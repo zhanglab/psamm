@@ -5,6 +5,12 @@ reaction equations as used in ModelSEED.
 >>> parse('|H2O| + |PPi| => (2) |Phosphate| + (2) |H+|')
 ('=>', [('H2O', 1, None), ('PPi', 1, None)], [('Phosphate', 2, None), ('H+', 2, None)])
 
+>>> format(parse('(2) |H2O| <= (2) |H2| + |O2|'))
+'(2) |H2| + |O2| => (2) |H2O|'
+
+>>> parse('|H2| + (0.5) |O2| => |H2O|')
+('=>', [('H2', 1, None), ('O2', Decimal('0.5'), None)], [('H2O', 1, None)])
+
 The representation does not seem to follow a published scheme so the
 following grammar has been reverse engineered from actual data sets. This
 parser is based on the derived grammer.::
@@ -189,3 +195,8 @@ def format(rx):
     return '{} {} {}'.format(format_compound_list(left),
                              '?' if direction == '' else direction,
                              format_compound_list(right))
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
