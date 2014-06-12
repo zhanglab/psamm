@@ -38,9 +38,7 @@ is used.::
 '''
 
 import re
-
 from decimal import Decimal
-from collections import defaultdict
 
 # TODO This implementation is simply a hand-written parser. A proper parser
 # could be generated using a parser generator and the grammar described above.
@@ -148,15 +146,6 @@ def parse(rx):
     return (direction, list(parse_compound_list(left)),
             list(parse_compound_list(right)))
 
-def normalize_compound_list(cmpds):
-    '''Normalize compound list by summing up duplicate compounds'''
-
-    d = defaultdict(int)
-    for name, count, compartment in cmpds:
-        d[(name, compartment)] += count
-
-    return tuple((spec[0], count, spec[1]) for spec, count in d.iteritems())
-
 def normalize(rx):
     '''Normalize reaction by turning all left-directed reactions'''
 
@@ -167,8 +156,7 @@ def normalize(rx):
         left = rx[2]
         right = rx[1]
 
-    return (direction, normalize_compound_list(left),
-            normalize_compound_list(right))
+    return (direction, left, right)
 
 def translate_compounds(rx, translate):
     '''Translate compound names using translate function'''
