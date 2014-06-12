@@ -1,7 +1,49 @@
+
+'''Implementation of a parser for the textual representations of chemical
+reaction equations as used in ModelSEED.
+
+>>> parse('|H2O| + |PPi| => (2) |Phosphate| + (2) |H+|')
+('=>', [('H2O', 1, None), ('PPi', 1, None)], [('Phosphate', 2, None), ('H+', 2, None)])
+
+The representation does not seem to follow a published scheme so the
+following grammar has been reverse engineered from actual data sets. This
+parser is based on the derived grammer.::
+
+    <reaction>     ::= <comp-list> ' ' <reaction-dir> ' ' <comp-list>
+    <reaction-dir> ::= '<=' | '<=>' | '=>' | '?' | ''
+    <comp-list>    ::= '' | <compound> | <compound> ' + ' <comp-list>
+    <compound>     ::= <comp-count> ' ' <comp-spec> | <comp-spec>
+    <comp-count>   ::= '(' <comp-number> ')' | <comp-number>
+    <comp-number>  ::= <decimal>
+    <comp-spec>    ::= '|' <comp-id> '|' | 'cdp' <cdp-id>
+    <comp-id>      ::= <comp-name> '[' <comp-compart> ']' | <comp-name>
+    <comp-compart> ::= <alpha>
+    <comp-name>    ::= <any characters other than "|">
+    <cdp-id>       ::= <five digits>   ; [sic]
+
+Note that the derived grammar is quite sloppy and could easily follow more
+strict rules that would make parsing easier. When converting parsed reactions
+back to string represetation using this module only a subset of the grammar
+is used.::
+
+    <reaction>     ::= <comp-list> ' ' <reaction-dir> ' ' <comp-list>
+    <reaction-dir> ::= '<=>' | '=>' | '?'
+    <comp-list>    ::= '' | <compound> | <compound> ' + ' <comp-list>
+    <compound>     ::= <comp-count> ' ' <comp-spec> | <comp-spec>
+    <comp-count>   ::= '(' <decimal> ')'
+    <comp-spec>    ::= '|' <comp-name> '|' | '|' <comp-name> '[' <comp-compart> ']' '|'
+    <comp-compart> ::= <alpha>
+    <comp-name>    ::= <any characters other than "|">
+
+'''
+
 import re
 
 from decimal import Decimal
 from collections import defaultdict
+
+# TODO This implementation is simply a hand-written parser. A proper parser
+# could be generated using a parser generator and the grammar described above.
 
 class ParseError(Exception):
     '''Exception used to signal errors while parsing'''
@@ -28,10 +70,7 @@ def tokenize(rx):
         yield token
 
 def parse_compound_number(number):
-    '''Parse compound number
-
-    <comp-number> ::= <decimal>'''
-
+    '''Parse compound number'''
     return Decimal(number)
 
 def parse_compound_count(count):
@@ -45,9 +84,7 @@ def parse_compound_count(count):
     return parse_compound_number(number)
 
 def parse_compound_name(name):
-    '''Parse compound name
-
-    <comp-name>  ::= '|' <comp-id> '|' | 'cdp' <cdp-id> '''
+    '''Parse compound name'''
 
     m = re.match(r'^\|(.+)\||(cdp\d+)$', name)
     if not m:
@@ -56,11 +93,7 @@ def parse_compound_name(name):
     return m.group(1) if m.group(1) is not None else m.group(2)
 
 def parse_compound(cmpd):
-    '''Parse compound
-
-    <compound>     ::= <comp-count> <whitespace> <comp-name> | <comp-spec>
-    <comp-count>   ::= '(' <comp-number> ')' | <comp-number>
-    <comp-spec>    ::= <comp-name> | <comp-name> '[' <comp-compart> ']' '''
+    '''Parse compound'''
 
     count = 1
     if len(cmpd) == 2:
@@ -80,9 +113,7 @@ def parse_compound(cmpd):
     return (name, count, compartment)
 
 def parse_compound_list(cmpds):
-    '''Parse a list of compounds
-
-    <comp-list> ::= | <compound> | <compound> <whitespace> '+' <whitespace> <comp-list>'''
+    '''Parse a list of compounds'''
 
     if len(cmpds) == 0:
         return
@@ -101,10 +132,7 @@ def parse_compound_list(cmpds):
     yield parse_compound(cmpd)
 
 def parse(rx):
-    '''Parse a reaction string
-
-    <reaction>     ::= <comp-list> <whitespace> <reaction-dir> <whitespace> <comp-list>
-    <reaction-dir> ::= '<=' | '<=>' | '=>' | '' '''
+    '''Parse a reaction string'''
 
     tokens = list(tokenize(rx))
     direction = None
@@ -168,8 +196,8 @@ def format_compound_list(cmpds):
     return ' + '.join(format_compound(cmpd) for cmpd in cmpds)
 
 def format(rx):
-    '''Format reaction'''
-    direction, left, right = rx
+    '''Format parsed reaction using subset grammar'''
+    direction, left, right = normalize(rx)
     return '{} {} {}'.format(format_compound_list(left),
                              '?' if direction == '' else direction,
                              format_compound_list(right))
