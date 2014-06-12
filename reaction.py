@@ -74,8 +74,14 @@ def tokenize(rx):
         yield token
 
 def parse_compound_number(number):
-    '''Parse compound number'''
-    return Decimal(number)
+    '''Parse compound number
+
+    Return plain int if possible, otherwise use Decimal.'''
+
+    d = Decimal(number)
+    if d % 1 == 0:
+        return int(d)
+    return d
 
 def parse_compound_count(count):
     '''Parse compound count'''
