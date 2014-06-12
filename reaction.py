@@ -100,13 +100,13 @@ def parse_compound_list(cmpds):
 
     yield parse_compound(cmpd)
 
-def parse(tokens):
-    '''Parse a tokenized reaction
+def parse(rx):
+    '''Parse a reaction string
 
     <reaction>     ::= <comp-list> <whitespace> <reaction-dir> <whitespace> <comp-list>
     <reaction-dir> ::= '<=' | '<=>' | '=>' | '' '''
 
-    tokens = list(tokens)
+    tokens = list(tokenize(rx))
     direction = None
     for i, t in enumerate(tokens):
         if t in ('<=', '<=>', '=>', ''):
