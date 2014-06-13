@@ -1,3 +1,6 @@
+
+'''Parser for chemical formulas'''
+
 def parse(s):
     '''Parse a formula string (e.g. C6H10O2)
 
