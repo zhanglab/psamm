@@ -23,7 +23,9 @@ if __name__ == '__main__':
     exm = open('extracellular_metabolites.txt', 'w')
 
     compound = set()
-
+    compound_e = set()
+    compound_c = set()
+    
     r.readline()
     readerr = csv.reader(r, dialect='excel')
     for rowr in readerr:
@@ -46,9 +48,9 @@ if __name__ == '__main__':
 
             # Lists the compounds in two seprate files by compartartment
             if comp is None:
-                cm.write('{}\n'.format(id))
+                compound_c.add(id)
             elif comp == 'e':
-                exm.write('{}\n'.format(id))
+                compound_e.add(id)
 
         # Lists the matrix
         for cpdid, value, comp in left:
@@ -63,6 +65,12 @@ if __name__ == '__main__':
     for cpdid in sorted(compound):
         cl.write('{}\n'.format(cpdid))
 
+    for cpdid in sorted(compound_c):
+        cm.write('{}\n'.format(cpdid))
+
+    for cpdid in sorted(compound_e):
+        exm.write('{}\n'.format(cpdid))
+    
     r.close()
     rr.close()
     w.close()
