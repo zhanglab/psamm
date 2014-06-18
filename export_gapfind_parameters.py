@@ -27,7 +27,7 @@ if __name__ == '__main__':
     r.readline()
     readerr = csv.reader(r, dialect='excel')
     for rowr in readerr:
-        SEED_rid, RXN_name, EC, Equation_cpdname, Equation_cpdid, KEGG_rid, KEGG_maps, Gene_ids, Visited, Pathway, Additional_paths, Inconsistencies, Gene_id_and_rn_used, Actual_ec, Reaction_technicalities = rowr
+        SEED_rid, RXN_name, EC, Equation_cpdname, Equation_cpdid, KEGG_rid, KEGG_maps, Gene_ids = rowr[:8]
 
         direction, left, right = reaction.parse(Equation_cpdid)
 
