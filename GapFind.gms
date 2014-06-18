@@ -31,6 +31,9 @@ $include "extracellular_metabolites.txt"
 Parameters
         UpperLimits(j)          maximum value flux can take
         LowerLimits(j)          minimum value flux can take
+        Vmax    /100/
+        epsilon /0.001/
+        M       /100/
 ;
 
 Parameter S(i,j) stoichiometric coefficients (S matrix) /
@@ -39,8 +42,8 @@ $include "mat.txt"
 
 *** Set lower and upper bounds on fluxes accordingly
 LowerLimits(j) = 0;
-LowerLimits(j)$rev(j) = -100;
-UpperLimits(j) = 100;
+LowerLimits(j)$rev(j) = -Vmax;
+UpperLimits(j) = Vmax;
 
 Variables
         v(j)			flux value through reaction
@@ -55,12 +58,12 @@ Binary variables
 Equations
         massbalance(i)          mass balance for cytosolic metabolites
         massbalance_comp(i)     mass balance for metabolites in internal compartments
-        obj                     objective function
         prodconsirrev_min(i,j)  minimum production binary constraint (irreversible)
         prodconsirrev_max(i,j)  maximum production binary constraint (irreversible)
         prodconsrev_min(i,j)    minimum production binary constraint (reversible)
         prodconsrev_max(i,j)    maximum production binary constrains (reversible)
         binarycons(i)           metabolite production binary constraint
+        obj                     objective function
 ;
 
 *** The mass balance constraints
@@ -74,10 +77,10 @@ massbalance_comp(i)$(not cytosol(i) and not extracellular(i)).. sum(j$S(i,j),S(i
 *** Constraints on production of metabolites in reaction
 * Ensure that the binary variable w is only one in the case where at least
 * epsilon units are produced.
-prodconsirrev_min(i,j)$( (S(i,j) gt 0 and not rev(j)) ).. S(i,j)*v(j) =g= 0.001*w(i,j);
-prodconsirrev_max(i,j)$( (S(i,j) gt 0 and not rev(j)) ).. S(i,j)*v(j) =l= 100*w(i,j);
-prodconsrev_min(i,j)$( (S(i,j) ne 0 and rev(j)) ).. S(i,j)*v(j) =g= 0.001-100*(1-w(i,j));
-prodconsrev_max(i,j)$( (S(i,j) ne 0 and rev(j)) ).. S(i,j)*v(j) =l= 100*w(i,j);
+prodconsirrev_min(i,j)$( (S(i,j) gt 0 and not rev(j)) ).. S(i,j)*v(j) =g= epsilon*w(i,j);
+prodconsirrev_max(i,j)$( (S(i,j) gt 0 and not rev(j)) ).. S(i,j)*v(j) =l= M*w(i,j);
+prodconsrev_min(i,j)$( (S(i,j) ne 0 and rev(j)) ).. S(i,j)*v(j) =g= epsilon-M*(1-w(i,j));
+prodconsrev_max(i,j)$( (S(i,j) ne 0 and rev(j)) ).. S(i,j)*v(j) =l= M*w(i,j);
 
 *** Constraint on production of metabolites in general
 * Ensure that the binary variable xp is only one in the case where at least
@@ -91,12 +94,12 @@ obj.. z =e= sum(i,xp(i));
 Model gapfind /
         massbalance
         massbalance_comp
-        obj
         prodconsirrev_min
         prodconsirrev_max
         prodconsrev_min
         prodconsrev_max
         binarycons
+        obj
 /;
 
 v.lo(j) = LowerLimits(j);
