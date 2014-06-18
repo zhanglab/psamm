@@ -19,6 +19,8 @@ if __name__ == '__main__':
     rr = open('rev.txt', 'w')
     cl = open('metabolites.txt', 'w')
     m = open('mat.txt', 'w')
+    cm = open('cytosol_metabolites.txt', 'w')
+    exm = open('extracellular_metabolites.txt', 'w')
 
     compound = set()
 
@@ -28,20 +30,27 @@ if __name__ == '__main__':
         SEED_rid, RXN_name, EC, Equation_cpdname, Equation_cpdid, KEGG_rid, KEGG_maps, Gene_ids, Visited, Pathway, Additional_paths, Inconsistencies, Gene_id_and_rn_used, Actual_ec, Reaction_technicalities = rowr
 
         direction, left, right = reaction.parse(Equation_cpdid)
-        
-        # Lists all the reaction names    
+
+        # Lists all the reaction names
         w.write('{}\n'.format(SEED_rid))
 
         # Lists the reverse reactions
         if direction == '<=>':
             rr.write('{}\n'.format(SEED_rid))
 
+
         # Add compound names to the set
         for cpdid, value, comp in left + right:
             id = cpdid if comp is None else cpdid + '_' + comp
             compound.add(id)
 
-        # Lists the matrix 
+            # Lists the compounds in two seprate files by compartartment
+            if comp is None:
+                cm.write('{}\n'.format(id))
+            elif comp == 'e':
+                exm.write('{}\n'.format(id))
+
+        # Lists the matrix
         for cpdid, value, comp in left:
             id = cpdid if comp is None else cpdid + '_' + comp
             m.write('{}.{}\t{}\n'.format(id, SEED_rid, -value))
@@ -59,3 +68,5 @@ if __name__ == '__main__':
     w.close()
     cl.close()
     m.close()
+    cm.close()
+    exm.close()
