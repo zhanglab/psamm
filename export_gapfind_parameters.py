@@ -21,10 +21,12 @@ if __name__ == '__main__':
     m = open('mat.txt', 'w')
     cm = open('cytosol_metabolites.txt', 'w')
     exm = open('extracellular_metabolites.txt', 'w')
+    rnp = open('root_no_production.txt', 'w')
 
     compound = set()
     compound_e = set()
     compound_c = set()
+    compound_produced = set() 
     
     r.readline()
     readerr = csv.reader(r, dialect='excel')
@@ -39,8 +41,14 @@ if __name__ == '__main__':
         # Lists the reverse reactions
         if direction == '<=>':
             rr.write('{}\n'.format(SEED_rid))
-
-
+            for cpdid, value, comp in left + right:
+                id = cpdid if comp is None else cpdid + '_' + comp
+                compound_produced.add(id)
+        else:
+            for cpdid, value, comp in right:
+                id = cpdid if comp is None else cpdid + '_' + comp
+                compound_produced.add(id)
+                
         # Add compound names to the set
         for cpdid, value, comp in left + right:
             id = cpdid if comp is None else cpdid + '_' + comp
@@ -70,7 +78,11 @@ if __name__ == '__main__':
 
     for cpdid in sorted(compound_e):
         exm.write('{}\n'.format(cpdid))
-    
+
+    compound_not_produced = compound_c - compound_produced
+    for cpdid in sorted(compound_not_produced):
+        rnp.write('{}\n'.format(cpdid))
+ 
     r.close()
     rr.close()
     w.close()
@@ -78,3 +90,4 @@ if __name__ == '__main__':
     m.close()
     cm.close()
     exm.close()
+    rnp.close()
