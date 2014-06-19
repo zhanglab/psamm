@@ -1,5 +1,8 @@
 
-'''Parse GapFind output and print no-production metabolites'''
+'''Parse GapFind output and print no-production metabolites
+
+The GapFind file should be produced with parameter "ps=0".
+'''
 
 import sys
 import csv 
