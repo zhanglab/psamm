@@ -31,7 +31,7 @@ if __name__ == '__main__':
     for rowr in readerr:
         SEED_rid, RXN_name, EC, Equation_cpdname, Equation_cpdid, KEGG_rid, KEGG_maps, Gene_ids = rowr[:8]
 
-        direction, left, right = reaction.parse(Equation_cpdid)
+        direction, left, right = reaction.normalize(reaction.parse(Equation_cpdid))
 
         # Lists all the reaction names
         w.write('{}\n'.format(SEED_rid))
