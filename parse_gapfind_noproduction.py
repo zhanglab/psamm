@@ -14,6 +14,7 @@ if __name__ == '__main__':
 
     f = open(sys.argv[1], 'r')
     c = open(sys.argv[2], 'r')
+    blocked_file = open('blocked.txt', 'w')
 
     compound_map = {}
 
@@ -47,6 +48,9 @@ if __name__ == '__main__':
                     if KEGG_cid != "None":
                         count_in_kegg += 1
                     print '{}\t{}\t{}'.format(cpdid, KEGG_cid, Formula)
+                    blocked_file.write('{}\n'.format(cpdid))
 
     print 'Not produced: {}/{}'.format(count_not_produced, count)
     print 'In KEGG: {}/{}'.format(count_in_kegg, count_not_produced)
+
+    blocked_file.close()
