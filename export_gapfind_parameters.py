@@ -18,6 +18,8 @@ if __name__ == '__main__':
 
     # Opens files to write in 
     w = open('rxnnames.txt', 'w')
+    database_list = open('databaserxn.txt', 'w')
+    model_list = open('modelrxn.txt', 'w')
     rr = open('rev.txt', 'w')
     cl = open('metabolites.txt', 'w')
     m = open('mat.txt', 'w')
@@ -38,6 +40,7 @@ if __name__ == '__main__':
 
         # Lists all the reaction names
         w.write('{}\n'.format(SEED_rid))
+        model_list.write('{}\n'.format(SEED_rid))
 
         # Lists the reverse reactions
         if direction == '<=>':
@@ -83,8 +86,12 @@ if __name__ == '__main__':
     compound_not_produced = compound_c - compound_produced
     for cpdid in sorted(compound_not_produced):
         rnp.write('{}\n'.format(cpdid))
- 
+
     rxn_table.close()
+
+    database_list.close()
+    model_list.close()
+
     rr.close()
     w.close()
     cl.close()
