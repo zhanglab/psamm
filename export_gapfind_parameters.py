@@ -13,6 +13,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert reaction table to GapFind input format')
     parser.add_argument('rxnfile', type=argparse.FileType('r'), help='Reaction table file')
     parser.add_argument('--exchange', action='store_true', help='Add exchange reactions to database list')
+    parser.add_argument('--transport', action='store_true', help='Add transport reactions to database list')
     args = parser.parse_args()
 
     rxn_table = args.rxnfile
@@ -74,10 +75,10 @@ if __name__ == '__main__':
             id = cpdid if comp is None else cpdid + '_' + comp
             m.write('{}.{}\t{}\n'.format(id, SEED_rid, value))
 
-    # Optionally create exchange reactions in database
-    if args.exchange:
+    # Optionally create transport reactions in database
+    if args.transport:
         for cpdid in sorted(compound_c):
-            rxnid = 'rxnex_' + cpdid
+            rxnid = 'rxntp_' + cpdid
             w.write('{}\n'.format(rxnid))
             database_list.write('{}\n'.format(rxnid))
 
@@ -86,6 +87,17 @@ if __name__ == '__main__':
             compound_e.add(cpdid + '_e')
             m.write('{}_e.{}\t{}\n'.format(cpdid, rxnid, -1))
             m.write('{}.{}\t{}\n'.format(cpdid, rxnid, 1))
+
+    # Optionally create exchange reactions in database
+    if args.exchange:
+        for cpdid in sorted(compound_e):
+            rxnid = 'rxnex_' + cpdid
+            w.write('{}\n'.format(rxnid))
+            database_list.write('{}\n'.format(rxnid))
+
+            # Write to matrix
+            m.write('{}.{}\t{}\n'.format(cpdid, rxnid, -1))
+            rr.write('{}\n'.format(rxnid))
 
     # Lists all the compound names in the set
     for cpdid in sorted(compound):
