@@ -104,6 +104,5 @@ Model gapfind /
 
 v.lo(j) = LowerLimits(j);
 v.up(j) = UpperLimits(j);
-gapfind.optfile = 1;
 	
 solve gapfind using mip maximizing z;
