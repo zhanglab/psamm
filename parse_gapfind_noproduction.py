@@ -40,15 +40,15 @@ if __name__ == '__main__':
             fields = line.split()
             cpdid = fields[0]
             produced = fields[2] != '.'
-            count += 1
 
-            if not produced:
-                if not cpdid.endswith('_e'):
+            if not cpdid.endswith('_e'):
+                count += 1
+                if not produced:
                     Formula, KEGG_cid, CPD_name = compound_map[cpdid]
                     count_not_produced += 1
-                    if KEGG_cid != "None":
+                    if KEGG_cid != 'None':
                         count_in_kegg += 1
-                    print '{}\t{}\t{}'.format(cpdid, KEGG_cid, Formula)
+                    print '{}\t{}\t{}\t{}'.format(cpdid, KEGG_cid, Formula, CPD_name)
                     blocked_file.write('{}\n'.format(cpdid))
 
     print 'Not produced: {}/{}'.format(count_not_produced, count)
