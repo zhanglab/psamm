@@ -16,6 +16,10 @@ Set j reactions in S (n) /
 $include "rxnnames.txt"
 /;
 
+Set mod(j) reactions of the model organism /
+$include "modelrxn.txt"
+/;
+
 Set rev(j) reversible reactions /
 $include "rev.txt"
 /;
@@ -104,5 +108,6 @@ Model gapfind /
 
 v.lo(j) = LowerLimits(j);
 v.up(j) = UpperLimits(j);
-	
+v.fx(j)$( not mod(j) ) = 0;
+
 solve gapfind using mip maximizing z;
