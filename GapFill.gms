@@ -118,7 +118,7 @@ prodcons_max(i,j)$( blocked(i) and S(i,j) ne 0 ).. S(i,j)*v(j) =l= M*w(i,j);
 *** Constraint on the production of the metabolite in question in general
 * Ensure that the metabolite in question is produced by at least one
 * reaction.
-binarycons(i)$( blocked(i) ).. sum(j$(S(i,j) ne 0), w(i,j)) =g= 1;
+binarycons(i)$( blocked(i) ).. sum(j$((S(i,j) ne 0 and rev(j) ) or (S(i,j) gt 0 and not rev(j) )), w(i,j)) =g= 1;
 
 *** Minimize the number of model reaction modifications
 * Minimize the sum of added database reactions and reversed model reactions.
