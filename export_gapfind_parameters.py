@@ -12,7 +12,7 @@ if __name__ == '__main__':
         print 'USAGE: {} RXNFILE'.format(sys.argv[0])
         sys.exit(-1)
 
-    r = open(sys.argv[1], 'r')
+    rxn_table = open(sys.argv[1], 'r')
 
     # Opens files to write in 
     w = open('rxnnames.txt', 'w')
@@ -28,10 +28,9 @@ if __name__ == '__main__':
     compound_c = set()
     compound_produced = set() 
     
-    r.readline()
-    readerr = csv.reader(r, dialect='excel')
-    for rowr in readerr:
-        SEED_rid, RXN_name, EC, Equation_cpdname, Equation_cpdid, KEGG_rid, KEGG_maps, Gene_ids = rowr[:8]
+    rxn_table.readline() # Skip header
+    for row in csv.reader(rxn_table, dialect='excel'):
+        SEED_rid, RXN_name, EC, Equation_cpdname, Equation_cpdid, KEGG_rid, KEGG_maps, Gene_ids = row[:8]
 
         direction, left, right = reaction.normalize(reaction.parse(Equation_cpdid))
 
@@ -83,7 +82,7 @@ if __name__ == '__main__':
     for cpdid in sorted(compound_not_produced):
         rnp.write('{}\n'.format(cpdid))
  
-    r.close()
+    rxn_table.close()
     rr.close()
     w.close()
     cl.close()
