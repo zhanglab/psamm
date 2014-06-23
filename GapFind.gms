@@ -71,7 +71,7 @@ Equations
 * the diluting effect from cell division, export from diffusion, etc., which means
 * that the production of these metabolites only has to be positive. For metabolites
 * in internal compartments the uptake and secretion has to even out.
-massbalance(i)$(cytosol(i) and not extracellular(i)).. sum(j$S(i,j),S(i,j)*v(j)) =g= 0;
+massbalance(i).. sum(j$S(i,j),S(i,j)*v(j)) =g= 0;
 massbalance_comp(i)$(not cytosol(i) and not extracellular(i)).. sum(j$S(i,j),S(i,j)*v(j)) =e= 0;
 
 *** Constraints on production of metabolites in reaction
