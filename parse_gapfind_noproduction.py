@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 '''Parse GapFind output and print no-production metabolites
 

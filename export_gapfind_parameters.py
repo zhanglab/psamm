@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 '''This program lists (in separate files) the reaction names, the names of the 
 reactions that are reversible, the cpdid of the compounds used in all of the 
