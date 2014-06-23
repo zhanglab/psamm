@@ -4,16 +4,17 @@
 reactions that are reversible, the cpdid of the compounds used in all of the 
 reactions, writes the compounds and stoichiometric values in matrix format'''
 
-import sys
+import argparse
 import csv
 import reaction
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print 'USAGE: {} RXNFILE'.format(sys.argv[0])
-        sys.exit(-1)
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Convert reaction table to GapFind input format')
+    parser.add_argument('rxnfile', type=argparse.FileType('r'), help='Reaction table file')
+    args = parser.parse_args()
 
-    rxn_table = open(sys.argv[1], 'r')
+    rxn_table = args.rxnfile
 
     # Opens files to write in 
     w = open('rxnnames.txt', 'w')
