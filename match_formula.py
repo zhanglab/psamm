@@ -13,8 +13,9 @@ if __name__ == '__main__':
     # Read formulas of compound list
     compound_map = {}
     for row in csv.reader(args.cpdfile, dialect='excel'):
-        seed_cid, formula, mass, kegg_cid, cpd_name = row[:5]
-        compound_map[seed_cid] = formula
+        seed_cid, formula, mass, kegg_cid, cpd_names = row[:5]
+        main_name = cpd_names.split(',<br>')[0].replace('&#39;', '\'')
+        compound_map[seed_cid] = main_name, formula
 
     # Read list of cytosolic compounds
     compound_c = set()
@@ -33,12 +34,18 @@ if __name__ == '__main__':
     # Record formula of available compounds
     available_formula = defaultdict(set)
     for cpd in compound_c - blocked:
-        formula = compound_map[cpd]
+        cpd_name, formula = compound_map[cpd]
         available_formula[formula].add(cpd)
 
     # Find isomers of blocked compounds
+    count = 0
     for cpd in sorted(blocked):
-        formula = compound_map[cpd]
+        cpd_name, formula = compound_map[cpd]
         other = available_formula[formula]
         if len(other) > 0:
-            print '{} possibly available as isomer(s) {} ({})'.format(cpd, ', '.join(other), formula)
+            count += 1
+            print '{} ({}) [{}] possibly available as isomer(s):'.format(cpd_name, cpd, formula)
+            for other_id in other:
+                print ' - {} ({})'.format(compound_map[other_id][0], other_id)
+
+    print '{} blocked compounds can be resolved'.format(count)
