@@ -255,6 +255,45 @@ class ModelSEED(object):
 
         yield cls._parse_compound(cmpd)
 
+class SudenSimple(object):
+    '''Parser for the simple reaction format in Suden model'''
+
+    @classmethod
+    def parse(cls, s):
+        '''Parse a reaction string
+
+        >>> SudenSimple.parse('1 H2O + 1 PPi <=> 2 Phosphate + 2 proton')
+        Reaction('<=>', [('H2O', 1, None), ('PPi', 1, None)], [('Phosphate', 2, None), ('proton', 2, None)])
+
+        >>> SudenSimple.parse('1 H2 + 0.5 O2 <=> 1 H2O')
+        Reaction('<=>', [('H2', 1, None), ('O2', Decimal('0.5'), None)], [('H2O', 1, None)])
+        '''
+        def parse_compound_list(s):
+            cpds = []
+            for cpd in s.split('+'):
+                if cpd == '':
+                    continue
+                count, spec = cpd.strip().split(' ')
+                spec_split = spec.split('[')
+                if len(spec_split) == 2:
+                    # compartment
+                    cpdid = spec_split[0]
+                    comp = spec_split[1].rstrip(']')
+                else:
+                    cpdid = spec
+                    comp = None
+                d = Decimal(count)
+                if d % 1 == 0:
+                    d = int(d)
+                cpds.append((cpdid, d, comp))
+            return cpds
+
+        cpd_left, cpd_right = s.split('<=>')
+        left = parse_compound_list(cpd_left)
+        right = parse_compound_list(cpd_right)
+
+        return Reaction('<=>', left, right)
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()

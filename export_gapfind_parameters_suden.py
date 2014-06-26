@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-'''This program lists (in separate files) the reaction names, the names of the 
-reactions that are reversible, the cpdid of the compounds used in all of the 
+'''This program lists (in separate files) the reaction names, the names of the
+reactions that are reversible, the cpdid of the compounds used in all of the
 reactions, writes the compounds and stoichiometric values in matrix format'''
 
 import sys
@@ -23,67 +23,37 @@ if __name__ == '__main__':
     m = open('mat.txt', 'w')
     cm = open('cytosol_metabolites.txt', 'w')
     exm = open('extracellular_metabolites.txt', 'w')
-    
+
     compound = set()
     compound_e = set()
     compound_c = set()
-    compound_produced = set() 
-    
+    compound_produced = set()
+
     r.readline()
     readerr = csv.reader(r, delimiter='\t')
     for rowr in readerr:
         rxn_id, rxn_name, equation_cpd, equation_name, Subsystem, Suden_protien_ID, gene_association, protein_id, ec_reference, Reversibility, Ref_directionality, category, SEED_reversibility, Reversibility_without_seed, Pfam_domains, Pfam_Consensus_Score, DIFF_list = rowr[:17]
-        
-        
-        left = []
-        right = []
 
-        def parse_compound_list(s):
-            cpds = []
-            for cpd in s.split('+'):
-                if cpd == '':
-                    continue
-                count, spec = cpd.strip().split(' ')
-                spec_split = spec.split('[')
-                if len(spec_split) == 2:
-                    # compartment
-                    cpdid = spec_split[0]
-                    comp = spec_split[1].rstrip(']')
-                else:
-                    cpdid = spec
-                    comp = None
-                d = Decimal(count)
-                if d % 1 == 0:
-                    d = int(d)
-                cpds.append((cpdid, d, comp))
-            return cpds
-
-        cpd_left, cpd_right = equation_cpd.split('<=>')
-        left = parse_compound_list(cpd_left)
-        right = parse_compound_list(cpd_right)
-
-        direction = '<=>'
+        rx = reaction.SudenSimple.parse(Equation_cpdid).normalized()
         if Reversibility == 'N':
-            direction = '=>'
+            rx.direction = '=>'
 
-        #direction, left, right = reaction.normalize(reaction.parse(Equation_cpdid))
-    
         # Lists all the reaction names
         w.write('{}\n'.format(rxn_id))
 
         # Lists the reverse reactions
-        if direction == '<=>':
+        if rx.direction == '<=>':
             rr.write('{}\n'.format(rxn_id))
-            for cpdid, value, comp in left + right:
+            for cpdid, value, comp in rx.left + rx.right:
                 id = cpdid if comp is None else cpdid + '_' + comp
                 compound_produced.add(id)
         else:
-            for cpdid, value, comp in right:
+            for cpdid, value, comp in rx.right:
                 id = cpdid if comp is None else cpdid + '_' + comp
                 compound_produced.add(id)
-                
+
         # Add compound names to the set
-        for cpdid, value, comp in left + right:
+        for cpdid, value, comp in rx.left + rx.right:
             id = cpdid if comp is None else cpdid + '_' + comp
             compound.add(id)
 
@@ -94,11 +64,11 @@ if __name__ == '__main__':
                 compound_e.add(id)
 
         # Lists the matrix
-        for cpdid, value, comp in left:
+        for cpdid, value, comp in rx.left:
             id = cpdid if comp is None else cpdid + '_' + comp
             m.write('{}.{}\t{}\n'.format(id, rxn_id, -value))
-        
-        for cpdid, value, comp in right:
+
+        for cpdid, value, comp in rx.right:
             id = cpdid if comp is None else cpdid + '_' + comp
             m.write('{}.{}\t{}\n'.format(id, rxn_id, value))
 
@@ -115,10 +85,7 @@ if __name__ == '__main__':
     compound_not_produced = compound_c - compound_produced
     for cpdid in sorted(compound_not_produced):
         rnp.write('{}\n'.format(cpdid))
- 
-    
- 
- 
+
     r.close()
     rr.close()
     w.close()
