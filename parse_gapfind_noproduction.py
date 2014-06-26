@@ -5,36 +5,39 @@
 The GapFind file should be produced with parameter "ps=0".
 '''
 
-import sys
 import csv
 import re
+import argparse
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
-        print 'USAGE: {} GAPFIND CPDLIST'.format(sys.argv[0])
-        sys.exit(-1)
+    parser = argparse.ArgumentParser(description='Parse GapFind output and generate no-production list')
+    parser.add_argument('gapfind', type=argparse.FileType('r'), help='GapFind output file (ps=0)')
+    parser.add_argument('cpdfile', type=argparse.FileType('r'), help='Compound table file')
+    args = parser.parse_args()
 
-    f = open(sys.argv[1], 'r')
-    c = open(sys.argv[2], 'r')
     blocked_file = open('blocked.txt', 'w')
 
     compound_map = {}
 
-    c.readline() # Skip header
-    readerc = csv.reader(c, dialect='excel')
-    for rowc in readerc:
-        SEED_cid, Formula, Mass, KEGG_cid, CPD_name = rowc[:5]
-        compound_map[SEED_cid] = Formula, KEGG_cid, CPD_name
+    # Load compounds
+    cpdfile = args.cpdfile
+    cpdfile.readline() # Skip header
+    for row in csv.reader(cpdfile, dialect='excel'):
+        seed_cid, formula, mass, kegg_cid, cpd_name = row[:5]
+        compound_map[seed_cid] = formula, kegg_cid, cpd_name
+    cpdfile.close()
 
+    # Parse GapFind output
     count = 0
     count_not_produced = 0
     count_in_kegg = 0
     flag = False
-    for line in f:
+    gffile = args.gapfind
+    for line in gffile:
         if line.startswith('---- VAR xp'):
             flag = True
             for i in range(3):
-                next(f)
+                next(gffile)
         elif flag:
             if line == '\n':
                 break
@@ -44,6 +47,7 @@ if __name__ == '__main__':
             produced = fields[2] != '.'
             comp = None
 
+            # Parse compartment
             m = re.match(r'(.+?)_(.+)$', cpdid)
             if m is not None:
                 cpdid = m.group(1)
@@ -58,8 +62,8 @@ if __name__ == '__main__':
                         count_in_kegg += 1
                     print '{}\t{}\t{}\t{}'.format(cpdid, KEGG_cid, Formula, CPD_name)
                     blocked_file.write('{}\n'.format(cpdid))
+    gffile.close()
+    blocked_file.close()
 
     print 'Not produced: {}/{}'.format(count_not_produced, count)
     print 'In KEGG: {}/{}'.format(count_in_kegg, count_not_produced)
-
-    blocked_file.close()
