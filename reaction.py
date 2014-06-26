@@ -2,15 +2,6 @@
 '''Implementation of a parser for the textual representations of chemical
 reaction equations as used in ModelSEED.
 
->>> parse('|H2O| + |PPi| => (2) |Phosphate| + (2) |H+|')
-('=>', [('H2O', 1, None), ('PPi', 1, None)], [('Phosphate', 2, None), ('H+', 2, None)])
-
->>> format(parse('(2) |H2O| <= (2) |H2| + |O2|'))
-'(2) |H2| + |O2| => (2) |H2O|'
-
->>> parse('|H2| + (0.5) |O2| => |H2O|')
-('=>', [('H2', 1, None), ('O2', Decimal('0.5'), None)], [('H2O', 1, None)])
-
 The representation does not seem to follow a published scheme so the
 following grammar has been reverse engineered from actual data sets. This
 parser is based on the derived grammer.::
@@ -48,6 +39,87 @@ from decimal import Decimal
 
 # TODO This implementation is simply a hand-written parser. A proper parser
 # could be generated using a parser generator and the grammar described above.
+
+class Reaction(object):
+    '''Reaction equation representation'''
+
+    def __init__(self, direction, left, right):
+        self.direction = direction
+        self.left = left
+        self.right = right
+
+    def normalized(self):
+        '''Return normalized reaction
+
+        >>> Reaction('<=', [('Au', 1, None)], [('Pb', 1, None)]).normalized()
+        Reaction('=>', [('Pb', 1, None)], [('Au', 1, None)])
+        '''
+
+        if self.direction == '<=':
+            direction = '=>'
+            left = list(self.right)
+            right = list(self.left)
+        else:
+            direction = self.direction
+            left = list(self.left)
+            right = list(self.right)
+
+        return Reaction(direction, left, right)
+
+    def translated_compounds(self, translate):
+        '''Return reaction where compound names have been translated
+
+        For each compound the translate function is called with the compound name
+        and the returned value is used as the new compound name. A new reaction is
+        returned with the substituted compound names.
+
+        >>> rx = Reaction('=>', [('Pb', 1, None)], [('Au', 1, None)])
+        >>> rx.translated_compounds(lambda name: name.lower())
+        Reaction('=>', [('pb', 1, None)], [('au', 1, None)])
+        '''
+
+        def translate_compound_list(l):
+            return [(translate(cpdname), count, comp) for cpdname, count, comp in l]
+        left = translate_compound_list(self.left)
+        right = translate_compound_list(self.right)
+
+        return Reaction(self.direction, left, right)
+
+    def format(self):
+        '''Format reaction as string
+
+        >>> Reaction('<=', [('H2O', 2, None)], [('H2', 2, None), ('O2', 1, None)]).format()
+        '(2) |H2| + |O2| => (2) |H2O|'
+        '''
+
+        # Define helper functions
+        def format_compound(cmpd):
+            '''Format compound'''
+            name, count, compartment = cmpd
+
+            if compartment is not None:
+                spec = '{}[{}]'.format(name, compartment)
+            else:
+                spec = name
+
+            if count != 1:
+                return '({}) |{}|'.format(count, spec)
+            return '|{}|'.format(spec)
+
+        def format_compound_list(cmpds):
+            '''Format compound list'''
+            return ' + '.join(format_compound(cmpd) for cmpd in cmpds)
+
+        rx = self.normalized()
+        return '{} {} {}'.format(format_compound_list(rx.left),
+                                 '?' if rx.direction == '' else rx.direction,
+                                 format_compound_list(rx.right))
+
+    def __str__(self):
+        return self.format()
+
+    def __repr__(self):
+        return 'Reaction({}, {}, {})'.format(repr(self.direction), repr(self.left), repr(self.right))
 
 class ParseError(Exception):
     '''Exception used to signal errors while parsing'''
@@ -142,7 +214,14 @@ def parse_compound_list(cmpds):
     yield parse_compound(cmpd)
 
 def parse(rx):
-    '''Parse a reaction string'''
+    '''Parse a reaction string
+
+    >>> parse('|H2O| + |PPi| => (2) |Phosphate| + (2) |H+|')
+    Reaction('=>', [('H2O', 1, None), ('PPi', 1, None)], [('Phosphate', 2, None), ('H+', 2, None)])
+
+    >>> parse('|H2| + (0.5) |O2| => |H2O|')
+    Reaction('=>', [('H2', 1, None), ('O2', Decimal('0.5'), None)], [('H2O', 1, None)])
+    '''
 
     tokens = list(tokenize(rx))
     direction = None
@@ -155,52 +234,8 @@ def parse(rx):
     if direction is None:
         raise ParseError('Failed to parse reaction: {}'.format(tokens))
 
-    return (direction, list(parse_compound_list(left)),
-            list(parse_compound_list(right)))
-
-def normalize(rx):
-    '''Normalize reaction by turning all left-directed reactions'''
-
-    direction, left, right = rx
-
-    if direction == '<=':
-        direction = '=>'
-        left = rx[2]
-        right = rx[1]
-
-    return (direction, left, right)
-
-def translate_compounds(rx, translate):
-    '''Translate compound names using translate function'''
-
-    direction, left, right = rx
-
-    return (direction, [(translate(name), count, compartment) for name, count, compartment in left],
-            [(translate(name), count, compartment) for name, count, compartment in right])
-
-def format_compound(cmpd):
-    '''Format compound'''
-    name, count, compartment = cmpd
-
-    if compartment is not None:
-        spec = '{}[{}]'.format(name, compartment)
-    else:
-        spec = name
-
-    if count != 1:
-        return '({}) |{}|'.format(count, spec)
-    return '|{}|'.format(spec)
-
-def format_compound_list(cmpds):
-    '''Format compound list'''
-    return ' + '.join(format_compound(cmpd) for cmpd in cmpds)
-
-def format(rx):
-    '''Format parsed reaction using subset grammar'''
-    direction, left, right = normalize(rx)
-    return '{} {} {}'.format(format_compound_list(left),
-                             '?' if direction == '' else direction,
-                             format_compound_list(right))
+    return Reaction(direction, list(parse_compound_list(left)),
+                    list(parse_compound_list(right)))
 
 
 if __name__ == '__main__':

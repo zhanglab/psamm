@@ -43,7 +43,7 @@ if __name__ == '__main__':
     rxn_table.readline() # Skip header
     for row in csv.reader(rxn_table, dialect='excel'):
         SEED_rid, RXN_name, EC, Equation_cpdname, Equation_cpdid, KEGG_rid, KEGG_maps, Gene_ids = row[:8]
-        direction, left, right = reaction.normalize(reaction.parse(Equation_cpdid))
+        rx = reaction.parse(Equation_cpdid).normalized()
 
         # Lists all the reaction names
         w.write('{}\n'.format(SEED_rid))
@@ -51,18 +51,18 @@ if __name__ == '__main__':
         reaction_model.add(SEED_rid)
 
         # Lists the reverse reactions
-        if direction == '<=>':
+        if rx.direction == '<=>':
             rr.write('{}\n'.format(SEED_rid))
-            for cpdid, value, comp in left + right:
+            for cpdid, value, comp in rx.left + rx.right:
                 id = cpdid if comp is None else cpdid + '_' + comp
                 compound_produced.add(id)
         else:
-            for cpdid, value, comp in right:
+            for cpdid, value, comp in rx.right:
                 id = cpdid if comp is None else cpdid + '_' + comp
                 compound_produced.add(id)
 
         # Add compound names to the set
-        for cpdid, value, comp in left + right:
+        for cpdid, value, comp in rx.left + rx.right:
             id = cpdid if comp is None else cpdid + '_' + comp
             compound.add(id)
 
@@ -73,11 +73,11 @@ if __name__ == '__main__':
                 compound_e.add(id)
 
         # Lists the matrix
-        for cpdid, value, comp in left:
+        for cpdid, value, comp in rx.left:
             id = cpdid if comp is None else cpdid + '_' + comp
             m.write('{}.{}\t{}\n'.format(id, SEED_rid, -value))
 
-        for cpdid, value, comp in right:
+        for cpdid, value, comp in rx.right:
             id = cpdid if comp is None else cpdid + '_' + comp
             m.write('{}.{}\t{}\n'.format(id, SEED_rid, value))
 
@@ -135,19 +135,18 @@ if __name__ == '__main__':
                     return 'cpd' + m.group(1)
                 return compound_map[name]
 
-            rxn = reaction.normalize(reaction.parse(equation_cpdname))
-            direction, left, right = reaction.translate_compounds(rxn, translate)
+            rx = reaction.parse(equation_cpdname).normalized().translated_compounds(translate)
 
             # Lists all the reaction names
             w.write('{}\n'.format(seed_rid))
             database_list.write('{}\n'.format(seed_rid))
 
             # Lists the reverse reactions
-            if direction == '<=>' or direction.strip() == '':
+            if rx.direction == '<=>' or rx.direction.strip() == '':
                 rr.write('{}\n'.format(seed_rid))
 
             # Add compound names to the set
-            for cpdid, value, comp in left + right:
+            for cpdid, value, comp in rx.left + rx.right:
                 id = cpdid if comp is None else cpdid + '_' + comp
                 compound.add(id)
 
@@ -158,11 +157,11 @@ if __name__ == '__main__':
                     compound_e.add(id)
 
             # Lists the matrix
-            for cpdid, value, comp in left:
+            for cpdid, value, comp in rx.left:
                 id = cpdid if comp is None else cpdid + '_' + comp
                 m.write('{}.{}\t{}\n'.format(id, seed_rid, -value))
 
-            for cpdid, value, comp in right:
+            for cpdid, value, comp in rx.right:
                 id = cpdid if comp is None else cpdid + '_' + comp
                 m.write('{}.{}\t{}\n'.format(id, seed_rid, value))
 
