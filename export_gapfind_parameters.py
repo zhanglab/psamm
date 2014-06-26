@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-'''This program lists (in separate files) the reaction names, the names of the 
-reactions that are reversible, the cpdid of the compounds used in all of the 
+'''This program lists (in separate files) the reaction names, the names of the
+reactions that are reversible, the cpdid of the compounds used in all of the
 reactions, writes the compounds and stoichiometric values in matrix format'''
 
 import argparse
@@ -22,7 +22,7 @@ if __name__ == '__main__':
 
     rxn_table = args.rxnfile
 
-    # Opens files to write in 
+    # Opens files to write in
     w = open('rxnnames.txt', 'w')
     database_list = open('databaserxn.txt', 'w')
     model_list = open('modelrxn.txt', 'w')
@@ -39,11 +39,11 @@ if __name__ == '__main__':
     compound_c = set()
     compound_produced = set()
     reaction_model = set()
-    
+
     rxn_table.readline() # Skip header
     for row in csv.reader(rxn_table, dialect='excel'):
         SEED_rid, RXN_name, EC, Equation_cpdname, Equation_cpdid, KEGG_rid, KEGG_maps, Gene_ids = row[:8]
-        rx = reaction.parse(Equation_cpdid).normalized()
+        rx = reaction.ModelSEED.parse(Equation_cpdid).normalized()
 
         # Lists all the reaction names
         w.write('{}\n'.format(SEED_rid))
@@ -135,7 +135,7 @@ if __name__ == '__main__':
                     return 'cpd' + m.group(1)
                 return compound_map[name]
 
-            rx = reaction.parse(equation_cpdname).normalized().translated_compounds(translate)
+            rx = reaction.ModelSEED.parse(equation_cpdname).normalized().translated_compounds(translate)
 
             # Lists all the reaction names
             w.write('{}\n'.format(seed_rid))
