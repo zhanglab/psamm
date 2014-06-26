@@ -12,20 +12,26 @@ import argparse
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Parse GapFind output and generate no-production list')
     parser.add_argument('gapfind', type=argparse.FileType('r'), help='GapFind output file (ps=0)')
-    parser.add_argument('cpdfile', type=argparse.FileType('r'), help='Compound table file')
+    parser.add_argument('--cpdfile', type=argparse.FileType('r'), help='Compound table file')
     args = parser.parse_args()
 
     blocked_file = open('blocked.txt', 'w')
 
+    model_cpds = set()
+    with open('model_cpds.txt', 'r') as f:
+        for line in f:
+            cpdid = line.strip()
+            model_cpds.add(cpdid)
     compound_map = {}
 
     # Load compounds
-    cpdfile = args.cpdfile
-    cpdfile.readline() # Skip header
-    for row in csv.reader(cpdfile, dialect='excel'):
-        seed_cid, formula, mass, kegg_cid, cpd_name = row[:5]
-        compound_map[seed_cid] = formula, kegg_cid, cpd_name
-    cpdfile.close()
+    if args.cpdfile is not None:
+        cpdfile = args.cpdfile
+        cpdfile.readline() # Skip header
+        for row in csv.reader(cpdfile, dialect='excel'):
+            seed_cid, formula, mass, kegg_cid, cpd_name = row[:5]
+            compound_map[seed_cid] = formula, kegg_cid, cpd_name
+        cpdfile.close()
 
     # Parse GapFind output
     count = 0
@@ -50,18 +56,21 @@ if __name__ == '__main__':
             # Parse compartment
             m = re.match(r'(.+?)_(.+)$', cpdid)
             if m is not None:
-                cpdid = m.group(1)
                 comp = m.group(2)
 
-            if comp is None and cpdid in compound_map:
+            if comp is None and cpdid in model_cpds:
                 count += 1
                 if not produced:
-                    Formula, KEGG_cid, CPD_name = compound_map[cpdid]
-                    count_not_produced += 1
-                    if KEGG_cid != 'None':
-                        count_in_kegg += 1
-                    print '{}\t{}\t{}\t{}'.format(cpdid, KEGG_cid, Formula, CPD_name)
                     blocked_file.write('{}\n'.format(cpdid))
+                    count_not_produced += 1
+
+                    if cpdid in compound_map:
+                        Formula, KEGG_cid, CPD_name = compound_map[cpdid]
+                        if KEGG_cid != 'None':
+                            count_in_kegg += 1
+                        print '{}\t{}\t{}\t{}'.format(cpdid, KEGG_cid, Formula, CPD_name)
+                    else:
+                        print cpdid
     gffile.close()
     blocked_file.close()
 

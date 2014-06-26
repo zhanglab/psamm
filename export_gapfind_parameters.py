@@ -32,6 +32,7 @@ if __name__ == '__main__':
     cm = open('cytosol_metabolites.txt', 'w')
     exm = open('extracellular_metabolites.txt', 'w')
     rnp = open('root_no_production.txt', 'w')
+    model_cpds = open('model_cpds.txt', 'w')
 
     compound = set()
     compound_e = set()
@@ -59,7 +60,7 @@ if __name__ == '__main__':
             for cpdid, value, comp in right:
                 id = cpdid if comp is None else cpdid + '_' + comp
                 compound_produced.add(id)
-                
+
         # Add compound names to the set
         for cpdid, value, comp in left + right:
             id = cpdid if comp is None else cpdid + '_' + comp
@@ -79,6 +80,10 @@ if __name__ == '__main__':
         for cpdid, value, comp in right:
             id = cpdid if comp is None else cpdid + '_' + comp
             m.write('{}.{}\t{}\n'.format(id, SEED_rid, value))
+
+    # Write out list of compounds in the model
+    for cpdid in sorted(compound):
+        model_cpds.write('{}\n'.format(cpdid))
 
     # Optionally create transport reactions in database
     if args.transport:
@@ -189,3 +194,5 @@ if __name__ == '__main__':
     cm.close()
     exm.close()
     rnp.close()
+
+    model_cpds.close()
