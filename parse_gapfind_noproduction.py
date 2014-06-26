@@ -6,7 +6,8 @@ The GapFind file should be produced with parameter "ps=0".
 '''
 
 import sys
-import csv 
+import csv
+import re
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
@@ -19,6 +20,7 @@ if __name__ == '__main__':
 
     compound_map = {}
 
+    c.readline() # Skip header
     readerc = csv.reader(c, dialect='excel')
     for rowc in readerc:
         SEED_cid, Formula, Mass, KEGG_cid, CPD_name = rowc[:5]
@@ -40,8 +42,14 @@ if __name__ == '__main__':
             fields = line.split()
             cpdid = fields[0]
             produced = fields[2] != '.'
+            comp = None
 
-            if not cpdid.endswith('_e'):
+            m = re.match(r'(.+?)_(.+)$', cpdid)
+            if m is not None:
+                cpdid = m.group(1)
+                comp = m.group(2)
+
+            if comp is None and cpdid in compound_map:
                 count += 1
                 if not produced:
                     Formula, KEGG_cid, CPD_name = compound_map[cpdid]
