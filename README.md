@@ -42,7 +42,8 @@ $ gams ~/model_script/GapFind.gms ps=0
 A script is used to parse the output from running GapFind.
 
 ``` shell
-$ ~/model_script/parse_gapfind_noproduction.py GapFind.lst cpd_table.csv
+$ ~/model_script/parse_gapfind_noproduction.py GapFind.lst \
+	--cpdfile cpd_table.csv
 ```
 
 This will show a detailed list of the compounds that could not be produced in
@@ -56,14 +57,17 @@ this time. We can run the export script again and tell it to put some reactions
 into the database this time.
 
 ``` shell
-$ ~/model_script/export_gapfind_parameters.py --exchange --transport rxn_table.csv
+$ ~/model_script/export_gapfind_parameters.py --exchange --transport \
+	--database ModelSEED_rxns.tsv ModelSEED_cpds.tsv rxn_table.csv
 ```
 
-This command will add exchange and transport reactions to the database.
-`--transport` will allow a reaction for every compound in the cytosol that
-brings that compound into the cytosol from the extracellular space.
+This command will recreate the output files with exchange and transport
+reactions to the database. In addition reactions from an external database
+are added. `--transport` will allow a reaction for every compound in the
+cytosol that brings that compound into the cytosol from the extracellular space.
 Similarly, `--exchange` will allow a pseudoreaction for every compound in the
-extracellular space which makes the compound readily available.
+extracellular space which makes the compound readily available. `--database`
+will import reactions from an existing table to the database.
 
 Now GAMS can be used to solve the GapFill problem.
 
