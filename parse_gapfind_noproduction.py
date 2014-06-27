@@ -22,9 +22,15 @@ if __name__ == '__main__':
         for line in f:
             cpdid = line.strip()
             model_cpds.add(cpdid)
-    compound_map = {}
+
+    compound_c = set()
+    with open('cytosol_metabolites.txt', 'r') as f:
+        for line in f:
+            cpdid = line.strip()
+            compound_c.add(cpdid)
 
     # Load compounds
+    compound_map = {}
     if args.cpdfile is not None:
         cpdfile = args.cpdfile
         cpdfile.readline() # Skip header
@@ -53,12 +59,7 @@ if __name__ == '__main__':
             produced = fields[2] != '.'
             comp = None
 
-            # Parse compartment
-            m = re.match(r'(.+?)_(.+)$', cpdid)
-            if m is not None:
-                comp = m.group(2)
-
-            if comp is None and cpdid in model_cpds:
+            if cpdid in compound_c and cpdid in model_cpds:
                 count += 1
                 if not produced:
                     blocked_file.write('{}\n'.format(cpdid))
