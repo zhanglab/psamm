@@ -110,62 +110,63 @@ if __name__ == '__main__':
             rr.write('{}\n'.format(rxnid))
 
     # Load database reaction tables
-    for db_rxn_file, db_cpd_file in args.database:
-        compound_map = {}
+    if args.database:
+        for db_rxn_file, db_cpd_file in args.database:
+            compound_map = {}
 
-        db_cpd_file.readline() # Skip header
-        for row in csv.reader(db_cpd_file, delimiter='\t'):
-            seed_cid, cpdnames, formula, mass, kegg_maps, kegg_cid = row[:6]
-            for cpdname in cpdnames.split(',<br>'):
-                compound_map[cpdname] = seed_cid
-        db_cpd_file.close()
+            db_cpd_file.readline() # Skip header
+            for row in csv.reader(db_cpd_file, delimiter='\t'):
+                seed_cid, cpdnames, formula, mass, kegg_maps, kegg_cid = row[:6]
+                for cpdname in cpdnames.split(',<br>'):
+                    compound_map[cpdname] = seed_cid
+            db_cpd_file.close()
 
-        db_rxn_file.readline() # Skip header
-        for row in csv.reader(db_rxn_file, delimiter='\t'):
-            seed_rid, rxn_name, equation_cpdname, roles, subsystems, kegg_maps, enzyme, kegg_rid = row[:8]
+            db_rxn_file.readline() # Skip header
+            for row in csv.reader(db_rxn_file, delimiter='\t'):
+                seed_rid, rxn_name, equation_cpdname, roles, subsystems, kegg_maps, enzyme, kegg_rid = row[:8]
 
-            if seed_rid in reaction_model:
-                continue
-            if equation_cpdname.strip() == '':
-                continue
+                if seed_rid in reaction_model:
+                    continue
+                if equation_cpdname.strip() == '':
+                    continue
 
-            def translate(name):
-                m = re.match(r'cdp(\d+)', name) # [sic]
-                if m is not None:
-                    return 'cpd' + m.group(1)
-                return compound_map[name]
+                def translate(name):
+                    m = re.match(r'cdp(\d+)', name) # [sic]
+                    if m is not None:
+                        return 'cpd' + m.group(1)
+                    return compound_map[name]
 
-            rx = reaction.ModelSEED.parse(equation_cpdname).normalized().translated_compounds(translate)
+                rx = reaction.ModelSEED.parse(equation_cpdname).normalized().translated_compounds(translate)
 
-            # Lists all the reaction names
-            w.write('{}\n'.format(seed_rid))
-            database_list.write('{}\n'.format(seed_rid))
+                # Lists all the reaction names
+                w.write('{}\n'.format(seed_rid))
+                database_list.write('{}\n'.format(seed_rid))
 
-            # Lists the reverse reactions
-            if rx.direction == '<=>' or rx.direction.strip() == '':
-                rr.write('{}\n'.format(seed_rid))
+                # Lists the reverse reactions
+                if rx.direction == '<=>' or rx.direction.strip() == '':
+                    rr.write('{}\n'.format(seed_rid))
 
-            # Add compound names to the set
-            for cpdid, value, comp in rx.left + rx.right:
-                id = cpdid if comp is None else cpdid + '_' + comp
-                compound.add(id)
+                # Add compound names to the set
+                for cpdid, value, comp in rx.left + rx.right:
+                    id = cpdid if comp is None else cpdid + '_' + comp
+                    compound.add(id)
 
-                # Lists the compounds in two seprate files by compartartment
-                if comp is None:
-                    compound_c.add(id)
-                elif comp == 'e':
-                    compound_e.add(id)
+                    # Lists the compounds in two seprate files by compartartment
+                    if comp is None:
+                        compound_c.add(id)
+                    elif comp == 'e':
+                        compound_e.add(id)
 
-            # Lists the matrix
-            for cpdid, value, comp in rx.left:
-                id = cpdid if comp is None else cpdid + '_' + comp
-                m.write('{}.{}\t{}\n'.format(id, seed_rid, -value))
+                # Lists the matrix
+                for cpdid, value, comp in rx.left:
+                    id = cpdid if comp is None else cpdid + '_' + comp
+                    m.write('{}.{}\t{}\n'.format(id, seed_rid, -value))
 
-            for cpdid, value, comp in rx.right:
-                id = cpdid if comp is None else cpdid + '_' + comp
-                m.write('{}.{}\t{}\n'.format(id, seed_rid, value))
+                for cpdid, value, comp in rx.right:
+                    id = cpdid if comp is None else cpdid + '_' + comp
+                    m.write('{}.{}\t{}\n'.format(id, seed_rid, value))
 
-        db_rxn_file.close()
+            db_rxn_file.close()
 
     # Lists all the compound names in the set
     for cpdid in sorted(compound):
