@@ -294,6 +294,87 @@ class SudenSimple(object):
 
         return Reaction('<=>', left, right)
 
+class MetNet(object):
+    '''Parser for the reaction format in MetNet model'''
+
+    @classmethod
+    def parse(cls, s):
+        '''Parse a reaction string
+
+        >>> MetNet.parse('[c] : akg + ala-L <==> glu-L + pyr')
+        Reaction('<=>', [('cpd_akg', 1, None), ('cpd_ala-L', 1, None)], [('cpd_glu-L', 1, None), ('cpd_pyr', 1, None)])
+
+        >>> MetNet.parse('(2) ficytcc553[c] + so3[c] + h2o[c] --> (2) focytcc553[c] + so4[c] + (2) h[e]')
+        Reaction('=>', [('cpd_ficytcc553', 2, None), ('cpd_so3', 1, None), ('cpd_h2o', 1, None)], [('cpd_focytcc553', 2, None), ('cpd_so4', 1, None), ('cpd_h', 2, 'e')])
+        '''
+
+        def parse_compound_list(s, global_comp):
+            cpds = []
+
+            if s.strip() == '':
+                return []
+
+            for cpd in s.strip().split('+'):
+                cpdsplit = cpd.strip().split(') ')
+                if len(cpdsplit) == 2:
+                    count = Decimal(cpdsplit[0].lstrip('('))
+                    if count % 1 == 0:
+                        count = int(count)
+                    cpdspec = cpdsplit[1]
+                else:
+                    count = 1
+                    cpdspec = cpd.strip()
+                    
+                if global_comp is None:
+                    cpd_spec_split = cpdspec.split('[')
+                    if len(cpd_spec_split) == 2:
+                        comp = cpd_spec_split[1].rstrip(']')
+                        cpdid = cpd_spec_split[0]
+                    else:
+                        cpdid = cpd_spec_split
+                        comp = None
+                else:
+                    cpdid = cpdspec
+                    comp = global_comp
+
+                # By convention we set the cytosol compartment to None
+                if comp == 'c':
+                    comp = None
+
+                cpds.append((cpdid, count, comp))
+
+            return cpds
+
+        # Split by colon for compartment information
+        eq_split = s.split(':')
+        
+        if len(eq_split) == 2:
+            global_comp, second = eq_split
+            global_comp = global_comp.strip('[] ')
+        else:
+            second = eq_split[0]
+            global_comp = None
+
+        # Split by equation arrow
+        direction = '=>'
+        left_right = second.split('-->')
+        if len(left_right) == 1:
+            direction = '<=>'
+            cpd_left, cpd_right = second.split('<==>')
+        else:
+            cpd_left, cpd_right = left_right
+
+        # Remove incompatible characters from compound id
+        def translate(cpdid):
+            return 'cpd_' + cpdid.replace(',', '__')
+
+        # Split by +
+        left = [(translate(cpdid), count, comp) for cpdid, count, comp in parse_compound_list(cpd_left, global_comp)]
+        right = [(translate(cpdid), count, comp) for cpdid, count, comp in parse_compound_list(cpd_right, global_comp)]
+
+        return Reaction(direction, left, right)
+
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
