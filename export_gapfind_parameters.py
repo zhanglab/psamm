@@ -40,19 +40,18 @@ if __name__ == '__main__':
     compound_produced = set()
     reaction_model = set()
 
-    rxn_table.readline() # Skip header
-    for row in csv.reader(rxn_table, dialect='excel'):
-        SEED_rid, RXN_name, EC, Equation_cpdname, Equation_cpdid, KEGG_rid, KEGG_maps, Gene_ids = row[:8]
-        rx = reaction.ModelSEED.parse(Equation_cpdid).normalized()
+    for row in csv.reader(rxn_table, delimiter='\t'):
+        rxn_id, equation = row[:2]
+        rx = reaction.ModelSEED.parse(equation).normalized()
 
         # Lists all the reaction names
-        w.write('{}\n'.format(SEED_rid))
-        model_list.write('{}\n'.format(SEED_rid))
-        reaction_model.add(SEED_rid)
+        w.write('{}\n'.format(rxn_id))
+        model_list.write('{}\n'.format(rxn_id))
+        reaction_model.add(rxn_id)
 
         # Lists the reverse reactions
         if rx.direction == '<=>':
-            rr.write('{}\n'.format(SEED_rid))
+            rr.write('{}\n'.format(rxn_id))
             for cpdid, value, comp in rx.left + rx.right:
                 id = cpdid if comp is None else cpdid + '_' + comp
                 compound_produced.add(id)
@@ -75,11 +74,11 @@ if __name__ == '__main__':
         # Lists the matrix
         for cpdid, value, comp in rx.left:
             id = cpdid if comp is None else cpdid + '_' + comp
-            m.write('{}.{}\t{}\n'.format(id, SEED_rid, -value))
+            m.write('{}.{}\t{}\n'.format(id, rxn_id, -value))
 
         for cpdid, value, comp in rx.right:
             id = cpdid if comp is None else cpdid + '_' + comp
-            m.write('{}.{}\t{}\n'.format(id, SEED_rid, value))
+            m.write('{}.{}\t{}\n'.format(id, rxn_id, value))
 
     # Write out list of compounds in the model
     for cpdid in sorted(compound):
