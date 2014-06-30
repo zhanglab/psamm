@@ -15,8 +15,7 @@ if __name__ == '__main__':
     parser.add_argument('rxnfile', type=argparse.FileType('r'), help='Reaction table file')
     parser.add_argument('--exchange', action='store_true', help='Add exchange reactions to database list')
     parser.add_argument('--transport', action='store_true', help='Add transport reactions to database list')
-    parser.add_argument('--database', nargs=2, metavar=('rxnfile', 'cpdfile'),
-                        action='append', type=argparse.FileType('r'),
+    parser.add_argument('--database', metavar='rxnfile', action='append', type=argparse.FileType('r'),
                         help='Supply reaction table to add to database list')
     args = parser.parse_args()
 
@@ -110,40 +109,22 @@ if __name__ == '__main__':
 
     # Load database reaction tables
     if args.database:
-        for db_rxn_file, db_cpd_file in args.database:
-            compound_map = {}
-
-            db_cpd_file.readline() # Skip header
-            for row in csv.reader(db_cpd_file, delimiter='\t'):
-                seed_cid, cpdnames, formula, mass, kegg_maps, kegg_cid = row[:6]
-                for cpdname in cpdnames.split(',<br>'):
-                    compound_map[cpdname] = seed_cid
-            db_cpd_file.close()
-
-            db_rxn_file.readline() # Skip header
+        for db_rxn_file in args.database:
             for row in csv.reader(db_rxn_file, delimiter='\t'):
-                seed_rid, rxn_name, equation_cpdname, roles, subsystems, kegg_maps, enzyme, kegg_rid = row[:8]
+                rxn_id, equation = row[:2]
 
-                if seed_rid in reaction_model:
-                    continue
-                if equation_cpdname.strip() == '':
+                if rxn_id in reaction_model:
                     continue
 
-                def translate(name):
-                    m = re.match(r'cdp(\d+)', name) # [sic]
-                    if m is not None:
-                        return 'cpd' + m.group(1)
-                    return compound_map[name]
-
-                rx = reaction.ModelSEED.parse(equation_cpdname).normalized().translated_compounds(translate)
+                rx = reaction.ModelSEED.parse(equation).normalized()
 
                 # Lists all the reaction names
-                w.write('{}\n'.format(seed_rid))
-                database_list.write('{}\n'.format(seed_rid))
+                w.write('{}\n'.format(rxn_id))
+                database_list.write('{}\n'.format(rxn_id))
 
                 # Lists the reverse reactions
                 if rx.direction == '<=>' or rx.direction.strip() == '':
-                    rr.write('{}\n'.format(seed_rid))
+                    rr.write('{}\n'.format(rxn_id))
 
                 # Add compound names to the set
                 for cpdid, value, comp in rx.left + rx.right:
@@ -159,11 +140,11 @@ if __name__ == '__main__':
                 # Lists the matrix
                 for cpdid, value, comp in rx.left:
                     id = cpdid if comp is None else cpdid + '_' + comp
-                    m.write('{}.{}\t{}\n'.format(id, seed_rid, -value))
+                    m.write('{}.{}\t{}\n'.format(id, rxn_id, -value))
 
                 for cpdid, value, comp in rx.right:
                     id = cpdid if comp is None else cpdid + '_' + comp
-                    m.write('{}.{}\t{}\n'.format(id, seed_rid, value))
+                    m.write('{}.{}\t{}\n'.format(id, rxn_id, value))
 
             db_rxn_file.close()
 
