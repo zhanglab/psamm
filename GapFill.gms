@@ -25,10 +25,6 @@ Set mod(j) reactions of the model organism /
 $include "modelrxn.txt"
 /;
 
-Set database(j)	reactions from the external database /
-$include "databaserxn.txt"
-/;
-
 Set rev(j) reversible reactions /
 $include "rev.txt"
 /;
@@ -62,18 +58,18 @@ $include "mat.txt"
 UpperLimits(j)$( mod(j) ) = Vmax;
 LowerLimits(j)$( mod(j) ) = -Vmax;
 LowerLimits(j)$( mod(j) and not rev(j) ) = 0;
-UpperLimits(j)$( database(j) ) = Vmax;
-LowerLimits(j)$( database(j) ) = -Vmax;
+UpperLimits(j)$( not mod(j) ) = Vmax;
+LowerLimits(j)$( not mod(j) ) = -Vmax;
 
 Variables
         v(j)			flux value through reaction
-	z			objective
+        z			    objective
 ;
 
 Binary variables
-	yd(j)			whether database reaction j is active
-        ym(j)                   whether model reaction j is reversed
-	w(i,j)                  whether reaction j that produces metabolite i is active
+	    yd(j)           whether database reaction j is active
+        ym(j)           whether model reaction j is reversed
+	    w(i,j)          whether reaction j that produces metabolite i is active
 ;
 
 Equations
@@ -106,8 +102,8 @@ modelflux_max(j)$( mod(j) ).. v(j) =l= UpperLimits(j);
 
 *** Constraints on flux of database reactions
 * These constraints ensure that y is set when a reaction is active
-databaseflux_min(j)$( database(j) and not mod(j) ).. v(j) =g= LowerLimits(j)*yd(j);
-databaseflux_max(j)$( database(j) and not mod(j) ).. v(j) =l= UpperLimits(j)*yd(j);
+databaseflux_min(j)$( not mod(j) ).. v(j) =g= LowerLimits(j)*yd(j);
+databaseflux_max(j)$( not mod(j) ).. v(j) =l= UpperLimits(j)*yd(j);
 
 *** Constraints on the production of the metabolite in question by reaction
 * Ensure that the binary variable w is only one in the case where at least
@@ -138,9 +134,5 @@ Model gapfill /
         binarycons
         obj
 /;
-
-*** Fix the reactions both in model and database to flux 0 ??
-v.fx(j)$( mod(j) and database(j) ) = 0;
-v.fx(j)$( not mod(j) and not database(j) ) = 0;
 
 solve gapfill using mip minimizing z;
