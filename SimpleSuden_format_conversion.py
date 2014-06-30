@@ -17,6 +17,7 @@ if __name__ == '__main__':
     for row in csv.reader(rxn_table, delimiter='\t'):
         SEED_rid, rxn_name, equation_cpd, equation_name, Subsystem, Suden_protien_ID, gene_association, protein_id, ec_reference, Reversibility = row[:10]
         rx = reaction.SudenSimple.parse(equation_cpd).normalized()
+        SEED_rid = SEED_rid.lower()
         
         print '{}\t{}'.format(SEED_rid, rx)
     
