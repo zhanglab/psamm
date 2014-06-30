@@ -119,7 +119,7 @@ class ModelSEED(object):
         tokens = list(cls._tokenize(s))
         direction = None
         for i, t in enumerate(tokens):
-            if t in ('<=', '<=>', '=>', ''):
+            if t in ('<=', '<=>', '=>', '?', ''):
                 direction = t
                 left = tokens[:i]
                 right = tokens[i+1:]
