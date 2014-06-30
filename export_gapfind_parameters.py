@@ -58,7 +58,7 @@ if __name__ == '__main__':
             database_list.write('{}\n'.format(rxn_id))
 
             # Lists the reverse reactions
-            if rx.direction == '<=>' or rx.direction.strip() == '':
+            if rx.direction == '<=>' or rx.direction.strip() == '' or rx.direction == '?':
                 rr.write('{}\n'.format(rxn_id))
 
             # Add compound names to the set
