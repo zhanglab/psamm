@@ -19,7 +19,7 @@ if __name__ == '__main__':
                         help='Supply reaction table to add to database list')
     args = parser.parse_args()
 
-    rxn_table = args.rxnfile
+    rxn_file = args.rxnfile
 
     # Opens files to write in
     w = open('rxnnames.txt', 'w')
@@ -37,116 +37,80 @@ if __name__ == '__main__':
     compound_e = set()
     compound_c = set()
     compound_produced = set()
-    reaction_model = set()
+    compound_model = set()
+    model_reactions = set()
 
-    for row in csv.reader(rxn_table, delimiter='\t'):
-        rxn_id, equation = row[:2]
-        rx = reaction.ModelSEED.parse(equation).normalized()
+    for line in rxn_file:
+        rxn_id = line.strip()
 
         # Lists all the reaction names
-        w.write('{}\n'.format(rxn_id))
         model_list.write('{}\n'.format(rxn_id))
-        reaction_model.add(rxn_id)
+        model_reactions.add(rxn_id)
 
-        # Lists the reverse reactions
-        if rx.direction == '<=>':
-            rr.write('{}\n'.format(rxn_id))
+    # Load database reaction tables
+    for db_rxn_file in args.database:
+        for row in csv.reader(db_rxn_file, delimiter='\t'):
+            rxn_id, equation = row[:2]
+            rx = reaction.ModelSEED.parse(equation).normalized()
+
+            # Lists all the reaction names
+            w.write('{}\n'.format(rxn_id))
+            database_list.write('{}\n'.format(rxn_id))
+
+            # Lists the reverse reactions
+            if rx.direction == '<=>' or rx.direction.strip() == '':
+                rr.write('{}\n'.format(rxn_id))
+
+            # Add compound names to the set
             for cpdid, value, comp in rx.left + rx.right:
                 id = cpdid if comp is None else cpdid + '_' + comp
-                compound_produced.add(id)
-        else:
+                compound.add(id)
+
+                if rxn_id in model_reactions:
+                    compound_model.add(id)
+
+                # Lists the compounds in two seprate files by compartartment
+                if comp is None:
+                    compound_c.add(id)
+                elif comp == 'e':
+                    compound_e.add(id)
+
+            # Lists the matrix
+            for cpdid, value, comp in rx.left:
+                id = cpdid if comp is None else cpdid + '_' + comp
+                m.write('{}.{}\t{}\n'.format(id, rxn_id, -value))
+
             for cpdid, value, comp in rx.right:
                 id = cpdid if comp is None else cpdid + '_' + comp
-                compound_produced.add(id)
+                m.write('{}.{}\t{}\n'.format(id, rxn_id, value))
 
-        # Add compound names to the set
-        for cpdid, value, comp in rx.left + rx.right:
-            id = cpdid if comp is None else cpdid + '_' + comp
-            compound.add(id)
-
-            # Lists the compounds in two seprate files by compartartment
-            if comp is None:
-                compound_c.add(id)
-            elif comp == 'e':
-                compound_e.add(id)
-
-        # Lists the matrix
-        for cpdid, value, comp in rx.left:
-            id = cpdid if comp is None else cpdid + '_' + comp
-            m.write('{}.{}\t{}\n'.format(id, rxn_id, -value))
-
-        for cpdid, value, comp in rx.right:
-            id = cpdid if comp is None else cpdid + '_' + comp
-            m.write('{}.{}\t{}\n'.format(id, rxn_id, value))
-
-    # Write out list of compounds in the model
-    for cpdid in sorted(compound):
-        model_cpds.write('{}\n'.format(cpdid))
+        db_rxn_file.close()
 
     # Optionally create transport reactions in database
     if args.transport:
         for cpdid in sorted(compound_c):
-            rxnid = 'rxntp_' + cpdid
-            w.write('{}\n'.format(rxnid))
-            database_list.write('{}\n'.format(rxnid))
+            if cpdid in model_reactions:
+                rxnid = 'rxntp_' + cpdid
+                w.write('{}\n'.format(rxnid))
+                database_list.write('{}\n'.format(rxnid))
 
-            # Write to matrix
-            compound.add(cpdid + '_e')
-            compound_e.add(cpdid + '_e')
-            m.write('{}_e.{}\t{}\n'.format(cpdid, rxnid, -1))
-            m.write('{}.{}\t{}\n'.format(cpdid, rxnid, 1))
+                # Write to matrix
+                compound.add(cpdid + '_e')
+                compound_e.add(cpdid + '_e')
+                m.write('{}_e.{}\t{}\n'.format(cpdid, rxnid, -1))
+                m.write('{}.{}\t{}\n'.format(cpdid, rxnid, 1))
 
     # Optionally create exchange reactions in database
     if args.exchange:
         for cpdid in sorted(compound_e):
-            rxnid = 'rxnex_' + cpdid
-            w.write('{}\n'.format(rxnid))
-            database_list.write('{}\n'.format(rxnid))
+            if cpdid in model_reactions:
+                rxnid = 'rxnex_' + cpdid
+                w.write('{}\n'.format(rxnid))
+                database_list.write('{}\n'.format(rxnid))
 
-            # Write to matrix
-            m.write('{}.{}\t{}\n'.format(cpdid, rxnid, -1))
-            rr.write('{}\n'.format(rxnid))
-
-    # Load database reaction tables
-    if args.database:
-        for db_rxn_file in args.database:
-            for row in csv.reader(db_rxn_file, delimiter='\t'):
-                rxn_id, equation = row[:2]
-
-                if rxn_id in reaction_model:
-                    continue
-
-                rx = reaction.ModelSEED.parse(equation).normalized()
-
-                # Lists all the reaction names
-                w.write('{}\n'.format(rxn_id))
-                database_list.write('{}\n'.format(rxn_id))
-
-                # Lists the reverse reactions
-                if rx.direction == '<=>' or rx.direction.strip() == '':
-                    rr.write('{}\n'.format(rxn_id))
-
-                # Add compound names to the set
-                for cpdid, value, comp in rx.left + rx.right:
-                    id = cpdid if comp is None else cpdid + '_' + comp
-                    compound.add(id)
-
-                    # Lists the compounds in two seprate files by compartartment
-                    if comp is None:
-                        compound_c.add(id)
-                    elif comp == 'e':
-                        compound_e.add(id)
-
-                # Lists the matrix
-                for cpdid, value, comp in rx.left:
-                    id = cpdid if comp is None else cpdid + '_' + comp
-                    m.write('{}.{}\t{}\n'.format(id, rxn_id, -value))
-
-                for cpdid, value, comp in rx.right:
-                    id = cpdid if comp is None else cpdid + '_' + comp
-                    m.write('{}.{}\t{}\n'.format(id, rxn_id, value))
-
-            db_rxn_file.close()
+                # Write to matrix
+                m.write('{}.{}\t{}\n'.format(cpdid, rxnid, -1))
+                rr.write('{}\n'.format(rxnid))
 
     # Lists all the compound names in the set
     for cpdid in sorted(compound):
@@ -158,11 +122,14 @@ if __name__ == '__main__':
     for cpdid in sorted(compound_e):
         exm.write('{}\n'.format(cpdid))
 
+    for cpdid in sorted(compound_model):
+        model_cpds.write('{}\n'.format(cpdid))
+
     compound_not_produced = compound_c - compound_produced
     for cpdid in sorted(compound_not_produced):
         rnp.write('{}\n'.format(cpdid))
 
-    rxn_table.close()
+    rxn_file.close()
 
     database_list.close()
     model_list.close()
