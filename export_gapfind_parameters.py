@@ -89,7 +89,7 @@ if __name__ == '__main__':
     # Optionally create transport reactions in database
     if args.transport:
         for cpdid in sorted(compound_c):
-            if cpdid in model_reactions:
+            if cpdid in compound_model:
                 rxnid = 'rxntp_' + cpdid
                 w.write('{}\n'.format(rxnid))
                 database_list.write('{}\n'.format(rxnid))
@@ -103,7 +103,7 @@ if __name__ == '__main__':
     # Optionally create exchange reactions in database
     if args.exchange:
         for cpdid in sorted(compound_e):
-            if cpdid in model_reactions:
+            if cpdid in compound_model:
                 rxnid = 'rxnex_' + cpdid
                 w.write('{}\n'.format(rxnid))
                 database_list.write('{}\n'.format(rxnid))
