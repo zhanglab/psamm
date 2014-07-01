@@ -59,6 +59,10 @@ Parameter S(i,j) stoichiometric coefficients (S matrix) /
 $include "mat.txt"
 /;
 
+Parameter exchlimit(j) lower bound of exchange reactions (max uptake) /
+$include "exchangelimit.txt";
+/;
+
 *** Set lower and upper bounds on fluxes accordingly
 * By default, all fluxes are allowed to vary between Vmax and -Vmax
 * The S matrix contains the set of reversible directions. Reactions outside this
@@ -76,8 +80,8 @@ Variables
 ;
 
 Equations
-        massbalance(i)			mass balance equations for each metabolite
-        obj						calculates the dot product of the c vector and the flux vector
+        massbalance(i)		mass balance equations for each metabolite
+        obj			calculates the dot product of the c vector and the flux vector
 ;
 
 massbalance(i).. sum( j,S(i,j)*v(j) ) =e= 0;
@@ -98,26 +102,7 @@ Model FBA /
 * indicating that the extracellular metabolites can flow away from the cell.
 * A negative flux through the exchange reactions implies that the metabolite
 * are being made available to the cell.
-
-*** Carbon sources
-*LowerLimits('EX_ac_e') = -5;
-*LowerLimits('EX_akg_e') = -5;
-*LowerLimits('EX_etoh_e') = -5;
-*LowerLimits('EX_for_e') = -5;
-*LowerLimits('EX_fum_e') = -5;
-LowerLimits('EX_glc_e') = -5;
-*LowerLimits('EX_lacD_e') = -5;
-*LowerLimits('EX_pyr_e') = -5;
-*LowerLimits('EX_succ_e') = -5;
-
-*** Electron Acceptor
-LowerLimits('EX_o2_e') = -Vmax;
-
-*** Essential nutrients
-LowerLimits('EX_co2_e') = -Vmax;
-LowerLimits('EX_h2o_e') = -Vmax;
-LowerLimits('EX_h_e') = -Vmax;
-LowerLimits('EX_pi_e') = -Vmax;
+LowerLimits(j)$exch(j) = exchlimit(j);
 
 *** Use the LowerLimits and UpperLimits parameters to establish global bounds
 * on the fluxes. Reactions that are not in the model are fixed to 0.
