@@ -76,8 +76,9 @@ Variables
 ;
 
 Equations
-        massbalance(i) mass balance equations for each metabolite
-        objfun calculates the dot product of the c vector the flux vector;
+        massbalance(i)			mass balance equations for each metabolite
+        obj						calculates the dot product of the c vector and the flux vector
+;
 
 massbalance(i).. sum( j,S(i,j)*v(j) ) =e= 0;
 obj.. z =e= sum( j,c(j)*v(j) );
@@ -87,7 +88,7 @@ c('Biomass') = 1;
 
 
 Model FBA /
-        objfun
+        obj
         massbalance
 /;
 
@@ -126,4 +127,4 @@ v.fx(j)$( not mod(j) ) = 0;
 
 *** Solve model
 FBA.optfile = 1;
-solve FBA using lp maximizing Obj;
+solve FBA using lp maximizing z;
