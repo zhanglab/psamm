@@ -28,5 +28,5 @@ if __name__ == '__main__':
             fields = line.split()
             rxnid = fields[0]
             enabled = fields[2] != '.'
-            if enabled:
-                print '{}\t{}'.format(rxnid, float(fields[2]))
+            flux = float(fields[2]) if enabled else 0               
+            print '{}\t{}'.format(rxnid, flux)
