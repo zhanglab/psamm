@@ -96,3 +96,32 @@ of reactions that had to be added from the database.
 ``` shell
 $ ~/model_script/parse_gapfill.py GapFill.lst
 ```
+
+Flux balance analysis
+---------------------
+
+We can use the same files as produced for GapFind and GapFill to actually run
+a flux balance analysis on the model. To do this we will first need to define
+the boundary conditions of the simulation (i.e. the simulated growth medium).
+
+First we need a file listing the exchange reactions that are defined in the
+model (`exchangerxn.txt`). Secondly the lower limits of the exchange reactions
+are listed in a separate file, `exchangelimit.txt` (tab-separated; reaction id
+followed by a number). This file defines the maximum availability of the
+compounds in each exchange reaction. By default these reactions will have a
+lower flux limit of zero indicating the the reaction does not make any
+compounds available.
+
+When running the flux balance analysis the flux of the reaction `Biomass`
+will be maximized. This reaction should correspond to the actual biomass
+reaction, or alternatively the reaction id can be changed in the GAMS file.
+
+``` shell
+$ gams ~/model_script/FluxBalance.gms ps=0
+```
+
+The resulting flux values can be parsed out using
+
+``` shell
+$ ~/model_script/parse_fluxbalance.py FluxBalance.lst
+```
