@@ -14,10 +14,7 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
 
-    # Parse GapFind output
-    count = 0
-    count_not_produced = 0
-    count_in_kegg = 0
+    # Parse out added reactions
     flag = False
     gffile = args.gapfill
     for line in gffile:
@@ -34,7 +31,27 @@ if __name__ == '__main__':
             rxn_id = fields[0]
             enabled = fields[2] != '.'
             if enabled:
-                print rxn_id
+                print '{}\tadded'.format(rxn_id)
+                
+    # Parse out reversed reactions
+    flag = False
+    gffile.seek(0)
+    for line in gffile:
+        if line.startswith('---- VAR ym'):
+            flag = True
+            for i in range(3):
+                next(gffile)
+        elif flag:
+            if line == '\n':
+                break
+
+            fields = line.split()
+            
+            rxn_id = fields[0]
+            enabled = fields[2] != '.'
+            if enabled:
+                print '{}\treverse'.format(rxn_id)
+        
             
     gffile.close()
 
