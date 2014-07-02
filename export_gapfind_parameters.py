@@ -108,7 +108,7 @@ if __name__ == '__main__':
             database_list.write('{}\n'.format(rxnid))
 
             # Write to matrix
-            m.write('{}.{}\t{}\n'.format(cpdid, rxnid, -1))
+            m.write('{}.{}\t{}\n'.format(cpdid, rxnid, 1))
             rr.write('{}\n'.format(rxnid))
 
     # Lists all the compound names in the set
