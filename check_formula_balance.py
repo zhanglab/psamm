@@ -52,7 +52,7 @@ if __name__ == '__main__':
         #print right_form    
             
         if right_form != left_form:
-                print '{}\t{}\t{}'.format(SEED_rid, pprint.pformat(left_form),
+                print '{}\t{}\t{}'.format(rxn_id, pprint.pformat(left_form),
                                             pprint.pformat(right_form))        
             
     rxn_file.close()
