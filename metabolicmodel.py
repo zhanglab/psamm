@@ -134,6 +134,8 @@ def flux_balance(model, reaction='Biomass'):
 
 if __name__ == '__main__':
     model = MetabolicModel.load_model()
+
+    print 'Flux balance maximizing Biomass'
     for rxnid, flux in flux_balance(model, 'Biomass'):
         print '{}\t{}'.format(rxnid, flux)
 
@@ -143,5 +145,6 @@ if __name__ == '__main__':
 
     #print model.reaction_set - fastcore.fastcc(model, 0.001)
 
-    core = { 'Biomass' }
-    print fastcore.find_sparse_mode(model, core, model.reaction_set - core, False, 0.001)
+    core = { 'Biomass' , 'PGI', 'ICL' }
+    induced = fastcore.fastcore(model, core, 0.001)
+    print '|A| = {}, A = {}'.format(len(induced), induced)

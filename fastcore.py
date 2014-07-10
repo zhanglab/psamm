@@ -152,7 +152,6 @@ def fastcore_lp10(model, subset_k, subset_p, epsilon):
     # Define objective
     objective = sum(zs)
     prob += objective
-    print prob
 
     # Solve
     status = prob.solve()
@@ -173,10 +172,11 @@ def support_set(fluxiter, threshold):
     return set(rxnid for rxnid, v in fluxiter if abs(v) >= threshold)
 
 def fastcc(model, epsilon):
-    '''Find the largest consistent subset of the model
+    '''Check consistency of model reactions
 
-    Returns a set containing the reactions in this subset
-    or an empty set if no such subset can be found.'''
+    Returns a set containing the reactions in the largest
+    consistent subset of the model or an empty set if no such
+    subset can be found.'''
 
     consistent_subset = set()
 
@@ -234,23 +234,82 @@ def fastcc(model, epsilon):
 
     return consistent_subset
 
-def find_sparse_mode(model, subset, additional, singleton, epsilon):
-    if len(subset) == 0:
+def find_sparse_mode(model, core, additional, singleton, epsilon):
+    '''Find the support of a sparse mode containing the the core subset
+
+    The result will contain the subset and as few of the additional
+    reactions as possible.'''
+
+    if len(core) == 0:
         return set()
 
     if singleton:
-        subset_i = set((next(iter(subset)),))
+        subset_i = set((next(iter(core)),))
         print 'LP7 on {}'.format(subset_i)
         support = support_set(fastcore_lp7(model, subset_i, epsilon), 0.99*epsilon)
     else:
-        print 'LP7 on {}'.format(subset)
-        support = support_set(fastcore_lp7(model, subset, epsilon), 0.99*epsilon)
+        print 'LP7 on {}'.format(core)
+        support = support_set(fastcore_lp7(model, core, epsilon), 0.99*epsilon)
 
     print 'Support = {}'.format(support)
-    k = subset & support
+    k = core & support
 
     if len(k) == 0:
         return set()
 
     print 'K = {}'.format(k)
+    print 'LP10 on K={} and P={}'.format(k, additional)
     return support_set(fastcore_lp10(model, k, additional, epsilon), 0.99*epsilon)
+
+def fastcore(model, core, epsilon):
+    '''Fastcore'''
+
+    consistent_subset = set()
+
+    subset = core - model.reversible
+    print '|J| = {}, J = {}'.format(len(subset), subset)
+
+    penalty_set = model.reaction_set - core
+    print '|P| = {}, P = {}'.format(len(penalty_set), penalty_set)
+
+    mode = find_sparse_mode(model, subset, penalty_set, False, epsilon)
+    if len(subset - mode) > 0:
+        raise Exception('Inconsistent irreversible core reactions')
+
+    consistent_subset |= mode
+    print '|A| = {}, A = {}'.format(len(consistent_subset), consistent_subset)
+
+    subset = core - mode
+    print '|J| = {}, J = {}'.format(len(subset), subset)
+
+    flipped = False
+    singleton = False
+    while len(subset) > 0:
+        penalty_set -= consistent_subset
+        mode = find_sparse_subset(model, subset, penalty_set, singleton, epsilon)
+        consistent_subset |= mode
+        print '|A| = {}, A = {}'.format(len(consistent_subset), consistent_subset)
+
+        if not subset.isdisjoint(consistent_subset):
+            subset -= consistent_subset
+            print '|J| = {}, J = {}'.format(len(subset), subset)
+            flipped = False
+        else:
+            if singleton:
+                subset_i = set((next(iter(core)),))
+                subset_rev_i = subset_i & model.reversible
+            else:
+                subset_rev_i = subset & model.reversible
+
+            if flipped or len(subset_rev_i) == 0:
+                flipped = False
+                if singleton:
+                    raise Exception('Global network inconsistent: {}'.format(subset_rev_i))
+                else:
+                    singleton = True
+            else:
+                model = model.flipped(subset_rev_i)
+                flipped = True
+                print 'Flip'
+
+    return consistent_subset
