@@ -68,7 +68,7 @@ if __name__ == '__main__':
         qseqid, sseqid, pident, length, mismatch, gapopen, qstart, qend, sstart, send, evalue, bitscore = row
         gid = qseqid.split('|')[1]
 
-        if float(pident) < 60:
+        if float(pident) < 60 or float(evalue) > 1e-3:
             continue
 
         if gid != current_qid:
@@ -89,7 +89,7 @@ if __name__ == '__main__':
         qseqid, sseqid, pident, length, mismatch, gapopen, qstart, qend, sstart, send, evalue, bitscore = row1
         cje_id = qseqid[4:]
 
-        if float(pident) < 60:
+        if float(pident) < 60 or float(evalue) > 1e-3 :
             continue
 
         if cje_id != current_qid:
