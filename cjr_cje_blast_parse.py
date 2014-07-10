@@ -116,7 +116,7 @@ if __name__ == '__main__':
     for gene_id in cje_map.iterkeys():
         if gene_id not in gene_mapping:
             unique_cje_genes.add(gene_id)
-            print gene_id, cje_map[gene_id]
+            print '{}\t{}'.format(gene_id, cje_map[gene_id])
     print 'Cjr unique: {}, Cje unique: {}'.format(len(unique_cjr_genes), len(unique_cje_genes))
 
     # Genes that appear to be shared
@@ -127,7 +127,7 @@ if __name__ == '__main__':
         if gene_mapping[best_match] == gene_id:
             shared_genes.add(gene_id)
             shared_genes.add(best_match)
-            print gene_id, best_match
+            print '{}\t{}'.format(gene_id, best_match)
     print 'Shared: {}'.format(len(shared_genes))
 
     # Genes with homologs
@@ -135,5 +135,10 @@ if __name__ == '__main__':
     homolog_genes = set(cjr_map.iterkeys()) | set(cje_map.iterkeys())
     homolog_genes -= unique_cje_genes | unique_cjr_genes | shared_genes
     for gene_id in homolog_genes:
-        print gene_id
+        if gene_id in cjr_map:
+            print '{}\thomologous to\t{}'.format(gene_id, gene_mapping[gene_id])
+    for gene_id in homolog_genes:
+        if gene_id in cje_map:
+            print '{}\thomologous to\t{}'.format(gene_id, gene_mapping[gene_id])
+            
     print 'Homologues: {}'.format(len(homolog_genes))
