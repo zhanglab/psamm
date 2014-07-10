@@ -41,15 +41,18 @@ if __name__ == '__main__':
 
     cjr_reactions = set()
     cje_reactions = set()
-    cjr_map = {} # gi: rxnXXXXX
-    cje_map = {} # CjXXXX: ABCD
+    cjr_gene_map = defaultdict(set) # gi: rxnXXXXX
+    cje_gene_map = defaultdict(set) # CjXXXX: ABCD
+    cjr_reaction_map = defaultdict(set) # rxnXXXX: gi
+    cje_reaction_map = defaultdict(set) # ABCD: CjXXXX
 
     cjr_network_file.readline()
     for row in csv.reader(cjr_network_file, delimiter='\t'):
         SEED_rid, RXN_name, EC, Equation_cpdid, Equation_cpdname, KEGG_rid, KEGG_maps, Gene_ids = row
         cjr_reactions.add(SEED_rid)
         for id in Gene_ids.split(','):
-            cjr_map[id] = SEED_rid
+            cjr_gene_map[id].add(SEED_rid)
+            cjr_reaction_map[SEED_rid].add(id)
 
     metnet_file.readline()
     for row in csv.reader(metnet_file, dialect='excel'):
@@ -57,7 +60,8 @@ if __name__ == '__main__':
         cje_reactions.add(Reaction_abbreviation)
         for m in re.finditer(r'Cj\d+[a-z]?', Gene):
             cje_id = m.group(0)
-            cje_map[cje_id] = Reaction_abbreviation
+            cje_gene_map[cje_id].add(Reaction_abbreviation)
+            cje_reaction_map[Reaction_abbreviation].add(cje_id)
 
     gene_mapping = {}
     reaction_mapping = defaultdict(set)
@@ -109,36 +113,58 @@ if __name__ == '__main__':
     unique_cje_genes = set()
     unique_cjr_genes = set()
     print 'Genes that appear to be unique to each model:'
-    for gene_id in cjr_map.iterkeys():
+    for gene_id in cjr_gene_map.iterkeys():
         if gene_id not in gene_mapping:
             unique_cjr_genes.add(gene_id)
-            print gene_id, cjr_map[gene_id]
-    for gene_id in cje_map.iterkeys():
+            print '{}\t{}'.format(gene_id, ','.join(cjr_gene_map[gene_id]))
+    for gene_id in cje_gene_map.iterkeys():
         if gene_id not in gene_mapping:
             unique_cje_genes.add(gene_id)
-            print '{}\t{}'.format(gene_id, cje_map[gene_id])
+            print '{}\t{}'.format(gene_id, ','.join(cje_gene_map[gene_id]))
     print 'Cjr unique: {}, Cje unique: {}'.format(len(unique_cjr_genes), len(unique_cje_genes))
 
     # Genes that appear to be shared
     shared_genes = set()
+    shared_mapping = {}
     print 'Genes that appear to be shared:'
-    for gene_id in cjr_map.iterkeys():
-        best_match = gene_mapping[gene_id]
-        if gene_mapping[best_match] == gene_id:
-            shared_genes.add(gene_id)
-            shared_genes.add(best_match)
-            print '{}\t{}'.format(gene_id, best_match)
+    for gene_id in cjr_gene_map.iterkeys():
+        if gene_id in gene_mapping:
+            best_match = gene_mapping[gene_id]
+            if best_match in gene_mapping and gene_mapping[best_match] == gene_id:
+                shared_genes.add(gene_id)
+                shared_genes.add(best_match)
+                shared_mapping[gene_id] = best_match
+                shared_mapping[best_match] = gene_id
+                
+                print '{}\t{}'.format(gene_id, best_match)
     print 'Shared: {}'.format(len(shared_genes))
 
-    # Genes with homologs
+    # Genes with homologues
     print 'Genes that appear to be homologous'
-    homolog_genes = set(cjr_map.iterkeys()) | set(cje_map.iterkeys())
+    homolog_genes = set(cjr_gene_map.iterkeys()) | set(cje_gene_map.iterkeys())
     homolog_genes -= unique_cje_genes | unique_cjr_genes | shared_genes
     for gene_id in homolog_genes:
-        if gene_id in cjr_map:
+        if gene_id in cjr_gene_map:
             print '{}\thomologous to\t{}'.format(gene_id, gene_mapping[gene_id])
     for gene_id in homolog_genes:
-        if gene_id in cje_map:
+        if gene_id in cje_gene_map:
             print '{}\thomologous to\t{}'.format(gene_id, gene_mapping[gene_id])
             
     print 'Homologues: {}'.format(len(homolog_genes))
+    
+    # Try to map reactions to reactions
+    for rxnid in cjr_reaction_map.iterkeys():
+        print rxnid
+ #       cje_rid_set = set()
+#        cje_gid_set = set()
+        for cjr_gene_id in cjr_reaction_map[rxnid]: 
+            if cjr_gene_id not in shared_mapping:
+                print 'not in shared'
+                print cjr_gene_id
+            else:
+                cje_gene_id = shared_mapping[cjr_gene_id]
+                for cje_rxnid in cje_gene_map[cje_gene_id]:
+#                    cje_rid_set.add(cje_rxnid)
+#                    cje_gid_set.add(cje_gene_id)
+                    print ' - {} ({})'.format(cje_rxnid, cje_gene_id)
+            print
