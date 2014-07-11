@@ -88,6 +88,12 @@ class MetabolicModel(object):
     def load_exchange_limits(self, v_max=1000):
         '''Load exchange limits from external file'''
 
+        with open('exchangerxn.txt', 'r') as f:
+            for line in f:
+                rxnid = line.strip()
+                if rxnid in model.reaction_set:
+                    model._limits[rxnid] = Bounds(lower=0, upper=v_max)
+
         with open('exchangelimit.txt', 'r') as f:
             for line in f:
                 line = line.strip()
