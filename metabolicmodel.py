@@ -2,6 +2,7 @@
 
 import pulp
 from collections import defaultdict
+from itertools import chain
 import fastcore
 import fluxanalysis
 
@@ -62,6 +63,22 @@ class FluxBounds(object):
 
     def __repr__(self):
         return 'FluxBounds({}, {})'.format(repr(self._lower), repr(self._upper))
+
+class MetabolicReaction(object):
+    def __init__(self, reversible, metabolites):
+        self.reversible = bool(reversible)
+        self.metabolites = dict(metabolites)
+
+    @classmethod
+    def from_reaction(cls, reaction):
+        if reaction.direction not in ('=>', '<=>'):
+            raise ValueError('Invalid direction in reaction: {}'.format(reaction.direction))
+        reversible = reaction.direction == '<=>'
+        return cls(reversible, chain((((cpdid, comp), -value) for cpdid, value, comp in reaction.left),
+                                        (((cpdid, comp), value) for cpdid, value, comp in reaction.right)))
+
+    def __repr__(self):
+        return 'MetabolicReaction({}, {})'.format(repr(self.reversible), repr(self.metabolites))
 
 class MetabolicDatabase(object):
     '''Database of metabolic reactions'''
