@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import pulp
-from itertools import izip
 from collections import namedtuple, defaultdict
 import fastcore
+import fluxanalysis
 
 Bounds = namedtuple('Bounds', ('lower', 'upper'))
 
@@ -207,45 +207,6 @@ class MetabolicModel(object):
         model.flip(subset)
         return model
 
-def flux_balance(model, reaction='Biomass'):
-    # Create Flux balance problem
-    prob = pulp.LpProblem('FluxBalance', pulp.LpMaximize)
-
-    reaction_list = sorted(model.reaction_set)
-    compound_list = sorted(model.compound_set)
-    reaction_map = dict((rxnid, i) for i, rxnid in enumerate(reaction_list))
-    compound_map = dict((cpdid, i) for i, cpdid in enumerate(compound_list))
-
-    # Add variables to problem
-    fluxes = []
-    for rxnid in reaction_list:
-        lower, upper = model.limits[rxnid]
-        var = pulp.LpVariable('v_'+rxnid, lower, upper)
-        fluxes.append(var)
-
-    # Add constraints to problem
-    massbalance_lhs = [0 for cpdid in compound_list]
-    for spec, value in model.matrix.iteritems():
-        cpdid, rxnid = spec
-        cpdindex = compound_map[cpdid]
-        rxnindex = reaction_map[rxnid]
-        massbalance_lhs[cpdindex] += value*fluxes[rxnindex]
-
-    for lhs in massbalance_lhs:
-        prob += lhs == 0
-
-    # Add objective
-    objective = fluxes[reaction_map[reaction]]
-    prob += objective
-
-    # Solve
-    status = prob.solve()
-    if pulp.LpStatus[status] != 'Optimal':
-        raise Exception('Non-optimal solution: {}'.format(pulp.LpStatus[status]))
-
-    for rxnid, flux in izip(reaction_list, fluxes):
-        yield rxnid, flux.value()
-
 if __name__ == '__main__':
     database = MetabolicDatabase.load_from_file()
     model = database.load_model_from_file()
@@ -268,5 +229,5 @@ if __name__ == '__main__':
     model.load_exchange_limits()
 
     print 'Flux balance maximizing Biomass'
-    for rxnid, flux in flux_balance(model, 'Biomass'):
+    for rxnid, flux in fluxanalysis.flux_balance(model, 'Biomass'):
         print '{}\t{}'.format(rxnid, flux)
