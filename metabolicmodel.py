@@ -1,11 +1,67 @@
 #!/usr/bin/env python
 
 import pulp
-from collections import namedtuple, defaultdict
+from collections import defaultdict
 import fastcore
 import fluxanalysis
 
-Bounds = namedtuple('Bounds', ('lower', 'upper'))
+class FluxBounds(object):
+    '''Represents lower and upper bounds of flux'''
+
+    def __init__(self, lower=0, upper=0):
+        self._check_bounds(lower, upper)
+        self._lower = lower
+        self._upper = upper
+
+    def __iter__(self):
+        yield self._lower
+        yield self._upper
+
+    def _check_bounds(self, lower, upper):
+        if lower > upper:
+            raise ValueError('Lower bound larger than upper bound')
+
+    @property
+    def lower(self):
+        return self._lower
+
+    @lower.setter
+    def lower(self, value):
+        self._check_bounds(value, self._upper)
+        self._lower = value
+
+    @lower.deleter
+    def lower(self):
+        self._lower = 0
+
+    @property
+    def upper(self):
+        return self._upper
+
+    @upper.setter
+    def upper(self, value):
+        self._check_bounds(self._lower, value)
+        self._upper = value
+
+    @upper.deleter
+    def upper(self):
+        self._upper = 0
+
+    @property
+    def bounds(self):
+        return self._lower, self._upper
+
+    @bounds.setter
+    def bounds(self, value):
+        lower, upper = value
+        self._check_bounds(lower, upper)
+        self._lower, self._upper = value
+
+    def flipped(self):
+        return self.__class__(-self._upper, -self._lower)
+
+    def __repr__(self):
+        return 'FluxBounds({}, {})'.format(repr(self._lower), repr(self._upper))
 
 class MetabolicDatabase(object):
     '''Database of metabolic reactions'''
@@ -26,10 +82,7 @@ class MetabolicDatabase(object):
                 model.add_reaction(rxnid)
 
         for rxnid in model.reaction_set:
-            if rxnid in self.reversible:
-                model._limits[rxnid] = Bounds(lower=-v_max, upper=v_max)
-            else:
-                model._limits[rxnid] = Bounds(lower=0, upper=v_max)
+            model.reset_flux_bounds(rxnid, v_max)
 
         return model
 
@@ -67,7 +120,7 @@ class MetabolicModel(object):
 
     def __init__(self, database):
         self.database = database
-        self._limits = {}
+        self._limits = defaultdict(FluxBounds)
         self.reaction_set = set()
         self.compound_set = set()
         self._flipped = set()
@@ -85,6 +138,14 @@ class MetabolicModel(object):
         for compound, value in self.database.reactions[reaction].iteritems():
             self.compound_set.add(compound)
 
+    def reset_flux_bounds(self, reaction, v_max=1000):
+        '''Reset flux bounds of model reaction
+
+        A reversible reaction will be reset to (-v_max, v_max) and
+        an irreversible reaction will be set to (0, v_max).'''
+
+        self._limits[reaction].bounds = (-v_max, v_max) if reaction in self.database.reversible else (0, v_max)
+
     def load_exchange_limits(self, v_max=1000):
         '''Load exchange limits from external file'''
 
@@ -92,7 +153,7 @@ class MetabolicModel(object):
             for line in f:
                 rxnid = line.strip()
                 if rxnid in model.reaction_set:
-                    model._limits[rxnid] = Bounds(lower=0, upper=v_max)
+                    model._limits[rxnid].bounds = 0, v_max
 
         with open('exchangelimit.txt', 'r') as f:
             for line in f:
@@ -102,7 +163,7 @@ class MetabolicModel(object):
                 rxnid, value = line.split()
 
                 if rxnid in model.reaction_set:
-                    model._limits[rxnid] = Bounds(lower=float(value), upper=v_max)
+                    model._limits[rxnid].bounds = float(value), v_max
 
     @property
     def reversible(self):
@@ -162,12 +223,8 @@ class MetabolicModel(object):
 
             def __getitem__(self, key):
                 if key in self._model._flipped:
-                    lower, upper = self._model._limits[key]
-                    return Bounds(lower=-upper, upper=-lower)
+                    return self._model._limits[key].flipped()
                 return self._model._limits[key]
-
-            def __setitem__(self, key, value):
-                self._model._limits[key] = value
 
             def __contains__(self, key):
                 return key in self._model._limits
@@ -191,6 +248,7 @@ class MetabolicModel(object):
         model._limits = dict(self._limits)
         model.reaction_set = set(self.reaction_set)
         model.compound_set = set(self.compound_set)
+        model._flipped = set(self._flipped)
         return model
 
     def flip(self, subset):
@@ -220,13 +278,17 @@ if __name__ == '__main__':
     core = set(model.reaction_set)
     for rxnid in database.reactions:
         model_complete.add_reaction(rxnid)
-        model_complete.limits[rxnid] = Bounds(lower=-1000, upper=1000) if rxnid in database.reversible else Bounds(lower=0, upper=1000)
+        model_complete.reset_flux_bounds(rxnid)
     print 'Fastcore induced set with core = {}'.format(core)
     induced = fastcore.fastcore(model_complete, core, 0.001)
     print '|A| = {}, A = {}'.format(len(induced), induced)
 
     # Load bounds on exchange reactions
     model.load_exchange_limits()
+
+    print 'Flux bounds for model'
+    for rxnid, bounds in model.limits.iteritems():
+        print rxnid, bounds
 
     print 'Flux balance maximizing Biomass'
     for rxnid, flux in fluxanalysis.flux_balance(model, 'Biomass'):
