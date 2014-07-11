@@ -100,7 +100,7 @@ def fastcore_lp7(model, reaction_subset, epsilon):
         yield rxnid, flux.value()
 
 def fastcore_lp10(model, subset_k, subset_p, epsilon):
-    if len(subset_p) == 0 or len(subset_k) == 0:
+    if len(subset_k) == 0:
         return
 
     scaling = 1e5
@@ -159,7 +159,6 @@ def fastcore_lp10(model, subset_k, subset_p, epsilon):
         raise Exception('Non-optimal solution: {}'.format(pulp.LpStatus[status]))
 
     for rxnid, flux in izip(reaction_list, fluxes):
-        print '{}\t{}'.format(rxnid, flux.value())
         yield rxnid, flux.value()
 
 def support_set(fluxiter, threshold):
@@ -235,10 +234,7 @@ def fastcc(model, epsilon):
     return consistent_subset
 
 def find_sparse_mode(model, core, additional, singleton, epsilon):
-    '''Find the support of a sparse mode containing the the core subset
-
-    The result will contain the subset and as few of the additional
-    reactions as possible.'''
+    '''Find the support of a sparse mode containing the the core subset.'''
 
     if len(core) == 0:
         return set()
@@ -262,7 +258,10 @@ def find_sparse_mode(model, core, additional, singleton, epsilon):
     return support_set(fastcore_lp10(model, k, additional, epsilon), 0.99*epsilon)
 
 def fastcore(model, core, epsilon):
-    '''Fastcore'''
+    '''Find a flux consistent subnetwork containing the core subset
+
+    The result will contain the core subset and as few of the additional
+    reactions as possible.'''
 
     consistent_subset = set()
 
@@ -286,7 +285,7 @@ def fastcore(model, core, epsilon):
     singleton = False
     while len(subset) > 0:
         penalty_set -= consistent_subset
-        mode = find_sparse_subset(model, subset, penalty_set, singleton, epsilon)
+        mode = find_sparse_mode(model, subset, penalty_set, singleton, epsilon)
         consistent_subset |= mode
         print '|A| = {}, A = {}'.format(len(consistent_subset), consistent_subset)
 
