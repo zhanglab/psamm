@@ -61,6 +61,7 @@ class Reaction(object):
         return formatter.format(self)
 
     def copy(self):
+        '''Returns a distinct copy as a new Reaction object'''
         direction = str(self.direction)
         left = list(self.left)
         right = list(self.right)
@@ -73,9 +74,17 @@ class Reaction(object):
         return 'Reaction({}, {}, {})'.format(repr(self.direction), repr(self.left), repr(self.right))
 
     def __eq__(self, other):
-        if self.direction == other.direction and self.left == other.left and self.right == other.right:
-            return True
-        return False
+        '''Indicate equality of self and other
+
+        >>> rx = Reaction('=>', [('Pb', 1, None)], [('Au', 1, None)])
+        >>> rx == Reaction('=>', [('Pb', 1, None)], [('Au', 1, None)])
+        True
+        >>> rx == Reaction('=>', [('Au', 1, None)], [('Pb', 1, None)])
+        False
+        '''
+        return (self.direction == other.direction and
+                self.left == other.left and
+                self.right == other.right)
 
     def __ne__(self, other):
         return not self == other
@@ -338,7 +347,7 @@ class MetNet(object):
                 else:
                     count = 1
                     cpdspec = cpd.strip()
-                    
+
                 if global_comp is None:
                     cpd_spec_split = cpdspec.split('[')
                     if len(cpd_spec_split) == 2:
@@ -361,7 +370,7 @@ class MetNet(object):
 
         # Split by colon for compartment information
         eq_split = s.split(':')
-        
+
         if len(eq_split) == 2:
             global_comp, second = eq_split
             global_comp = global_comp.strip('[] ')
