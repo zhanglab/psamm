@@ -397,6 +397,52 @@ class MetNet(object):
 
         return Reaction(direction, left, right)
 
+class KEGG(object):
+    '''Parser for the reaction format in KEGG'''
+
+    @classmethod
+    def parse(cls, s):
+        '''Parse a KEGG reaction string
+
+        >>> KEGG.parse('C00013 + C00001 <=> 2 C00009')
+        Reaction('<=>', [('C00013', 1, None), ('C00001', 1, None)], [('C00009', 2, None)])
+        >>> KEGG.parse('C00404 + n C00001 <=> (n+1) C02174')
+        Reaction('<=>', [('C00404', 1, None), ('C00001', 'n', None)], [('C02174', 'n+1', None)])
+        '''
+        def parse_count(s):
+            m = re.match(r'\((.*)\)', s)
+            if m is not None:
+                s = m.group(1)
+
+            m = re.match(r'\d+', s)
+            if m is not None:
+                return int(m.group(0))
+
+            return s
+
+        def parse_compound_list(s):
+            for cpd in s.split(' + '):
+                if cpd == '':
+                    continue
+
+                fields = cpd.strip().split(' ')
+                if len(fields) > 2:
+                    raise ParseError('Malformed compound specification: {}'.format(cpd))
+                if len(fields) == 1:
+                    count = 1
+                    cpdid = fields[0]
+                else:
+                    count = parse_count(fields[0])
+                    cpdid = fields[1]
+
+                yield cpdid, count, None
+
+        cpd_left, cpd_right = s.split('<=>')
+        left = list(parse_compound_list(cpd_left.strip()))
+        right = list(parse_compound_list(cpd_right.strip()))
+
+        return Reaction('<=>', left, right)
+
 
 if __name__ == '__main__':
     import doctest
