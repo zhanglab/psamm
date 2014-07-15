@@ -142,7 +142,7 @@ class MetabolicModel(object):
         self.compound_set = set()
         self._flipped = set()
 
-    def add_reaction(self, reaction):
+    def add_reaction(self, reaction, v_max=1000):
         '''Add reaction to model'''
 
         if reaction in self.reaction_set:
@@ -152,6 +152,8 @@ class MetabolicModel(object):
             raise Exception('Model reaction does not reference a database reaction: {}'.format(rxnid))
 
         self.reaction_set.add(reaction)
+        self._limits[reaction] = FluxBounds(-v_max, v_max) if reaction in self.database.reversible else FluxBounds(0, v_max)
+
         for compound, value in self.database.reactions[reaction].iteritems():
             self.compound_set.add(compound)
 
@@ -295,7 +297,6 @@ if __name__ == '__main__':
     core = set(model.reaction_set)
     for rxnid in database.reactions:
         model_complete.add_reaction(rxnid)
-        model_complete.reset_flux_bounds(rxnid)
     print 'Fastcore induced set with core = {}'.format(core)
     induced = fastcore.fastcore(model_complete, core, 0.001)
     print '|A| = {}, A = {}'.format(len(induced), induced)
