@@ -60,11 +60,25 @@ class Reaction(object):
             formatter = ModelSEED
         return formatter.format(self)
 
+    def copy(self):
+        direction = str(self.direction)
+        left = list(self.left)
+        right = list(self.right)
+        return self.__class__(direction, left, right)
+
     def __str__(self):
         return self.format()
 
     def __repr__(self):
         return 'Reaction({}, {}, {})'.format(repr(self.direction), repr(self.left), repr(self.right))
+
+    def __eq__(self, other):
+        if self.direction == other.direction and self.left == other.left and self.right == other.right:
+            return True
+        return False
+
+    def __ne__(self, other):
+        return not self == other
 
 class ParseError(Exception):
     '''Exception used to signal errors while parsing'''
