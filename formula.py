@@ -78,34 +78,34 @@ class Formula(object):
         number = ''
         atom = ''
 
-        for i in range(len(s)):
+        for c in s:
             if looking_for_number:
-                if s[i].isdigit():
+                if c.isdigit():
                     looking_for_number = False
-                    number += s[i]
-                elif s[i].islower():
-                    atom += s[i]
+                    number += c
+                elif c.islower():
+                    atom += c
                 else:
                     if has_read_uppercase:
                         # Implicit 1
                         formula[atom] = 1
-                        atom = s[i]
+                        atom = c
                         number = ''
                     else:
-                        atom += s[i]
+                        atom += c
                         has_read_uppercase = True
             else:
-                if s[i].isdigit():
-                    number += s[i]
+                if c.isdigit():
+                    number += c
                 else:
                     formula[atom] = int(number)
-                    atom = s[i]
+                    atom = c
                     number = ''
                     looking_for_number = True
                     has_read_uppercase = True
 
         formula[atom] = int(number) if number != '' else 1
-        return Formula(formula)
+        return cls(formula)
 
 
 if __name__ == '__main__':
