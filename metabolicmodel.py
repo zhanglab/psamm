@@ -171,8 +171,8 @@ class MetabolicModel(object):
         with open('exchangerxn.txt', 'r') as f:
             for line in f:
                 rxnid = line.strip()
-                if rxnid in model.reaction_set:
-                    model._limits[rxnid].bounds = 0, v_max
+                if rxnid in self.reaction_set:
+                    self._limits[rxnid].bounds = 0, v_max
 
         with open('exchangelimit.txt', 'r') as f:
             for line in f:
@@ -181,8 +181,8 @@ class MetabolicModel(object):
                     continue
                 rxnid, value = line.split()
 
-                if rxnid in model.reaction_set:
-                    model._limits[rxnid].bounds = float(value), v_max
+                if rxnid in self.reaction_set:
+                    self._limits[rxnid].bounds = float(value), v_max
 
     @property
     def reversible(self):
