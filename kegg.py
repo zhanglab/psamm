@@ -1,4 +1,6 @@
 
+'''Module related to loading KEGG database files'''
+
 import re
 
 class ParseError(Exception):
