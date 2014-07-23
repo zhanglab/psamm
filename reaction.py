@@ -3,6 +3,7 @@
 
 import re
 from decimal import Decimal
+from expression import Expression
 
 class Reaction(object):
     '''Reaction equation representation'''
@@ -407,7 +408,7 @@ class KEGG(object):
         >>> KEGG.parse('C00013 + C00001 <=> 2 C00009')
         Reaction('<=>', [('C00013', 1, None), ('C00001', 1, None)], [('C00009', 2, None)])
         >>> KEGG.parse('C00404 + n C00001 <=> (n+1) C02174')
-        Reaction('<=>', [('C00404', 1, None), ('C00001', 'n', None)], [('C02174', 'n+1', None)])
+        Reaction('<=>', [('C00404', 1, None), ('C00001', <Expression 'n'>, None)], [('C02174', <Expression 'n + 1'>, None)])
         '''
         def parse_count(s):
             m = re.match(r'\((.*)\)', s)
@@ -418,7 +419,7 @@ class KEGG(object):
             if m is not None:
                 return int(m.group(0))
 
-            return s
+            return Expression.parse(s)
 
         def parse_compound_list(s):
             for cpd in s.split(' + '):
