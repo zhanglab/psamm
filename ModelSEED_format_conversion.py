@@ -12,12 +12,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert ModelSEED reaction table to standard format')
     parser.add_argument('rxnfile', type=argparse.FileType('r'), help='Reaction table file')
     parser.add_argument('cpdfile', type=argparse.FileType('r'), help='Compound table file')
-    
+
     args = parser.parse_args()
 
     rxn_file = args.rxnfile
     cpd_file = args.cpdfile
-    
+
     compound_map = {}
 
     cpd_file.readline() # Skip header
@@ -42,6 +42,6 @@ if __name__ == '__main__':
 
         rx = reaction.ModelSEED.parse(equation_cpdname).normalized().translated_compounds(translate)
 
-        print '{}\t{}'.format(seed_rid,rx)
+        print '{}\t{}'.format(seed_rid, rx)
 
     rxn_file.close()
