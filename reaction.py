@@ -2,32 +2,126 @@
 '''Definitions related to reaction equations and parsing of such equations'''
 
 import re
+import functools
 from decimal import Decimal
 from expression import Expression
 
+@functools.total_ordering
+class Compound(object):
+    '''Represents a compound in a reaction equation
+
+    A compound is a named entity in the reaction equations representing a
+    chemical compound. A compound can represent a generalized chemical entity
+    (e.g. polyphosphate) and the arguments can be used to instantiate a specific
+    chemical entity (e.g. polyphosphate(3)) by passing a number as an argument
+    or a partially specified entity by passing an expression (e.g. polyphosphate(n)).'''
+
+    def __init__(self, name, arguments=()):
+        self._name = str(name)
+        self._arguments = tuple(arguments)
+
+    @property
+    def name(self):
+        '''Name of compound'''
+        return self._name
+
+    @property
+    def arguments(self):
+        '''Expression argument for generalized compounds'''
+        return self._arguments
+
+    def translate(self, func):
+        '''Translate compound name using given function
+
+        >>> Compound('Pb').translate(lambda x: x.lower())
+        Compound('pb')'''
+        return self.__class__(func(self._name), self._arguments)
+
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__) and
+            self._name == other._name and
+            self._arguments == other._arguments)
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __lt__(self, other):
+        if isinstance(other, Compound):
+            return (self._name, self._arguments) < (other._name, other._arguments)
+        return NotImplemented
+
+    def __hash__(self):
+        return hash('Compound') ^ hash(self._name) ^ hash(self._arguments)
+
+    def __str__(self):
+        '''String representation of compound
+
+        >>> str(Compound('Phosphate'))
+        'Phosphate'
+
+        >>> str(Compound('Polyphosphate', [Expression.parse('n')]))
+        'Polyphosphate(n)'
+        '''
+        s = self._name
+        if len(self._arguments) > 0:
+            s += '({})'.format(', '.join(str(a) for a in self._arguments))
+        return s
+
+    def __repr__(self):
+        if len(self._arguments) == 0:
+            return 'Compound({})'.format(repr(self._name))
+        return 'Compound({}, {})'.format(repr(self._name), repr(self._arguments))
+
 class Reaction(object):
-    '''Reaction equation representation'''
+    '''Reaction equation representation
+
+    Each compound is associated with a number and a compartment. The compartment
+    indicates that it belongs a certain separate part of the model which thereby
+    makes it distinct from compounds in other compartments. This simplifies
+    modelling of compounds since compounds of different compartments cannot
+    normally interact unless a reaction specifically allows this to happen.
+    '''
 
     def __init__(self, direction, left, right):
-        self.direction = direction
-        self.left = left
-        self.right = right
+        self._direction = direction
+        self._left = tuple(left)
+        self._right = tuple(right)
+
+    @property
+    def direction(self):
+        '''Direction of reaction equation'''
+        return self._direction
+
+    @property
+    def left(self):
+        '''Sequence of compounds on the left-hand side of the reaction equation'''
+        return self._left
+
+    @property
+    def right(self):
+        '''Sequence of compounds on the right-hand side of the reaction equation'''
+        return self._right
+
+    @property
+    def compounds(self):
+        '''Sequence of compounds on both sides of the reaction equation'''
+        return self._left + self._right
 
     def normalized(self):
         '''Return normalized reaction
 
-        >>> Reaction('<=', [('Au', 1, None)], [('Pb', 1, None)]).normalized()
-        Reaction('=>', [('Pb', 1, None)], [('Au', 1, None)])
+        >>> Reaction('<=', [(Compound('Au'), 1, None)], [(Compound('Pb'), 1, None)]).normalized()
+        Reaction('=>', ((Compound('Pb'), 1, None),), ((Compound('Au'), 1, None),))
         '''
 
-        if self.direction == '<=':
+        if self._direction == '<=':
             direction = '=>'
-            left = list(self.right)
-            right = list(self.left)
+            left = self._right
+            right = self._left
         else:
-            direction = self.direction
-            left = list(self.left)
-            right = list(self.right)
+            direction = self._direction
+            left = self._left
+            right = self._right
 
         return Reaction(direction, left, right)
 
@@ -38,23 +132,26 @@ class Reaction(object):
         and the returned value is used as the new compound name. A new reaction is
         returned with the substituted compound names.
 
-        >>> rx = Reaction('=>', [('Pb', 1, None)], [('Au', 1, None)])
+        >>> rx = Reaction('=>', [(Compound('Pb'), 1, None)], [(Compound('Au'), 1, None)])
         >>> rx.translated_compounds(lambda name: name.lower())
-        Reaction('=>', [('pb', 1, None)], [('au', 1, None)])
+        Reaction('=>', ((Compound('pb'), 1, None),), ((Compound('au'), 1, None),))
         '''
 
-        def translate_compound_list(l):
-            return [(translate(cpdname), count, comp) for cpdname, count, comp in l]
-        left = translate_compound_list(self.left)
-        right = translate_compound_list(self.right)
+        left = ((compound.translate(translate), count, comp) for compound, count, comp in self._left)
+        right = ((compound.translate(translate), count, comp) for compound, count, comp in self._right)
 
-        return Reaction(self.direction, left, right)
+        return Reaction(self._direction, left, right)
 
     def format(self, formatter=None):
         '''Format reaction as string using specified formatter
 
-        >>> Reaction('=>', [('Pb', 1, None)], [('Au', 1, None)]).format()
+        >>> Reaction('=>', [(Compound('Pb'), 1, None)], [(Compound('Au'), 1, None)]).format()
         '|Pb| => |Au|'
+
+        >>> pp1 = Compound('Polyphosphate', [Expression.parse('n')])
+        >>> pp2 = Compound('Polyphosphate', [Expression.parse('n+1')])
+        >>> Reaction('=>', [(Compound('ATP'), 1, None), (pp1, 1, None)], [(Compound('ADP'), 1, None), (pp2, 1, None)]).format()
+        '|ATP| + |Polyphosphate(n)| => |ADP| + |Polyphosphate(n + 1)|'
         '''
 
         if formatter is None:
@@ -63,16 +160,13 @@ class Reaction(object):
 
     def copy(self):
         '''Returns a distinct copy as a new Reaction object'''
-        direction = str(self.direction)
-        left = list(self.left)
-        right = list(self.right)
-        return self.__class__(direction, left, right)
+        return self.__class__(self._direction, self._left, self._right)
 
     def __str__(self):
         return self.format()
 
     def __repr__(self):
-        return 'Reaction({}, {}, {})'.format(repr(self.direction), repr(self.left), repr(self.right))
+        return 'Reaction({}, {}, {})'.format(repr(self._direction), repr(self._left), repr(self._right))
 
     def __eq__(self, other):
         '''Indicate equality of self and other
@@ -83,9 +177,9 @@ class Reaction(object):
         >>> rx == Reaction('=>', [('Au', 1, None)], [('Pb', 1, None)])
         False
         '''
-        return (self.direction == other.direction and
-                self.left == other.left and
-                self.right == other.right)
+        return (self._direction == other._direction and
+                self._left == other._left and
+                self._right == other._right)
 
     def __ne__(self, other):
         return not self == other
@@ -134,10 +228,10 @@ class ModelSEED(object):
         '''Parse a reaction string
 
         >>> ModelSEED.parse('|H2O| + |PPi| => (2) |Phosphate| + (2) |H+|')
-        Reaction('=>', [('H2O', 1, None), ('PPi', 1, None)], [('Phosphate', 2, None), ('H+', 2, None)])
+        Reaction('=>', ((Compound('H2O'), 1, None), (Compound('PPi'), 1, None)), ((Compound('Phosphate'), 2, None), (Compound('H+'), 2, None)))
 
         >>> ModelSEED.parse('|H2| + (0.5) |O2| => |H2O|')
-        Reaction('=>', [('H2', 1, None), ('O2', Decimal('0.5'), None)], [('H2O', 1, None)])
+        Reaction('=>', ((Compound('H2'), 1, None), (Compound('O2'), Decimal('0.5'), None)), ((Compound('H2O'), 1, None),))
         '''
 
         tokens = list(cls._tokenize(s))
@@ -158,27 +252,23 @@ class ModelSEED(object):
     def format(cls, rx):
         '''Format reaction as string
 
-        >>> ModelSEED.format(Reaction('<=', [('H2O', 2, None)], [('H2', 2, None), ('O2', 1, None)]))
+        >>> ModelSEED.format(Reaction('<=', [(Compound('H2O'), 2, None)], [(Compound('H2'), 2, None), (Compound('O2'), 1, None)]))
         '(2) |H2| + |O2| => (2) |H2O|'
         '''
 
         # Define helper functions
-        def format_compound(cmpd):
+        def format_compound(compound, count, comp):
             '''Format compound'''
-            name, count, compartment = cmpd
-
-            if compartment is not None:
-                spec = '{}[{}]'.format(name, compartment)
-            else:
-                spec = name
-
+            cpdspec = str(compound)
+            if comp is not None:
+                cpdspec += '[{}]'.format(comp)
             if count != 1:
-                return '({}) |{}|'.format(count, spec)
-            return '|{}|'.format(spec)
+                return '({}) |{}|'.format(count, cpdspec)
+            return '|{}|'.format(cpdspec)
 
         def format_compound_list(cmpds):
             '''Format compound list'''
-            return ' + '.join(format_compound(cmpd) for cmpd in cmpds)
+            return ' + '.join(format_compound(compound, count, comp) for compound, count, comp in cmpds)
 
         rx = rx.normalized()
         return '{} {} {}'.format(format_compound_list(rx.left),
@@ -257,7 +347,7 @@ class ModelSEED(object):
             name = m.group(1)
             compartment = m.group(2)
 
-        return (name, count, compartment)
+        return Compound(name), count, compartment
 
     @classmethod
     def _parse_compound_list(cls, cmpds):
@@ -287,13 +377,12 @@ class SudenSimple(object):
         '''Parse a reaction string
 
         >>> SudenSimple.parse('1 H2O + 1 PPi <=> 2 Phosphate + 2 proton')
-        Reaction('<=>', [('H2O', 1, None), ('PPi', 1, None)], [('Phosphate', 2, None), ('proton', 2, None)])
+        Reaction('<=>', ((Compound('H2O'), 1, None), (Compound('PPi'), 1, None)), ((Compound('Phosphate'), 2, None), (Compound('proton'), 2, None)))
 
         >>> SudenSimple.parse('1 H2 + 0.5 O2 <=> 1 H2O')
-        Reaction('<=>', [('H2', 1, None), ('O2', Decimal('0.5'), None)], [('H2O', 1, None)])
+        Reaction('<=>', ((Compound('H2'), 1, None), (Compound('O2'), Decimal('0.5'), None)), ((Compound('H2O'), 1, None),))
         '''
         def parse_compound_list(s):
-            cpds = []
             for cpd in s.split('+'):
                 if cpd == '':
                     continue
@@ -309,12 +398,11 @@ class SudenSimple(object):
                 d = Decimal(count)
                 if d % 1 == 0:
                     d = int(d)
-                cpds.append((cpdid, d, comp))
-            return cpds
+                yield Compound(cpdid), d, comp
 
         cpd_left, cpd_right = s.split('<=>')
-        left = parse_compound_list(cpd_left)
-        right = parse_compound_list(cpd_right)
+        left = list(parse_compound_list(cpd_left))
+        right = list(parse_compound_list(cpd_right))
 
         return Reaction('<=>', left, right)
 
@@ -326,17 +414,15 @@ class MetNet(object):
         '''Parse a reaction string
 
         >>> MetNet.parse('[c] : akg + ala-L <==> glu-L + pyr')
-        Reaction('<=>', [('cpd_akg', 1, None), ('cpd_ala-L', 1, None)], [('cpd_glu-L', 1, None), ('cpd_pyr', 1, None)])
+        Reaction('<=>', ((Compound('cpd_akg'), 1, None), (Compound('cpd_ala-L'), 1, None)), ((Compound('cpd_glu-L'), 1, None), (Compound('cpd_pyr'), 1, None)))
 
         >>> MetNet.parse('(2) ficytcc553[c] + so3[c] + h2o[c] --> (2) focytcc553[c] + so4[c] + (2) h[e]')
-        Reaction('=>', [('cpd_ficytcc553', 2, None), ('cpd_so3', 1, None), ('cpd_h2o', 1, None)], [('cpd_focytcc553', 2, None), ('cpd_so4', 1, None), ('cpd_h', 2, 'e')])
+        Reaction('=>', ((Compound('cpd_ficytcc553'), 2, None), (Compound('cpd_so3'), 1, None), (Compound('cpd_h2o'), 1, None)), ((Compound('cpd_focytcc553'), 2, None), (Compound('cpd_so4'), 1, None), (Compound('cpd_h'), 2, 'e')))
         '''
 
         def parse_compound_list(s, global_comp):
-            cpds = []
-
             if s.strip() == '':
-                return []
+                return
 
             for cpd in s.strip().split('+'):
                 cpdsplit = cpd.strip().split(') ')
@@ -365,9 +451,7 @@ class MetNet(object):
                 if comp == 'c':
                     comp = None
 
-                cpds.append((cpdid, count, comp))
-
-            return cpds
+                yield Compound(cpdid), count, comp
 
         # Split by colon for compartment information
         eq_split = s.split(':')
@@ -393,8 +477,8 @@ class MetNet(object):
             return 'cpd_' + cpdid.replace(',', '__')
 
         # Split by +
-        left = [(translate(cpdid), count, comp) for cpdid, count, comp in parse_compound_list(cpd_left, global_comp)]
-        right = [(translate(cpdid), count, comp) for cpdid, count, comp in parse_compound_list(cpd_right, global_comp)]
+        left = ((compound.translate(translate), count, comp) for compound, count, comp in parse_compound_list(cpd_left, global_comp))
+        right = ((compound.translate(translate), count, comp) for compound, count, comp in parse_compound_list(cpd_right, global_comp))
 
         return Reaction(direction, left, right)
 
@@ -406,12 +490,14 @@ class KEGG(object):
         '''Parse a KEGG reaction string
 
         >>> KEGG.parse('C00013 + C00001 <=> 2 C00009')
-        Reaction('<=>', [('C00013', 1, None), ('C00001', 1, None)], [('C00009', 2, None)])
+        Reaction('<=>', ((Compound('C00013'), 1, None), (Compound('C00001'), 1, None)), ((Compound('C00009'), 2, None),))
         >>> KEGG.parse('C00404 + n C00001 <=> (n+1) C02174')
-        Reaction('<=>', [('C00404', 1, None), ('C00001', <Expression 'n'>, None)], [('C02174', <Expression 'n + 1'>, None)])
+        Reaction('<=>', ((Compound('C00404'), 1, None), (Compound('C00001'), <Expression 'n'>, None)), ((Compound('C02174'), <Expression 'n + 1'>, None),))
+        >>> KEGG.parse('C00039(n) <=> C00013 + C00039(n+1)')
+        Reaction('<=>', ((Compound('C00039', (<Expression 'n'>,)), 1, None),), ((Compound('C00013'), 1, None), (Compound('C00039', (<Expression 'n + 1'>,)), 1, None)))
         '''
         def parse_count(s):
-            m = re.match(r'\((.*)\)', s)
+            m = re.match(r'\((.+)\)', s)
             if m is not None:
                 s = m.group(1)
 
@@ -420,6 +506,12 @@ class KEGG(object):
                 return int(m.group(0))
 
             return Expression.parse(s)
+
+        def parse_compound(s):
+            m = re.match(r'(.+)\((.+)\)', s)
+            if m is not None:
+                return Compound(m.group(1), [Expression.parse(m.group(2))])
+            return Compound(s)
 
         def parse_compound_list(s):
             for cpd in s.split(' + '):
@@ -431,12 +523,12 @@ class KEGG(object):
                     raise ParseError('Malformed compound specification: {}'.format(cpd))
                 if len(fields) == 1:
                     count = 1
-                    cpdid = fields[0]
+                    compound = parse_compound(fields[0])
                 else:
                     count = parse_count(fields[0])
-                    cpdid = fields[1]
+                    compound = parse_compound(fields[1])
 
-                yield cpdid, count, None
+                yield compound, count, None
 
         cpd_left, cpd_right = s.split('<=>')
         left = list(parse_compound_list(cpd_left.strip()))

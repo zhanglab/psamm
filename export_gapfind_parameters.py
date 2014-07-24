@@ -9,6 +9,10 @@ import csv
 import reaction
 import re
 
+def compound_id(compound, compartment):
+    '''Generate unique id for compound'''
+    return compound.name if compartment is None else compound.name + '_' + compartment
+
 if __name__ == '__main__':
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Convert reaction table to GapFind input format')
@@ -33,7 +37,7 @@ if __name__ == '__main__':
     rnp = open('root_no_production.txt', 'w')
     model_cpds = open('model_cpds.txt', 'w')
 
-    compound = set()
+    compound_all = set()
     compound_e = set()
     compound_c = set()
     compound_produced = set()
@@ -62,9 +66,9 @@ if __name__ == '__main__':
                 rr.write('{}\n'.format(rxn_id))
 
             # Add compound names to the set
-            for cpdid, value, comp in rx.left + rx.right:
-                id = cpdid if comp is None else cpdid + '_' + comp
-                compound.add(id)
+            for compound, value, comp in rx.compounds:
+                id = compound_id(compound, comp)
+                compound_all.add(id)
 
                 if rxn_id in model_reactions:
                     compound_model.add(id)
@@ -76,12 +80,12 @@ if __name__ == '__main__':
                     compound_e.add(id)
 
             # Lists the matrix
-            for cpdid, value, comp in rx.left:
-                id = cpdid if comp is None else cpdid + '_' + comp
+            for compound, value, comp in rx.left:
+                id = compound_id(compound, comp)
                 m.write('{}.{}\t{}\n'.format(id, rxn_id, -value))
 
-            for cpdid, value, comp in rx.right:
-                id = cpdid if comp is None else cpdid + '_' + comp
+            for compound, value, comp in rx.right:
+                id = compound_id(compound, comp)
                 m.write('{}.{}\t{}\n'.format(id, rxn_id, value))
 
         db_rxn_file.close()
@@ -95,7 +99,7 @@ if __name__ == '__main__':
                 database_list.write('{}\n'.format(rxnid))
 
                 # Write to matrix
-                compound.add(cpdid + '_e')
+                compound_all.add(cpdid + '_e')
                 compound_e.add(cpdid + '_e')
                 m.write('{}_e.{}\t{}\n'.format(cpdid, rxnid, -1))
                 m.write('{}.{}\t{}\n'.format(cpdid, rxnid, 1))
@@ -112,7 +116,7 @@ if __name__ == '__main__':
             rr.write('{}\n'.format(rxnid))
 
     # Lists all the compound names in the set
-    for cpdid in sorted(compound):
+    for cpdid in sorted(compound_all):
         cl.write('{}\n'.format(cpdid))
 
     for cpdid in sorted(compound_c):
