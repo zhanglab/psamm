@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+'''Check whether reactions in a given database are balanced
+
+Balanced reactions are those reactions where the number of atoms
+is consistent on the left and right side of the reaction equation.
+Reactions that are not balanced will be printed out.'''
+
 import csv
 from formula import Formula
 import reaction
@@ -24,6 +30,9 @@ if __name__ == '__main__':
     for rowc in readerc:
         SEED_cid, cpd_names, formula, Mass,KEGG_maps, KEGG_cid = rowc
 
+        if '*' in formula:
+            continue
+
         compound_formula[SEED_cid] = Formula.parse(formula)
 
     readerr = csv.reader(rxn_file,delimiter='\t')
@@ -35,12 +44,11 @@ if __name__ == '__main__':
 
         rx = reaction.ModelSEED.parse(Equation_cpdid).normalized()
 
-        left_form = sum((count * compound_formula[cpdid] for cpdid, count, comp in rx.left), Formula())
-        right_form = sum((count * compound_formula[cpdid] for cpdid, count, comp in rx.right), Formula())
+        left_form = sum(count * compound_formula[compound.name] for compound, count, comp in rx.left if compound.name in compound_formula)
+        right_form = sum(count * compound_formula[compound.name] for compound, count, comp in rx.right if compound.name in compound_formula)
 
         if right_form != left_form:
-                print '{}\t{}\t{}'.format(rxn_id, pprint.pformat(left_form),
-                                            pprint.pformat(right_form))
+                print '{}\t{}\t{}'.format(rxn_id, left_form, right_form)
 
     rxn_file.close()
     cpd_file.close()
