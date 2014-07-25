@@ -1,44 +1,39 @@
 
 '''Implementation of Flux Balance Analysis'''
 
-import pulp
-from itertools import izip
+import cplex
 
 def flux_balance(model, reaction='Biomass'):
     # Create Flux balance problem
-    prob = pulp.LpProblem('FluxBalance', pulp.LpMaximize)
+    prob = cplex.Cplex()
 
-    reaction_list = sorted(model.reaction_set)
-    compound_list = sorted(model.compound_set)
-    reaction_map = dict((rxnid, i) for i, rxnid in enumerate(reaction_list))
-    compound_map = dict((cpdid, i) for i, cpdid in enumerate(compound_list))
-
-    # Add variables to problem
-    fluxes = []
-    for rxnid in reaction_list:
+    # Define flux variables
+    flux_names = []
+    flux_lower = []
+    flux_upper = []
+    flux_obj = []
+    for rxnid in model.reaction_set:
         lower, upper = model.limits[rxnid]
-        var = pulp.LpVariable('v_'+rxnid, lower, upper)
-        fluxes.append(var)
+        flux_names.append('v_'+rxnid)
+        flux_lower.append(lower)
+        flux_upper.append(upper)
+        flux_obj.append(1 if rxnid == reaction else 0)
+    prob.variables.add(names=flux_names, lb=flux_lower, ub=flux_upper, obj=flux_obj)
 
-    # Add constraints to problem
-    massbalance_lhs = [0 for cpdid in compound_list]
+    # Define constraints
+    massbalance_lhs = { cpdid: [] for cpdid in model.compound_set }
     for spec, value in model.matrix.iteritems():
         cpdid, rxnid = spec
-        cpdindex = compound_map[cpdid]
-        rxnindex = reaction_map[rxnid]
-        massbalance_lhs[cpdindex] += value*fluxes[rxnindex]
-
-    for lhs in massbalance_lhs:
-        prob += lhs == 0
-
-    # Add objective
-    objective = fluxes[reaction_map[reaction]]
-    prob += objective
+        massbalance_lhs[cpdid].append(('v_'+rxnid, value))
+    for cpdid, lhs in massbalance_lhs.iteritems():
+        prob.linear_constraints.add(lin_expr=[cplex.SparsePair(*zip(*lhs))], senses=['E'], rhs=[0], names=['massbalance_'+cpdid])
 
     # Solve
-    status = prob.solve()
-    if pulp.LpStatus[status] != 'Optimal':
-        raise Exception('Non-optimal solution: {}'.format(pulp.LpStatus[status]))
+    prob.objective.set_sense(prob.objective.sense.maximize)
+    prob.solve()
+    status = prob.solution.get_status()
+    if status != 1:
+        raise Exception('Non-optimal solution: {}'.format(prob.solution.get_status_string()))
 
-    for rxnid, flux in izip(reaction_list, fluxes):
-        yield rxnid, flux.value()
+    for rxnid in model.reaction_set:
+        yield rxnid, prob.solution.get_values('v_'+rxnid)
