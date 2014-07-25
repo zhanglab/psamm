@@ -73,6 +73,12 @@ class CompoundEntry(object):
                 database, entry = line.split(':', 1)
                 yield database.strip(), entry.strip()
 
+    @property
+    def comment(self):
+        if 'comment' not in self.values:
+            return None
+        return '\n'.join(self.values['comment'])
+
     def __getitem__(self, name):
         if name not in self.values:
             raise AttributeError('Attribute does not exist: {}'.format(name))
