@@ -289,25 +289,30 @@ if __name__ == '__main__':
     model = database.load_model_from_file()
 
     # Run Fastcc and print the inconsistent set
-    print 'Fastcc inconsistent set'
-    print model.reaction_set - fastcore.fastcc(model, 0.001)
+    print 'Calculating Fastcc consistent subset...'
+    consistent_core = fastcore.fastcc(model, 0.001)
+    print 'Result: |A| = {}, |A| = {}'.format(len(consistent_core), consistent_core)
 
     # Run Fastcore and print the induced reaction set
     model_complete = model.copy()
-    core = set(model.reaction_set)
     for rxnid in database.reactions:
         model_complete.add_reaction(rxnid)
-    print 'Fastcore induced set with core = {}'.format(core)
+    print 'Calculating Fastcore induced set with consistent core...'
+    core = consistent_core | { 'Biomass' }
     induced = fastcore.fastcore(model_complete, core, 0.001)
-    print '|A| = {}, A = {}'.format(len(induced), induced)
+    print 'Result: |A| = {}, A = {}'.format(len(induced), induced)
+    added_reactions = induced - core
+    print 'Extended: |E| = {}, E = {}'.format(len(added_reactions), added_reactions)
 
     # Load bounds on exchange reactions
     model.load_exchange_limits()
 
-    print 'Flux bounds for model'
-    for rxnid, bounds in model.limits.iteritems():
-        print rxnid, bounds
+    print 'Flux balance on original model maximizing Biomass...'
+    for rxnid, flux in sorted(fluxanalysis.flux_balance(model, 'Biomass')):
+        print '{}\t{}'.format(rxnid, flux)
 
-    print 'Flux balance maximizing Biomass'
-    for rxnid, flux in fluxanalysis.flux_balance(model, 'Biomass'):
+    print 'Flux balance on induced model maximizing Biomass...'
+    for rxnid in induced:
+        model.add_reaction(rxnid)
+    for rxnid, flux in sorted(fluxanalysis.flux_balance(model, 'Biomass')):
         print '{}\t{}'.format(rxnid, flux)
