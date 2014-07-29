@@ -31,7 +31,7 @@ if __name__ == '__main__':
     for row in csv.reader(rxn_file, delimiter='\t'):
         seed_rid, rxn_name, equation_cpdname, roles, subsystems, kegg_maps, enzyme, kegg_rid = row[:8]
 
-        if equation_cpdname.strip() == '':
+        if seed_rid.startswith('#') or equation_cpdname.strip() == '':
             continue
 
         def translate(name):
