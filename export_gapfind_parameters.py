@@ -93,16 +93,15 @@ if __name__ == '__main__':
     # Optionally create transport reactions in database
     if args.transport:
         for cpdid in sorted(compound_c):
-            if cpdid in compound_model:
-                rxnid = 'rxntp_' + cpdid
-                w.write('{}\n'.format(rxnid))
-                database_list.write('{}\n'.format(rxnid))
+            rxnid = 'rxntp_' + cpdid
+            w.write('{}\n'.format(rxnid))
+            database_list.write('{}\n'.format(rxnid))
 
-                # Write to matrix
-                compound_all.add(cpdid + '_e')
-                compound_e.add(cpdid + '_e')
-                m.write('{}_e.{}\t{}\n'.format(cpdid, rxnid, -1))
-                m.write('{}.{}\t{}\n'.format(cpdid, rxnid, 1))
+            # Write to matrix
+            compound_all.add(cpdid + '_e')
+            compound_e.add(cpdid + '_e')
+            m.write('{}_e.{}\t{}\n'.format(cpdid, rxnid, -1))
+            m.write('{}.{}\t{}\n'.format(cpdid, rxnid, 1))
 
     # Optionally create exchange reactions in database
     if args.exchange:
