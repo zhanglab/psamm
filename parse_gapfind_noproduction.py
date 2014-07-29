@@ -23,11 +23,11 @@ if __name__ == '__main__':
             cpdid = line.strip()
             model_cpds.add(cpdid)
 
-    compound_c = set()
-    with open('cytosol_metabolites.txt', 'r') as f:
+    compound_e = set()
+    with open('extracellular_metabolites.txt', 'r') as f:
         for line in f:
             cpdid = line.strip()
-            compound_c.add(cpdid)
+            compound_e.add(cpdid)
 
     # Load compounds
     compound_map = {}
@@ -59,7 +59,7 @@ if __name__ == '__main__':
             produced = fields[2] != '.'
             comp = None
 
-            if cpdid in compound_c and cpdid in model_cpds:
+            if cpdid not in compound_e and cpdid in model_cpds:
                 count += 1
                 if not produced:
                     blocked_file.write('{}\n'.format(cpdid))
