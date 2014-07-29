@@ -265,7 +265,7 @@ def fastcore_lp10_cplex(model, subset_k, subset_p, epsilon):
     zs_names = []
     for rxnid in subset_p:
         zs_names.append('z_'+rxnid)
-    prob.variables.add(names=zs_names, lb=[0]*len(zs_names), ub=[max_bound*scaling]*len(zs_names), obj=[1]*len(zs_names))
+    prob.variables.add(names=zs_names, lb=[0]*len(zs_names), ub=[cplex.infinity]*len(zs_names), obj=[1]*len(zs_names))
 
     # Define constraints
     for rxnid in subset_p:
@@ -366,7 +366,7 @@ def fastcc(model, epsilon):
     return consistent_subset
 
 def find_sparse_mode(model, core, additional, singleton, epsilon):
-    '''Find the support of a sparse mode containing the the core subset.'''
+    '''Find the support of a sparse mode containing the core subset.'''
 
     if len(core) == 0:
         return set()
