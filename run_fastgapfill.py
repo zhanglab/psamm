@@ -17,22 +17,30 @@ if __name__ == '__main__':
     model_complete = model.copy()
     for rxnid in database.reactions:
         model_complete.add_reaction(rxnid)
+
     print 'Calculating Fastcore induced set with consistent core...'
     core = consistent_core | { 'Biomass' }
+
     induced = fastcore.fastcore(model_complete, core, 0.001)
     print 'Result: |A| = {}, A = {}'.format(len(induced), induced)
     added_reactions = induced - core
     print 'Extended: |E| = {}, E = {}'.format(len(added_reactions), added_reactions)
 
     # Load bounds on exchange reactions
-    model.load_exchange_limits()
+    #model.load_exchange_limits()
 
     print 'Flux balance on original model maximizing Biomass...'
     for rxnid, flux in sorted(fluxanalysis.flux_balance(model, 'Biomass')):
         print '{}\t{}'.format(rxnid, flux)
 
     print 'Flux balance on induced model maximizing Biomass...'
+    model_induced = model.copy()
     for rxnid in induced:
-        model.add_reaction(rxnid)
-    for rxnid, flux in sorted(fluxanalysis.flux_balance(model, 'Biomass')):
-        print '{}\t{}'.format(rxnid, flux)
+        model_induced.add_reaction(rxnid)
+    for rxnid, flux in sorted(fluxanalysis.flux_balance(model_induced, 'Biomass')):
+        reaction_class = 'Dbase'
+        if rxnid in core:
+            reaction_class = 'Core'
+        elif rxnid in model.reaction_set:
+            reaction_class = 'Model'
+        print '{}\t{}\t{}'.format(rxnid, reaction_class, flux)
