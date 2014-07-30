@@ -7,7 +7,16 @@ import fastcore
 import fluxanalysis
 
 class FluxBounds(object):
-    '''Represents lower and upper bounds of flux'''
+    '''Represents lower and upper bounds of flux as a mutable object
+
+    >>> FluxBounds(-5, 1000)
+    FluxBounds(-5, 1000)
+
+    >>> FluxBounds(100, 0)
+    Traceback (most recent call last):
+        ...
+    ValueError: Lower bound larger than upper bound
+    '''
 
     def __init__(self, lower=0, upper=0):
         self._check_bounds(lower, upper)
@@ -15,6 +24,18 @@ class FluxBounds(object):
         self._upper = upper
 
     def __iter__(self):
+        '''Iterator over lower and upper value
+
+        >>> it = iter(FluxBounds(-5, 1000))
+        >>> next(it)
+        -5
+        >>> next(it)
+        1000
+        >>> next(it)
+        Traceback (most recent call last):
+            ...
+        StopIteration
+        '''
         yield self._lower
         yield self._upper
 
@@ -24,6 +45,18 @@ class FluxBounds(object):
 
     @property
     def lower(self):
+        '''Lower bound
+
+        >>> f = FluxBounds(-5, 1000)
+        >>> f.lower
+        -5
+        >>> f.lower = -20
+        >>> f
+        FluxBounds(-20, 1000)
+        >>> f.lower = 1200
+        Traceback (most recent call last):
+            ...
+        ValueError: Lower bound larger than upper bound'''
         return self._lower
 
     @lower.setter
@@ -31,12 +64,20 @@ class FluxBounds(object):
         self._check_bounds(value, self._upper)
         self._lower = value
 
-    @lower.deleter
-    def lower(self):
-        self._lower = 0
-
     @property
     def upper(self):
+        '''Upper bound
+
+        >>> f = FluxBounds(-5, 1000)
+        >>> f.upper
+        1000
+        >>> f.upper = 0
+        >>> f
+        FluxBounds(-5, 0)
+        >>> f.upper = -6
+        Traceback (most recent call last):
+            ...
+        ValueError: Lower bound larger than upper bound'''
         return self._upper
 
     @upper.setter
@@ -44,12 +85,20 @@ class FluxBounds(object):
         self._check_bounds(self._lower, value)
         self._upper = value
 
-    @upper.deleter
-    def upper(self):
-        self._upper = 0
-
     @property
     def bounds(self):
+        '''Bounds as a tuple
+
+        >>> f = FluxBounds(-5, 1000)
+        >>> f.bounds
+        (-5, 1000)
+        >>> f.bounds = 10, 20
+        >>> f
+        FluxBounds(10, 20)
+        >>> f.bounds = 20, -10
+        Traceback (most recent call last):
+            ...
+        ValueError: Lower bound larger than upper bound'''
         return self._lower, self._upper
 
     @bounds.setter
@@ -59,7 +108,29 @@ class FluxBounds(object):
         self._lower, self._upper = value
 
     def flipped(self):
+        '''New FluxBounds with bounds mirrored around zero
+
+        >>> FluxBounds(-5, 1000).flipped()
+        FluxBounds(-1000, 5)'''
         return self.__class__(-self._upper, -self._lower)
+
+    def __eq__(self, other):
+        '''Equality test
+
+        >>> f = FluxBounds(-5, 10)
+        >>> f == FluxBounds(-5, 10)
+        True
+        >>> f == FluxBounds(0, 10)
+        False'''
+        return isinstance(other, FluxBounds) and self.bounds == other.bounds
+
+    def __ne__(self, other):
+        '''Inequality test
+
+        >>> f = FluxBounds(-5, 10)
+        >>> f != FluxBounds(-5, 10)
+        False'''
+        return not self == other
 
     def __repr__(self):
         return 'FluxBounds({}, {})'.format(repr(self._lower), repr(self._upper))
@@ -149,7 +220,7 @@ class MetabolicModel(object):
             return
 
         if reaction not in self.database.reactions:
-            raise Exception('Model reaction does not reference a database reaction: {}'.format(rxnid))
+            raise Exception('Model reaction does not reference a database reaction: {}'.format(reaction))
 
         self.reaction_set.add(reaction)
         self._limits[reaction] = FluxBounds(-v_max, v_max) if reaction in self.database.reversible else FluxBounds(0, v_max)
