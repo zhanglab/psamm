@@ -336,6 +336,33 @@ class Formula(object):
 
         return formula
 
+    @classmethod
+    def balance(cls, lhs, rhs):
+        '''Return formulas that need to be added to balance given formulas
+
+        Given complete formulas for right side and left side of a reaction,
+        calculate formulas for the missing compounds on both sides. Return
+        as a left, right tuple.
+
+        >>> Formula.balance(Formula.parse('H2O'), Formula.parse('OH'))
+        (Formula({}), Formula({Atom('H'): 1}))
+
+        >>> Formula.balance(Formula.parse('C3H6OH'), Formula.parse('CH6O2'))
+        (Formula({Atom('O'): 1}), Formula({Atom('C'): 2, Atom('H'): 1}))
+
+        >>> Formula.balance(Formula.parse('H2(CH2)n'), Formula.parse('CH3O(CH2)n'))
+        (Formula({Atom('C'): 1, Atom('H'): 1, Atom('O'): 1}), Formula({}))'''
+
+        def missing(formula, other):
+            for element, value in formula._values.iteritems():
+                if element not in other._values:
+                    yield value*element
+                # Check that
+                elif value - other._values[element] > 0:
+                    delta = value - other._values[element]
+                    yield delta*element
+
+        return sum(missing(rhs, lhs), Formula()), sum(missing(lhs, rhs), Formula())
 
 if __name__ == '__main__':
     import doctest
