@@ -7,48 +7,8 @@ Vlassis, Nikos, Maria Pires Pacheco, and Thomas Sauter.
 network models." PLoS computational biology 10.1 (2014):
 e1003424.'''
 
-import pulp
 import cplex
 from itertools import izip
-
-def fastcore_lp3(model, reaction_subset):
-    # Create LP-3 problem of Fastcore
-    prob = pulp.LpProblem('Fastcore-LP-3', pulp.LpMaximize)
-
-    reaction_list = sorted(model.reaction_set)
-    compound_list = sorted(model.compound_set)
-    reaction_map = dict((rxnid, i) for i, rxnid in enumerate(reaction_list))
-    compound_map = dict((cpdid, i) for i, cpdid in enumerate(compound_list))
-
-    # Define flux variables
-    fluxes = []
-    for rxnid in reaction_list:
-        lower, upper = model.limits[rxnid]
-        var = pulp.LpVariable('v_'+rxnid, lower, upper)
-        fluxes.append(var)
-
-    # Define constraints
-    massbalance_lhs = [0 for cpdid in compound_list]
-    for spec, value in model.matrix.iteritems():
-        cpdid, rxnid = spec
-        cpdindex = compound_map[cpdid]
-        rxnindex = reaction_map[rxnid]
-        massbalance_lhs[cpdindex] += value*fluxes[rxnindex]
-
-    for lhs in massbalance_lhs:
-        prob += lhs == 0
-
-    # Define objective
-    objective = sum(fluxes[reaction_map[rxnid]] for rxnid in reaction_subset)
-    prob += objective
-
-    # Solve
-    status = prob.solve()
-    if pulp.LpStatus[status] != 'Optimal':
-        raise Exception('Non-optimal solution: {}'.format(pulp.LpStatus[status]))
-
-    for rxnid, flux in izip(reaction_list, fluxes):
-        yield rxnid, flux.value()
 
 def fastcore_lp3_cplex(model, reaction_subset):
     # Create LP-3 problem of Fastcore
@@ -84,54 +44,6 @@ def fastcore_lp3_cplex(model, reaction_subset):
 
     for rxnid in model.reaction_set:
         yield rxnid, prob.solution.get_values('v_'+rxnid)
-
-def fastcore_lp7(model, reaction_subset, epsilon):
-    # Create LP-7 problem of Fastcore
-    prob = pulp.LpProblem('Fastcore-LP-7', pulp.LpMaximize)
-
-    reaction_list = sorted(model.reaction_set)
-    compound_list = sorted(model.compound_set)
-    reaction_map = dict((rxnid, i) for i, rxnid in enumerate(reaction_list))
-    compound_map = dict((cpdid, i) for i, cpdid in enumerate(compound_list))
-
-    # Define flux variables
-    fluxes = []
-    for rxnid in reaction_list:
-        lower, upper = model.limits[rxnid]
-        var = pulp.LpVariable('v_'+rxnid, lower, upper)
-        fluxes.append(var)
-
-    # Define z variables and constraints
-    zs = []
-    for rxnid in reaction_subset:
-        var = pulp.LpVariable('z_'+rxnid, 0, epsilon)
-        zs.append(var)
-
-        rxnindex = reaction_map[rxnid]
-        prob += fluxes[rxnindex] >= var
-
-    # Define constraints
-    massbalance_lhs = [0 for cpdid in compound_list]
-    for spec, value in model.matrix.iteritems():
-        cpdid, rxnid = spec
-        cpdindex = compound_map[cpdid]
-        rxnindex = reaction_map[rxnid]
-        massbalance_lhs[cpdindex] += value*fluxes[rxnindex]
-
-    for lhs in massbalance_lhs:
-        prob += lhs == 0
-
-    # Define objective
-    objective = sum(zs)
-    prob += objective
-
-    # Solve
-    status = prob.solve()
-    if pulp.LpStatus[status] != 'Optimal':
-        raise Exception('Non-optimal solution: {}'.format(pulp.LpStatus[status]))
-
-    for rxnid, flux in izip(reaction_list, fluxes):
-        yield rxnid, flux.value()
 
 def fastcore_lp7_cplex(model, reaction_subset, epsilon):
     # Create LP-7 problem of Fastcore
@@ -174,68 +86,6 @@ def fastcore_lp7_cplex(model, reaction_subset, epsilon):
 
     for rxnid in model.reaction_set:
         yield rxnid, prob.solution.get_values('v_'+rxnid)
-
-def fastcore_lp10(model, subset_k, subset_p, epsilon):
-    if len(subset_k) == 0:
-        return
-
-    scaling = 1e5
-
-    # Create LP-10 problem of Fastcore
-    prob = pulp.LpProblem('Fastcore-LP-10', pulp.LpMinimize)
-
-    reaction_list = sorted(model.reaction_set)
-    compound_list = sorted(model.compound_set)
-    reaction_map = dict((rxnid, i) for i, rxnid in enumerate(reaction_list))
-    compound_map = dict((cpdid, i) for i, cpdid in enumerate(compound_list))
-
-    # Define flux variables
-    max_bound = 0
-    fluxes = []
-    for rxnid in reaction_list:
-        lower, upper = model.limits[rxnid]
-        for b in (lower, upper):
-            if abs(b) >= max_bound:
-                max_bound = abs(b)
-        var = pulp.LpVariable('v_'+rxnid, lower*scaling, upper*scaling)
-        fluxes.append(var)
-
-    # Define z variables and constraints
-    zs = []
-    for rxnid in subset_p:
-        var = pulp.LpVariable('z_'+rxnid, 0, max_bound*scaling)
-        zs.append(var)
-
-        rxnindex = reaction_map[rxnid]
-        prob += fluxes[rxnindex] >= -var
-        prob += fluxes[rxnindex] <= var
-
-    # Define constraints
-    for rxnid in subset_k:
-        rxnindex = reaction_map[rxnid]
-        prob += fluxes[rxnindex] >= epsilon*scaling
-
-    massbalance_lhs = [0 for cpdid in compound_list]
-    for spec, value in model.matrix.iteritems():
-        cpdid, rxnid = spec
-        cpdindex = compound_map[cpdid]
-        rxnindex = reaction_map[rxnid]
-        massbalance_lhs[cpdindex] += value*fluxes[rxnindex]
-
-    for lhs in massbalance_lhs:
-        prob += lhs == 0
-
-    # Define objective
-    objective = sum(zs)
-    prob += objective
-
-    # Solve
-    status = prob.solve()
-    if pulp.LpStatus[status] != 'Optimal':
-        raise Exception('Non-optimal solution: {}'.format(pulp.LpStatus[status]))
-
-    for rxnid, flux in izip(reaction_list, fluxes):
-        yield rxnid, flux.value()
 
 def fastcore_lp10_cplex(model, subset_k, subset_p, epsilon):
     if len(subset_k) == 0:
