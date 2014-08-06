@@ -7,10 +7,9 @@ is consistent on the left and right side of the reaction equation.
 Reactions that are not balanced will be printed out.'''
 
 import csv
-from formula import Formula
+from formula import Formula, Radical
 import reaction
 import argparse
-import pprint
 
 # Main program
 if __name__ == '__main__':
@@ -30,10 +29,15 @@ if __name__ == '__main__':
     for rowc in readerc:
         SEED_cid, cpd_names, formula, Mass,KEGG_maps, KEGG_cid = rowc
 
-        if '*' in formula:
-            continue
+        # Create pseudo-radical group for compounds with
+        # missing formula, so they don't match up. Only
+        # cpd11632 (Photon) is allowed to have an empty formula.
+        if (formula.strip() == '' and SEED_cid != 'cpd11632') or '*' in formula:
+            f = Formula({Radical('R'+SEED_cid): 1})
+        else:
+            f = Formula.parse(formula)
 
-        compound_formula[SEED_cid] = Formula.parse(formula)
+        compound_formula[SEED_cid] = f
 
     readerr = csv.reader(rxn_file,delimiter='\t')
     for rowr in readerr:
