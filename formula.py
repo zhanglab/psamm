@@ -164,26 +164,33 @@ class Formula(object):
     def __add__(self, other):
         '''Sum of self and other
 
-        >>> Formula({'H': 2, 'O': 1}) + Formula({'N': 1, 'O': 2})
-        Formula({'H': 2, 'N': 1, 'O': 3})
-        '''
-        if isinstance(other, numbers.Number) and other == 0:
-            return Formula(self._values)
-        elif isinstance(other, FormulaElement):
+        >>> Formula({Atom('H'): 2, Atom('O'): 1}) + Formula({Atom('N'): 1, Atom('O'): 2})
+        Formula({Atom('H'): 2, Atom('N'): 1, Atom('O'): 3})
+
+        >>> Formula({Atom('H'): Expression.parse('n')}) + Formula({Atom('H'): Expression.parse('-n')})
+        Formula({})'''
+
+        if isinstance(other, FormulaElement):
             result = Formula(self._values)
             if other in self._values:
                 result._values[other] += 1
+                if isinstance(result._values[other], Expression):
+                    result._values[other] = result._values[other].simplify()
             else:
                 result._values[other] = 1
-            return result
         elif isinstance(other, Formula):
-            result = defaultdict(int)
+            values = defaultdict(int)
             for f in (self._values, other._values):
                 for key, value in f.items():
-                    result[key] += value
-            return Formula(result)
+                    values[key] += value
+                    if isinstance(values[key], Expression):
+                        values[key] = values[key].simplify()
+            result = Formula(values)
         else:
             return NotImplemented
+
+        result._values = { key: value for key, value in result._values.items() if value != 0 }
+        return result
 
     def __radd__(self, other):
         return self + other
@@ -191,23 +198,24 @@ class Formula(object):
     def __mul__(self, other):
         '''Multiply each count by other
 
-        >>> Formula({'H': 2, 'O': 1}) * 4
-        Formula({'H': 8, 'O': 4})'''
+        >>> Formula({Atom('H'): 2, Atom('O'): 1}) * 4
+        Formula({Atom('H'): 8, Atom('O'): 4})'''
 
         if isinstance(other, numbers.Number):
-            return Formula({ key: value*other for key, value in self._values.items() })
-        elif isinstance(other, Variable):
-            return Formula({ self: other })
-        elif isinstance(other, Expression):
-            return Formula({ self: other })
+            result = Formula({ key: value*other for key, value in self._values.items() })
+        elif isinstance(other, Variable) or isinstance(other, Expression):
+            result = Formula({ self: other.simplify() })
         else:
             return NotImplemented
+
+        result._values = { key: value for key, value in result._values.items() if value != 0 }
+        return result
 
     def __rmul__(self, other):
         '''Multiply each count by other
 
-        >>> 2 * Formula({'H': 2, 'O': 1})
-        Formula({'H': 4, 'O': 2})'''
+        >>> 2 * Formula({Atom('H'): 2, Atom('O'): 1})
+        Formula({Atom('H'): 4, Atom('O'): 2})'''
 
         return self * other
 
@@ -220,9 +228,9 @@ class Formula(object):
     def __eq__(self, other):
         '''Equality of self and other
 
-        >>> Formula({'H': 2, 'O': 1}) == Formula({'O': 1, 'H': 2})
+        >>> Formula({Atom('H'): 2, Atom('O'): 1}) == Formula({Atom('O'): 1, Atom('H'): 2})
         True
-        >>> Formula({'Au': 1}) == Formula({'Ag': 1})
+        >>> Formula({Atom('Au'): 1}) == Formula({Atom('Ag'): 1})
         False'''
 
         return isinstance(other, Formula) and self._values == other._values
@@ -230,7 +238,7 @@ class Formula(object):
     def __ne__(self, other):
         '''Not equality of self and other
 
-        >>> Formula({'Au': 1}) != Formula({'Ag': 1})
+        >>> Formula({Atom('Au'): 1}) != Formula({Atom('Ag'): 1})
         True'''
 
         return not self == other
@@ -328,6 +336,33 @@ class Formula(object):
 
         return formula
 
+    @classmethod
+    def balance(cls, lhs, rhs):
+        '''Return formulas that need to be added to balance given formulas
+
+        Given complete formulas for right side and left side of a reaction,
+        calculate formulas for the missing compounds on both sides. Return
+        as a left, right tuple.
+
+        >>> Formula.balance(Formula.parse('H2O'), Formula.parse('OH'))
+        (Formula({}), Formula({Atom('H'): 1}))
+
+        >>> Formula.balance(Formula.parse('C3H6OH'), Formula.parse('CH6O2'))
+        (Formula({Atom('O'): 1}), Formula({Atom('C'): 2, Atom('H'): 1}))
+
+        >>> Formula.balance(Formula.parse('H2(CH2)n'), Formula.parse('CH3O(CH2)n'))
+        (Formula({Atom('C'): 1, Atom('H'): 1, Atom('O'): 1}), Formula({}))'''
+
+        def missing(formula, other):
+            for element, value in formula._values.iteritems():
+                if element not in other._values:
+                    yield value*element
+                # Check that
+                elif value - other._values[element] > 0:
+                    delta = value - other._values[element]
+                    yield delta*element
+
+        return sum(missing(rhs, lhs), Formula()), sum(missing(lhs, rhs), Formula())
 
 if __name__ == '__main__':
     import doctest
