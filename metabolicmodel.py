@@ -159,6 +159,27 @@ class MetabolicDatabase(object):
         self.compound_reactions = defaultdict(set)
         self.reversible = set()
 
+    def set_reaction(self, rxnid, reaction):
+        # Overwrite previous reaction if the same id is used
+        if rxnid in self.reactions:
+            # Clean up compound to reaction mapping
+            for compound in self.reactions[rxnid]:
+                self.compound_reactions[compound].remove(rxnid)
+
+            self.reversible.discard(rxnid)
+            del self.reactions[rxnid]
+
+        # Add values to global (sparse) stoichiometric matrix
+        for compound, value, comp in reaction.left:
+            self.reactions[rxnid][(compound.name, comp)] = -value
+            self.compound_reactions[(compound.name, comp)].add(rxnid)
+        for compound, value, comp in reaction.right:
+            self.reactions[rxnid][(compound.name, comp)] = value
+            self.compound_reactions[(compound.name, comp)].add(rxnid)
+
+        if reaction.direction != '=>':
+            self.reversible.add(rxnid)
+
     def load_model_from_file(self, reaction_list, v_max=1000):
         '''Load model defined by given reaction list file'''
 
@@ -182,26 +203,7 @@ class MetabolicDatabase(object):
             for line in file:
                 rxnid, equation = line.strip().split(None, 1)
                 rx = reaction.ModelSEED.parse(equation).normalized()
-
-                # Overwrite previous reaction if the same id is used
-                if rxnid in database.reactions:
-                    del database.reactions[rxnid]
-
-                # Add values to global (sparse) stoichiometric matrix
-                for compound, value, comp in rx.left:
-                    database.reactions[rxnid][(compound.name, comp)] = -value
-                for compound, value, comp in rx.right:
-                    database.reactions[rxnid][(compound.name, comp)] = value
-
-                if rx.direction != '=>':
-                    database.reversible.add(rxnid)
-
-        # Create mapping from compound to reaction. We do this
-        # outside the previous loop so that we can overwrite
-        # reactions without having to fix the compound mapping.
-        for rxnid, compound_dict in database.reactions.iteritems():
-            for compound, value in compound_dict:
-                database.compound_reactions[compound].add(rxnid)
+                database.set_reaction(rxnid, rx)
 
         return database
 
@@ -247,6 +249,21 @@ class MetabolicModel(object):
 
         for compound, value in self._database.reactions[reaction].iteritems():
             self._compound_set.add(compound)
+
+    def remove_reaction(self, reaction):
+        '''Remove reaction from model'''
+
+        if reaction not in self._reaction_set:
+            return
+
+        self._reaction_set.remove(reaction)
+        del self._limits[reaction]
+
+        # Remove compound from compound_set if it is not referenced
+        # by any other reactions in the model.
+        for compound, value in self._database.reactions[reaction].iteritems():
+            if all(other_reaction not in self._reaction_set for other_reaction in self._database.compound_reactions[compound]):
+                self._compound_set.remove(compound)
 
     def reset_flux_bounds(self, reaction, v_max=1000):
         '''Reset flux bounds of model reaction
