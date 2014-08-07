@@ -3,8 +3,8 @@
 
 from collections import defaultdict
 from itertools import chain
-import fastcore
-import fluxanalysis
+
+from reaction import ModelSEED, Reaction, Compound
 
 class FluxBounds(object):
     '''Represents lower and upper bounds of flux as a mutable object
@@ -159,15 +159,50 @@ class MetabolicDatabase(object):
         self.compound_reactions = defaultdict(set)
         self.reversible = set()
 
-    def load_model_from_file(self, v_max=1000):
-        '''Load model from definition in current directory'''
+    @property
+    def compounds(self):
+        return set(self.compound_reactions)
+
+    def get_reaction(self, rxnid):
+        if rxnid not in self.reactions:
+            raise ValueError('Unknown reaction {}'.format(repr(rxnid)))
+
+        direction = '=>'
+        if rxnid in self.reversible:
+            direction = '<=>'
+
+        left = ((Compound(compound[0]), -value, compound[1]) for compound, value in self.reactions[rxnid].iteritems() if value < 0)
+        right = ((Compound(compound[0]), value, compound[1]) for compound, value in self.reactions[rxnid].iteritems() if value > 0)
+        return Reaction(direction, left, right)
+
+    def set_reaction(self, rxnid, reaction):
+        # Overwrite previous reaction if the same id is used
+        if rxnid in self.reactions:
+            # Clean up compound to reaction mapping
+            for compound in self.reactions[rxnid]:
+                self.compound_reactions[compound].remove(rxnid)
+
+            self.reversible.discard(rxnid)
+            del self.reactions[rxnid]
+
+        # Add values to global (sparse) stoichiometric matrix
+        for compound, value, comp in reaction.left:
+            self.reactions[rxnid][(compound.name, comp)] = -value
+            self.compound_reactions[(compound.name, comp)].add(rxnid)
+        for compound, value, comp in reaction.right:
+            self.reactions[rxnid][(compound.name, comp)] = value
+            self.compound_reactions[(compound.name, comp)].add(rxnid)
+
+        if reaction.direction != '=>':
+            self.reversible.add(rxnid)
+
+    def load_model_from_file(self, reaction_list, v_max=1000):
+        '''Load model defined by given reaction list file'''
 
         model = MetabolicModel(self)
-
-        with open('modelrxn.txt', 'r') as f:
-            for line in f:
-                rxnid = line.strip()
-                model.add_reaction(rxnid)
+        for line in reaction_list:
+            rxnid = line.strip()
+            model.add_reaction(rxnid)
 
         for rxnid in model.reaction_set:
             model.reset_flux_bounds(rxnid, v_max)
@@ -175,25 +210,16 @@ class MetabolicDatabase(object):
         return model
 
     @classmethod
-    def load_from_file(cls):
-        '''Load database from definition in current directory'''
+    def load_from_files(cls, *files):
+        '''Load database from given reactions definition lists'''
 
         database = cls()
 
-        with open('mat.txt', 'r') as f:
-            for line in f:
-                fields = line.strip().split()
-                cpdid, rxnid = fields[0].split('.', 2)
-                value = float(fields[1])
-
-                database.reactions[rxnid][cpdid] = value
-                database.compound_reactions[cpdid].add(rxnid)
-
-        with open('rev.txt', 'r') as f:
-            for line in f:
-                rxnid = line.strip()
-                if rxnid in database.reactions:
-                    database.reversible.add(rxnid)
+        for file in files:
+            for line in file:
+                rxnid, equation = line.strip().split(None, 1)
+                rx = ModelSEED.parse(equation).normalized()
+                database.set_reaction(rxnid, rx)
 
         return database
 
@@ -239,6 +265,21 @@ class MetabolicModel(object):
 
         for compound, value in self._database.reactions[reaction].iteritems():
             self._compound_set.add(compound)
+
+    def remove_reaction(self, reaction):
+        '''Remove reaction from model'''
+
+        if reaction not in self._reaction_set:
+            return
+
+        self._reaction_set.remove(reaction)
+        del self._limits[reaction]
+
+        # Remove compound from compound_set if it is not referenced
+        # by any other reactions in the model.
+        for compound, value in self._database.reactions[reaction].iteritems():
+            if all(other_reaction not in self._reaction_set for other_reaction in self._database.compound_reactions[compound]):
+                self._compound_set.remove(compound)
 
     def reset_flux_bounds(self, reaction, v_max=1000):
         '''Reset flux bounds of model reaction
