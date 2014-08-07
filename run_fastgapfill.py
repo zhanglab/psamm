@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import argparse
+import csv
+
 from metabolicmodel import MetabolicDatabase
 from reaction import Reaction, Compound
 import fastcore
@@ -11,12 +13,25 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run FastGapFill on a metabolic model')
     parser.add_argument('reactionlist', type=argparse.FileType('r'), help='Model definition')
     parser.add_argument('--database', required=True, metavar='reactionfile', action='append',
-                        type=argparse.FileType('r'),
+                        type=argparse.FileType('r'), default=[],
                         help='Reaction definition list to usa as database')
+    parser.add_argument('--compounds', metavar='compoundfile', action='append',
+                        type=argparse.FileType('r'), default=[],
+                        help='Optional compound information table')
     args = parser.parse_args()
 
     database = MetabolicDatabase.load_from_files(*args.database)
     model = database.load_model_from_file(args.reactionlist)
+
+    # Load compound information
+    compounds = {}
+    for compound_table in args.compounds:
+        compound_table.readline() # Skip header
+        for row in csv.reader(compound_table, delimiter='\t'):
+            cpdid, names = row[:2]
+            synonyms = names.split(',<br>')
+            name = synonyms.pop()
+            compounds[cpdid] = name
 
     # Run Fastcc and print the inconsistent set
     print 'Calculating Fastcc consistent subset...'
@@ -66,4 +81,5 @@ if __name__ == '__main__':
             reaction_class = 'Core'
         elif rxnid in model.reaction_set:
             reaction_class = 'Model'
-        print '{}\t{}\t{}\t{}'.format(rxnid, reaction_class, flux, database.get_reaction(rxnid))
+        reaction = database.get_reaction(rxnid).translated_compounds(lambda x: compounds.get(x, x))
+        print '{}\t{}\t{}\t{}'.format(rxnid, reaction_class, flux, reaction)
