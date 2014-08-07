@@ -4,7 +4,7 @@
 from collections import defaultdict
 from itertools import chain
 
-import reaction
+from reaction import ModelSEED, Reaction, Compound
 
 class FluxBounds(object):
     '''Represents lower and upper bounds of flux as a mutable object
@@ -163,6 +163,18 @@ class MetabolicDatabase(object):
     def compounds(self):
         return set(self.compound_reactions)
 
+    def get_reaction(self, rxnid):
+        if rxnid not in self.reactions:
+            raise ValueError('Unknown reaction {}'.format(repr(rxnid)))
+
+        direction = '=>'
+        if rxnid in self.reversible:
+            direction = '<=>'
+
+        left = ((Compound(compound[0]), -value, compound[1]) for compound, value in self.reactions[rxnid].iteritems() if value < 0)
+        right = ((Compound(compound[0]), value, compound[1]) for compound, value in self.reactions[rxnid].iteritems() if value > 0)
+        return Reaction(direction, left, right)
+
     def set_reaction(self, rxnid, reaction):
         # Overwrite previous reaction if the same id is used
         if rxnid in self.reactions:
@@ -206,7 +218,7 @@ class MetabolicDatabase(object):
         for file in files:
             for line in file:
                 rxnid, equation = line.strip().split(None, 1)
-                rx = reaction.ModelSEED.parse(equation).normalized()
+                rx = ModelSEED.parse(equation).normalized()
                 database.set_reaction(rxnid, rx)
 
         return database

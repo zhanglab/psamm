@@ -66,4 +66,4 @@ if __name__ == '__main__':
             reaction_class = 'Core'
         elif rxnid in model.reaction_set:
             reaction_class = 'Model'
-        print '{}\t{}\t{}'.format(rxnid, reaction_class, flux)
+        print '{}\t{}\t{}\t{}'.format(rxnid, reaction_class, flux, database.get_reaction(rxnid))
