@@ -8,20 +8,25 @@ import random
 FLUX_THRESHOLD = 0.75
 
 if __name__ == '__main__':
+    # Parse command line arguments
     parser = argparse.ArgumentParser(description='Find random minimal set of reactions that keep biomass above a threshold')
+    parser.add_argument('--database', required=True, metavar='reactionfile', action='append',
+                        type=argparse.FileType('r'), default=[],
+                        help='Reaction definition list to usa as database')
+    parser.add_argument('reactionlist', type=argparse.FileType('r'), help='Model definition')
     parser.add_argument('reaction', help='Name of the biomass reaction')
     args = parser.parse_args()
 
     biomass_reaction = args.reaction
 
-    database = MetabolicDatabase.load_from_file()
-    model = database.load_model_from_file()
+    database = MetabolicDatabase.load_from_files(*args.database)
+    model = database.load_model_from_file(args.reactionlist)
     model.load_exchange_limits()
 
     # Obtain normal biomass flux
     fluxes = dict(fluxanalysis.flux_balance(model, biomass_reaction))
     threshold = fluxes[biomass_reaction] * FLUX_THRESHOLD
-    
+
     # number of experiments
     model_test = model.copy()
     essential = { biomass_reaction }
