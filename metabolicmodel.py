@@ -159,6 +159,10 @@ class MetabolicDatabase(object):
         self.compound_reactions = defaultdict(set)
         self.reversible = set()
 
+    @property
+    def compounds(self):
+        return set(self.compound_reactions)
+
     def set_reaction(self, rxnid, reaction):
         # Overwrite previous reaction if the same id is used
         if rxnid in self.reactions:
