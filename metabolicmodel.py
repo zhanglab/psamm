@@ -207,26 +207,38 @@ class MetabolicModel(object):
     stoichiometric values are reversed.'''
 
     def __init__(self, database):
-        self.database = database
+        self._database = database
         self._limits = defaultdict(FluxBounds)
-        self.reaction_set = set()
-        self.compound_set = set()
+        self._reaction_set = set()
+        self._compound_set = set()
         self._flipped = set()
+
+    @property
+    def database(self):
+        return self._database
+
+    @property
+    def reaction_set(self):
+        return set(self._reaction_set)
+
+    @property
+    def compound_set(self):
+        return set(self._compound_set)
 
     def add_reaction(self, reaction, v_max=1000):
         '''Add reaction to model'''
 
-        if reaction in self.reaction_set:
+        if reaction in self._reaction_set:
             return
 
-        if reaction not in self.database.reactions:
+        if reaction not in self._database.reactions:
             raise Exception('Model reaction does not reference a database reaction: {}'.format(reaction))
 
-        self.reaction_set.add(reaction)
-        self._limits[reaction] = FluxBounds(-v_max, v_max) if reaction in self.database.reversible else FluxBounds(0, v_max)
+        self._reaction_set.add(reaction)
+        self._limits[reaction] = FluxBounds(-v_max, v_max) if reaction in self._database.reversible else FluxBounds(0, v_max)
 
-        for compound, value in self.database.reactions[reaction].iteritems():
-            self.compound_set.add(compound)
+        for compound, value in self._database.reactions[reaction].iteritems():
+            self._compound_set.add(compound)
 
     def reset_flux_bounds(self, reaction, v_max=1000):
         '''Reset flux bounds of model reaction
@@ -234,7 +246,7 @@ class MetabolicModel(object):
         A reversible reaction will be reset to (-v_max, v_max) and
         an irreversible reaction will be set to (0, v_max).'''
 
-        self._limits[reaction].bounds = (-v_max, v_max) if reaction in self.database.reversible else (0, v_max)
+        self._limits[reaction].bounds = (-v_max, v_max) if reaction in self._database.reversible else (0, v_max)
 
     def load_exchange_limits(self, v_max=1000):
         '''Load exchange limits from external file'''
@@ -242,7 +254,7 @@ class MetabolicModel(object):
         with open('exchangerxn.txt', 'r') as f:
             for line in f:
                 rxnid = line.strip()
-                if rxnid in self.reaction_set:
+                if rxnid in self._reaction_set:
                     self._limits[rxnid].bounds = 0, v_max
 
         with open('exchangelimit.txt', 'r') as f:
@@ -252,13 +264,13 @@ class MetabolicModel(object):
                     continue
                 rxnid, value = line.split()
 
-                if rxnid in self.reaction_set:
+                if rxnid in self._reaction_set:
                     self._limits[rxnid].bounds = float(value), v_max
 
     @property
     def reversible(self):
         '''The set of reversible reactions'''
-        return self.database.reversible & self.reaction_set
+        return self._database.reversible & self._reaction_set
 
     @property
     def matrix(self):
@@ -273,11 +285,11 @@ class MetabolicModel(object):
 
             def __getitem__(self, key):
                 if len(key) != 2:
-                    raise KeyError(repr(key))
+                    raise TypeError(repr(key))
                 cpdid, rxnid = key
-                if rxnid not in self._model.reaction_set:
+                if rxnid not in self._model._reaction_set:
                     raise KeyError(repr(key))
-                value = self._model.database.reactions[rxnid][cpdid]
+                value = self._model._database.reactions[rxnid][cpdid]
                 return value * self._value_mul(rxnid)
 
             def __contains__(self, key):
@@ -291,13 +303,13 @@ class MetabolicModel(object):
                 return self.iterkeys()
 
             def iterkeys(self):
-                for rxnid in self._model.reaction_set:
-                    for cpdid in self._model.database.reactions[rxnid]:
+                for rxnid in self._model._reaction_set:
+                    for cpdid in self._model._database.reactions[rxnid]:
                         yield cpdid, rxnid
 
             def iteritems(self):
-                for rxnid in self._model.reaction_set:
-                    for cpdid, value in self._model.database.reactions[rxnid].iteritems():
+                for rxnid in self._model._reaction_set:
+                    for cpdid, value in self._model._database.reactions[rxnid].iteritems():
                         value = value * self._value_mul(rxnid)
                         yield (cpdid, rxnid), value
 
@@ -334,10 +346,10 @@ class MetabolicModel(object):
     def copy(self):
         '''Return copy of model'''
 
-        model = self.__class__(self.database)
+        model = self.__class__(self._database)
         model._limits = dict(self._limits)
-        model.reaction_set = set(self.reaction_set)
-        model.compound_set = set(self.compound_set)
+        model._reaction_set = set(self._reaction_set)
+        model._compound_set = set(self.compound_set)
         model._flipped = set(self._flipped)
         return model
 
