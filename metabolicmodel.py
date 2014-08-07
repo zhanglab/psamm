@@ -3,8 +3,8 @@
 
 from collections import defaultdict
 from itertools import chain
-import fastcore
-import fluxanalysis
+
+import reaction
 
 class FluxBounds(object):
     '''Represents lower and upper bounds of flux as a mutable object
@@ -159,15 +159,13 @@ class MetabolicDatabase(object):
         self.compound_reactions = defaultdict(set)
         self.reversible = set()
 
-    def load_model_from_file(self, v_max=1000):
-        '''Load model from definition in current directory'''
+    def load_model_from_file(self, reaction_list, v_max=1000):
+        '''Load model defined by given reaction list file'''
 
         model = MetabolicModel(self)
-
-        with open('modelrxn.txt', 'r') as f:
-            for line in f:
-                rxnid = line.strip()
-                model.add_reaction(rxnid)
+        for line in reaction_list:
+            rxnid = line.strip()
+            model.add_reaction(rxnid)
 
         for rxnid in model.reaction_set:
             model.reset_flux_bounds(rxnid, v_max)
@@ -175,25 +173,35 @@ class MetabolicDatabase(object):
         return model
 
     @classmethod
-    def load_from_file(cls):
-        '''Load database from definition in current directory'''
+    def load_from_files(cls, *files):
+        '''Load database from given reactions definition lists'''
 
         database = cls()
 
-        with open('mat.txt', 'r') as f:
-            for line in f:
-                fields = line.strip().split()
-                cpdid, rxnid = fields[0].split('.', 2)
-                value = float(fields[1])
+        for file in files:
+            for line in file:
+                rxnid, equation = line.strip().split(None, 1)
+                rx = reaction.ModelSEED.parse(equation).normalized()
 
-                database.reactions[rxnid][cpdid] = value
-                database.compound_reactions[cpdid].add(rxnid)
-
-        with open('rev.txt', 'r') as f:
-            for line in f:
-                rxnid = line.strip()
+                # Overwrite previous reaction if the same id is used
                 if rxnid in database.reactions:
+                    del database.reactions[rxnid]
+
+                # Add values to global (sparse) stoichiometric matrix
+                for compound, value, comp in rx.left:
+                    database.reactions[rxnid][(compound.name, comp)] = -value
+                for compound, value, comp in rx.right:
+                    database.reactions[rxnid][(compound.name, comp)] = value
+
+                if rx.direction != '=>':
                     database.reversible.add(rxnid)
+
+        # Create mapping from compound to reaction. We do this
+        # outside the previous loop so that we can overwrite
+        # reactions without having to fix the compound mapping.
+        for rxnid, compound_dict in database.reactions.iteritems():
+            for compound, value in compound_dict:
+                database.compound_reactions[compound].add(rxnid)
 
         return database
 

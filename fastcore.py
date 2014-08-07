@@ -10,6 +10,12 @@ e1003424.'''
 import cplex
 from itertools import izip
 
+def cpdid_str(compound):
+    cpdid, comp = compound
+    if comp is None:
+        return cpdid
+    return cpdid+'_'+comp
+
 def fastcore_lp3_cplex(model, reaction_subset):
     # Create LP-3 problem of Fastcore
     prob = cplex.Cplex()
@@ -28,12 +34,13 @@ def fastcore_lp3_cplex(model, reaction_subset):
     prob.variables.add(names=flux_names, lb=flux_lower, ub=flux_upper, obj=flux_obj)
 
     # Define constraints
-    massbalance_lhs = { cpdid: [] for cpdid in model.compound_set }
+    massbalance_lhs = { compound: [] for compound in model.compound_set }
     for spec, value in model.matrix.iteritems():
-        cpdid, rxnid = spec
-        massbalance_lhs[cpdid].append(('v_'+rxnid, value))
-    for cpdid, lhs in massbalance_lhs.iteritems():
-        prob.linear_constraints.add(lin_expr=[cplex.SparsePair(*zip(*lhs))], senses=['E'], rhs=[0], names=['massbalance_'+cpdid])
+        compound, rxnid = spec
+        massbalance_lhs[compound].append(('v_'+rxnid, float(value)))
+    for compound, lhs in massbalance_lhs.iteritems():
+        prob.linear_constraints.add(lin_expr=[cplex.SparsePair(*zip(*lhs))], senses=['E'],
+                                    rhs=[0], names=['massbalance_'+cpdid_str(compound)])
 
     # Solve
     prob.objective.set_sense(prob.objective.sense.maximize)
@@ -70,12 +77,13 @@ def fastcore_lp7_cplex(model, reaction_subset, epsilon):
     for rxnid in reaction_subset:
         prob.linear_constraints.add(lin_expr=[cplex.SparsePair(ind=('v_'+rxnid, 'z_'+rxnid), val=(1, -1))], senses=['G'], rhs=[0])
 
-    massbalance_lhs = { cpdid: [] for cpdid in model.compound_set }
+    massbalance_lhs = { compound: [] for compound in model.compound_set }
     for spec, value in model.matrix.iteritems():
-        cpdid, rxnid = spec
-        massbalance_lhs[cpdid].append(('v_'+rxnid, value))
-    for cpdid, lhs in massbalance_lhs.iteritems():
-        prob.linear_constraints.add(lin_expr=[cplex.SparsePair(*zip(*lhs))], senses=['E'], rhs=[0], names=['massbalance_'+cpdid])
+        compound, rxnid = spec
+        massbalance_lhs[compound].append(('v_'+rxnid, float(value)))
+    for compound, lhs in massbalance_lhs.iteritems():
+        prob.linear_constraints.add(lin_expr=[cplex.SparsePair(*zip(*lhs))], senses=['E'],
+                                    rhs=[0], names=['massbalance_'+cpdid_str(compound)])
 
     # Solve
     prob.objective.set_sense(prob.objective.sense.maximize)
@@ -126,12 +134,13 @@ def fastcore_lp10_cplex(model, subset_k, subset_p, epsilon):
     prob.linear_constraints.add(lin_expr=[cplex.SparsePair(ind=['v_'+rxnid], val=[1]) for rxnid in subset_k],
                                 senses=['G'] * len(subset_k), rhs=[epsilon*scaling] * len(subset_k))
 
-    massbalance_lhs = { cpdid: [] for cpdid in model.compound_set }
+    massbalance_lhs = { compound: [] for compound in model.compound_set }
     for spec, value in model.matrix.iteritems():
-        cpdid, rxnid = spec
-        massbalance_lhs[cpdid].append(('v_'+rxnid, value))
-    for cpdid, lhs in massbalance_lhs.iteritems():
-        prob.linear_constraints.add(lin_expr=[cplex.SparsePair(*zip(*lhs))], senses=['E'], rhs=[0], names=['massbalance_'+cpdid])
+        compound, rxnid = spec
+        massbalance_lhs[compound].append(('v_'+rxnid, float(value)))
+    for compound, lhs in massbalance_lhs.iteritems():
+        prob.linear_constraints.add(lin_expr=[cplex.SparsePair(*zip(*lhs))], senses=['E'],
+                                    rhs=[0], names=['massbalance_'+cpdid_str(compound)])
 
     # Solve
     prob.objective.set_sense(prob.objective.sense.minimize)

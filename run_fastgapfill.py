@@ -1,12 +1,21 @@
 #!/usr/bin/env python
 
+import argparse
 from metabolicmodel import MetabolicDatabase
 import fastcore
 import fluxanalysis
 
 if __name__ == '__main__':
-    database = MetabolicDatabase.load_from_file()
-    model = database.load_model_from_file()
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Run FastGapFill on a metabolic model')
+    parser.add_argument('reactionlist', type=argparse.FileType('r'), help='Model definition')
+    parser.add_argument('--database', required=True, metavar='reactionfile', action='append',
+                        type=argparse.FileType('r'),
+                        help='Reaction definition list to usa as database')
+    args = parser.parse_args()
+
+    database = MetabolicDatabase.load_from_files(*args.database)
+    model = database.load_model_from_file(args.reactionlist)
 
     # Run Fastcc and print the inconsistent set
     print 'Calculating Fastcc consistent subset...'
