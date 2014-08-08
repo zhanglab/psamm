@@ -9,7 +9,7 @@ import re
 
 if __name__ == '__main__':
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Convert ModelSEED reaction table to standard format')
+    parser = argparse.ArgumentParser(description='Prints Equation_cpd')
     parser.add_argument('rxnfile', type=argparse.FileType('r'), help='Reaction table file')
     parser.add_argument('cpdfile', type=argparse.FileType('r'), help='Compound table file')
     parser.add_argument('rxnlist', type=argparse.FileType('r'), help='List of Rxns')
