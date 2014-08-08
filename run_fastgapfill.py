@@ -80,15 +80,15 @@ if __name__ == '__main__':
     # Load bounds on exchange reactions
     #model.load_exchange_limits()
 
-    print 'Flux balance on original model maximizing Biomass...'
-    for rxnid, flux in sorted(fluxanalysis.flux_balance(model, 'Biomass')):
+    print 'Flux balance on original model maximizing growth...'
+    for rxnid, flux in sorted(fluxanalysis.flux_balance(model, 'Growth')):
         print '{}\t{}'.format(rxnid, flux)
 
-    print 'Flux balance on induced model maximizing Biomass...'
+    print 'Flux balance on induced model maximizing growth...'
     model_induced = model.copy()
     for rxnid in induced:
         model_induced.add_reaction(rxnid)
-    for rxnid, flux in sorted(fluxanalysis.flux_balance(model_induced, 'Biomass')):
+    for rxnid, flux in sorted(fluxanalysis.flux_balance(model_induced, 'Growth')):
         reaction_class = 'Dbase'
         if rxnid in consistent_core:
             reaction_class = 'Core'
