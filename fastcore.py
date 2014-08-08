@@ -7,6 +7,7 @@ Vlassis, Nikos, Maria Pires Pacheco, and Thomas Sauter.
 network models." PLoS computational biology 10.1 (2014):
 e1003424.'''
 
+import sys
 import cplex
 
 def cpdid_str(compound):
@@ -15,9 +16,18 @@ def cpdid_str(compound):
         return cpdid
     return cpdid+'_'+comp
 
+def cplex_prob():
+    '''Create a Cplex object that is set up to not flood stdout'''
+    prob = cplex.Cplex()
+    prob.set_results_stream(sys.stderr)
+    prob.set_warning_stream(sys.stderr)
+    prob.set_error_stream(sys.stderr)
+    prob.set_log_stream(sys.stderr)
+    return prob
+
 def fastcore_lp3_cplex(model, reaction_subset):
     # Create LP-3 problem of Fastcore
-    prob = cplex.Cplex()
+    prob = cplex_prob()
 
     # Define flux variables
     flux_names = []
@@ -53,7 +63,7 @@ def fastcore_lp3_cplex(model, reaction_subset):
 
 def fastcore_lp7_cplex(model, reaction_subset, epsilon):
     # Create LP-7 problem of Fastcore
-    prob = cplex.Cplex()
+    prob = cplex_prob()
 
     # Define flux variables
     flux_names = []
@@ -101,7 +111,7 @@ def fastcore_lp10_cplex(model, subset_k, subset_p, epsilon):
     scaling = 1e5
 
     # Create LP-10 problem of Fastcore
-    prob = cplex.Cplex()
+    prob = cplex_prob()
 
     # Define flux variables
     flux_names = []
