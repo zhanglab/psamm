@@ -42,7 +42,7 @@ if __name__ == '__main__':
     print 'Adding exchange and transport reactions...'
     for cpdid, comp in database.compounds:
         rxnid_ex = 'rxnex_'+cpdid
-        reaction_ex = Reaction('<=>', [], [(Compound(cpdid), 1, 'e')])
+        reaction_ex = Reaction('<=>', [(Compound(cpdid), 1, 'e')], [])
         print '{}\t{}'.format(rxnid_ex, reaction_ex)
         database.set_reaction(rxnid_ex, reaction_ex)
 
