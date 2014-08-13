@@ -83,8 +83,8 @@ def fastcore_lp7_cplex(model, reaction_subset, epsilon):
     prob.variables.add(names=zs_names, lb=[0]*len(zs_names), ub=[epsilon]*len(zs_names), obj=[1]*len(zs_names))
 
     # Define constraints
-    for rxnid in reaction_subset:
-        prob.linear_constraints.add(lin_expr=[cplex.SparsePair(ind=('v_'+rxnid, 'z_'+rxnid), val=(1, -1))], senses=['G'], rhs=[0])
+    prob.linear_constraints.add(lin_expr=[cplex.SparsePair(ind=('v_'+rxnid, 'z_'+rxnid), val=(1, -1)) for rxnid in reaction_subset],
+                                senses=['G']*len(reaction_subset), rhs=[0]*len(reaction_subset))
 
     massbalance_lhs = { compound: [] for compound in model.compound_set }
     for spec, value in model.matrix.iteritems():
