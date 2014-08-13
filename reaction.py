@@ -184,6 +184,9 @@ class Reaction(object):
     def __ne__(self, other):
         return not self == other
 
+    def __hash__(self):
+        return hash('Reaction') ^ hash(self._direction) ^ hash(self._left) ^ hash(self._right)
+
 class ParseError(Exception):
     '''Exception used to signal errors while parsing'''
     pass
