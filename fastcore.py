@@ -8,7 +8,6 @@ network models." PLoS computational biology 10.1 (2014):
 e1003424.'''
 
 import cplex
-from itertools import izip
 
 def cpdid_str(compound):
     cpdid, comp = compound
@@ -286,7 +285,7 @@ def fastcore(model, core, epsilon):
             flipped = False
         else:
             if singleton:
-                subset_i = set((next(iter(core)),))
+                subset_i = set((next(iter(subset)),))
                 subset_rev_i = subset_i & model.reversible
             else:
                 subset_rev_i = subset & model.reversible
