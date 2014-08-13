@@ -39,22 +39,37 @@ if __name__ == '__main__':
     consistent_core = fastcore.fastcc_consistent_subset(model, 0.001)
     print 'Result: |A| = {}, |A| = {}'.format(len(consistent_core), consistent_core)
 
+    all_reactions = {}
+    for rxnid in database.reactions:
+        rx = database.get_reaction(rxnid)
+        all_reactions[rx] = rxnid
+
+    model_compartments = set([None, 'e'])
+
     # Add exchange and transport reactions to database
     print 'Adding exchange and transport reactions...'
     for cpdid, comp in database.compounds:
-        rxnid_ex = 'rxnex_'+cpdid
-        reaction_ex = Reaction('<=>', [(Compound(cpdid), 1, 'e')], [])
-        print '{}\t{}'.format(rxnid_ex, reaction_ex)
-        database.set_reaction(rxnid_ex, reaction_ex)
+        if comp in model_compartments:
+            rxnid_ex = 'rxnex_'+cpdid
+            reaction_ex = Reaction('<=>', [(Compound(cpdid), 1, 'e')], [])
+            if reaction_ex not in all_reactions:
+                print '{}\t{}'.format(rxnid_ex, reaction_ex)
+                database.set_reaction(rxnid_ex, reaction_ex)
+                all_reactions[reaction_ex] = rxnid_ex
+            else:
+                print '{}\tAlready in database! ({})'.format(rxnid_ex, all_reactions[reaction_ex])
 
-        rxnid_tp = 'rxntp_'+cpdid
-        reaction_tp = Reaction('<=>', [(Compound(cpdid), 1, 'e')], [(Compound(cpdid), 1, None)])
-        print '{}\t{}'.format(rxnid_tp, reaction_tp)
-        database.set_reaction(rxnid_tp, reaction_tp)
+            rxnid_tp = 'rxntp_'+cpdid
+            reaction_tp = Reaction('<=>', [(Compound(cpdid), 1, 'e')], [(Compound(cpdid), 1, None)])
+            if reaction_tp not in all_reactions:
+                print '{}\t{}'.format(rxnid_tp, reaction_tp)
+                database.set_reaction(rxnid_tp, reaction_tp)
+                all_reactions[reaction_tp] = rxnid_tp
+            else:
+                print '{}\tAlready in database! ({})'.format(rxnid_tp, all_reactions[reaction_tp])
 
     # Add reaction from database to model. Do not add reactions from compartments
     # that are not in the model.
-    model_compartments = (None, 'e')
     model_complete = model.copy()
     for rxnid in database.reactions:
         reaction = database.get_reaction(rxnid)
