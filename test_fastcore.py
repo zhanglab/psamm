@@ -32,29 +32,29 @@ class TestFastcore(unittest.TestCase):
         supp = fastcore.support_set_positive(result, 0.001*0.99)
         self.assertEqual(supp, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
 
-    def test_find_sparse_mode(self):
+    def test_find_sparse_mode_singleton(self):
         core = { 'rxn_1' }
-        mode = fastcore.find_sparse_mode(self.model, core, self.model.reaction_set - core, False, 0.001)
+        mode = fastcore.find_sparse_mode(self.model, core, self.model.reaction_set - core, 0.001)
         self.assertEqual(mode, { 'rxn_1', 'rxn_3', 'rxn_6' })
 
         core = { 'rxn_2' }
-        mode = fastcore.find_sparse_mode(self.model, core, self.model.reaction_set - core, False, 0.001)
+        mode = fastcore.find_sparse_mode(self.model, core, self.model.reaction_set - core, 0.001)
         self.assertEqual(mode, set())
 
         core = { 'rxn_3' }
-        mode = fastcore.find_sparse_mode(self.model, core, self.model.reaction_set - core, False, 0.001)
+        mode = fastcore.find_sparse_mode(self.model, core, self.model.reaction_set - core, 0.001)
         self.assertEqual(mode, { 'rxn_1', 'rxn_3', 'rxn_6' })
 
         core = { 'rxn_4' }
-        mode = fastcore.find_sparse_mode(self.model, core, self.model.reaction_set - core, False, 0.001)
+        mode = fastcore.find_sparse_mode(self.model, core, self.model.reaction_set - core, 0.001)
         self.assertEqual(mode, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
 
         core = { 'rxn_5' }
-        mode = fastcore.find_sparse_mode(self.model, core, self.model.reaction_set - core, False, 0.001)
+        mode = fastcore.find_sparse_mode(self.model, core, self.model.reaction_set - core, 0.001)
         self.assertEqual(mode, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
 
         core = { 'rxn_6' }
-        mode = fastcore.find_sparse_mode(self.model, core, self.model.reaction_set - core, False, 0.001)
+        mode = fastcore.find_sparse_mode(self.model, core, self.model.reaction_set - core, 0.001)
         self.assertEqual(mode, { 'rxn_1', 'rxn_3', 'rxn_6' })
 
     def test_fastcc_inconsistent(self):

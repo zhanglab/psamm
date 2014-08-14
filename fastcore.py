@@ -257,19 +257,14 @@ def fastcc_consistent_subset(model, epsilon):
     a set of reaction names.'''
     return model.reaction_set - set(fastcc(model, epsilon))
 
-def find_sparse_mode(model, core, additional, singleton, epsilon):
+def find_sparse_mode(model, core, additional, epsilon):
     '''Find the support of a sparse mode containing the core subset.'''
 
     if len(core) == 0:
         return set()
 
-    if singleton:
-        subset_i = set((next(iter(core)),))
-        #print 'LP7 on {}'.format(subset_i)
-        support = support_set_positive(fastcore_lp7_cplex(model, subset_i, epsilon), 0.99*epsilon)
-    else:
-        #print 'LP7 on {}'.format(core)
-        support = support_set_positive(fastcore_lp7_cplex(model, core, epsilon), 0.99*epsilon)
+    #print 'LP7 on {}'.format(core)
+    support = support_set_positive(fastcore_lp7_cplex(model, core, epsilon), 0.99*epsilon)
 
     #print 'Support = {}'.format(support)
     k = core & support
@@ -295,7 +290,7 @@ def fastcore(model, core, epsilon):
     penalty_set = model.reaction_set - core
     #print '|P| = {}, P = {}'.format(len(penalty_set), penalty_set)
 
-    mode = find_sparse_mode(model, subset, penalty_set, False, epsilon)
+    mode = find_sparse_mode(model, subset, penalty_set, epsilon)
     if len(subset - mode) > 0:
         raise Exception('Inconsistent irreversible core reactions')
 
@@ -309,7 +304,13 @@ def fastcore(model, core, epsilon):
     singleton = False
     while len(subset) > 0:
         penalty_set -= consistent_subset
-        mode = find_sparse_mode(model, subset, penalty_set, singleton, epsilon)
+        if singleton:
+            subset_i = set((next(iter(subset)),))
+        else:
+            subset_i = subset
+
+        mode = find_sparse_mode(model, subset_i, penalty_set, epsilon)
+
         consistent_subset |= mode
         #print '|A| = {}, A = {}'.format(len(consistent_subset), consistent_subset)
 
@@ -318,12 +319,7 @@ def fastcore(model, core, epsilon):
             #print '|J| = {}, J = {}'.format(len(subset), subset)
             flipped = False
         else:
-            if singleton:
-                subset_i = set((next(iter(subset)),))
-                subset_rev_i = subset_i & model.reversible
-            else:
-                subset_rev_i = subset & model.reversible
-
+            subset_rev_i = subset_i & model.reversible
             if flipped or len(subset_rev_i) == 0:
                 flipped = False
                 if singleton:
