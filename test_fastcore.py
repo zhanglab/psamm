@@ -57,6 +57,19 @@ class TestFastcore(unittest.TestCase):
         mode = fastcore.find_sparse_mode(self.model, core, self.model.reaction_set - core, False, 0.001)
         self.assertEqual(mode, { 'rxn_1', 'rxn_3', 'rxn_6' })
 
+    def test_fastcc_inconsistent(self):
+        self.assertEqual(list(fastcore.fastcc(self.model, 0.001)), ['rxn_2'])
+
+    def test_fastcc_is_consistent_on_inconsistent(self):
+        self.assertEqual(fastcore.fastcc_is_consistent(self.model, 0.001), False)
+
+    def test_fastcc_is_consistent_on_consistent(self):
+        self.model.remove_reaction('rxn_2')
+        self.assertEqual(fastcore.fastcc_is_consistent(self.model, 0.001), True)
+
+    def test_fastcc_consistent_subset(self):
+        self.assertEqual(fastcore.fastcc_consistent_subset(self.model, 0.001), set(['rxn_1', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6']))
+
     def test_fastcore_global_inconsistent(self):
         self.database.set_reaction('rxn_7', ModelSEED.parse('|E| <=>'))
         self.assertRaises(Exception, fastcore.fastcore, (self.model, { 'rxn_7' }, 0.001))

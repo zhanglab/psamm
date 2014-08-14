@@ -182,9 +182,8 @@ def support_set_positive(fluxiter, threshold):
 def fastcc(model, epsilon):
     '''Check consistency of model reactions
 
-    Returns a set containing the reactions in the largest
-    consistent subset of the model or an empty set if no such
-    subset can be found.'''
+    Yields all reactions in the model that are not part
+    of the consistent subset.'''
 
     consistent_subset = set()
 
@@ -198,9 +197,8 @@ def fastcc(model, epsilon):
     #print 'A = {}'.format(consistent_subset)
 
     inconsistent_subset = subset - support
-
-    if len(inconsistent_subset) > 0:
-        print 'Subset inconsistent: {}'.format(inconsistent_subset)
+    for reaction in inconsistent_subset:
+        yield reaction
 
     subset = (model.reaction_set - support) - inconsistent_subset
     #print '|J| = {}'.format(len(subset))
@@ -232,7 +230,8 @@ def fastcc(model, epsilon):
                 flipped = False
                 if singleton:
                     subset -= subset_rev_i
-                    print 'Reversible reaction inconsistent: {}'.format(subset_rev_i)
+                    for reaction in subset_rev_i:
+                        yield reaction
                 else:
                     singleton = True
             else:
@@ -240,7 +239,23 @@ def fastcc(model, epsilon):
                 flipped = True
                 #print 'Flip'
 
-    return consistent_subset
+def fastcc_is_consistent(model, epsilon):
+    '''Quckly check whether model is consistent
+
+    Returns true if the model is consistent. If it is only necessary
+    to know whether a model is consistent, this function is faster
+    as it will return the result as soon as it finds a single
+    inconsistent reaction.'''
+    for reaction in fastcc(model, epsilon):
+        return False
+    return True
+
+def fastcc_consistent_subset(model, epsilon):
+    '''Return consistent subset of model
+
+    The largest consistent subset is returned as
+    a set of reaction names.'''
+    return model.reaction_set - set(fastcc(model, epsilon))
 
 def find_sparse_mode(model, core, additional, singleton, epsilon):
     '''Find the support of a sparse mode containing the core subset.'''

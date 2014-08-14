@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
     # Run Fastcc and print the inconsistent set
     print 'Calculating Fastcc consistent subset...'
-    consistent_core = fastcore.fastcc(model, 0.001)
+    consistent_core = fastcore.fastcc_consistent_subset(model, 0.001)
     print 'Result: |A| = {}, |A| = {}'.format(len(consistent_core), consistent_core)
 
     # Add exchange and transport reactions to database
