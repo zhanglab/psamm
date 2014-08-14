@@ -166,9 +166,18 @@ def support_set(fluxiter, threshold):
 
     The fluxiter argument must be an iterable returning
     reaction, flux-pairs. The support set is the set of
+    reactions that have an absolute flux value above a
+    certain threshold.'''
+    return set(rxnid for rxnid, v in fluxiter if abs(v) >= threshold)
+
+def support_set_positive(fluxiter, threshold):
+    '''Return the support set of the fluxes (only positive fluxes)
+
+    The fluxiter argument must be an iterable returning
+    reaction, flux-pairs. The support set is the set of
     reactions that have a flux value above a certain
     threshold.'''
-    return set(rxnid for rxnid, v in fluxiter if abs(v) >= threshold)
+    return set(rxnid for rxnid, v in fluxiter if v >= threshold)
 
 def fastcc(model, epsilon):
     '''Check consistency of model reactions
@@ -242,10 +251,10 @@ def find_sparse_mode(model, core, additional, singleton, epsilon):
     if singleton:
         subset_i = set((next(iter(core)),))
         #print 'LP7 on {}'.format(subset_i)
-        support = support_set(fastcore_lp7_cplex(model, subset_i, epsilon), 0.99*epsilon)
+        support = support_set_positive(fastcore_lp7_cplex(model, subset_i, epsilon), 0.99*epsilon)
     else:
         #print 'LP7 on {}'.format(core)
-        support = support_set(fastcore_lp7_cplex(model, core, epsilon), 0.99*epsilon)
+        support = support_set_positive(fastcore_lp7_cplex(model, core, epsilon), 0.99*epsilon)
 
     #print 'Support = {}'.format(support)
     k = core & support
