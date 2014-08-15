@@ -6,7 +6,7 @@ from itertools import chain
 
 from metabolicmodel import MetabolicDatabase
 from reaction import Reaction, Compound
-import fastcore
+import fastcore as fc
 import fluxanalysis
 
 if __name__ == '__main__':
@@ -23,6 +23,9 @@ if __name__ == '__main__':
 
     database = MetabolicDatabase.load_from_files(*args.database)
     model = database.load_model_from_file(args.reactionlist)
+
+    # Create fastcore object
+    fastcore = fc.Fastcore()
 
     # Load compound information
     compounds = {}
@@ -78,7 +81,7 @@ if __name__ == '__main__':
         model_complete.add_reaction(rxnid)
 
     #print 'Calculating Fastcc consistent subset of database...'
-    #database_consistent = fastcore.fastcc(model_complete, 0.001)
+    #database_consistent = fastcore.fastcc_consistent_subset(model_complete, 0.001)
     #print 'Result: |A| = {}, A = {}'.format(len(database_consistent), database_consistent)
     #removed_reactions = model_complete.reaction_set - database_consistent
     #print 'Removed: |R| = {}, R = {}'.format(len(removed_reactions), removed_reactions)
@@ -113,7 +116,7 @@ if __name__ == '__main__':
         print '{}\t{}\t{}\t{}'.format(rxnid, reaction_class, flux, reaction)
 
     print 'Calculating Fastcc consistent subset of induced model...'
-    consistent_core = fastcore.fastcc_inconsistent_subset(model_induced, 0.001)
+    consistent_core = fastcore.fastcc_consistent_subset(model_induced, 0.001)
     print 'Result: |A| = {}, A = {}'.format(len(consistent_core), consistent_core)
     removed_reactions = model_induced.reaction_set - consistent_core
     print 'Removed: |R| = {}, R = {}'.format(len(removed_reactions), removed_reactions)
