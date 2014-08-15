@@ -45,3 +45,23 @@ def flux_balance(model, reaction='Biomass', solver=lpsolver.CplexSolver()):
 
     for rxnid in model.reaction_set:
         yield rxnid, prob.solution.get_values('v_'+rxnid)
+
+def naive_consistency_check(model, subset, epsilon, solver=lpsolver.CplexSolver()):
+    subset = set(subset)
+    while len(subset) > 0:
+        reaction = next(iter(subset))
+        print '{} left, checking {}...'.format(len(subset), reaction)
+        fluxiter = flux_balance(model, reaction, solver)
+        support = set(rxnid for rxnid, v in fluxiter if abs(v) >= epsilon)
+        subset -= support
+        if reaction in support:
+            continue
+        elif reaction in model.reversible:
+            model2 = model.flipped({ reaction })
+            fluxiter = flux_balance(model2, reaction, solver)
+            support = set(rxnid for rxnid, v in fluxiter if abs(v) >= epsilon)
+            subset -= support
+            if reaction in support:
+                continue
+        print '{} not consistent!'.format(reaction)
+        yield reaction
