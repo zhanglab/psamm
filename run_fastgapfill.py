@@ -47,38 +47,14 @@ if __name__ == '__main__':
         rx = database.get_reaction(rxnid)
         all_reactions[rx] = rxnid
 
-    model_compartments = set([None, 'e'])
+    model_compartments = { None, 'e' }
 
     # Add exchange and transport reactions to database
-    print 'Adding exchange and transport reactions...'
-    for cpdid, comp in database.compounds:
-        if comp in model_compartments:
-            rxnid_ex = 'rxnex_'+cpdid
-            reaction_ex = Reaction('<=>', [(Compound(cpdid), 1, 'e')], [])
-            if reaction_ex not in all_reactions:
-                print '{}\t{}'.format(rxnid_ex, reaction_ex)
-                database.set_reaction(rxnid_ex, reaction_ex)
-                all_reactions[reaction_ex] = rxnid_ex
-            else:
-                print '{}\tAlready in database! ({})'.format(rxnid_ex, all_reactions[reaction_ex])
-
-            rxnid_tp = 'rxntp_'+cpdid
-            reaction_tp = Reaction('<=>', [(Compound(cpdid), 1, 'e')], [(Compound(cpdid), 1, None)])
-            if reaction_tp not in all_reactions:
-                print '{}\t{}'.format(rxnid_tp, reaction_tp)
-                database.set_reaction(rxnid_tp, reaction_tp)
-                all_reactions[reaction_tp] = rxnid_tp
-            else:
-                print '{}\tAlready in database! ({})'.format(rxnid_tp, all_reactions[reaction_tp])
-
-    # Add reaction from database to model. Do not add reactions from compartments
-    # that are not in the model.
     model_complete = model.copy()
-    for rxnid in database.reactions:
-        reaction = database.get_reaction(rxnid)
-        if any(comp not in model_compartments for compound, value, comp in chain(reaction.left, reaction.right)):
-            continue
-        model_complete.add_reaction(rxnid)
+    print 'Adding database, exchange and transport reactions...'
+    model_complete.add_all_database_reactions(model_compartments)
+    model_complete.add_all_exchange_reactions()
+    model_complete.add_all_transport_reactions()
 
     #print 'Calculating Fastcc consistent subset of database...'
     #database_consistent = fastcore.fastcc_consistent_subset(model_complete, 0.001)
