@@ -2,6 +2,7 @@
 '''Implementation of Flux Balance Analysis'''
 
 import cplex
+import lpsolver
 
 def cpdid_str(compound):
     cpdid, comp = compound
@@ -9,9 +10,9 @@ def cpdid_str(compound):
         return cpdid
     return cpdid+'_'+comp
 
-def flux_balance(model, reaction='Biomass'):
+def flux_balance(model, reaction='Biomass', solver=lpsolver.CplexSolver()):
     # Create Flux balance problem
-    prob = cplex.Cplex()
+    prob = solver.create_problem()
 
     # Define flux variables
     flux_names = []
