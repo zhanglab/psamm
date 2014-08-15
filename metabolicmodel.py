@@ -396,6 +396,8 @@ class MetabolicModel(object):
 
     def flip(self, subset):
         '''Flip stoichiometry and limits of reactions in subset'''
+        if any(reaction not in self._reaction_set for reaction in subset):
+            raise ValueError('A reaction in the subset is not in the model')
         self._flipped ^= subset
 
     def flipped(self, subset):
