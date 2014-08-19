@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+
+import argparse
+
+from metabolicmodel import MetabolicDatabase
+import massconsistency
+
+if __name__ == '__main__':
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Run FastGapFill on a metabolic model')
+    parser.add_argument('reactionlist', type=argparse.FileType('r'), help='Model definition')
+    parser.add_argument('--database', required=True, metavar='reactionfile', action='append',
+                        type=argparse.FileType('r'), default=[],
+                        help='Reaction definition list to use as database')
+    parser.add_argument('--compounds', metavar='compoundfile', action='append',
+                        type=argparse.FileType('r'), default=[],
+                        help='Optional compound information table')
+    args = parser.parse_args()
+
+    database = MetabolicDatabase.load_from_files(*args.database)
+    model = database.load_model_from_file(args.reactionlist)
+
+    for rxnid in database.reactions:
+        model.add_reaction(rxnid)
+
+    # Create a set of known mass-inconsistent reactions
+    exchange = set()
+
+    for rxnid in model.reaction_set:
+        rx = database.get_reaction(rxnid)
+        if len(rx.left) == 0 or len(rx.right) == 0:
+            exchange.add(rxnid)
+
+    # Create set of compounds allowed to have mass zero
+    zeromass = set()
+    zeromass.add('cpd11632') # Photon
+    zeromass.add('cpd12713') # Electron
+
+    p = massconsistency.MassConsistencyCheck()
+
+    print 'Mass consistency on model (database)...'
+    epsilon = 1e-5
+    compound_iter = p.check_compound_consistency(model, exchange, zeromass)
+
+    print 'Compound consistency...'
+    good = 0
+    total = 0
+    for cpdid, mass in sorted(compound_iter, key=lambda x: x[1], reverse=True):
+        if cpdid == 'cpd_h':
+            print 'Proton mass: {}'.format(mass)
+        if mass >= 1-epsilon or cpdid in zeromass:
+            good += 1
+        total += 1
+        print '{}: {}'.format(cpdid, mass)
+    print 'Consistent compounds: {}/{}'.format(good, total)
+
+    print 'Is consistent? {}'.format(p.is_consistent(model, exchange, zeromass))
+
+    print 'Reaction consistency...'
+    reaction_iter, compound_iter = p.check_reaction_consistency(model, exchange, zeromass)
+    for rxnid, residual in sorted(reaction_iter, key=lambda x: abs(x[1]), reverse=True):
+        if residual >= epsilon:
+            print '{}\t{}'.format(rxnid, residual)
