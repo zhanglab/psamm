@@ -127,7 +127,7 @@ if __name__ == '__main__':
     for cpdid in sorted(compound_model):
         model_cpds.write('{}\n'.format(cpdid))
 
-    compound_not_produced = compound_c - compound_produced
+    compound_not_produced = (compound_c - compound_produced) & compound_model
     for cpdid in sorted(compound_not_produced):
         rnp.write('{}\n'.format(cpdid))
 
