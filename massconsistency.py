@@ -74,7 +74,7 @@ class MassConsistencyCheck(object):
 
         return status == 1
 
-    def check_reaction_consistency(self, model, exchange=set(), zeromass=set()):
+    def check_reaction_consistency(self, model, exchange=set(), zeromass=set(), weights=None):
         '''Check inconsistent reactions by minimizing mass residuals for each reaction
 
         Returns a reaction iterable, and compound iterable. The
@@ -93,6 +93,10 @@ class MassConsistencyCheck(object):
         self._cplex_add_compound_mass(prob, model, zeromass)
         self._cplex_constrain_identical(prob, model)
 
+        # Initialize weights of the weighted L1-norm
+        if weights is None:
+            weights = { rxnid: 1 for rxnid in model.reaction_set }
+
         # Define residual mass variables and objective constriants
         rs_names = []
         zs_names = []
@@ -101,7 +105,7 @@ class MassConsistencyCheck(object):
             zs_names.append('z_'+rxnid) # objective variable
         prob.variables.add(names=rs_names, lb=[-cplex.infinity]*len(rs_names), ub=[cplex.infinity]*len(rs_names))
         prob.variables.add(names=zs_names, lb=[0]*len(zs_names), ub=[cplex.infinity]*len(zs_names))
-        prob.objective.set_linear(('z_'+rxnid, 1) for rxnid in model.reaction_set)
+        prob.objective.set_linear(('z_'+rxnid, weights[rxnid]) for rxnid in model.reaction_set)
 
         # Define constraints
         prob.linear_constraints.add(lin_expr=[cplex.SparsePair(ind=('r_'+rxnid, 'z_'+rxnid),
