@@ -123,5 +123,5 @@ $ gams ~/model_script/FluxBalance.gms ps=0
 The resulting flux values can be parsed out using
 
 ``` shell
-$ ~/model_script/parse_fluxbalance.py FluxBalance.lst
+$ ~/model_script/parse_fluxbalance.py FluxBalance.lst rxn_list
 ```
