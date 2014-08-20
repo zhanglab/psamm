@@ -11,6 +11,10 @@ def cpdid_str(compound):
     return cpdid+'_'+comp
 
 def flux_balance(model, reaction='Biomass', solver=lpsolver.CplexSolver()):
+    '''Maximize the flux of a specific reaction
+
+    Yields tuples of reaction id and flux for all model reactions.'''
+
     # Create Flux balance problem
     prob = solver.create_problem()
 
@@ -47,6 +51,21 @@ def flux_balance(model, reaction='Biomass', solver=lpsolver.CplexSolver()):
         yield rxnid, prob.solution.get_values('v_'+rxnid)
 
 def naive_consistency_check(model, subset, epsilon, solver=lpsolver.CplexSolver()):
+    '''Check that reaction subset of model is consistent using FBA
+
+    A reaction is consistent if there is at least one flux solution
+    to the model that both respects the compound balance of the
+    stoichiometric matrix and also allows the reaction to have non-zero
+    flux.
+
+    The naive way to check this is to run FBA on each reaction in turn
+    and checking whether the flux in the solution is non-zero. Since FBA
+    only tries to maximize the flux (and the flux can be negative for
+    reversible reactions), we have to try to both maximize and minimize
+    the flux. An optimization to this method is implemented such that if
+    checking one reaction results in flux in another unchecked reaction,
+    that reaction will immediately be marked flux consistent.'''
+
     subset = set(subset)
     while len(subset) > 0:
         reaction = next(iter(subset))
