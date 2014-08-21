@@ -10,6 +10,8 @@ e1003424.'''
 import sys
 import lpsolver
 import cplex
+from fluxanalysis import flux_balance
+
 
 def support_set(fluxiter, threshold):
     '''Return the support set of the fluxes
@@ -42,45 +44,6 @@ class Fastcore(object):
         if comp is None:
             return cpdid
         return cpdid+'_'+comp
-
-    def lp3(self, model, reaction_subset):
-        # This is in fact just a standard FBA, maximizing the flux of
-        # the reactions in the subset.
-
-        # Create LP-3 problem of Fastcore
-        prob = self._solver.create_problem()
-
-        # Define flux variables
-        flux_names = []
-        flux_lower = []
-        flux_upper = []
-        flux_obj = []
-        for rxnid in model.reaction_set:
-            lower, upper = model.limits[rxnid]
-            flux_names.append('v_'+rxnid)
-            flux_lower.append(lower)
-            flux_upper.append(upper)
-            flux_obj.append(1 if rxnid in reaction_subset else 0)
-        prob.variables.add(names=flux_names, lb=flux_lower, ub=flux_upper, obj=flux_obj)
-
-        # Define constraints
-        massbalance_lhs = { compound: [] for compound in model.compound_set }
-        for spec, value in model.matrix.iteritems():
-            compound, rxnid = spec
-            massbalance_lhs[compound].append(('v_'+rxnid, float(value)))
-        for compound, lhs in massbalance_lhs.iteritems():
-            prob.linear_constraints.add(lin_expr=[cplex.SparsePair(*zip(*lhs))], senses=['E'],
-                                        rhs=[0], names=['massbalance_'+self._cpdid_str(compound)])
-
-        # Solve
-        prob.objective.set_sense(prob.objective.sense.maximize)
-        prob.solve()
-        status = prob.solution.get_status()
-        if status != 1:
-            raise Exception('Non-optimal solution: {}'.format(prob.solution.get_status_string()))
-
-        for rxnid in model.reaction_set:
-            yield rxnid, prob.solution.get_values('v_'+rxnid)
 
     def lp7(self, model, reaction_subset, epsilon):
         # This is similar to FBA but approximately maximizing the number
@@ -221,9 +184,10 @@ class Fastcore(object):
         singleton = False
         while len(subset) > 0:
             if singleton:
-                subset_i = set((next(iter(subset)),))
+                reaction = next(iter(subset))
+                subset_i = { reaction }
                 #print 'LP3 on {}'.format(subset_i)
-                support = support_set(self.lp3(model, subset_i), epsilon)
+                support = support_set(flux_balance(model, reaction, self._solver), epsilon)
             else:
                 subset_i = subset
                 #print 'LP7 on {}'.format(subset_i)
