@@ -140,3 +140,4 @@ def naive_consistency_check(model, subset, epsilon, solver=lpsolver.CplexSolver(
                 continue
         print '{} not consistent!'.format(reaction)
         yield reaction
+        subset.remove(reaction)
