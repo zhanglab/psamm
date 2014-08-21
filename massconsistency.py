@@ -74,7 +74,7 @@ class MassConsistencyCheck(object):
 
         return status == 1
 
-    def check_reaction_consistency(self, model, exchange=set(), zeromass=set(), weights=None):
+    def check_reaction_consistency(self, model, exchange=set(), zeromass=set(), weights={}):
         '''Check inconsistent reactions by minimizing mass residuals for each reaction
 
         Returns a reaction iterable, and compound iterable. The
@@ -93,9 +93,8 @@ class MassConsistencyCheck(object):
         self._cplex_add_compound_mass(prob, model, zeromass)
         self._cplex_constrain_identical(prob, model)
 
-        # Initialize weights of the weighted L1-norm
-        if weights is None:
-            weights = { rxnid: 1 for rxnid in model.reaction_set }
+        # Initialize default weights of the weighted L1-norm
+        weights = { rxnid: weights.get(rxnid, 1) for rxnid in model.reaction_set }
 
         # Define residual mass variables and objective constriants
         rs_names = []

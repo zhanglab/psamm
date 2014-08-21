@@ -50,7 +50,7 @@ def flux_balance(model, reaction='Biomass', solver=lpsolver.CplexSolver()):
     for rxnid in model.reaction_set:
         yield rxnid, prob.solution.get_values('v_'+rxnid)
 
-def flux_minimization(model, fixed, weights=None, solver=lpsolver.CplexSolver()):
+def flux_minimization(model, fixed, weights={}, solver=lpsolver.CplexSolver()):
     '''Minimize flux of all reactions while keeping certain fluxes fixed
 
     The fixed reactions are given in a dictionary as reaction id
@@ -59,8 +59,7 @@ def flux_minimization(model, fixed, weights=None, solver=lpsolver.CplexSolver())
     prob = solver.create_problem()
 
     # Initialize default value of weights of the weighted L1-norm
-    if weights is None:
-        weights = { rxnid: 1 for rxnid in model.reaction_set }
+    weights = { rxnid: weights.get(rxnid, 1) for rxnid in model.reaction_set }
 
     # Define flux variables
     flux_names = []
