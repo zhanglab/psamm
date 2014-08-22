@@ -126,6 +126,20 @@ The resulting flux values can be parsed out using
 $ ~/model_script/parse_fluxbalance.py FluxBalance.lst rxn_list
 ```
 
+Alternatively, the python implementation of FBA can be used. This will operate
+directly on the reaction database and model definition, and we will avoid
+having to export the `txt` files entirely. The `exchangelimit.txt` can still be
+used to define the exchange reaction limits. This method can be run using
+
+``` shell
+$ ~/model_script/run_fluxanalysis.py --database ModelSEED_database.tsv \
+        --database custom_database.tsv rxn_list Biomass
+```
+
+More advanced analysis and data processing can be done by using the python
+module `metnet.fluxanalysis` directly. A demonstration of how to accomplish
+this can be seen in the `run_fluxanalysis.py` script.
+
 Test suite
 ----------
 
