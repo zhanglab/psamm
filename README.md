@@ -54,7 +54,7 @@ Now GAMS can be used to solve the GapFind problem using the list of parameters
 that was just produced.
 
 ``` shell
-$ gams ~/model_script/GapFind.gms ps=0
+$ gams ~/model_script/GAMS/GapFind.gms ps=0
 ```
 
 A script is used to parse the output from running GapFind.
@@ -86,7 +86,7 @@ This command will recreate the output files with the additional reactions
 in the database. Now GAMS can be used to solve the GapFill problem.
 
 ``` shell
-$ gams ~/model_script/GapFill.gms ps=0
+$ gams ~/model_script/GAMS/GapFill.gms ps=0
 ```
 
 The output will provide a list of added exchange reactions and/or reversed
@@ -117,7 +117,7 @@ will be maximized. This reaction should correspond to the actual biomass
 reaction, or alternatively the reaction id can be changed in the GAMS file.
 
 ``` shell
-$ gams ~/model_script/FluxBalance.gms ps=0
+$ gams ~/model_script/GAMS/FluxBalance.gms ps=0
 ```
 
 The resulting flux values can be parsed out using
