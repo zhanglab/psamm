@@ -2,7 +2,8 @@
 
 import csv
 import argparse
-import reaction
+
+from metnet.reaction import Reaction, SimpleSuden
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert Suden reaction table to standard format')
@@ -16,9 +17,9 @@ if __name__ == '__main__':
     for row in csv.reader(rxn_table, delimiter='\t'):
         SEED_rid, rxn_name, equation_cpd, equation_name, Subsystem, Suden_protien_ID, gene_association, protein_id, ec_num, reference, Reversibility = row[:11]
 
-        rx = reaction.SudenSimple.parse(equation_cpd).normalized()
+        rx = SudenSimple.parse(equation_cpd).normalized()
         if Reversibility == 'N':
-            rx = reaction.Reaction('=>', rx.left, rx.right)
+            rx = Reaction('=>', rx.left, rx.right)
 
         if not SEED_rid.islower() and SEED_rid[:3].lower() == 'rxn':
             SEED_rid = 'simplesuden_' + SEED_rid.lower()

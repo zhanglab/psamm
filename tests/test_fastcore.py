@@ -2,10 +2,10 @@
 
 import unittest
 
-import metabolicmodel
-import fastcore
-import lpsolver
-from reaction import ModelSEED
+from metnet import metabolicmodel
+from metnet import fastcore
+from metnet import lpsolver
+from metnet.reaction import ModelSEED
 
 class TestFastcoreSimpleVlassisModel(unittest.TestCase):
     '''Test fastcore using the simple model in Vlassis et al. 2014.'''

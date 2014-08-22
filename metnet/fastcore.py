@@ -8,9 +8,10 @@ network models." PLoS computational biology 10.1 (2014):
 e1003424.'''
 
 import sys
-import lpsolver
 import cplex
-from fluxanalysis import flux_balance
+
+from . import lpsolver
+from .fluxanalysis import flux_balance
 
 
 def support_set(fluxiter, threshold):

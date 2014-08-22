@@ -4,7 +4,7 @@
 from collections import defaultdict
 from itertools import chain
 
-from reaction import ModelSEED, Reaction, Compound
+from .reaction import ModelSEED, Reaction, Compound
 
 class FluxBounds(object):
     '''Represents lower and upper bounds of flux as a mutable object

@@ -4,7 +4,8 @@
 import re
 import functools
 from decimal import Decimal
-from expression import Expression
+
+from .expression import Expression
 
 @functools.total_ordering
 class Compound(object):

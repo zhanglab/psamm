@@ -4,10 +4,10 @@ import argparse
 import csv
 from itertools import chain
 
-from metabolicmodel import MetabolicDatabase
-from reaction import Reaction, Compound
-import fastcore as fc
-import fluxanalysis
+from metnet.metabolicmodel import MetabolicDatabase
+from metnet.reaction import Reaction, Compound
+from metnet.fastcore import Fastcore
+from metnet.fluxanalysis import flux_balance
 
 if __name__ == '__main__':
     # Parse command line arguments
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     model = database.load_model_from_file(args.reactionlist)
 
     # Create fastcore object
-    fastcore = fc.Fastcore()
+    fastcore = Fastcore()
 
     # Load compound information
     compounds = {}
@@ -75,14 +75,14 @@ if __name__ == '__main__':
     #model.load_exchange_limits()
 
     print 'Flux balance on original model maximizing growth...'
-    for rxnid, flux in sorted(fluxanalysis.flux_balance(model, 'Growth')):
+    for rxnid, flux in sorted(flux_balance(model, 'Growth')):
         print '{}\t{}'.format(rxnid, flux)
 
     print 'Flux balance on induced model maximizing growth...'
     model_induced = model.copy()
     for rxnid in induced:
         model_induced.add_reaction(rxnid)
-    for rxnid, flux in sorted(fluxanalysis.flux_balance(model_induced, 'Growth')):
+    for rxnid, flux in sorted(flux_balance(model_induced, 'Growth')):
         reaction_class = 'Dbase'
         if rxnid in consistent_core:
             reaction_class = 'Core'

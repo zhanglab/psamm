@@ -6,8 +6,9 @@ reactions, writes the compounds and stoichiometric values in matrix format'''
 
 import argparse
 import csv
-import reaction
 import re
+
+from metnet.reaction import ModelSEED
 
 def compound_id(compound, compartment):
     '''Generate unique id for compound'''
@@ -55,7 +56,7 @@ if __name__ == '__main__':
     for db_rxn_file in args.database:
         for row in csv.reader(db_rxn_file, delimiter='\t'):
             rxn_id, equation = row[:2]
-            rx = reaction.ModelSEED.parse(equation).normalized()
+            rx = ModelSEED.parse(equation).normalized()
 
             # Lists all the reaction names
             w.write('{}\n'.format(rxn_id))

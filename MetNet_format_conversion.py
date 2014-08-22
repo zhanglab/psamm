@@ -4,7 +4,7 @@
 
 import argparse
 import csv
-import reaction
+from metnet.reaction import MetNet
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert MetNet reaction table to standardized format')
@@ -17,7 +17,7 @@ if __name__ == '__main__':
         Reaction_abbreviation, Reaction_name, Equation, EC_number, Gene, Protein, H_Pylori_ortholog, Pathway, Source, Notes = row
         rxnid = 'rxn_' + Reaction_abbreviation.replace('(', '__').replace(')', '__')
 
-        rx = reaction.MetNet.parse(Equation).normalized()
+        rx = MetNet.parse(Equation).normalized()
 
         print '{}\t{}'.format(rxnid, rx)
 

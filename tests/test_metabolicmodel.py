@@ -2,8 +2,8 @@
 
 import unittest
 
-import metabolicmodel
-from reaction import ModelSEED
+from metnet import metabolicmodel
+from metnet.reaction import ModelSEED
 
 class TestMetabolicDatabase(unittest.TestCase):
     def setUp(self):
