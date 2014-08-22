@@ -125,3 +125,28 @@ The resulting flux values can be parsed out using
 ``` shell
 $ ~/model_script/parse_fluxbalance.py FluxBalance.lst rxn_list
 ```
+
+Test suite
+----------
+
+The python modules have test suites that allows us to automatically test various
+aspects of the module implemention. It is important to make sure that all tests
+run without failure _before_ committing changes to any of the modules. The test
+suite is run by changing to the project directory and running
+
+``` shell
+$ ./test.py
+```
+
+Adding or improving tests for python modules is highly encouraged. A test suite for
+a new module should be created in `tests/test_<modulename>.py`. These test suites
+use the built-in `unittest` module.
+
+In addition, some modules have documentation that can be tested using the `doctest`
+module. These test suites should also run without failure before any commits. They
+can be run from the `model_script` directory by specifying the particular module
+(e.g the `expression` module) using
+
+``` shell
+$ python -m metnet.expression -v
+```
