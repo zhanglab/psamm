@@ -9,8 +9,9 @@ will have to be excluded from this check, as they are not able to
 preserve mass (by definition). In addition some models may contain
 pseudo-compounds (e.g. "photon") that also has to be excluded.'''
 
-import lpsolver
 import cplex
+
+from . import lpsolver
 
 class MassConsistencyCheck(object):
     def __init__(self, solver=lpsolver.CplexSolver()):

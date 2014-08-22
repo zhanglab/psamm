@@ -2,7 +2,8 @@
 '''Implementation of Flux Balance Analysis'''
 
 import cplex
-import lpsolver
+
+from . import lpsolver
 
 def cpdid_str(compound):
     cpdid, comp = compound

@@ -7,9 +7,10 @@ is consistent on the left and right side of the reaction equation.
 Reactions that are not balanced will be printed out.'''
 
 import csv
-from formula import Formula, Radical
-import reaction
 import argparse
+
+from metnet.formula import Formula, Radical
+from metnet.reaction import ModelSEED
 
 # Main program
 if __name__ == '__main__':
@@ -46,7 +47,7 @@ if __name__ == '__main__':
         if Equation_cpdid.strip() == '':
             continue
 
-        rx = reaction.ModelSEED.parse(Equation_cpdid).normalized()
+        rx = ModelSEED.parse(Equation_cpdid).normalized()
 
         def multiply_formula(compound_list):
             for compound, count, comp in compound_list:

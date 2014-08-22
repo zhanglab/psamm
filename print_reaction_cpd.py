@@ -3,9 +3,10 @@
 '''Enter a list of reaction ID's and the program gives you the equation_name and equation_cpd'''
 
 import csv
-import reaction
 import argparse
 import re
+
+from metnet.reaction import ModelSEED
 
 if __name__ == '__main__':
     # Parse command line arguments
@@ -13,19 +14,19 @@ if __name__ == '__main__':
     parser.add_argument('rxnfile', type=argparse.FileType('r'), help='Reaction table file')
     parser.add_argument('cpdfile', type=argparse.FileType('r'), help='Compound table file')
     parser.add_argument('rxnlist', type=argparse.FileType('r'), help='List of Rxns')
-    
+
     args = parser.parse_args()
 
     rxn_file = args.rxnfile
     cpd_file = args.cpdfile
     rxn_list = args.rxnlist
-    
+
     compound_map = {}
     reaction_map = set()
 
     for row in csv.reader(rxn_list, delimiter='\t'):
         rxn_id = row[0]
-        
+
         reaction_map.add(rxn_id)
 
     cpd_file.readline() # Skip header
@@ -48,10 +49,10 @@ if __name__ == '__main__':
                 return 'cpd' + m.group(1)
             return compound_map[name]
 
-        rx = reaction.ModelSEED.parse(equation_cpdname).normalized().translated_compounds(translate)
-       
+        rx = ModelSEED.parse(equation_cpdname).normalized().translated_compounds(translate)
+
         if seed_rid in reaction_map:
             print '{}\t{}\t{}'.format(seed_rid,equation_cpdname,rx)
-            
+
 
     rxn_file.close()

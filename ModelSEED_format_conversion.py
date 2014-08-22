@@ -3,9 +3,10 @@
 '''Convert ModelSEED reaction table to standard format'''
 
 import csv
-import reaction
 import argparse
 import re
+
+from metnet.reaction import ModelSEED
 
 if __name__ == '__main__':
     # Parse command line arguments
@@ -40,7 +41,7 @@ if __name__ == '__main__':
                 return 'cpd' + m.group(1)
             return compound_map[name]
 
-        rx = reaction.ModelSEED.parse(equation_cpdname).normalized().translated_compounds(translate)
+        rx = ModelSEED.parse(equation_cpdname).normalized().translated_compounds(translate)
 
         print '{}\t{}'.format(seed_rid, rx)
 

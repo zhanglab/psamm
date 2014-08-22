@@ -2,8 +2,8 @@
 
 import argparse
 
-from metabolicmodel import MetabolicDatabase
-import massconsistency
+from metnet.metabolicmodel import MetabolicDatabase
+from metnet.massconsistency import MassConsistencyCheck
 
 if __name__ == '__main__':
     # Parse command line arguments
@@ -36,11 +36,11 @@ if __name__ == '__main__':
     zeromass.add('cpd11632') # Photon
     zeromass.add('cpd12713') # Electron
 
-    p = massconsistency.MassConsistencyCheck()
+    mass_consistency = MassConsistencyCheck()
 
     print 'Mass consistency on model (database)...'
     epsilon = 1e-5
-    compound_iter = p.check_compound_consistency(model, exchange, zeromass)
+    compound_iter = mass_consistency.check_compound_consistency(model, exchange, zeromass)
 
     print 'Compound consistency...'
     good = 0
@@ -54,10 +54,10 @@ if __name__ == '__main__':
         print '{}: {}'.format(cpdid, mass)
     print 'Consistent compounds: {}/{}'.format(good, total)
 
-    print 'Is consistent? {}'.format(p.is_consistent(model, exchange, zeromass))
+    print 'Is consistent? {}'.format(mass_consistency.is_consistent(model, exchange, zeromass))
 
     print 'Reaction consistency...'
-    reaction_iter, compound_iter = p.check_reaction_consistency(model, exchange, zeromass)
+    reaction_iter, compound_iter = mass_consistency.check_reaction_consistency(model, exchange, zeromass)
     for rxnid, residual in sorted(reaction_iter, key=lambda x: abs(x[1]), reverse=True):
         if residual >= epsilon:
             print '{}\t{}'.format(rxnid, residual)

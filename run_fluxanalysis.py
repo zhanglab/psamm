@@ -4,9 +4,8 @@ import sys
 import argparse
 import csv
 
-from metabolicmodel import MetabolicDatabase
-import fluxanalysis
-import lpsolver
+from metnet.metabolicmodel import MetabolicDatabase
+from metnet.fluxanalysis import flux_balance, flux_minimization
 
 if __name__ == '__main__':
     # Parse command line arguments
@@ -42,7 +41,7 @@ if __name__ == '__main__':
     model.load_exchange_limits()
 
     # Run FBA on model
-    fba_fluxes = dict(fluxanalysis.flux_balance(model, reaction))
+    fba_fluxes = dict(flux_balance(model, reaction))
     optimum = fba_fluxes[reaction]
     for rxnid, flux in sorted(fba_fluxes.iteritems()):
         rx = database.get_reaction(rxnid)
@@ -52,7 +51,7 @@ if __name__ == '__main__':
     epsilon = 1e-5
 
     # Run flux minimization
-    fmin_fluxes = dict(fluxanalysis.flux_minimization(model, { reaction: optimum }))
+    fmin_fluxes = dict(flux_minimization(model, { reaction: optimum }))
     count = 0
     for rxnid, flux in sorted(fmin_fluxes.iteritems()):
         if fba_fluxes[rxnid] - epsilon > flux:

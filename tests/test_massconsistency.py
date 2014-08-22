@@ -2,10 +2,10 @@
 
 import unittest
 
-import metabolicmodel
-import massconsistency
-import lpsolver
-from reaction import ModelSEED
+from metnet import metabolicmodel
+from metnet import massconsistency
+from metnet import lpsolver
+from metnet.reaction import ModelSEED
 
 class TestMassConsistency(unittest.TestCase):
     '''Test fastcore using a simple model'''

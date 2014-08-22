@@ -5,8 +5,9 @@ import pprint
 import numbers
 import re
 from collections import defaultdict
-from expression import Variable, Expression
 import functools
+
+from .expression import Variable, Expression
 
 class FormulaElement(object):
     def __add__(self, other):

@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
 import argparse
-from metabolicmodel import MetabolicDatabase
-import fluxanalysis
 import random
+
+from metnet.metabolicmodel import MetabolicDatabase
+import metnet.fluxanalysis
 
 FLUX_THRESHOLD = 0.75
 
@@ -24,7 +25,7 @@ if __name__ == '__main__':
     model.load_exchange_limits()
 
     # Obtain normal biomass flux
-    fluxes = dict(fluxanalysis.flux_balance(model, biomass_reaction))
+    fluxes = dict(metnet.fluxanalysis.flux_balance(model, biomass_reaction))
     threshold = fluxes[biomass_reaction] * FLUX_THRESHOLD
 
     # number of experiments
@@ -40,7 +41,7 @@ if __name__ == '__main__':
         model_test.limits[testing_rxn].bounds = 0, 0
 
         try:
-            fluxes = dict(fluxanalysis.flux_balance(model, biomass_reaction))
+            fluxes = dict(metnet.fluxanalysis.flux_balance(model, biomass_reaction))
         except:
             for rxnid, bounds in model.limits.iteritems():
                 print rxnid, bounds
