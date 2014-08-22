@@ -140,6 +140,37 @@ More advanced analysis and data processing can be done by using the python
 module `metnet.fluxanalysis` directly. A demonstration of how to accomplish
 this can be seen in the `run_fluxanalysis.py` script.
 
+Mass consistency
+----------------
+
+A model or reaction database can be checked for mass inconsistencies. The basic
+idea is that we should be able to assign a positive mass to each compound in the
+model and have each reaction be balanced with respect to these mass assignments.
+If it can be shown that assigning the masses is impossible, we have discovered
+an inconsistency.
+
+Some variants of this idea is implemented in the `metnet.massconsistency` module.
+The mass consistency check can also be run using
+
+``` shell
+$ ~/model_script/run_fluxanalysis.py --database ModelSEED_database.tsv \
+        --database custom_database.tsv --compounds ModelSEED_cpds.tsv rxn_list
+```
+
+In addition, the chemical formula of compounds can be used to more closely
+point out why a reaction is inconsistent. This check can be done using the
+following script
+
+``` shell
+$ ~/model_script/check_formula_balance.py ModelSEED_database.tsv \
+        ModelSEED_cpds.tsv
+```
+
+For each inconsistent reaction, the reaction id will be printed followed by
+the elements in, respectively, the left- and right-hand side of the reaction,
+followed by the elements needed to balance the left- and right-hand side,
+respectively.
+
 Test suite
 ----------
 
