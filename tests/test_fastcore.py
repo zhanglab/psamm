@@ -20,8 +20,34 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
         self.database.set_reaction('rxn_5', ModelSEED.parse('|C| => |D|'))
         self.database.set_reaction('rxn_6', ModelSEED.parse('|D| =>'))
         self.model = self.database.load_model_from_file(iter(self.database.reactions))
-
         self.fastcore = fastcore.Fastcore(lpsolver.CplexSolver(None))
+
+    def test_flipable_model_view_matrix_get_item_after_flip(self):
+        model = fastcore.FlipableModelView(self.model)
+        model.flip({ 'rxn_4' })
+        self.assertEqual(model.matrix[('A', None), 'rxn_1'], 2)
+        self.assertEqual(model.matrix[('A', None), 'rxn_2'], -1)
+        self.assertEqual(model.matrix[('A', None), 'rxn_4'], 1)
+        self.assertEqual(model.matrix[('C', None), 'rxn_4'], -1)
+
+    def test_flipable_model_view_matrix_get_item_after_double_flip(self):
+        model = fastcore.FlipableModelView(self.model)
+        model.flip({ 'rxn_4', 'rxn_5' })
+        model.flip({ 'rxn_1', 'rxn_4', 'rxn_2' })
+        self.assertEqual(model.matrix[('A', None), 'rxn_1'], -2)
+        self.assertEqual(model.matrix[('A', None), 'rxn_2'], 1)
+        self.assertEqual(model.matrix[('B', None), 'rxn_2'], -1)
+        self.assertEqual(model.matrix[('A', None), 'rxn_4'], -1)
+        self.assertEqual(model.matrix[('C', None), 'rxn_4'], 1)
+        self.assertEqual(model.matrix[('C', None), 'rxn_5'], 1)
+        self.assertEqual(model.matrix[('D', None), 'rxn_5'], -1)
+
+    def test_flipable_model_view_limits_get_item_after_flip(self):
+        model = fastcore.FlipableModelView(self.model)
+        model.flip({ 'rxn_1', 'rxn_2' })
+        self.assertEqual(model.limits['rxn_1'], metabolicmodel.FluxBounds(-1000, 0))
+        self.assertEqual(model.limits['rxn_2'], metabolicmodel.FluxBounds(-1000, 1000))
+        self.assertEqual(model.limits['rxn_3'], metabolicmodel.FluxBounds(0, 1000))
 
     def test_lp10(self):
         result = self.fastcore.lp10(self.model, { 'rxn_6' }, { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5' }, 0.001)

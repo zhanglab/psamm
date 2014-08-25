@@ -227,17 +227,13 @@ class MetabolicModel(object):
     '''Represents a metabolic model containing a set of reactions
 
     The model contains a list of reactions referencing the reactions
-    in the associated database. To support certain optimization
-    algorithms that operate on the stoichiometric matrix it is possible
-    to flip a subset of the reactions such that both flux limits and
-    stoichiometric values are reversed.'''
+    in the associated database.'''
 
     def __init__(self, database):
         self._database = database
         self._limits = defaultdict(FluxBounds)
         self._reaction_set = set()
         self._compound_set = set()
-        self._flipped = set()
 
     @property
     def database(self):
@@ -369,76 +365,47 @@ class MetabolicModel(object):
         '''The set of reversible reactions'''
         return self._database.reversible & self._reaction_set
 
+    class MatrixView(object):
+        def __init__(self, model):
+            self._model = model
+
+        def __getitem__(self, key):
+            if len(key) != 2:
+                raise TypeError(repr(key))
+            cpdid, rxnid = key
+            if rxnid not in self._model._reaction_set:
+                raise KeyError(repr(key))
+            value = self._model._database.reactions[rxnid][cpdid]
+            return value
+
+        def __contains__(self, key):
+            try:
+                self.__getitem__(key)
+            except KeyError:
+                return False
+            return True
+
+        def __iter__(self):
+            return self.iterkeys()
+
+        def iterkeys(self):
+            for rxnid in self._model._reaction_set:
+                for cpdid in self._model._database.reactions[rxnid]:
+                    yield cpdid, rxnid
+
+        def iteritems(self):
+            for rxnid in self._model._reaction_set:
+                for cpdid, value in self._model._database.reactions[rxnid].iteritems():
+                    yield (cpdid, rxnid), value
+
     @property
     def matrix(self):
         '''Mapping from compound, reaction to stoichiometric value'''
-
-        class MatrixView(object):
-            def __init__(self, model):
-                self._model = model
-
-            def _value_mul(self, rxnid):
-                return -1 if rxnid in self._model._flipped else 1
-
-            def __getitem__(self, key):
-                if len(key) != 2:
-                    raise TypeError(repr(key))
-                cpdid, rxnid = key
-                if rxnid not in self._model._reaction_set:
-                    raise KeyError(repr(key))
-                value = self._model._database.reactions[rxnid][cpdid]
-                return value * self._value_mul(rxnid)
-
-            def __contains__(self, key):
-                try:
-                    self.__getitem__(key)
-                except KeyError:
-                    return False
-                return True
-
-            def __iter__(self):
-                return self.iterkeys()
-
-            def iterkeys(self):
-                for rxnid in self._model._reaction_set:
-                    for cpdid in self._model._database.reactions[rxnid]:
-                        yield cpdid, rxnid
-
-            def iteritems(self):
-                for rxnid in self._model._reaction_set:
-                    for cpdid, value in self._model._database.reactions[rxnid].iteritems():
-                        value = value * self._value_mul(rxnid)
-                        yield (cpdid, rxnid), value
-
-        return MatrixView(self)
+        return MetabolicModel.MatrixView(self)
 
     @property
     def limits(self):
-        '''Bounds for reactions fluxes'''
-
-        class LimitsView(object):
-            def __init__(self, model):
-                self._model = model
-
-            def __getitem__(self, key):
-                if key in self._model._flipped:
-                    return self._model._limits[key].flipped()
-                return self._model._limits[key]
-
-            def __contains__(self, key):
-                return key in self._model._limits
-
-            def __iter__(self):
-                return self.iterkeys()
-
-            def iterkeys(self):
-                return self._model._limits.iterkeys()
-
-            def iteritems(self):
-                for key in iter(self):
-                    yield key, self[key]
-
-        return LimitsView(self)
+        return self._limits
 
     def copy(self):
         '''Return copy of model'''
@@ -446,24 +413,7 @@ class MetabolicModel(object):
         model = self.__class__(self._database)
         model._limits = dict(self._limits)
         model._reaction_set = set(self._reaction_set)
-        model._compound_set = set(self.compound_set)
-        model._flipped = set(self._flipped)
-        return model
-
-    def flip(self, subset):
-        '''Flip stoichiometry and limits of reactions in subset'''
-        if any(reaction not in self._reaction_set for reaction in subset):
-            raise ValueError('A reaction in the subset is not in the model')
-        self._flipped ^= subset
-
-    def flipped(self, subset):
-        '''Return model with flipped stoichiometry of the subset reactions
-
-        Both stoichiometric values and flux bounds are reversed in the
-        returned model.'''
-
-        model = self.copy()
-        model.flip(subset)
+        model._compound_set = set(self._compound_set)
         return model
 
 

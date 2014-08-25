@@ -46,31 +46,6 @@ class TestMetabolicModel(unittest.TestCase):
         self.assertEqual(self.model.matrix[('C', None), 'rxn_5'], -1)
         self.assertEqual(self.model.matrix[('D', None), 'rxn_5'], 1)
 
-    def test_matrix_get_item_after_flip(self):
-        self.model.flip({ 'rxn_4' })
-        self.assertEqual(self.model.matrix[('A', None), 'rxn_1'], 2)
-        self.assertEqual(self.model.matrix[('A', None), 'rxn_2'], -1)
-        self.assertEqual(self.model.matrix[('A', None), 'rxn_4'], 1)
-        self.assertEqual(self.model.matrix[('C', None), 'rxn_4'], -1)
-
-    def test_matrix_get_item_after_flipped(self):
-        model = self.model.flipped({ 'rxn_4' })
-        self.assertEqual(self.model.matrix[('A', None), 'rxn_4'], -1)
-        self.assertEqual(self.model.matrix[('C', None), 'rxn_4'], 1)
-        self.assertEqual(model.matrix[('A', None), 'rxn_4'], 1)
-        self.assertEqual(model.matrix[('C', None), 'rxn_4'], -1)
-
-    def test_matrix_get_item_after_double_flip(self):
-        self.model.flip({ 'rxn_4', 'rxn_5' })
-        self.model.flip({ 'rxn_1', 'rxn_4', 'rxn_2' })
-        self.assertEqual(self.model.matrix[('A', None), 'rxn_1'], -2)
-        self.assertEqual(self.model.matrix[('A', None), 'rxn_2'], 1)
-        self.assertEqual(self.model.matrix[('B', None), 'rxn_2'], -1)
-        self.assertEqual(self.model.matrix[('A', None), 'rxn_4'], -1)
-        self.assertEqual(self.model.matrix[('C', None), 'rxn_4'], 1)
-        self.assertEqual(self.model.matrix[('C', None), 'rxn_5'], 1)
-        self.assertEqual(self.model.matrix[('D', None), 'rxn_5'], -1)
-
     def test_matrix_iteritems(self):
         matrix_set = { ((('A', None), 'rxn_1'), 2),
                          ((('A', None), 'rxn_2'), -1),
@@ -86,12 +61,6 @@ class TestMetabolicModel(unittest.TestCase):
 
     def test_limits_get_item(self):
         self.assertEqual(self.model.limits['rxn_1'], metabolicmodel.FluxBounds(0, 1000))
-        self.assertEqual(self.model.limits['rxn_2'], metabolicmodel.FluxBounds(-1000, 1000))
-        self.assertEqual(self.model.limits['rxn_3'], metabolicmodel.FluxBounds(0, 1000))
-
-    def test_limits_get_item_after_flip(self):
-        self.model.flip({ 'rxn_1', 'rxn_2' })
-        self.assertEqual(self.model.limits['rxn_1'], metabolicmodel.FluxBounds(-1000, 0))
         self.assertEqual(self.model.limits['rxn_2'], metabolicmodel.FluxBounds(-1000, 1000))
         self.assertEqual(self.model.limits['rxn_3'], metabolicmodel.FluxBounds(0, 1000))
 
