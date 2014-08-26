@@ -192,6 +192,7 @@ class Expression(object):
                         result._variables[var] = value
             result._offset = self._offset + other._offset
             return result
+        return NotImplemented
 
     def __radd__(self, other):
         return self + other
