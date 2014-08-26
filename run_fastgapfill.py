@@ -12,13 +12,14 @@ from metnet.fluxanalysis import flux_balance
 if __name__ == '__main__':
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Run FastGapFill on a metabolic model')
-    parser.add_argument('reactionlist', type=argparse.FileType('r'), help='Model definition')
     parser.add_argument('--database', required=True, metavar='reactionfile', action='append',
                         type=argparse.FileType('r'), default=[],
                         help='Reaction definition list to usa as database')
     parser.add_argument('--compounds', metavar='compoundfile', action='append',
                         type=argparse.FileType('r'), default=[],
                         help='Optional compound information table')
+    parser.add_argument('reactionlist', type=argparse.FileType('r'), help='Model definition')
+    parser.add_argument('reaction', help='Reaction to maximize')
     args = parser.parse_args()
 
     database = MetabolicDatabase.load_from_files(*args.database)
@@ -74,15 +75,15 @@ if __name__ == '__main__':
     # Load bounds on exchange reactions
     #model.load_exchange_limits()
 
-    print 'Flux balance on original model maximizing growth...'
-    for rxnid, flux in sorted(flux_balance(model, 'Growth')):
+    print 'Flux balance on original model maximizing {}...'.format(args.reaction)
+    for rxnid, flux in sorted(flux_balance(model, args.reaction)):
         print '{}\t{}'.format(rxnid, flux)
 
-    print 'Flux balance on induced model maximizing growth...'
+    print 'Flux balance on induced model maximizing {}...'.format(args.reaction)
     model_induced = model.copy()
     for rxnid in induced:
         model_induced.add_reaction(rxnid)
-    for rxnid, flux in sorted(flux_balance(model_induced, 'Growth')):
+    for rxnid, flux in sorted(flux_balance(model_induced, args.reaction)):
         reaction_class = 'Dbase'
         if rxnid in consistent_core:
             reaction_class = 'Core'
