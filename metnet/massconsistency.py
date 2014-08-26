@@ -25,21 +25,17 @@ class MassConsistencyCheck(object):
 
     def _cplex_add_compound_mass(self, prob, model, zeromass=set(), lower=1):
         '''Add variables for compound mass'''
-        mass_names = []
-        mass_lower = []
         for compound in model.compound_set:
-            mass_names.append('m_'+self._cpdid_str(compound))
-            mass_lower.append(0 if compound[0] in zeromass else lower)
-        prob.variables.add(names=mass_names, lb=mass_lower, ub=[cplex.infinity]*len(mass_names))
+            prob.define('m_'+self._cpdid_str(compound), lower=(0 if compound[0] in zeromass else lower))
 
     def _cplex_constrain_identical(self, prob, model):
         '''Constrain identical compounds in different compartments to the same mass'''
         compound_id_constr = []
         for compound in model.compound_set:
             if compound[1] is not None and (compound[0], None) in model.compound_set:
-                compound_id_constr.append(('m_'+compound[0], 'm_'+self._cpdid_str(compound)))
-        prob.linear_constraints.add(lin_expr=[cplex.SparsePair(ind=constr, val=(1, -1)) for constr in compound_id_constr],
-                                    senses=['E']*len(compound_id_constr), rhs=[0]*len(compound_id_constr))
+                mass_c = prob.var('m_'+compound[0])
+                mass_other = prob.var('m_'+self._cpdid_str(compound))
+                prob.add_linear_constraints(mass_c == mass_other)
 
     def is_consistent(self, model, exchange=set(), zeromass=set()):
         '''Try to assign a positive mass to each compound and return True on success
@@ -52,26 +48,19 @@ class MassConsistencyCheck(object):
         # Define mass variables
         self._cplex_add_compound_mass(prob, model, zeromass)
         self._cplex_constrain_identical(prob, model)
-        prob.objective.set_linear(('m_'+self._cpdid_str(compound), 1) for compound in model.compound_set)
+        prob.set_linear_objective(sum(prob.var('m_'+self._cpdid_str(compound)) for compound in model.compound_set))
 
         # Define constraints
-        massbalance_lhs = { rxnid: [] for rxnid in model.reaction_set }
+        massbalance_lhs = { rxnid: 0 for rxnid in model.reaction_set }
         for spec, value in model.matrix.iteritems():
             cpdid, rxnid = spec
-            massbalance_lhs[rxnid].append(('m_'+self._cpdid_str(cpdid), float(value)))
+            massbalance_lhs[rxnid] += prob.var('m_'+self._cpdid_str(cpdid)) * value
         for rxnid, lhs in massbalance_lhs.iteritems():
             if rxnid not in exchange:
-                ind, val = zip(*lhs)
-                prob.linear_constraints.add(lin_expr=[cplex.SparsePair(ind=ind, val=val)],
-                                            senses=['E'], rhs=[0], names=['massbalance_'+rxnid])
+                prob.add_linear_constraints(lhs == 0)
 
-        # Solve
-        prob.objective.set_sense(prob.objective.sense.minimize)
-        try:
-            prob.solve()
-            status = prob.solution.get_status()
-        except cplex.exceptions.CplexSolveError as e:
-            status = e.args[2]
+        prob.solve(lpsolver.CplexProblem.Minimize)
+        status = prob.cplex.solution.get_status()
 
         return status == 1
 
@@ -98,48 +87,39 @@ class MassConsistencyCheck(object):
         weights = { rxnid: weights.get(rxnid, 1) for rxnid in model.reaction_set }
 
         # Define residual mass variables and objective constriants
-        rs_names = []
-        zs_names = []
-        for rxnid in model.reaction_set:
-            rs_names.append('r_'+rxnid) # reaction mass residual
-            zs_names.append('z_'+rxnid) # objective variable
-        prob.variables.add(names=rs_names, lb=[-cplex.infinity]*len(rs_names), ub=[cplex.infinity]*len(rs_names))
-        prob.variables.add(names=zs_names, lb=[0]*len(zs_names), ub=[cplex.infinity]*len(zs_names))
-        prob.objective.set_linear(('z_'+rxnid, weights[rxnid]) for rxnid in model.reaction_set)
+        prob.define(*('z_'+rxnid for rxnid in model.reaction_set), lower=0)
+        prob.define(*('r_'+rxnid for rxnid in model.reaction_set))
 
-        # Define constraints
-        prob.linear_constraints.add(lin_expr=[cplex.SparsePair(ind=('r_'+rxnid, 'z_'+rxnid),
-                                                                val=(1, 1)) for rxnid in model.reaction_set],
-                                    senses=['G']*len(model.reaction_set), rhs=[0]*len(model.reaction_set))
-        prob.linear_constraints.add(lin_expr=[cplex.SparsePair(ind=('r_'+rxnid, 'z_'+rxnid),
-                                                                val=(-1, 1)) for rxnid in model.reaction_set],
-                                    senses=['G']*len(model.reaction_set), rhs=[0]*len(model.reaction_set))
+        objective = sum(prob.var('z_'+rxnid) * weights[rxnid] for rxnid in model.reaction_set)
+        prob.set_linear_objective(objective)
 
-        massbalance_lhs = { rxnid: [] for rxnid in model.reaction_set }
+        r = prob.set('r_'+rxnid for rxnid in model.reaction_set)
+        z = prob.set('z_'+rxnid for rxnid in model.reaction_set)
+        prob.add_linear_constraints(z >= r, r >= -z)
+
+        massbalance_lhs = { rxnid: 0 for rxnid in model.reaction_set }
         for spec, value in model.matrix.iteritems():
             compound, rxnid = spec
-            massbalance_lhs[rxnid].append(('m_'+self._cpdid_str(compound), float(value)))
+            massbalance_lhs[rxnid] += prob.var('m_'+self._cpdid_str(compound)) * value
         for rxnid, lhs in massbalance_lhs.iteritems():
             if rxnid not in exchange:
-                ind, val = zip(*(lhs + [('r_'+rxnid, 1)]))
-                prob.linear_constraints.add(lin_expr=[cplex.SparsePair(ind=ind, val=val)],
-                                            senses=['E'], rhs=[0], names=['massbalance_'+rxnid])
+                r = prob.var('r_'+rxnid)
+                prob.add_linear_constraints(lhs + r == 0)
 
         # Solve
-        prob.objective.set_sense(prob.objective.sense.minimize)
-        prob.solve()
-        status = prob.solution.get_status()
+        prob.solve(lpsolver.CplexProblem.Minimize)
+        status = prob.cplex.solution.get_status()
         if status != 1:
-            raise Exception('Non-optimal solution: {}'.format(prob.solution.get_status_string()))
+            raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
         def iterate_reactions():
             for rxnid in model.reaction_set:
-                residual = prob.solution.get_values('r_'+rxnid)
+                residual = prob.get_value('r_'+rxnid)
                 yield rxnid, residual
 
         def iterate_compounds():
             for compound in model.compound_set:
-                yield self._cpdid_str(compound), prob.solution.get_values('m_'+self._cpdid_str(compound))
+                yield self._cpdid_str(compound), prob.get_value('m_'+self._cpdid_str(compound))
 
         return iterate_reactions(), iterate_compounds()
 
@@ -165,34 +145,26 @@ class MassConsistencyCheck(object):
         self._cplex_constrain_identical(prob, model)
 
         # Define z variables
-        zs_names = []
-        for cpdid in model.compound_set:
-            zs_names.append('z_'+self._cpdid_str(cpdid))
-        prob.variables.add(names=zs_names, lb=[0]*len(zs_names), ub=[1]*len(zs_names),
-                            obj=[1]*len(zs_names))
+        prob.define(*('z_'+self._cpdid_str(compound) for compound in model.compound_set), lower=0, upper=1)
+        prob.set_linear_objective(sum(prob.var('z_'+self._cpdid_str(compound)) for compound in model.compound_set))
 
-        # Define constraints
-        prob.linear_constraints.add(lin_expr=[cplex.SparsePair(ind=('m_'+self._cpdid_str(compound),
-                                                                    'z_'+self._cpdid_str(compound)),
-                                                                val=(1, -1)) for compound in model.compound_set],
-                                    senses=['G']*len(model.compound_set), rhs=[0]*len(model.compound_set))
+        z = prob.set('z_'+self._cpdid_str(compound) for compound in model.compound_set)
+        m = prob.set('m_'+self._cpdid_str(compound) for compound in model.compound_set)
+        prob.add_linear_constraints(m >= z)
 
-        massbalance_lhs = { rxnid: [] for rxnid in model.reaction_set }
+        massbalance_lhs = { rxnid: 0 for rxnid in model.reaction_set }
         for spec, value in model.matrix.iteritems():
             cpdid, rxnid = spec
-            massbalance_lhs[rxnid].append(('m_'+self._cpdid_str(cpdid), float(value)))
+            massbalance_lhs[rxnid] += prob.var('m_'+self._cpdid_str(cpdid)) * value
         for rxnid, lhs in massbalance_lhs.iteritems():
             if rxnid not in exchange:
-                ind, val = zip(*lhs)
-                prob.linear_constraints.add(lin_expr=[cplex.SparsePair(ind=ind, val=val)],
-                                            senses=['E'], rhs=[0], names=['massbalance_'+rxnid])
+                prob.add_linear_constraints(lhs == 0)
 
         # Solve
-        prob.objective.set_sense(prob.objective.sense.maximize)
-        prob.solve()
-        status = prob.solution.get_status()
+        prob.solve(lpsolver.CplexProblem.Maximize)
+        status = prob.cplex.solution.get_status()
         if status != 1:
-            raise Exception('Non-optimal solution: {}'.format(prob.solution.get_status_string()))
+            raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
         for compound in model.compound_set:
-            yield self._cpdid_str(compound), prob.solution.get_values('m_'+self._cpdid_str(compound))
+            yield self._cpdid_str(compound), prob.get_value('m_'+self._cpdid_str(compound))
