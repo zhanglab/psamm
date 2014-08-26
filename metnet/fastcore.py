@@ -12,6 +12,7 @@ import cplex
 
 from . import lpsolver
 from .fluxanalysis import flux_balance
+from .metabolicmodel import FlipableModelView
 
 
 def support_set(fluxiter, threshold):
@@ -31,84 +32,6 @@ def support_set_positive(fluxiter, threshold):
     reactions that have a flux value above a certain
     threshold.'''
     return set(rxnid for rxnid, v in fluxiter if v >= threshold)
-
-
-class FlipableModelView(object):
-    '''Proxy wrapper of model objects allowing a flipped set of reactions
-
-    The proxy will forward all properties normally except
-    that flipped reactions will appear to have stoichiometric
-    values negated in the matrix property, and have bounds in
-    the limits property flipped. This view is needed for the
-    fastcore algorithms.'''
-
-    def __init__(self, model, flipped=set()):
-        self._model = model
-        self._flipped = set(flipped)
-
-    class MatrixView(object):
-        def __init__(self, view):
-            self._view = view
-
-        def _value_mul(self, rxnid):
-            return -1 if rxnid in self._view._flipped else 1
-
-        def __getitem__(self, key):
-            if len(key) != 2:
-                raise TypeError(repr(key))
-            cpdid, rxnid = key
-            value = self._view._model.matrix[key]
-            return value * self._value_mul(rxnid)
-
-        def __contains__(self, key):
-            return key in self._view._model.matrix
-
-        def __iter__(self):
-            return self.iterkeys()
-
-        def iterkeys(self):
-            return self._view._model.matrix.iterkeys()
-
-        def iteritems(self):
-            for key, value in self._view._model.matrix.iteritems():
-                cpdid, rxnid = key
-                yield key, value * self._value_mul(rxnid)
-
-    class LimitsView(object):
-        def __init__(self, view):
-            self._view = view
-
-        def __getitem__(self, key):
-            if key in self._view._flipped:
-                return self._view._model.limits[key].flipped()
-            return self._view._model.limits[key]
-
-        def __contains__(self, key):
-            return key in self._view._model.limits
-
-        def __iter__(self):
-            return self.iterkeys()
-
-        def iterkeys(self):
-            return self._view._model.limits.iterkeys()
-
-        def iteritems(self):
-            for key in iter(self):
-                yield key, self[key]
-
-    @property
-    def matrix(self):
-        return FlipableModelView.MatrixView(self)
-
-    @property
-    def limits(self):
-        return FlipableModelView.LimitsView(self)
-
-    def flip(self, subset):
-        self._flipped ^= subset
-
-    def __getattr__(self, name):
-        return getattr(self._model, name)
 
 
 class Fastcore(object):
