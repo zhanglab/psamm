@@ -89,7 +89,7 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
         self.assertEqual(mode, { 'rxn_1', 'rxn_3', 'rxn_6' })
 
     def test_fastcc_inconsistent(self):
-        self.assertEqual(list(self.fastcore.fastcc(self.model, 0.001)), ['rxn_2'])
+        self.assertEqual(set(self.fastcore.fastcc(self.model, 0.001)), { 'rxn_2' })
 
     def test_fastcc_is_consistent_on_inconsistent(self):
         self.assertEqual(self.fastcore.fastcc_is_consistent(self.model, 0.001), False)
