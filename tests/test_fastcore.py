@@ -78,5 +78,27 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
         self.database.set_reaction('rxn_7', ModelSEED.parse('|E| <=>'))
         self.assertRaises(Exception, self.fastcore.fastcore, (self.model, { 'rxn_7' }, 0.001))
 
+class TestFastcoreTinyBiomassModel(unittest.TestCase):
+    '''Test fastcore using a model with tiny values in biomass reaction'''
+
+    def setUp(self):
+        # TODO use mock model instead of actual model
+        self.database = metabolicmodel.MetabolicDatabase()
+        self.database.set_reaction('rxn_1', ModelSEED.parse('=> |A|'))
+        self.database.set_reaction('rxn_2', ModelSEED.parse('(0.000001) |A| =>'))
+        self.model = self.database.load_model_from_file(iter(self.database.reactions))
+        self.fastcore = fastcore.Fastcore(lpsolver.CplexSolver(None))
+
+    def test_fastcc_is_consistent(self):
+        self.assertTrue(self.fastcore.fastcc_is_consistent(self.model, 0.001))
+
+    def test_fastcore_induced_model(self):
+        core = { 'rxn_2' }
+        self.assertEquals(set(self.fastcore.fastcore(self.model, core, 0.001)), { 'rxn_1', 'rxn_2' })
+
+    def test_fastcore_induced_model_high_epsilon(self):
+        core = { 'rxn_2' }
+        self.assertEquals(set(self.fastcore.fastcore(self.model, core, 0.1)), { 'rxn_1', 'rxn_2' })
+
 if __name__ == '__main__':
     unittest.main()

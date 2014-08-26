@@ -103,7 +103,7 @@ class Fastcore(object):
         if len(subset_k) == 0:
             return
 
-        scaling = 1e5
+        scaling = 1e10
 
         # Create LP-10 problem of Fastcore
         prob = self._solver.create_problem()
