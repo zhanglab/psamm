@@ -3,6 +3,7 @@
 
 import cplex
 
+from .metabolicmodel import FlipableModelView
 from . import lpsolver
 
 def cpdid_str(compound):
@@ -122,6 +123,9 @@ def naive_consistency_check(model, subset, epsilon, solver=lpsolver.CplexSolver(
     checking one reaction results in flux in another unchecked reaction,
     that reaction will immediately be marked flux consistent.'''
 
+    # Wrap model in flipable proxy so reactions can be flipped
+    model = FlipableModelView(model)
+
     subset = set(subset)
     while len(subset) > 0:
         reaction = next(iter(subset))
@@ -132,8 +136,8 @@ def naive_consistency_check(model, subset, epsilon, solver=lpsolver.CplexSolver(
         if reaction in support:
             continue
         elif reaction in model.reversible:
-            model2 = model.flipped({ reaction })
-            fluxiter = flux_balance(model2, reaction, solver)
+            model.flip({ reaction })
+            fluxiter = flux_balance(model, reaction, solver)
             support = set(rxnid for rxnid, v in fluxiter if abs(v) >= epsilon)
             subset -= support
             if reaction in support:

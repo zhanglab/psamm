@@ -42,5 +42,28 @@ class TestFluxBalance(unittest.TestCase):
         self.assertEqual(fluxes['rxn_2'], 0)
         self.assertEqual(fluxes['rxn_6'], 1000)
 
+class TestNaiveConsistency(unittest.TestCase):
+    def setUp(self):
+        self.database = metabolicmodel.MetabolicDatabase()
+        self.database.set_reaction('rxn_1', ModelSEED.parse('=> (2) |A|'))
+        self.database.set_reaction('rxn_2', ModelSEED.parse('|A| <=> |B|'))
+        self.database.set_reaction('rxn_3', ModelSEED.parse('|A| => |D|'))
+        self.database.set_reaction('rxn_4', ModelSEED.parse('|A| => |C|'))
+        self.database.set_reaction('rxn_5', ModelSEED.parse('|C| => |D|'))
+        self.database.set_reaction('rxn_6', ModelSEED.parse('|D| =>'))
+        self.model = self.database.load_model_from_file(iter(self.database.reactions))
+        self.solver = lpsolver.CplexSolver(None)
+
+    def test_check_inconsistent(self):
+        self.model.remove_reaction('rxn_2')
+        core = self.model.reaction_set
+        inconsistent = set(fluxanalysis.naive_consistency_check(self.model, core, 0.001))
+        self.assertEqual(inconsistent, {})
+
+    def test_check_inconsistent(self):
+        core = self.model.reaction_set
+        inconsistent = set(fluxanalysis.naive_consistency_check(self.model, core, 0.001))
+        self.assertEqual(inconsistent, { 'rxn_2' })
+
 if __name__ == '__main__':
     unittest.main()
