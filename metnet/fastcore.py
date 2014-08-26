@@ -57,43 +57,31 @@ class Fastcore(object):
         prob = self._solver.create_problem()
 
         # Define flux variables
-        flux_names = []
-        flux_lower = []
-        flux_upper = []
         for rxnid in model.reaction_set:
             lower, upper = model.limits[rxnid]
-            flux_names.append('v_'+rxnid)
-            flux_lower.append(lower)
-            flux_upper.append(upper)
-        prob.variables.add(names=flux_names, lb=flux_lower, ub=flux_upper)
+            prob.define('v_'+rxnid, lower=lower, upper=upper)
 
         # Define z variables
-        zs_names = []
-        for rxnid in reaction_subset:
-            zs_names.append('z_'+rxnid)
-        prob.variables.add(names=zs_names, lb=[0]*len(zs_names), ub=[epsilon]*len(zs_names), obj=[1]*len(zs_names))
+        prob.define(*('z_'+rxnid for rxnid in reaction_subset), lower=0, upper=epsilon)
+        prob.set_linear_objective(sum(prob.var('z_'+rxnid) for rxnid in reaction_subset))
+        v = prob.set('v_'+rxnid for rxnid in reaction_subset)
+        z = prob.set('z_'+rxnid for rxnid in reaction_subset)
+        prob.add_linear_constraints(v >= z)
 
-        # Define constraints
-        prob.linear_constraints.add(lin_expr=[cplex.SparsePair(ind=('v_'+rxnid, 'z_'+rxnid), val=(1, -1)) for rxnid in reaction_subset],
-                                    senses=['G']*len(reaction_subset), rhs=[0]*len(reaction_subset))
-
-        massbalance_lhs = { compound: [] for compound in model.compound_set }
+        massbalance_lhs = { compound: 0 for compound in model.compound_set }
         for spec, value in model.matrix.iteritems():
             compound, rxnid = spec
-            massbalance_lhs[compound].append(('v_'+rxnid, float(value)))
-        for compound, lhs in massbalance_lhs.iteritems():
-            prob.linear_constraints.add(lin_expr=[cplex.SparsePair(*zip(*lhs))], senses=['E'],
-                                        rhs=[0], names=['massbalance_'+self._cpdid_str(compound)])
+            massbalance_lhs[compound] += prob.var('v_'+rxnid) * value
+        prob.add_linear_constraints(*(lhs == 0 for compound, lhs in massbalance_lhs.iteritems()))
 
         # Solve
-        prob.objective.set_sense(prob.objective.sense.maximize)
-        prob.solve()
-        status = prob.solution.get_status()
+        prob.solve(lpsolver.CplexProblem.Maximize)
+        status = prob.cplex.solution.get_status()
         if status != 1:
-            raise Exception('Non-optimal solution: {}'.format(prob.solution.get_status_string()))
+            raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
         for rxnid in sorted(model.reaction_set):
-            yield rxnid, prob.solution.get_values('v_'+rxnid)
+            yield rxnid, prob.get_value('v_'+rxnid)
 
     def lp10(self, model, subset_k, subset_p, epsilon):
         # This program forces reactions in subset K to attain flux > epsilon
@@ -109,9 +97,6 @@ class Fastcore(object):
         prob = self._solver.create_problem()
 
         # Define flux variables
-        flux_names = []
-        flux_lower = []
-        flux_upper = []
         max_penalty_bound = 0
         for rxnid in model.reaction_set:
             lower, upper = model.limits[rxnid]
@@ -121,40 +106,29 @@ class Fastcore(object):
                 for b in (lower, upper):
                     if abs(b) > max_penalty_bound:
                         max_penalty_bound = abs(b)
-            flux_names.append('v_'+rxnid)
-            flux_lower.append(lower*scaling)
-            flux_upper.append(upper*scaling)
-        prob.variables.add(names=flux_names, lb=flux_lower, ub=flux_upper)
+            prob.define('v_'+rxnid, lower=lower*scaling, upper=upper*scaling)
 
         # Define z variables
-        zs_names = []
-        for rxnid in subset_p:
-            zs_names.append('z_'+rxnid)
-        prob.variables.add(names=zs_names, lb=[0]*len(zs_names), ub=[max_penalty_bound*scaling]*len(zs_names), obj=[1]*len(zs_names))
+        prob.define(*('z_'+rxnid for rxnid in subset_p), lower=0, upper=max_penalty_bound*scaling)
+        prob.set_linear_objective(sum(prob.var('z_'+rxnid) for rxnid in subset_p))
+        z = prob.set('z_'+rxnid for rxnid in subset_p)
+        v = prob.set('v_'+rxnid for rxnid in subset_p)
+        prob.add_linear_constraints(z >= v, v >= -z)
 
-        # Define constraints
-        for rxnid in subset_p:
-            prob.linear_constraints.add(lin_expr=[cplex.SparsePair(ind=('v_'+rxnid, 'z_'+rxnid), val=(1, 1)), # v >= -z
-                                                  cplex.SparsePair(ind=('v_'+rxnid, 'z_'+rxnid), val=(-1, 1))], # z >= v
-                                        senses=['G', 'G'], rhs=[0, 0])
-
-        massbalance_lhs = { compound: [] for compound in model.compound_set }
+        massbalance_lhs = { compound: 0 for compound in model.compound_set }
         for spec, value in model.matrix.iteritems():
             compound, rxnid = spec
-            massbalance_lhs[compound].append(('v_'+rxnid, float(value)))
-        for compound, lhs in massbalance_lhs.iteritems():
-            prob.linear_constraints.add(lin_expr=[cplex.SparsePair(*zip(*lhs))], senses=['E'],
-                                        rhs=[0], names=['massbalance_'+self._cpdid_str(compound)])
+            massbalance_lhs[compound] += prob.var('v_'+rxnid) * value
+        prob.add_linear_constraints(*(lhs == 0 for compound, lhs in massbalance_lhs.iteritems()))
 
         # Solve
-        prob.objective.set_sense(prob.objective.sense.minimize)
-        prob.solve()
-        status = prob.solution.get_status()
+        prob.solve(lpsolver.CplexProblem.Minimize)
+        status = prob.cplex.solution.get_status()
         if status != 1:
-            raise Exception('Non-optimal solution: {}'.format(prob.solution.get_status_string()))
+            raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
         for rxnid in sorted(model.reaction_set):
-            yield rxnid, prob.solution.get_values('v_'+rxnid)
+            yield rxnid, prob.get_value('v_'+rxnid)
 
     def fastcc(self, model, epsilon):
         '''Check consistency of model reactions
