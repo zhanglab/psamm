@@ -65,11 +65,11 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
         self.assertEqual(set(self.fastcore.fastcc(self.model, 0.001)), { 'rxn_2' })
 
     def test_fastcc_is_consistent_on_inconsistent(self):
-        self.assertEqual(self.fastcore.fastcc_is_consistent(self.model, 0.001), False)
+        self.assertFalse(self.fastcore.fastcc_is_consistent(self.model, 0.001))
 
     def test_fastcc_is_consistent_on_consistent(self):
         self.model.remove_reaction('rxn_2')
-        self.assertEqual(self.fastcore.fastcc_is_consistent(self.model, 0.001), True)
+        self.assertTrue(self.fastcore.fastcc_is_consistent(self.model, 0.001))
 
     def test_fastcc_consistent_subset(self):
         self.assertEqual(self.fastcore.fastcc_consistent_subset(self.model, 0.001), set(['rxn_1', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6']))
