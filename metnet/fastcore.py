@@ -209,7 +209,7 @@ class Fastcore(object):
 
         The largest consistent subset is returned as
         a set of reaction names.'''
-        return model.reaction_set - set(self.fastcc(model, epsilon))
+        return model.reaction_set.difference(self.fastcc(model, epsilon))
 
     def find_sparse_mode(self, model, core, additional, epsilon):
         '''Find the support of a sparse mode containing the core subset.'''
