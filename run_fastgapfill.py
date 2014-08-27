@@ -8,6 +8,7 @@ from metnet.metabolicmodel import MetabolicDatabase
 from metnet.reaction import Reaction, Compound
 from metnet.fastcore import Fastcore
 from metnet.fluxanalysis import flux_balance
+from metnet import lpsolver
 
 if __name__ == '__main__':
     # Parse command line arguments
@@ -26,7 +27,8 @@ if __name__ == '__main__':
     model = database.load_model_from_file(args.reactionlist)
 
     # Create fastcore object
-    fastcore = Fastcore()
+    solver = lpsolver.CplexSolver(None)
+    fastcore = Fastcore(solver)
 
     # Load compound information
     compounds = {}
@@ -38,16 +40,7 @@ if __name__ == '__main__':
             name = synonyms.pop()
             compounds[cpdid] = name
 
-    # Run Fastcc and print the inconsistent set
-    print 'Calculating Fastcc consistent subset...'
-    consistent_core = fastcore.fastcc_consistent_subset(model, 0.001)
-    print 'Result: |A| = {}, |A| = {}'.format(len(consistent_core), consistent_core)
-
-    all_reactions = {}
-    for rxnid in database.reactions:
-        rx = database.get_reaction(rxnid)
-        all_reactions[rx] = rxnid
-
+    epsilon = 1e-5
     model_compartments = { None, 'e' }
 
     # Add exchange and transport reactions to database
@@ -57,17 +50,11 @@ if __name__ == '__main__':
     model_complete.add_all_exchange_reactions()
     model_complete.add_all_transport_reactions()
 
-    #print 'Calculating Fastcc consistent subset of database...'
-    #database_consistent = fastcore.fastcc_consistent_subset(model_complete, 0.001)
-    #print 'Result: |A| = {}, A = {}'.format(len(database_consistent), database_consistent)
-    #removed_reactions = model_complete.reaction_set - database_consistent
-    #print 'Removed: |R| = {}, R = {}'.format(len(removed_reactions), removed_reactions)
-
     # Run Fastcore and print the induced reaction set
     print 'Calculating Fastcore induced set on model...'
     core = model.reaction_set
 
-    induced = fastcore.fastcore(model_complete, core, 0.001)
+    induced = fastcore.fastcore(model_complete, core, epsilon)
     print 'Result: |A| = {}, A = {}'.format(len(induced), induced)
     added_reactions = induced - core
     print 'Extended: |E| = {}, E = {}'.format(len(added_reactions), added_reactions)
@@ -75,25 +62,19 @@ if __name__ == '__main__':
     # Load bounds on exchange reactions
     #model.load_exchange_limits()
 
-    print 'Flux balance on original model maximizing {}...'.format(args.reaction)
-    for rxnid, flux in sorted(flux_balance(model, args.reaction)):
-        print '{}\t{}'.format(rxnid, flux)
-
     print 'Flux balance on induced model maximizing {}...'.format(args.reaction)
     model_induced = model.copy()
     for rxnid in induced:
         model_induced.add_reaction(rxnid)
     for rxnid, flux in sorted(flux_balance(model_induced, args.reaction)):
         reaction_class = 'Dbase'
-        if rxnid in consistent_core:
-            reaction_class = 'Core'
-        elif rxnid in model.reaction_set:
+        if rxnid in model.reaction_set:
             reaction_class = 'Model'
         reaction = database.get_reaction(rxnid).translated_compounds(lambda x: compounds.get(x, x))
         print '{}\t{}\t{}\t{}'.format(rxnid, reaction_class, flux, reaction)
 
     print 'Calculating Fastcc consistent subset of induced model...'
-    consistent_core = fastcore.fastcc_consistent_subset(model_induced, 0.001)
+    consistent_core = fastcore.fastcc_consistent_subset(model_induced, epsilon)
     print 'Result: |A| = {}, A = {}'.format(len(consistent_core), consistent_core)
     removed_reactions = model_induced.reaction_set - consistent_core
     print 'Removed: |R| = {}, R = {}'.format(len(removed_reactions), removed_reactions)
