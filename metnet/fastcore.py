@@ -97,20 +97,16 @@ class Fastcore(object):
         prob = self._solver.create_problem()
 
         # Define flux variables
-        max_penalty_bound = 0
         for rxnid in model.reaction_set:
             lower, upper = model.limits[rxnid]
             if rxnid in subset_k:
                 lower = max(lower, epsilon)
-            if rxnid in subset_p:
-                for b in (lower, upper):
-                    if abs(b) > max_penalty_bound:
-                        max_penalty_bound = abs(b)
             prob.define('v_'+rxnid, lower=lower*scaling, upper=upper*scaling)
 
         # Define z variables
-        prob.define(*('z_'+rxnid for rxnid in subset_p), lower=0, upper=max_penalty_bound*scaling)
+        prob.define(*('z_'+rxnid for rxnid in subset_p), lower=0)
         prob.set_linear_objective(sum(prob.var('z_'+rxnid) for rxnid in subset_p))
+
         z = prob.set('z_'+rxnid for rxnid in subset_p)
         v = prob.set('v_'+rxnid for rxnid in subset_p)
         prob.add_linear_constraints(z >= v, v >= -z)
