@@ -83,13 +83,16 @@ class Fastcore(object):
         for rxnid in sorted(model.reaction_set):
             yield rxnid, prob.get_value('v_'+rxnid)
 
-    def lp10(self, model, subset_k, subset_p, epsilon):
+    def lp10(self, model, subset_k, subset_p, epsilon, weights={}):
         # This program forces reactions in subset K to attain flux > epsilon
         # while minimizing the sum of absolute flux values for reactions
         # in subset P (L1-regularization).
 
         if len(subset_k) == 0:
             return
+
+        # Initialize default value of weights of the weighted L1-norm
+        weights = { rxnid: weights.get(rxnid, 1) for rxnid in model.reaction_set }
 
         scaling = 1e10
 
@@ -105,7 +108,7 @@ class Fastcore(object):
 
         # Define z variables
         prob.define(*('z_'+rxnid for rxnid in subset_p), lower=0)
-        prob.set_linear_objective(sum(prob.var('z_'+rxnid) for rxnid in subset_p))
+        prob.set_linear_objective(sum(prob.var('z_'+rxnid) * weights[rxnid] for rxnid in subset_p))
 
         z = prob.set('z_'+rxnid for rxnid in subset_p)
         v = prob.set('v_'+rxnid for rxnid in subset_p)
@@ -211,26 +214,25 @@ class Fastcore(object):
         a set of reaction names.'''
         return model.reaction_set.difference(self.fastcc(model, epsilon))
 
-    def find_sparse_mode(self, model, core, additional, epsilon):
-        '''Find the support of a sparse mode containing the core subset.'''
+    def find_sparse_mode(self, model, core, additional, epsilon, weights={}):
+        '''Find a sparse mode containing reactions of the core subset
+
+        Resturn the support of a sparse mode that contains as many reactions
+        from core as possible, and as few reactions from additional as possible
+        (approximately). A dictionary of weights can be supplied which gives
+        further penalties for including specific additional reactions.'''
 
         if len(core) == 0:
             return set()
 
-        #print 'LP7 on {}'.format(core)
         support = support_set_positive(self.lp7(model, core, epsilon), epsilon)
-
-        #print '|Support| = {}'.format(len(support))
         k = core & support
-
         if len(k) == 0:
             return set()
 
-        #print '|K| = {}'.format(len(k))
-        #print 'LP10 on K ({}) and P ({})'.format(len(k), len(additional))
-        return support_set(self.lp10(model, k, additional, epsilon), epsilon)
+        return support_set(self.lp10(model, k, additional, epsilon, weights=weights), epsilon)
 
-    def fastcore(self, model, core, epsilon):
+    def fastcore(self, model, core, epsilon, weights={}):
         '''Find a flux consistent subnetwork containing the core subset
 
         The result will contain the core subset and as few of the additional
@@ -246,7 +248,7 @@ class Fastcore(object):
         #print '|P| = {}, P = {}'.format(len(penalty_set), penalty_set)
         #print '|P| = {}'.format(len(penalty_set))
 
-        mode = self.find_sparse_mode(model, subset, penalty_set, epsilon)
+        mode = self.find_sparse_mode(model, subset, penalty_set, epsilon, weights=weights)
         if len(subset - mode) > 0:
             raise Exception('Inconsistent irreversible core reactions: {}'.format(subset - mode))
 
@@ -270,7 +272,7 @@ class Fastcore(object):
             else:
                 subset_i = subset
 
-            mode = self.find_sparse_mode(model, subset_i, penalty_set, epsilon)
+            mode = self.find_sparse_mode(model, subset_i, penalty_set, epsilon, weights=weights)
             consistent_subset |= mode
             #print '|A| = {}, A = {}'.format(len(consistent_subset), consistent_subset)
             #print '|A| = {}'.format(len(consistent_subset))

@@ -27,6 +27,19 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
         supp = fastcore.support_set(result, 0.99*0.001)
         self.assertEqual(supp, { 'rxn_1', 'rxn_3', 'rxn_6' })
 
+    def test_lp10_weighted(self):
+        weights = { 'rxn_3': 1 }
+        result = self.fastcore.lp10(self.model, { 'rxn_6' }, { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5' }, 0.001,
+                                    weights=weights)
+        supp = fastcore.support_set(result, 0.99*0.001)
+        self.assertEqual(supp, { 'rxn_1', 'rxn_3', 'rxn_6' })
+
+        weights = { 'rxn_3': 3 }
+        result = self.fastcore.lp10(self.model, { 'rxn_6' }, { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5' }, 0.001,
+                                    weights=weights)
+        supp = fastcore.support_set(result, 0.99*0.001)
+        self.assertEqual(supp, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
+
     def test_lp7(self):
         result = self.fastcore.lp7(self.model, self.model.reaction_set, 0.001)
         supp = fastcore.support_set_positive(result, 0.001*0.99)
@@ -60,6 +73,18 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
         core = { 'rxn_6' }
         mode = self.fastcore.find_sparse_mode(self.model, core, self.model.reaction_set - core, 0.001)
         self.assertEqual(mode, { 'rxn_1', 'rxn_3', 'rxn_6' })
+
+    def test_find_sparse_mode_weighted(self):
+        core = { 'rxn_1' }
+        weights = { 'rxn_3': 1 }
+        mode = self.fastcore.find_sparse_mode(self.model, core, self.model.reaction_set - core, 0.001,
+                                                weights=weights)
+        self.assertEqual(mode, { 'rxn_1', 'rxn_3', 'rxn_6' })
+
+        weights = { 'rxn_3': 3 }
+        mode = self.fastcore.find_sparse_mode(self.model, core, self.model.reaction_set - core, 0.001,
+                                                weights=weights)
+        self.assertEqual(mode, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
 
     def test_fastcc_inconsistent(self):
         self.assertEqual(set(self.fastcore.fastcc(self.model, 0.001)), { 'rxn_2' })
