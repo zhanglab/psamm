@@ -319,10 +319,15 @@ class MetabolicModel(object):
                 rx = self._database.get_reaction(rxnid)
                 all_reactions[rx] = rxnid
 
+        def tp_id(cpdid, comp):
+            if comp is None:
+                return 'rxntp_'+cpdid
+            return 'rxntp_'+cpdid+'_'+comp
+
         for cpdid, comp in sorted(self.compound_set):
-            rxnid_tp = 'rxntp_'+cpdid
+            rxnid_tp = tp_id(cpdid, comp)
             if rxnid_tp not in self._database.reactions:
-                reaction_tp = Reaction('<=>', [(Compound(cpdid), 1, 'e')], [(Compound(cpdid), 1, None)])
+                reaction_tp = Reaction('<=>', [(Compound(cpdid), 1, 'e')], [(Compound(cpdid), 1, comp)])
                 if reaction_tp not in all_reactions:
                     self._database.set_reaction(rxnid_tp, reaction_tp)
                     self.add_reaction(rxnid_tp)
