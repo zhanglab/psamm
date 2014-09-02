@@ -8,20 +8,23 @@ from metnet.massconsistency import MassConsistencyCheck
 if __name__ == '__main__':
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Run FastGapFill on a metabolic model')
-    parser.add_argument('reactionlist', type=argparse.FileType('r'), help='Model definition')
     parser.add_argument('--database', required=True, metavar='reactionfile', action='append',
                         type=argparse.FileType('r'), default=[],
                         help='Reaction definition list to use as database')
     parser.add_argument('--compounds', metavar='compoundfile', action='append',
                         type=argparse.FileType('r'), default=[],
                         help='Optional compound information table')
+    parser.add_argument('reactionlist', nargs='?', type=argparse.FileType('r'),
+                        help='Model definition')
     args = parser.parse_args()
 
     database = MetabolicDatabase.load_from_files(*args.database)
-    model = database.load_model_from_file(args.reactionlist)
 
-    for rxnid in database.reactions:
-        model.add_reaction(rxnid)
+    # Load model from file if given, otherwise run on full database
+    if args.reactionlist:
+        model = database.load_model_from_file(args.reactionlist)
+    else:
+        model = database.get_model(database.reactions)
 
     # Create a set of known mass-inconsistent reactions
     exchange = set()
