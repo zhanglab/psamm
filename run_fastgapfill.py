@@ -15,7 +15,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run FastGapFill on a metabolic model')
     parser.add_argument('--database', required=True, metavar='reactionfile', action='append',
                         type=argparse.FileType('r'), default=[],
-                        help='Reaction definition list to usa as database')
+                        help='Reaction definition list to use as database')
     parser.add_argument('--compounds', metavar='compoundfile', action='append',
                         type=argparse.FileType('r'), default=[],
                         help='Optional compound information table')
