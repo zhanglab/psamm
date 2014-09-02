@@ -196,12 +196,26 @@ class MetabolicDatabase(object):
         if reaction.direction != '=>':
             self.reversible.add(rxnid)
 
-    def load_model_from_file(self, reaction_list, v_max=1000):
-        '''Load model defined by given reaction list file'''
+    def load_model_from_file(self, file, v_max=1000):
+        '''Load model defined by given reaction list file
 
+        Lines starting with pound sign (#) are skipped.'''
+
+        def reaction_file_iter(f):
+            for line in f:
+                line = line.strip()
+                if len(line) == 0 or line[0] == '#':
+                    continue
+                yield line
+
+        return self.get_model(reaction_file_iter(file), v_max)
+
+    def get_model(self, reaction_iter, v_max=1000):
+        '''Get model from reaction name iterator
+
+        The model will contain all reactions of the iterator.'''
         model = MetabolicModel(self)
-        for line in reaction_list:
-            rxnid = line.strip()
+        for rxnid in reaction_iter:
             model.add_reaction(rxnid)
 
         for rxnid in model.reaction_set:
@@ -217,7 +231,10 @@ class MetabolicDatabase(object):
 
         for file in files:
             for line in file:
-                rxnid, equation = line.strip().split(None, 1)
+                line = line.strip()
+                if len(line) == 0 or line[0] == '#':
+                    continue
+                rxnid, equation = line.split(None, 1)
                 rx = ModelSEED.parse(equation).normalized()
                 database.set_reaction(rxnid, rx)
 
