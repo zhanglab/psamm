@@ -5,6 +5,7 @@ import sys
 import math
 import numbers
 from itertools import repeat
+from collections import Counter
 
 import cplex as cp
 
@@ -156,7 +157,7 @@ class Expression(object):
     of expressions separately using a different element of the
     tuple.'''
     def __init__(self, variables={}, offset=0):
-        self._variables = dict(variables)
+        self._variables = Counter(variables)
         self._offset = offset
 
     @property
@@ -194,15 +195,9 @@ class Expression(object):
         if isinstance(other, numbers.Number):
             return self.__class__(self._variables, self._offset + other)
         elif isinstance(other, self.__class__):
-            result = self.__class__()
-            for f in (self._variables, other._variables):
-                for var, value in f.iteritems():
-                    if var in result._variables:
-                        result._variables[var] += value
-                    else:
-                        result._variables[var] = value
-            result._offset = self._offset + other._offset
-            return result
+            variables = Counter(self._variables)
+            variables.update(other._variables)
+            return self.__class__(variables, self._offset + other._offset)
         return NotImplemented
 
     def __radd__(self, other):
