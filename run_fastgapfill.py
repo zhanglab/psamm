@@ -52,7 +52,7 @@ if __name__ == '__main__':
 
     # Run Fastcore and print the induced reaction set
     print 'Calculating Fastcore induced set on model...'
-    core = model.reaction_set
+    core = set(model.reaction_set)
 
     induced = fastcore.fastcore(model_complete, core, epsilon)
     print 'Result: |A| = {}, A = {}'.format(len(induced), induced)

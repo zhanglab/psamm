@@ -15,23 +15,23 @@ from .fluxanalysis import flux_balance
 from .metabolicmodel import FlipableModelView
 
 
-def support_set(fluxiter, threshold):
-    '''Return the support set of the fluxes
+def support(fluxiter, threshold):
+    '''Yield reactions in the support set of the fluxes
 
     The fluxiter argument must be an iterable returning
     reaction, flux-pairs. The support set is the set of
     reactions that have an absolute flux value above a
     certain threshold.'''
-    return set(rxnid for rxnid, v in fluxiter if abs(v) >= threshold)
+    return (rxnid for rxnid, v in fluxiter if abs(v) >= threshold)
 
-def support_set_positive(fluxiter, threshold):
-    '''Return the support set of the fluxes (only positive fluxes)
+def support_positive(fluxiter, threshold):
+    '''Yield reactions in the support set of the fluxes (only positive fluxes)
 
     The fluxiter argument must be an iterable returning
     reaction, flux-pairs. The support set is the set of
     reactions that have a flux value above a certain
     threshold.'''
-    return set(rxnid for rxnid, v in fluxiter if v >= threshold)
+    return (rxnid for rxnid, v in fluxiter if v >= threshold)
 
 
 class Fastcore(object):
@@ -132,23 +132,21 @@ class Fastcore(object):
         Yields all reactions in the model that are not part
         of the consistent subset.'''
 
-        consistent_subset = set()
-
-        subset = model.reaction_set - model.reversible
+        reaction_set = set(model.reaction_set)
+        subset = reaction_set - model.reversible
         #print '|J| = {}'.format(len(subset))
         #print 'J = {}'.format(subset)
 
-        support = support_set(self.lp7(model, subset, epsilon), epsilon)
-        consistent_subset |= support
+        consistent_subset = set(support(self.lp7(model, subset, epsilon), epsilon))
         #print '|A| = {}'.format(len(consistent_subset))
         #print 'A = {}'.format(consistent_subset)
 
-        inconsistent_subset = subset - support
-        for reaction in inconsistent_subset:
+        for reaction in subset - consistent_subset:
+            # Inconsistent reaction
             yield reaction
 
         # Check remaining reactions
-        subset = (model.reaction_set - support) - inconsistent_subset
+        subset = (reaction_set - subset) - consistent_subset
         #print '|J| = {}'.format(len(subset))
         #print 'J = {}'.format(subset)
 
@@ -162,12 +160,12 @@ class Fastcore(object):
                 reaction = next(iter(subset))
                 subset_i = { reaction }
                 #print 'LP3 on {}'.format(subset_i)
-                support = support_set(flux_balance(model, reaction, self._solver), epsilon)
+                supp = support(flux_balance(model, reaction, self._solver), epsilon)
             else:
                 subset_i = subset
                 #print 'LP7 on {}'.format(subset_i)
-                support = support_set(self.lp7(model, subset_i, epsilon), epsilon)
-            consistent_subset |= support
+                supp = support(self.lp7(model, subset_i, epsilon), epsilon)
+            consistent_subset.update(supp)
             #print '|A| = {}'.format(len(consistent_subset))
             #print 'A = {}'.format(consistent_subset)
 
@@ -209,25 +207,26 @@ class Fastcore(object):
 
         The largest consistent subset is returned as
         a set of reaction names.'''
-        return model.reaction_set.difference(self.fastcc(model, epsilon))
+        reaction_set = set(model.reaction_set)
+        return reaction_set.difference(self.fastcc(model, epsilon))
 
     def find_sparse_mode(self, model, core, additional, epsilon, weights={}):
         '''Find a sparse mode containing reactions of the core subset
 
-        Resturn the support of a sparse mode that contains as many reactions
-        from core as possible, and as few reactions from additional as possible
-        (approximately). A dictionary of weights can be supplied which gives
-        further penalties for including specific additional reactions.'''
+        Return an iterator of the support of a sparse mode that contains as
+        many reactions from core as possible, and as few reactions from additional
+        as possible (approximately). A dictionary of weights can be supplied which
+        gives further penalties for including specific additional reactions.'''
 
         if len(core) == 0:
-            return set()
+            return iter(())
 
-        support = support_set_positive(self.lp7(model, core, epsilon), epsilon)
-        k = core & support
+        supp = support_positive(self.lp7(model, core, epsilon), epsilon)
+        k = core.intersection(supp)
         if len(k) == 0:
-            return set()
+            return iter(())
 
-        return support_set(self.lp10(model, k, additional, epsilon, weights=weights), epsilon)
+        return support(self.lp10(model, k, additional, epsilon, weights=weights), epsilon)
 
     def fastcore(self, model, core, epsilon, weights={}):
         '''Find a flux consistent subnetwork containing the core subset
@@ -236,17 +235,18 @@ class Fastcore(object):
         reactions as possible.'''
 
         consistent_subset = set()
+        reaction_set = set(model.reaction_set)
 
         subset = core - model.reversible
         #print '|J| = {}, J = {}'.format(len(subset), subset)
         #print '|J| = {}'.format(len(subset))
 
-        penalty_set = model.reaction_set - core
+        penalty_set = reaction_set - core
         #print '|P| = {}, P = {}'.format(len(penalty_set), penalty_set)
         #print '|P| = {}'.format(len(penalty_set))
 
-        mode = self.find_sparse_mode(model, subset, penalty_set, epsilon, weights=weights)
-        if len(subset - mode) > 0:
+        mode = set(self.find_sparse_mode(model, subset, penalty_set, epsilon, weights=weights))
+        if not subset.issubset(mode):
             raise Exception('Inconsistent irreversible core reactions: {}'.format(subset - mode))
 
         consistent_subset |= mode
@@ -270,7 +270,7 @@ class Fastcore(object):
                 subset_i = subset
 
             mode = self.find_sparse_mode(model, subset_i, penalty_set, epsilon, weights=weights)
-            consistent_subset |= mode
+            consistent_subset.update(mode)
             #print '|A| = {}, A = {}'.format(len(consistent_subset), consistent_subset)
             #print '|A| = {}'.format(len(consistent_subset))
 

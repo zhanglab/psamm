@@ -161,7 +161,7 @@ class MetabolicDatabase(object):
 
     @property
     def compounds(self):
-        return set(self.compound_reactions)
+        return iter(self.compound_reactions)
 
     def get_reaction(self, rxnid):
         if rxnid not in self.reactions:
@@ -258,11 +258,11 @@ class MetabolicModel(object):
 
     @property
     def reaction_set(self):
-        return set(self._reaction_set)
+        return iter(self._reaction_set)
 
     @property
     def compound_set(self):
-        return set(self._compound_set)
+        return iter(self._compound_set)
 
     def add_reaction(self, reaction, v_max=1000):
         '''Add reaction to model'''
