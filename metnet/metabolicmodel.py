@@ -297,10 +297,15 @@ class MetabolicModel(object):
     def add_all_database_reactions(self, compartments={None, 'e'}):
         '''Add all reactions from database that occur in given compartments'''
 
+        added = set()
         for rxnid in self._database.reactions:
             reaction = self._database.get_reaction(rxnid)
             if all(comp in compartments for compound, value, comp in reaction.compounds):
+                if rxnid not in self.reaction_set:
+                    added.add(rxnid)
                 self.add_reaction(rxnid)
+
+        return added
 
     def add_all_exchange_reactions(self, allow_duplicates=False):
         '''Add all exchange reactions to database and to model'''
@@ -313,17 +318,21 @@ class MetabolicModel(object):
                 rx = self._database.get_reaction(rxnid)
                 all_reactions[rx] = rxnid
 
+        added = set()
         for cpdid, comp in sorted(self.compound_set):
             rxnid_ex = 'rxnex_'+cpdid
             if rxnid_ex not in self._database.reactions:
                 reaction_ex = Reaction('<=>', [(Compound(cpdid), 1, 'e')], [])
                 if reaction_ex not in all_reactions:
                     self._database.set_reaction(rxnid_ex, reaction_ex)
-                    self.add_reaction(rxnid_ex)
                 else:
-                    self.add_reaction(all_reactions[reaction_ex])
-            else:
-                self.add_reaction(rxnid_ex)
+                    rxnid_ex = all_reactions[reaction_ex]
+
+            if rxnid_ex not in self.reaction_set:
+                added.add(rxnid_ex)
+            self.add_reaction(rxnid_ex)
+
+        return added
 
     def add_all_transport_reactions(self, allow_duplicates=False):
         '''Add all transport reactions to database and to model'''
@@ -341,17 +350,21 @@ class MetabolicModel(object):
                 return 'rxntp_'+cpdid
             return 'rxntp_'+cpdid+'_'+comp
 
+        added = set()
         for cpdid, comp in sorted(self.compound_set):
             rxnid_tp = tp_id(cpdid, comp)
             if rxnid_tp not in self._database.reactions:
                 reaction_tp = Reaction('<=>', [(Compound(cpdid), 1, 'e')], [(Compound(cpdid), 1, comp)])
                 if reaction_tp not in all_reactions:
                     self._database.set_reaction(rxnid_tp, reaction_tp)
-                    self.add_reaction(rxnid_tp)
                 else:
-                    self.add_reaction(all_reactions[reaction_tp])
-            else:
-                self.add_reaction(rxnid_tp)
+                    rxnid_tp = all_reactions[reaction_tp]
+
+            if rxnid_tp not in self.reaction_set:
+                added.add(rxnid_tp)
+            self.add_reaction(rxnid_tp)
+
+        return added
 
     def reset_flux_bounds(self, reaction, v_max=1000):
         '''Reset flux bounds of model reaction
