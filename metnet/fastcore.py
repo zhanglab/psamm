@@ -91,9 +91,6 @@ class Fastcore(object):
         if len(subset_k) == 0:
             return
 
-        # Initialize default value of weights of the weighted L1-norm
-        weights = { rxnid: weights.get(rxnid, 1) for rxnid in model.reaction_set }
-
         scaling = 1e10
 
         # Create LP-10 problem of Fastcore
@@ -108,7 +105,7 @@ class Fastcore(object):
 
         # Define z variables
         prob.define(*('z_'+rxnid for rxnid in subset_p), lower=0)
-        prob.set_linear_objective(sum(prob.var('z_'+rxnid) * weights[rxnid] for rxnid in subset_p))
+        prob.set_linear_objective(sum(prob.var('z_'+rxnid) * weights.get(rxnid, 1) for rxnid in subset_p))
 
         z = prob.set('z_'+rxnid for rxnid in subset_p)
         v = prob.set('v_'+rxnid for rxnid in subset_p)

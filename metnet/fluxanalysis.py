@@ -51,9 +51,6 @@ def flux_minimization(model, fixed, weights={}, solver=lpsolver.CplexSolver()):
 
     prob = solver.create_problem()
 
-    # Initialize default value of weights of the weighted L1-norm
-    weights = { rxnid: weights.get(rxnid, 1) for rxnid in model.reaction_set }
-
     # Define flux variables
     for rxnid in model.reaction_set:
         lower, upper = model.limits[rxnid]
@@ -63,7 +60,7 @@ def flux_minimization(model, fixed, weights={}, solver=lpsolver.CplexSolver()):
 
     # Define z variables
     prob.define(*('z_'+rxnid for rxnid in model.reaction_set), lower=0)
-    objective = sum(prob.var('z_'+rxnid) * weights[rxnid] for rxnid in model.reaction_set)
+    objective = sum(prob.var('z_'+rxnid) * weights.get(rxnid, 1) for rxnid in model.reaction_set)
     prob.set_linear_objective(objective)
 
     # Define constraints

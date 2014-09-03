@@ -83,14 +83,11 @@ class MassConsistencyCheck(object):
         self._cplex_add_compound_mass(prob, model, zeromass)
         self._cplex_constrain_identical(prob, model)
 
-        # Initialize default weights of the weighted L1-norm
-        weights = { rxnid: weights.get(rxnid, 1) for rxnid in model.reaction_set }
-
         # Define residual mass variables and objective constriants
         prob.define(*('z_'+rxnid for rxnid in model.reaction_set), lower=0)
         prob.define(*('r_'+rxnid for rxnid in model.reaction_set))
 
-        objective = sum(prob.var('z_'+rxnid) * weights[rxnid] for rxnid in model.reaction_set)
+        objective = sum(prob.var('z_'+rxnid) * weights.get(rxnid, 1) for rxnid in model.reaction_set)
         prob.set_linear_objective(objective)
 
         r = prob.set('r_'+rxnid for rxnid in model.reaction_set)
