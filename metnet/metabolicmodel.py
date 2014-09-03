@@ -352,6 +352,10 @@ class MetabolicModel(object):
 
         added = set()
         for cpdid, comp in sorted(self.compound_set):
+            if comp == 'e':
+                # A transport reaction with exchange would not be valid
+                continue
+
             rxnid_tp = tp_id(cpdid, comp)
             if rxnid_tp not in self._database.reactions:
                 reaction_tp = Reaction('<=>', [(Compound(cpdid), 1, 'e')], [(Compound(cpdid), 1, comp)])
