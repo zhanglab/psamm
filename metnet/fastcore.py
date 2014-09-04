@@ -15,22 +15,28 @@ from .fluxanalysis import flux_balance
 from .metabolicmodel import FlipableModelView
 
 
-def support(fluxiter, threshold):
+def support(fluxiter, threshold=None):
     '''Yield reactions in the support set of the fluxes
 
     The fluxiter argument must be an iterable returning
     reaction, flux-pairs. The support set is the set of
-    reactions that have an absolute flux value above a
-    certain threshold.'''
+    reactions that have an absolute flux value at or
+    above a certain threshold. If threshold is None
+    the mathematical definition (v != 0) is used.'''
+    if threshold is None:
+        return (rxnid for rxnid, v in fluxiter if v != 0)
     return (rxnid for rxnid, v in fluxiter if abs(v) >= threshold)
 
-def support_positive(fluxiter, threshold):
+def support_positive(fluxiter, threshold=None):
     '''Yield reactions in the support set of the fluxes (only positive fluxes)
 
     The fluxiter argument must be an iterable returning
     reaction, flux-pairs. The support set is the set of
-    reactions that have a flux value above a certain
-    threshold.'''
+    reactions that have a flux value at or above a certain
+    threshold. If threshold is None the mathematical
+    definition (v > 0) is used.'''
+    if threshold is None:
+        return (rxnid for rxnid, v in fluxiter if v > 0)
     return (rxnid for rxnid, v in fluxiter if v >= threshold)
 
 
