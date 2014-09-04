@@ -108,7 +108,7 @@ class CplexProblem(object):
                 # has therefore been evaluated to a truth-value (e.g
                 # '0 == 0' or '2 >= 3').
                 if not relation:
-                    raise Exception('Unsatisfiable relation added')
+                    raise ValueError('Unsatisfiable relation added')
             else:
                 if relation.sense in (Relation.StrictlyGreater, Relation.StrictlyLess):
                     raise ValueError('Strict relations are invalid in LP-problems: {}'.format(relation))
@@ -123,6 +123,10 @@ class CplexProblem(object):
 
     def set_linear_objective(self, expression):
         '''Set linear objective of problem'''
+        if isinstance(expression, numbers.Number):
+            # Allow expressions with no variables as objective,
+            # represented as a number
+            return
         self._cp.objective.set_linear(expression.values())
 
     def set_objective_sense(self, sense):
@@ -138,7 +142,7 @@ class CplexProblem(object):
         '''Solve problem'''
         if sense is not None:
             self.set_objective_sense(sense)
-        return self._cp.solve()
+        self._cp.solve()
 
     def get_value(self, expression):
         '''Return value of expression'''
