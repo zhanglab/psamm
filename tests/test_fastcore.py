@@ -101,7 +101,8 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
 
     def test_fastcore_global_inconsistent(self):
         self.database.set_reaction('rxn_7', ModelSEED.parse('|E| <=>'))
-        self.assertRaises(Exception, self.fastcore.fastcore, (self.model, { 'rxn_7' }, 0.001))
+        with self.assertRaises(Exception):
+            self.fastcore.fastcore(self.model, { 'rxn_7' }, 0.001)
 
 class TestFastcoreTinyBiomassModel(unittest.TestCase):
     '''Test fastcore using a model with tiny values in biomass reaction'''
