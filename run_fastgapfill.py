@@ -76,5 +76,5 @@ if __name__ == '__main__':
     print 'Calculating Fastcc consistent subset of induced model...'
     consistent_core = fastcore.fastcc_consistent_subset(model_induced, epsilon)
     print 'Result: |A| = {}, A = {}'.format(len(consistent_core), consistent_core)
-    removed_reactions = model_induced.reaction_set - consistent_core
+    removed_reactions = set(model_induced.reaction_set) - consistent_core
     print 'Removed: |R| = {}, R = {}'.format(len(removed_reactions), removed_reactions)
