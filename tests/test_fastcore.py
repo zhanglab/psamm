@@ -23,67 +23,74 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
         self.fastcore = fastcore.Fastcore(lpsolver.CplexSolver(None))
 
     def test_lp10(self):
-        result = self.fastcore.lp10(self.model, { 'rxn_6' }, { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5' }, 0.001)
-        supp = set(fastcore.support(result, 0.99*0.001))
+        result = self.fastcore.lp10(self.model, { 'rxn_6' }, { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5' },
+                                    epsilon=0.001, scaling=1e3)
+        supp = set(fastcore.support(result, 0.999*0.001))
         self.assertEqual(supp, { 'rxn_1', 'rxn_3', 'rxn_6' })
 
     def test_lp10_weighted(self):
         weights = { 'rxn_3': 1 }
-        result = self.fastcore.lp10(self.model, { 'rxn_6' }, { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5' }, 0.001,
-                                    weights=weights)
-        supp = set(fastcore.support(result, 0.99*0.001))
+        result = self.fastcore.lp10(self.model, { 'rxn_6' }, { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5' },
+                                    epsilon=0.001, scaling=1e3, weights=weights)
+        supp = set(fastcore.support(result, 0.999*0.001))
         self.assertEqual(supp, { 'rxn_1', 'rxn_3', 'rxn_6' })
 
         weights = { 'rxn_3': 3 }
-        result = self.fastcore.lp10(self.model, { 'rxn_6' }, { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5' }, 0.001,
-                                    weights=weights)
-        supp = set(fastcore.support(result, 0.99*0.001))
+        result = self.fastcore.lp10(self.model, { 'rxn_6' }, { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5' },
+                                    epsilon=0.001, scaling=1e3, weights=weights)
+        supp = set(fastcore.support(result, 0.999*0.001))
         self.assertEqual(supp, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
 
     def test_lp7(self):
         result = self.fastcore.lp7(self.model, set(self.model.reaction_set), 0.001)
-        supp = set(fastcore.support_positive(result, 0.001*0.99))
+        supp = set(fastcore.support_positive(result, 0.001*0.999))
         self.assertEqual(supp, { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
 
         result = self.fastcore.lp7(self.model, {'rxn_5'}, 0.001)
-        supp = set(fastcore.support_positive(result, 0.001*0.99))
+        supp = set(fastcore.support_positive(result, 0.001*0.999))
         self.assertEqual(supp, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
 
     def test_find_sparse_mode_singleton(self):
         core = { 'rxn_1' }
-        mode = set(self.fastcore.find_sparse_mode(self.model, core, set(self.model.reaction_set) - core, 0.001))
+        mode = set(self.fastcore.find_sparse_mode(self.model, core, set(self.model.reaction_set) - core,
+                                                    epsilon=0.001, scaling=1e3))
         self.assertEqual(mode, { 'rxn_1', 'rxn_3', 'rxn_6' })
 
         core = { 'rxn_2' }
-        mode = set(self.fastcore.find_sparse_mode(self.model, core, set(self.model.reaction_set) - core, 0.001))
+        mode = set(self.fastcore.find_sparse_mode(self.model, core, set(self.model.reaction_set) - core,
+                                                    epsilon=0.001, scaling=1e3))
         self.assertEqual(mode, set())
 
         core = { 'rxn_3' }
-        mode = set(self.fastcore.find_sparse_mode(self.model, core, set(self.model.reaction_set) - core, 0.001))
+        mode = set(self.fastcore.find_sparse_mode(self.model, core, set(self.model.reaction_set) - core,
+                                                    epsilon=0.001, scaling=1e3))
         self.assertEqual(mode, { 'rxn_1', 'rxn_3', 'rxn_6' })
 
         core = { 'rxn_4' }
-        mode = set(self.fastcore.find_sparse_mode(self.model, core, set(self.model.reaction_set) - core, 0.001))
+        mode = set(self.fastcore.find_sparse_mode(self.model, core, set(self.model.reaction_set) - core,
+                                                    epsilon=0.001, scaling=1e3))
         self.assertEqual(mode, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
 
         core = { 'rxn_5' }
-        mode = set(self.fastcore.find_sparse_mode(self.model, core, set(self.model.reaction_set) - core, 0.001))
+        mode = set(self.fastcore.find_sparse_mode(self.model, core, set(self.model.reaction_set) - core,
+                                                    epsilon=0.001, scaling=1e3))
         self.assertEqual(mode, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
 
         core = { 'rxn_6' }
-        mode = set(self.fastcore.find_sparse_mode(self.model, core, set(self.model.reaction_set) - core, 0.001))
+        mode = set(self.fastcore.find_sparse_mode(self.model, core, set(self.model.reaction_set) - core,
+                                                    epsilon=0.001, scaling=1e3))
         self.assertEqual(mode, { 'rxn_1', 'rxn_3', 'rxn_6' })
 
     def test_find_sparse_mode_weighted(self):
         core = { 'rxn_1' }
         weights = { 'rxn_3': 1 }
         mode = set(self.fastcore.find_sparse_mode(self.model, core, set(self.model.reaction_set) - core,
-                                                    0.001, weights=weights))
+                                                    epsilon=0.001, scaling=1e3, weights=weights))
         self.assertEqual(mode, { 'rxn_1', 'rxn_3', 'rxn_6' })
 
         weights = { 'rxn_3': 3 }
         mode = set(self.fastcore.find_sparse_mode(self.model, core, set(self.model.reaction_set) - core,
-                                                    0.001, weights=weights))
+                                                    epsilon=0.001, scaling=1e3, weights=weights))
         self.assertEqual(mode, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
 
     def test_fastcc_inconsistent(self):
