@@ -60,9 +60,9 @@ class TestMetabolicModel(unittest.TestCase):
         self.assertEqual(set(self.model.matrix.iteritems()), matrix_set)
 
     def test_limits_get_item(self):
-        self.assertEqual(self.model.limits['rxn_1'], metabolicmodel.FluxBounds(0, 1000))
-        self.assertEqual(self.model.limits['rxn_2'], metabolicmodel.FluxBounds(-1000, 1000))
-        self.assertEqual(self.model.limits['rxn_3'], metabolicmodel.FluxBounds(0, 1000))
+        self.assertEqual(self.model.limits['rxn_1'].bounds, (0, 1000))
+        self.assertEqual(self.model.limits['rxn_2'].bounds, (-1000, 1000))
+        self.assertEqual(self.model.limits['rxn_3'].bounds, (0, 1000))
 
 class TestMetabolicModel(unittest.TestCase):
     def setUp(self):
@@ -98,9 +98,9 @@ class TestMetabolicModel(unittest.TestCase):
 
     def test_flipable_model_view_limits_get_item_after_flip(self):
         self.model.flip({ 'rxn_1', 'rxn_2' })
-        self.assertEqual(self.model.limits['rxn_1'], metabolicmodel.FluxBounds(-1000, 0))
-        self.assertEqual(self.model.limits['rxn_2'], metabolicmodel.FluxBounds(-1000, 1000))
-        self.assertEqual(self.model.limits['rxn_3'], metabolicmodel.FluxBounds(0, 1000))
+        self.assertEqual(self.model.limits['rxn_1'].bounds, (-1000, 0))
+        self.assertEqual(self.model.limits['rxn_2'].bounds, (-1000, 1000))
+        self.assertEqual(self.model.limits['rxn_3'].bounds, (0, 1000))
 
 
 if __name__ == '__main__':
