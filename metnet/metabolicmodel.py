@@ -97,42 +97,6 @@ class FluxBounds(object):
     def __repr__(self):
         return '{}({}, {})'.format(self.__class__.__name__, repr(self.lower), repr(self.upper))
 
-class FlipableFluxBounds(FluxBounds):
-    '''FluxBounds object for a FlipableModelView
-
-    This object is used internally in the FlipableModelView to represent
-    the bounds of flux on a reaction that can be flipped.'''
-
-    def __init__(self, view, reaction):
-        super(FlipableFluxBounds, self).__init__(view._model, reaction)
-        self._view = view
-
-    def _assign_lower(self, value):
-        if self._reaction in self._view._flipped:
-            super(FlipableFluxBounds, self)._assign_upper(-value)
-        else:
-            super(FlipableFluxBounds, self)._assign_lower(value)
-
-    def _assign_upper(self, value):
-        if self._reaction in self._view._flipped:
-            super(FlipableFluxBounds, self)._assign_lower(-value)
-        else:
-            super(FlipableFluxBounds, self)._assign_upper(value)
-
-    @property
-    def lower(self):
-        '''Lower bound'''
-        if self._reaction in self._view._flipped:
-            return -super(FlipableFluxBounds, self).upper
-        return super(FlipableFluxBounds, self).lower
-
-    @property
-    def upper(self):
-        '''Upper bound'''
-        if self._reaction in self._view._flipped:
-            return -super(FlipableFluxBounds, self).lower
-        return super(FlipableFluxBounds, self).upper
-
 class StoichiometricMatrixView(Mapping):
     '''Provides a sparse matrix view on the stoichiometry of a model
 
@@ -164,26 +128,6 @@ class StoichiometricMatrixView(Mapping):
     def __len__(self):
         return sum(len(self._model._database.reactions[reaction]) for reaction in self._model._reaction_set)
 
-class FlipableStoichiometricMatrixView(StoichiometricMatrixView):
-    '''Provides a matrix view that flips with the underlying flipable model view
-
-    This object is used internally in FlipableModelView to
-    expose a matrix view that negates the stoichiometric
-    values of flipped reactions.'''
-
-    def __init__(self, view):
-        super(FlipableStoichiometricMatrixView, self).__init__(view._model)
-        self._view = view
-
-    def _value_mul(self, reaction):
-        return -1 if reaction in self._view._flipped else 1
-
-    def __getitem__(self, key):
-        if len(key) != 2:
-            raise KeyError(key)
-        compound, reaction = key
-        return self._value_mul(reaction) * super(FlipableStoichiometricMatrixView, self).__getitem__(key)
-
 class LimitsView(Mapping):
     '''Provides a view of the flux bounds defined in the model
 
@@ -208,20 +152,6 @@ class LimitsView(Mapping):
 
     def __len__(self):
         return len(self._model._reaction_set)
-
-class FlipableLimitsView(LimitsView):
-    '''Provides a limits view that flips with the underlying flipable model view
-
-    This object is used internally in FlipableModelView to
-    expose a limits view that flips the bounds of all flipped
-    reactions.'''
-
-    def __init__(self, view):
-        super(FlipableLimitsView, self).__init__(view._model)
-        self._view = view
-
-    def _create_bounds(self, reaction):
-        return FlipableFluxBounds(self._view, reaction)
 
 class MetabolicReaction(object):
     def __init__(self, reversible, metabolites):
@@ -504,6 +434,77 @@ class MetabolicModel(object):
         model._reaction_set = set(self._reaction_set)
         model._compound_set = set(self._compound_set)
         return model
+
+
+class FlipableFluxBounds(FluxBounds):
+    '''FluxBounds object for a FlipableModelView
+
+    This object is used internally in the FlipableModelView to represent
+    the bounds of flux on a reaction that can be flipped.'''
+
+    def __init__(self, view, reaction):
+        super(FlipableFluxBounds, self).__init__(view._model, reaction)
+        self._view = view
+
+    def _assign_lower(self, value):
+        if self._reaction in self._view._flipped:
+            super(FlipableFluxBounds, self)._assign_upper(-value)
+        else:
+            super(FlipableFluxBounds, self)._assign_lower(value)
+
+    def _assign_upper(self, value):
+        if self._reaction in self._view._flipped:
+            super(FlipableFluxBounds, self)._assign_lower(-value)
+        else:
+            super(FlipableFluxBounds, self)._assign_upper(value)
+
+    @property
+    def lower(self):
+        '''Lower bound'''
+        if self._reaction in self._view._flipped:
+            return -super(FlipableFluxBounds, self).upper
+        return super(FlipableFluxBounds, self).lower
+
+    @property
+    def upper(self):
+        '''Upper bound'''
+        if self._reaction in self._view._flipped:
+            return -super(FlipableFluxBounds, self).lower
+        return super(FlipableFluxBounds, self).upper
+
+class FlipableStoichiometricMatrixView(StoichiometricMatrixView):
+    '''Provides a matrix view that flips with the underlying flipable model view
+
+    This object is used internally in FlipableModelView to
+    expose a matrix view that negates the stoichiometric
+    values of flipped reactions.'''
+
+    def __init__(self, view):
+        super(FlipableStoichiometricMatrixView, self).__init__(view._model)
+        self._view = view
+
+    def _value_mul(self, reaction):
+        return -1 if reaction in self._view._flipped else 1
+
+    def __getitem__(self, key):
+        if len(key) != 2:
+            raise KeyError(key)
+        compound, reaction = key
+        return self._value_mul(reaction) * super(FlipableStoichiometricMatrixView, self).__getitem__(key)
+
+class FlipableLimitsView(LimitsView):
+    '''Provides a limits view that flips with the underlying flipable model view
+
+    This object is used internally in FlipableModelView to
+    expose a limits view that flips the bounds of all flipped
+    reactions.'''
+
+    def __init__(self, view):
+        super(FlipableLimitsView, self).__init__(view._model)
+        self._view = view
+
+    def _create_bounds(self, reaction):
+        return FlipableFluxBounds(self._view, reaction)
 
 class FlipableModelView(object):
     '''Proxy wrapper of model objects allowing a flipped set of reactions
