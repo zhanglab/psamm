@@ -1,7 +1,7 @@
 
 '''Representation of metabolic networks'''
 
-from collections import defaultdict
+from collections import defaultdict, Mapping
 from itertools import chain
 
 from .reaction import ModelSEED, Reaction, Compound
@@ -9,35 +9,28 @@ from .reaction import ModelSEED, Reaction, Compound
 class FluxBounds(object):
     '''Represents lower and upper bounds of flux as a mutable object
 
-    >>> FluxBounds(-5, 1000)
-    FluxBounds(-5, 1000)
+    This object is used internally in the model representation. Changing
+    the state of the object will change the underlying model parameters.
+    Deleting a value will reset that value to the defaults.'''
 
-    >>> FluxBounds(100, 0)
-    Traceback (most recent call last):
-        ...
-    ValueError: Lower bound larger than upper bound
-    '''
-
-    def __init__(self, lower=0, upper=0):
-        self._check_bounds(lower, upper)
-        self._lower = lower
-        self._upper = upper
+    def __init__(self, model, reaction):
+        self._model = model
+        self._reaction = reaction
 
     def __iter__(self):
-        '''Iterator over lower and upper value
+        '''Iterator over lower and upper value'''
+        yield self.lower
+        yield self.upper
 
-        >>> it = iter(FluxBounds(-5, 1000))
-        >>> next(it)
-        -5
-        >>> next(it)
-        1000
-        >>> next(it)
-        Traceback (most recent call last):
-            ...
-        StopIteration
-        '''
-        yield self._lower
-        yield self._upper
+    def _assign_lower(self, value):
+        self._model._limits_lower[self._reaction] = value
+
+    def _assign_upper(self, value):
+        self._model._limits_upper[self._reaction] = value
+
+    def _assign_both(self, lower, upper):
+        self._assign_lower(lower)
+        self._assign_upper(upper)
 
     def _check_bounds(self, lower, upper):
         if lower > upper:
@@ -45,95 +38,120 @@ class FluxBounds(object):
 
     @property
     def lower(self):
-        '''Lower bound
-
-        >>> f = FluxBounds(-5, 1000)
-        >>> f.lower
-        -5
-        >>> f.lower = -20
-        >>> f
-        FluxBounds(-20, 1000)
-        >>> f.lower = 1200
-        Traceback (most recent call last):
-            ...
-        ValueError: Lower bound larger than upper bound'''
-        return self._lower
+        '''Lower bound'''
+        try:
+            return self._model._limits_lower[self._reaction]
+        except KeyError:
+            return -self._model._v_max if self._reaction in self._model._database.reversible else 0
 
     @lower.setter
     def lower(self, value):
-        self._check_bounds(value, self._upper)
-        self._lower = value
+        self._check_bounds(value, self.upper)
+        self._assign_lower(value)
+
+    @lower.deleter
+    def lower(self):
+        self._model._limits_lower.pop(self._reaction, None)
 
     @property
     def upper(self):
-        '''Upper bound
-
-        >>> f = FluxBounds(-5, 1000)
-        >>> f.upper
-        1000
-        >>> f.upper = 0
-        >>> f
-        FluxBounds(-5, 0)
-        >>> f.upper = -6
-        Traceback (most recent call last):
-            ...
-        ValueError: Lower bound larger than upper bound'''
-        return self._upper
+        '''Upper bound'''
+        try:
+            return self._model._limits_upper[self._reaction]
+        except KeyError:
+            return self._model._v_max
 
     @upper.setter
     def upper(self, value):
-        self._check_bounds(self._lower, value)
-        self._upper = value
+        self._check_bounds(self.lower, value)
+        self._assign_upper(value)
+
+    @upper.deleter
+    def upper(self):
+        self._model._limits_upper.pop(self._reaction, None)
 
     @property
     def bounds(self):
-        '''Bounds as a tuple
-
-        >>> f = FluxBounds(-5, 1000)
-        >>> f.bounds
-        (-5, 1000)
-        >>> f.bounds = 10, 20
-        >>> f
-        FluxBounds(10, 20)
-        >>> f.bounds = 20, -10
-        Traceback (most recent call last):
-            ...
-        ValueError: Lower bound larger than upper bound'''
-        return self._lower, self._upper
+        '''Bounds as a tuple'''
+        return self.lower, self.upper
 
     @bounds.setter
     def bounds(self, value):
         lower, upper = value
         self._check_bounds(lower, upper)
-        self._lower, self._upper = value
+        self._assign_both(lower, upper)
 
-    def flipped(self):
-        '''New FluxBounds with bounds mirrored around zero
-
-        >>> FluxBounds(-5, 1000).flipped()
-        FluxBounds(-1000, 5)'''
-        return self.__class__(-self._upper, -self._lower)
+    @bounds.deleter
+    def bounds(self):
+        del self.lower
+        del self.upper
 
     def __eq__(self, other):
-        '''Equality test
-
-        >>> f = FluxBounds(-5, 10)
-        >>> f == FluxBounds(-5, 10)
-        True
-        >>> f == FluxBounds(0, 10)
-        False'''
-        return isinstance(other, FluxBounds) and self.bounds == other.bounds
+        '''Equality test'''
+        return isinstance(other, FluxBounds) and self.lower == other.lower and self.upper == other.upper
 
     def __ne__(self, other):
-        '''Inequality test
-
-        >>> f = FluxBounds(-5, 10)
-        >>> f != FluxBounds(-5, 10)
-        False'''
+        '''Inequality test'''
         return not self == other
 
     def __repr__(self):
-        return 'FluxBounds({}, {})'.format(repr(self._lower), repr(self._upper))
+        return '{}({}, {})'.format(self.__class__.__name__, repr(self.lower), repr(self.upper))
+
+class StoichiometricMatrixView(Mapping):
+    '''Provides a sparse matrix view on the stoichiometry of a model
+
+    This object is used internally in the MetabolicModel to expose
+    a sparse matrix view of the model stoichiometry.
+
+    Any compound, reaction-pair can be looked up to obtain the
+    corresponding stoichiometric value. If the value is not
+    defined (implicitly zero) a KeyError will be raised.'''
+
+    def __init__(self, model):
+        super(StoichiometricMatrixView, self).__init__()
+        self._model = model
+
+    def __getitem__(self, key):
+        if len(key) != 2:
+            raise KeyError(key)
+        compound, reaction = key
+        if reaction not in self._model._reaction_set:
+            raise KeyError(key)
+        value = self._model._database.reactions[reaction][compound]
+        return value
+
+    def __iter__(self):
+        for reaction in self._model._reaction_set:
+            for compound in self._model._database.reactions[reaction]:
+                yield compound, reaction
+
+    def __len__(self):
+        return sum(len(self._model._database.reactions[reaction]) for reaction in self._model._reaction_set)
+
+class LimitsView(Mapping):
+    '''Provides a view of the flux bounds defined in the model
+
+    This object is used internally in MetabolicModel to
+    expose a dictonary view of the FluxBounds associated
+    with the model reactions.'''
+
+    def __init__(self, model):
+        super(LimitsView, self).__init__()
+        self._model = model
+
+    def _create_bounds(self, reaction):
+        return FluxBounds(self._model, reaction)
+
+    def __getitem__(self, key):
+        if key not in self._model._reaction_set:
+            raise KeyError(key)
+        return self._create_bounds(key)
+
+    def __iter__(self):
+        return iter(self._model._reaction_set)
+
+    def __len__(self):
+        return len(self._model._reaction_set)
 
 class MetabolicReaction(object):
     def __init__(self, reversible, metabolites):
@@ -196,7 +214,7 @@ class MetabolicDatabase(object):
         if reaction.direction != '=>':
             self.reversible.add(rxnid)
 
-    def load_model_from_file(self, file, v_max=1000):
+    def load_model_from_file(self, file):
         '''Load model defined by given reaction list file
 
         Lines starting with pound sign (#) are skipped.'''
@@ -208,9 +226,9 @@ class MetabolicDatabase(object):
                     continue
                 yield line
 
-        return self.get_model(reaction_file_iter(file), v_max)
+        return self.get_model(reaction_file_iter(file))
 
-    def get_model(self, reaction_iter, v_max=1000):
+    def get_model(self, reaction_iter):
         '''Get model from reaction name iterator
 
         The model will contain all reactions of the iterator.'''
@@ -219,7 +237,7 @@ class MetabolicDatabase(object):
             model.add_reaction(rxnid)
 
         for rxnid in model.reaction_set:
-            model.reset_flux_bounds(rxnid, v_max)
+            del model.limits[rxnid].bounds
 
         return model
 
@@ -246,11 +264,13 @@ class MetabolicModel(object):
     The model contains a list of reactions referencing the reactions
     in the associated database.'''
 
-    def __init__(self, database):
+    def __init__(self, database, v_max=1000):
         self._database = database
-        self._limits = defaultdict(FluxBounds)
+        self._limits_lower = {}
+        self._limits_upper = {}
         self._reaction_set = set()
         self._compound_set = set()
+        self._v_max = v_max
 
     @property
     def database(self):
@@ -264,7 +284,7 @@ class MetabolicModel(object):
     def compound_set(self):
         return iter(self._compound_set)
 
-    def add_reaction(self, reaction, v_max=1000):
+    def add_reaction(self, reaction):
         '''Add reaction to model'''
 
         if reaction in self._reaction_set:
@@ -274,8 +294,6 @@ class MetabolicModel(object):
             raise Exception('Model reaction does not reference a database reaction: {}'.format(reaction))
 
         self._reaction_set.add(reaction)
-        self._limits[reaction] = FluxBounds(-v_max, v_max) if reaction in self._database.reversible else FluxBounds(0, v_max)
-
         for compound, value in self._database.reactions[reaction].iteritems():
             self._compound_set.add(compound)
 
@@ -286,7 +304,8 @@ class MetabolicModel(object):
             return
 
         self._reaction_set.remove(reaction)
-        del self._limits[reaction]
+        self._limits_lower.pop(reaction, None)
+        self._limits_upper.pop(reaction, None)
 
         # Remove compound from compound_set if it is not referenced
         # by any other reactions in the model.
@@ -370,22 +389,14 @@ class MetabolicModel(object):
 
         return added
 
-    def reset_flux_bounds(self, reaction, v_max=1000):
-        '''Reset flux bounds of model reaction
-
-        A reversible reaction will be reset to (-v_max, v_max) and
-        an irreversible reaction will be set to (0, v_max).'''
-
-        self._limits[reaction].bounds = (-v_max, v_max) if reaction in self._database.reversible else (0, v_max)
-
-    def load_exchange_limits(self, v_max=1000):
+    def load_exchange_limits(self):
         '''Load exchange limits from external file'''
 
         with open('exchangerxn.txt', 'r') as f:
             for line in f:
                 rxnid = line.strip()
                 if rxnid in self._reaction_set:
-                    self._limits[rxnid].bounds = 0, v_max
+                    self._limits[rxnid].bounds = 0, self._v_max
 
         with open('exchangelimit.txt', 'r') as f:
             for line in f:
@@ -398,63 +409,102 @@ class MetabolicModel(object):
                 rxnid, value = line.split()
 
                 if rxnid in self._reaction_set:
-                    self._limits[rxnid].bounds = float(value), v_max
+                    self._limits[rxnid].bounds = float(value), self._v_max
 
     @property
     def reversible(self):
         '''The set of reversible reactions'''
         return self._database.reversible & self._reaction_set
 
-    class MatrixView(object):
-        def __init__(self, model):
-            self._model = model
-
-        def __getitem__(self, key):
-            if len(key) != 2:
-                raise TypeError(repr(key))
-            cpdid, rxnid = key
-            if rxnid not in self._model._reaction_set:
-                raise KeyError(repr(key))
-            value = self._model._database.reactions[rxnid][cpdid]
-            return value
-
-        def __contains__(self, key):
-            try:
-                self.__getitem__(key)
-            except KeyError:
-                return False
-            return True
-
-        def __iter__(self):
-            return self.iterkeys()
-
-        def iterkeys(self):
-            for rxnid in self._model._reaction_set:
-                for cpdid in self._model._database.reactions[rxnid]:
-                    yield cpdid, rxnid
-
-        def iteritems(self):
-            for rxnid in self._model._reaction_set:
-                for cpdid, value in self._model._database.reactions[rxnid].iteritems():
-                    yield (cpdid, rxnid), value
-
     @property
     def matrix(self):
         '''Mapping from compound, reaction to stoichiometric value'''
-        return MetabolicModel.MatrixView(self)
+        return StoichiometricMatrixView(self)
 
     @property
     def limits(self):
-        return self._limits
+        return LimitsView(self)
 
     def copy(self):
         '''Return copy of model'''
 
         model = self.__class__(self._database)
-        model._limits = dict(self._limits)
+        model._limits_lower = dict(self._limits_lower)
+        model._limits_upper = dict(self._limits_upper)
         model._reaction_set = set(self._reaction_set)
         model._compound_set = set(self._compound_set)
         return model
+
+
+class FlipableFluxBounds(FluxBounds):
+    '''FluxBounds object for a FlipableModelView
+
+    This object is used internally in the FlipableModelView to represent
+    the bounds of flux on a reaction that can be flipped.'''
+
+    def __init__(self, view, reaction):
+        super(FlipableFluxBounds, self).__init__(view._model, reaction)
+        self._view = view
+
+    def _assign_lower(self, value):
+        if self._reaction in self._view._flipped:
+            super(FlipableFluxBounds, self)._assign_upper(-value)
+        else:
+            super(FlipableFluxBounds, self)._assign_lower(value)
+
+    def _assign_upper(self, value):
+        if self._reaction in self._view._flipped:
+            super(FlipableFluxBounds, self)._assign_lower(-value)
+        else:
+            super(FlipableFluxBounds, self)._assign_upper(value)
+
+    @property
+    def lower(self):
+        '''Lower bound'''
+        if self._reaction in self._view._flipped:
+            return -super(FlipableFluxBounds, self).upper
+        return super(FlipableFluxBounds, self).lower
+
+    @property
+    def upper(self):
+        '''Upper bound'''
+        if self._reaction in self._view._flipped:
+            return -super(FlipableFluxBounds, self).lower
+        return super(FlipableFluxBounds, self).upper
+
+class FlipableStoichiometricMatrixView(StoichiometricMatrixView):
+    '''Provides a matrix view that flips with the underlying flipable model view
+
+    This object is used internally in FlipableModelView to
+    expose a matrix view that negates the stoichiometric
+    values of flipped reactions.'''
+
+    def __init__(self, view):
+        super(FlipableStoichiometricMatrixView, self).__init__(view._model)
+        self._view = view
+
+    def _value_mul(self, reaction):
+        return -1 if reaction in self._view._flipped else 1
+
+    def __getitem__(self, key):
+        if len(key) != 2:
+            raise KeyError(key)
+        compound, reaction = key
+        return self._value_mul(reaction) * super(FlipableStoichiometricMatrixView, self).__getitem__(key)
+
+class FlipableLimitsView(LimitsView):
+    '''Provides a limits view that flips with the underlying flipable model view
+
+    This object is used internally in FlipableModelView to
+    expose a limits view that flips the bounds of all flipped
+    reactions.'''
+
+    def __init__(self, view):
+        super(FlipableLimitsView, self).__init__(view._model)
+        self._view = view
+
+    def _create_bounds(self, reaction):
+        return FlipableFluxBounds(self._view, reaction)
 
 class FlipableModelView(object):
     '''Proxy wrapper of model objects allowing a flipped set of reactions
@@ -462,70 +512,20 @@ class FlipableModelView(object):
     The proxy will forward all properties normally except
     that flipped reactions will appear to have stoichiometric
     values negated in the matrix property, and have bounds in
-    the limits property flipped. This view is needed for the
+    the limits property flipped. This view is needed for
     some algorithms.'''
 
     def __init__(self, model, flipped=set()):
         self._model = model
         self._flipped = set(flipped)
 
-    class MatrixView(object):
-        def __init__(self, view):
-            self._view = view
-
-        def _value_mul(self, rxnid):
-            return -1 if rxnid in self._view._flipped else 1
-
-        def __getitem__(self, key):
-            if len(key) != 2:
-                raise TypeError(repr(key))
-            cpdid, rxnid = key
-            value = self._view._model.matrix[key]
-            return value * self._value_mul(rxnid)
-
-        def __contains__(self, key):
-            return key in self._view._model.matrix
-
-        def __iter__(self):
-            return self.iterkeys()
-
-        def iterkeys(self):
-            return self._view._model.matrix.iterkeys()
-
-        def iteritems(self):
-            for key, value in self._view._model.matrix.iteritems():
-                cpdid, rxnid = key
-                yield key, value * self._value_mul(rxnid)
-
-    class LimitsView(object):
-        def __init__(self, view):
-            self._view = view
-
-        def __getitem__(self, key):
-            if key in self._view._flipped:
-                return self._view._model.limits[key].flipped()
-            return self._view._model.limits[key]
-
-        def __contains__(self, key):
-            return key in self._view._model.limits
-
-        def __iter__(self):
-            return self.iterkeys()
-
-        def iterkeys(self):
-            return self._view._model.limits.iterkeys()
-
-        def iteritems(self):
-            for key in iter(self):
-                yield key, self[key]
-
     @property
     def matrix(self):
-        return FlipableModelView.MatrixView(self)
+        return FlipableStoichiometricMatrixView(self)
 
     @property
     def limits(self):
-        return FlipableModelView.LimitsView(self)
+        return FlipableLimitsView(self)
 
     def flip(self, subset):
         self._flipped ^= subset
