@@ -390,7 +390,10 @@ class MetabolicModel(object):
         with open('exchangelimit.txt', 'r') as f:
             for line in f:
                 line = line.strip()
-                if line == '' or line[0] == '*':
+                # TODO Comments can start with an asterisk to remain
+                # compatible with GAMS files. Can be removed when
+                # compatibility is no longer needed.
+                if line == '' or line[0] == '#' or line[0] == '*':
                     continue
                 rxnid, value = line.split()
 
