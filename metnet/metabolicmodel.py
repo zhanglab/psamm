@@ -396,7 +396,7 @@ class MetabolicModel(object):
             for line in f:
                 rxnid = line.strip()
                 if rxnid in self._reaction_set:
-                    self._limits[rxnid].bounds = 0, self._v_max
+                    self._limits_lower[rxnid] = 0
 
         with open('exchangelimit.txt', 'r') as f:
             for line in f:
@@ -409,7 +409,7 @@ class MetabolicModel(object):
                 rxnid, value = line.split()
 
                 if rxnid in self._reaction_set:
-                    self._limits[rxnid].bounds = float(value), self._v_max
+                    self._limits_lower[rxnid] = float(value)
 
     @property
     def reversible(self):
