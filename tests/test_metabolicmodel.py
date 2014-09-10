@@ -32,10 +32,10 @@ class TestMetabolicModel(unittest.TestCase):
         self.model = self.database.get_model(self.database.reactions)
 
     def test_reaction_set(self):
-        self.assertEqual(self.model.reaction_set, { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
+        self.assertEqual(set(self.model.reaction_set), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
 
     def test_compound_set(self):
-        self.assertEqual(self.model.compound_set, { ('A', None), ('B', None), ('C', None), ('D', None) })
+        self.assertEqual(set(self.model.compound_set), { ('A', None), ('B', None), ('C', None), ('D', None) })
 
     def test_matrix_get_item(self):
         self.assertEqual(self.model.matrix[('A', None), 'rxn_1'], 2)
@@ -64,7 +64,7 @@ class TestMetabolicModel(unittest.TestCase):
         self.assertEqual(self.model.limits['rxn_2'].bounds, (-1000, 1000))
         self.assertEqual(self.model.limits['rxn_3'].bounds, (0, 1000))
 
-class TestMetabolicModel(unittest.TestCase):
+class TestMetabolicModelFlipableView(unittest.TestCase):
     def setUp(self):
         # TODO use mock database instead of actual database
         self.database = metabolicmodel.MetabolicDatabase()
