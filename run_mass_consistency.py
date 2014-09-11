@@ -48,13 +48,12 @@ if __name__ == '__main__':
     print 'Compound consistency...'
     good = 0
     total = 0
-    for cpdid, mass in sorted(compound_iter, key=lambda x: x[1], reverse=True):
-        if cpdid == 'cpd_h':
-            print 'Proton mass: {}'.format(mass)
-        if mass >= 1-epsilon or cpdid in zeromass:
+    for compound, mass in sorted(compound_iter, key=lambda x: x[1], reverse=True):
+        compound_id, comp = compound
+        if mass >= 1-epsilon or compound_id in zeromass:
             good += 1
         total += 1
-        print '{}: {}'.format(cpdid, mass)
+        print '{}: {}'.format(compound_id, mass)
     print 'Consistent compounds: {}/{}'.format(good, total)
 
     print 'Is consistent? {}'.format(mass_consistency.is_consistent(model, exchange, zeromass))
