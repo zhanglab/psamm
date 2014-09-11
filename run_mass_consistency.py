@@ -61,5 +61,5 @@ if __name__ == '__main__':
     print 'Reaction consistency...'
     reaction_iter, compound_iter = mass_consistency.check_reaction_consistency(model, exchange, zeromass)
     for rxnid, residual in sorted(reaction_iter, key=lambda x: abs(x[1]), reverse=True):
-        if residual >= epsilon:
+        if abs(residual) >= epsilon:
             print '{}\t{}'.format(rxnid, residual)
