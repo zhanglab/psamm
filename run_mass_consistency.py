@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import csv
 
 from metnet.metabolicmodel import MetabolicDatabase
 from metnet.massconsistency import MassConsistencyCheck
@@ -26,6 +27,16 @@ if __name__ == '__main__':
     else:
         model = database.get_model(database.reactions)
 
+    # Load compound information
+    compounds = {}
+    for compound_table in args.compounds:
+        compound_table.readline() # Skip header
+        for row in csv.reader(compound_table, delimiter='\t'):
+            cpdid, names = row[:2]
+            synonyms = names.split(',<br>')
+            name = synonyms.pop()
+            compounds[cpdid] = name
+
     # Create a set of known mass-inconsistent reactions
     exchange = set()
 
@@ -48,19 +59,19 @@ if __name__ == '__main__':
     print 'Compound consistency...'
     good = 0
     total = 0
-    for cpdid, mass in sorted(compound_iter, key=lambda x: x[1], reverse=True):
-        if cpdid == 'cpd_h':
-            print 'Proton mass: {}'.format(mass)
-        if mass >= 1-epsilon or cpdid in zeromass:
+    for compound, mass in sorted(compound_iter, key=lambda x: x[1], reverse=True):
+        compound_id, comp = compound
+        if mass >= 1-epsilon or compound_id in zeromass:
             good += 1
         total += 1
-        print '{}: {}'.format(cpdid, mass)
+        print '{}: {}'.format(compounds.get(compound_id, compound_id), mass)
     print 'Consistent compounds: {}/{}'.format(good, total)
 
     print 'Is consistent? {}'.format(mass_consistency.is_consistent(model, exchange, zeromass))
 
     print 'Reaction consistency...'
     reaction_iter, compound_iter = mass_consistency.check_reaction_consistency(model, exchange, zeromass)
-    for rxnid, residual in sorted(reaction_iter, key=lambda x: abs(x[1]), reverse=True):
-        if residual >= epsilon:
-            print '{}\t{}'.format(rxnid, residual)
+    for reaction_id, residual in sorted(reaction_iter, key=lambda x: abs(x[1]), reverse=True):
+        if abs(residual) >= epsilon:
+            reaction = database.get_reaction(reaction_id).translated_compounds(lambda x: compounds.get(x, x))
+            print '{}\t{}\t{}'.format(reaction_id, residual, reaction)

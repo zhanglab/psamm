@@ -164,4 +164,4 @@ class MassConsistencyCheck(object):
             raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
         for compound in model.compound_set:
-            yield self._cpdid_str(compound), prob.get_value('m_'+self._cpdid_str(compound))
+            yield compound, prob.get_value('m_'+self._cpdid_str(compound))
