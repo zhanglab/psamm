@@ -40,15 +40,11 @@ if __name__ == '__main__':
 
     model.load_exchange_limits()
 
+    epsilon = 1e-5
+
     # Run FBA on model
     fba_fluxes = dict(flux_balance(model, reaction))
     optimum = fba_fluxes[reaction]
-    for rxnid, flux in sorted(fba_fluxes.iteritems()):
-        rx = database.get_reaction(rxnid)
-        print '{}\t{}\t{}'.format(rxnid, flux, rx.translated_compounds(lambda x: compounds.get(x, x)))
-    print 'Maximum: {}'.format(optimum)
-
-    epsilon = 1e-5
 
     # Run flux minimization
     fmin_fluxes = dict(flux_minimization(model, { reaction: optimum }))
@@ -58,4 +54,5 @@ if __name__ == '__main__':
             count += 1
         rx = database.get_reaction(rxnid)
         print '{}\t{}\t{}\t{}'.format(rxnid, fba_fluxes[rxnid], flux, rx.translated_compounds(lambda x: compounds.get(x, x)))
+    print 'Maximum flux: {}'.format(optimum)
     print 'Minimized reactions: {}'.format(count)
