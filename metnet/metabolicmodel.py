@@ -204,12 +204,16 @@ class MetabolicDatabase(object):
             del self.reactions[rxnid]
 
         # Add values to global (sparse) stoichiometric matrix
+        # Compounds that occur on both sides will get a stoichiometric
+        # value based on the sum of the signed values on each side.
+        for compound, value, comp in reaction.compounds:
+            if (compound.name, comp) not in self.reactions[rxnid] and value != 0:
+                self.reactions[rxnid][compound.name, comp] = 0
+                self.compound_reactions[compound.name, comp].add(rxnid)
         for compound, value, comp in reaction.left:
-            self.reactions[rxnid][(compound.name, comp)] = -value
-            self.compound_reactions[(compound.name, comp)].add(rxnid)
+            self.reactions[rxnid][(compound.name, comp)] -= value
         for compound, value, comp in reaction.right:
-            self.reactions[rxnid][(compound.name, comp)] = value
-            self.compound_reactions[(compound.name, comp)].add(rxnid)
+            self.reactions[rxnid][(compound.name, comp)] += value
 
         if reaction.direction != '=>':
             self.reversible.add(rxnid)
