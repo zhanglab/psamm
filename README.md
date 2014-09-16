@@ -140,6 +140,26 @@ More advanced analysis and data processing can be done by using the python
 module `metnet.fluxanalysis` directly. A demonstration of how to accomplish
 this can be seen in the `run_fluxanalysis.py` script.
 
+Robustness analysis
+-------------------
+
+Robustness analysis can be run using `run_robustness.py`. The options
+that can be given are similar to the ones given to the previously described
+programs:
+
+``` shell
+$ ~/model_script/run_robustness.py --database ModelSEED_database.tsv \
+        --database custom_database.tsv rxn_list Biomass EX_Oxygen
+```
+
+In the example above, the `Biomass` reaction will be maximized while the
+`EX_Oxygen` (oxygen exchange) reaction is fixed at a certain flux in each
+iteration. The fixed flux will vary between the minimum and maximum flux.
+The number of iterations can be set using `--steps`. In each iteration,
+all reactions and the corresponding fluxes will be printed, as well as
+the value of the fixed flux. If the fixed flux results in an infeasible
+model, no output will be printed for that iteration.
+
 Mass consistency
 ----------------
 
