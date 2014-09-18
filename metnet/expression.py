@@ -19,9 +19,14 @@ class Variable(object):
     def __init__(self, symbol):
         '''Create variable with given symbol
 
+        Symbol must start with a letter or underscore but
+        can contain numbers in other positions.
+
         >>> Variable('x')
         Variable('x')'''
 
+        if not re.match(r'^[^\d\W]\w*\Z', symbol):
+            raise ValueError('Invalid symbol {}'.format(symbol))
         self._symbol = str(symbol)
 
     @property
@@ -51,7 +56,8 @@ class Variable(object):
         >>> Variable('x').substitute(y=42)
         Variable('x')
         >>> Variable('x').substitute(x=123, y=56)
-        123'''
+        123
+        '''
 
         if self._symbol in kwargs:
             return kwargs[self._symbol]
@@ -67,7 +73,7 @@ class Variable(object):
         return Expression({ self: 1 }) - other
 
     def __rsub__(self, other):
-        return self - other
+        return -self + other
 
     def __mul__(self, other):
         return Expression({ self: 1 }) * other
@@ -82,14 +88,7 @@ class Variable(object):
         return Expression({ self: -1 })
 
     def __eq__(self, other):
-        '''Check equality of variables
-
-        >>> Variable('x') == Variable('x')
-        True
-        >>> Variable('x') == Variable('y')
-        False
-        >>> Variable('x') == 5
-        False'''
+        '''Check equality of variables'''
         if isinstance(other, Expression):
             return other == self
         return isinstance(other, Variable) and self._symbol == other._symbol
@@ -118,26 +117,26 @@ class Expression(object):
         <Expression '2x + 3'>
         >>> Expression({ Variable('x'): 1, Variable('y'): 1 })
         <Expression 'x + y'>'''
-        self._variables = dict(variables)
+
+        self._variables = {}
         self._offset = offset
+
+        for var, value in variables.iteritems():
+            if not isinstance(var, Variable):
+                raise ValueError('Not a variable: {}'.format(var))
+            if value != 0:
+                self._variables[var] = value
 
     def simplify(self):
         '''Return simplified expression
 
         If the expression is of the form 'x', the variable will be returned,
         and if the expression contains no variables, the offset will be returned
-        as a number.
-
-        >>> Expression({}, 5).simplify()
-        5
-        >>> Expression({ Variable('x'): 1 }).simplify()
-        Variable('x')
-        >>> Expression({ Variable('x'): 2 }).simplify()
-        <Expression '2x'>'''
-        result = self.__class__({ var: value for var, value in self._variables.iteritems() if value != 0 }, self._offset)
+        as a number.'''
+        result = self.__class__(self._variables, self._offset)
         if len(result._variables) == 0:
             return result._offset
-        elif len(result._variables) == 1:
+        elif len(result._variables) == 1 and result._offset == 0:
             var, value = next(result._variables.iteritems())
             if value == 1:
                 return var
@@ -146,40 +145,22 @@ class Expression(object):
     def substitute(self, **kwargs):
         '''Return expression with variables substituted
 
-        >>> Expression({ Variable('x'): 2 }, 1).substitute(x=2)
-        5
-        >>> Expression({ Variable('x'): 1 }).substitute(y=2)
-        Variable('x')
-        >>> Expression({ Variable('x'): 2 }, 1).substitute(y=2)
-        <Expression '2x + 1'>
-        >>> ex = Expression({ Variable('x'): 1, Variable('y'): 2 })
-        >>> ex.substitute(y=Variable('x'))
-        <Expression '3x'>'''
-
+        >>> Expression.parse('x + 2y').substitute(y=-3)
+        <Expression 'x - 6'>
+        >>> Expression.parse('x + 2y').substitute(y=Variable('z'))
+        <Expression 'x + 2z'>
+        '''
         expr = self.__class__()
         for var, value in self._variables.iteritems():
             expr += value * var.substitute(**kwargs)
         return (expr + self._offset).simplify()
 
     def variables(self):
-        '''Return iterator of variables in expression
-
-        >>> ex = Expression({ Variable('x'): 1, Variable('y'): 2 }, 3)
-        >>> sorted(ex.variables())
-        [Variable('x'), Variable('y')]'''
+        '''Return iterator of variables in expression'''
         return iter(self._variables)
 
     def __add__(self, other):
-        '''Add expressions, variables or numbers
-
-        >>> Expression({ Variable('x'): 1 }) + 1
-        <Expression 'x + 1'>
-        >>> Expression({ Variable('x'): 1 }) + Variable('y')
-        <Expression 'x + y'>
-        >>> Expression({ Variable('x'): 1 }) + Variable('x')
-        <Expression '2x'>
-        >>> Expression({ Variable('x'): 1 }) + Expression({ Variable('y'): 2 })
-        <Expression 'x + 2y'>'''
+        '''Add expressions, variables or numbers'''
 
         if isinstance(other, numbers.Number):
             return self.__class__(self._variables, self._offset + other)
@@ -196,27 +177,14 @@ class Expression(object):
         return self + other
 
     def __sub__(self, other):
-        '''Subtract expressions, variables or numbers
-
-        >>> Expression({ Variable('x'): 1 }) - 1
-        <Expression 'x - 1'>
-        >>> Expression({ Variable('x'): 1 }) - Variable('y')
-        <Expression 'x - y'>
-        >>> Expression({ Variable('x'): 1 }) - Variable('x')
-        <Expression '0'>
-        >>> Expression({ Variable('x'): 1 }) - Expression({ Variable('y'): 2 })
-        <Expression 'x - 2y'>'''
-
+        '''Subtract expressions, variables or numbers'''
         return self + -other
 
     def __rsub__(self, other):
         return -self + other
 
     def __mul__(self, other):
-        '''Multiply by scalar
-
-        >>> Expression({ Variable('x'): 1 }, 3) * 4
-        <Expression '4x + 12'>'''
+        '''Multiply by scalar'''
         if isinstance(other, numbers.Number):
             if other == 0:
                 return self.__class__()
@@ -226,35 +194,17 @@ class Expression(object):
     def __rmul__(self, other):
         return self * other
 
+    def __div__(self, other):
+        '''Divide by scalar'''
+        if isinstance(other, numbers.Number):
+            return self.__class__({ var: value/other for var, value in self._variables.iteritems()}, self._offset/other)
+        return NotImplemented
+
     def __neg__(self):
         return self * -1
 
     def __eq__(self, other):
-        '''Expression equality
-
-        >>> Expression({ Variable('x'): 2, Variable('y'): 5 }) == Expression({ Variable('y'): 5, Variable('x'): 2 })
-        True
-        >>> Expression({ Variable('x'): 2, Variable('y'): 5 }) == Expression({ Variable('y'): 2, Variable('x'): -5 })
-        False
-        >>> Expression({ Variable('x'): 2, Variable('y'): 5 }) == Expression({ Variable('y'): 2, Variable('x'): -5, Variable('z'): 1 })
-        False
-        >>> Expression({ Variable('x'): 2, Variable('y'): 5 }, 4) == Expression({ Variable('y'): 5, Variable('x'): 2 })
-        False
-        >>> Expression({ Variable('x'): 1 }) == Variable('x')
-        True
-        >>> Expression({ Variable('x'): 2 }) == Variable('x')
-        False
-        >>> Expression({ Variable('x'): 1 }, 4) == Variable('x')
-        False
-        >>> Expression({ Variable('x'): 1, Variable('y'): 1 }) == Variable('x')
-        False
-        >>> Expression({}, 3) == 3
-        True
-        >>> Expression({}, -3) == 3
-        False
-        >>> Expression({ Variable('x'): 1 }, 3) == 3
-        False
-        '''
+        '''Expression equality'''
         if isinstance(other, Expression):
             return self._variables == other._variables and self._offset == other._offset
         elif isinstance(other, Variable):
@@ -308,14 +258,8 @@ class Expression(object):
     def parse(cls, s):
         '''Parse expression string
 
-        >>> Expression.parse('2x + 3')
-        <Expression '2x + 3'>
-        >>> Expression.parse('1')
-        <Expression '1'>
-        >>> Expression.parse('x + 4y + 2x + 0')
-        <Expression '3x + 4y'>
-        >>> Expression.parse('-2x1 + 5pi - 3x2')
-        <Expression '5pi - 2x1 - 3x2'>'''
+        Variables must be valid variable symbols and
+        coefficients must be integers.'''
 
         expr = Expression()
         s = s.strip()
@@ -324,7 +268,7 @@ class Expression(object):
 
         if s[0] not in '+-':
             s = '+'+s
-        for m in re.finditer(r'([+-])\s*(\d+)?([a-z]+\d*)?', s):
+        for m in re.finditer(r'([+-])\s*(\d+)?([^\d\W]\w*)?', s):
             term = 1 if m.group(1) == '+' else -1
             if m.group(2) is not None:
                 term *= int(m.group(2))
