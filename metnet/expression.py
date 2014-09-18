@@ -110,29 +110,32 @@ class Variable(object):
 class Expression(object):
     '''Represents an affine expression (e.g. 2x + 3y - z + 5)'''
 
-    def __init__(self, variables={}, offset=0):
-        '''Create expression of given variables and offset
+    def __init__(self, *args):
+        '''Create new expression
 
         >>> Expression({ Variable('x'): 2 }, 3)
-        <Expression '2x + 3'>
+        Expression('2x + 3')
         >>> Expression({ Variable('x'): 1, Variable('y'): 1 })
-        <Expression 'x + y'>'''
+        Expression('x + y')
+        '''
 
-        self._variables = {}
-        self._offset = offset
+        if len(args) == 1 and isinstance(args[0], basestring):
+            # Parse as string
+            self._variables, self._offset = self._parse_string(args[0])
+        elif len(args) <= 2:
+            self._variables = {}
+            self._offset = args[1] if len(args) >= 2 else 0
 
-        for var, value in variables.iteritems():
-            if not isinstance(var, Variable):
-                raise ValueError('Not a variable: {}'.format(var))
-            if value != 0:
-                self._variables[var] = value
+            variables = args[0] if len(args) >= 1 else {}
+            for var, value in variables.iteritems():
+                if not isinstance(var, Variable):
+                    raise ValueError('Not a variable: {}'.format(var))
+                if value != 0:
+                    self._variables[var] = value
+        else:
+            raise TypeError('Expression() requires one or two arguments')
 
-    @classmethod
-    def parse(cls, s):
-        return Expression(*cls._parse_string(s))
-
-    @classmethod
-    def _parse_string(cls, s):
+    def _parse_string(self, s):
         '''Parse expression string
 
         Variables must be valid variable symbols and
@@ -203,10 +206,10 @@ class Expression(object):
     def substitute(self, **kwargs):
         '''Return expression with variables substituted
 
-        >>> Expression.parse('x + 2y').substitute(y=-3)
-        <Expression 'x - 6'>
-        >>> Expression.parse('x + 2y').substitute(y=Variable('z'))
-        <Expression 'x + 2z'>
+        >>> Expression('x + 2y').substitute(y=-3)
+        Expression('x - 6')
+        >>> Expression('x + 2y').substitute(y=Variable('z'))
+        Expression('x + 2z')
         '''
         expr = self.__class__()
         for var, value in self._variables.iteritems():
@@ -310,7 +313,7 @@ class Expression(object):
         return ' '.join(terms)
 
     def __repr__(self):
-        return '<Expression \'{}\'>'.format(str(self))
+        return 'Expression({})'.format(repr(str(self)))
 
 
 if __name__ == '__main__':

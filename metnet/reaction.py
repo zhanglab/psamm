@@ -60,7 +60,7 @@ class Compound(object):
         >>> str(Compound('Phosphate'))
         'Phosphate'
 
-        >>> str(Compound('Polyphosphate', [Expression.parse('n')]))
+        >>> str(Compound('Polyphosphate', [Expression('n')]))
         'Polyphosphate(n)'
         '''
         s = self._name
@@ -155,8 +155,8 @@ class Reaction(object):
         >>> Reaction('=>', [(Compound('Pb'), 1, None)], [(Compound('Au'), 1, None)]).format()
         '|Pb| => |Au|'
 
-        >>> pp1 = Compound('Polyphosphate', [Expression.parse('n')])
-        >>> pp2 = Compound('Polyphosphate', [Expression.parse('n+1')])
+        >>> pp1 = Compound('Polyphosphate', [Expression('n')])
+        >>> pp2 = Compound('Polyphosphate', [Expression('n+1')])
         >>> Reaction('=>', [(Compound('ATP'), 1, None), (pp1, 1, None)], [(Compound('ADP'), 1, None), (pp2, 1, None)]).format()
         '|ATP| + |Polyphosphate(n)| => |ADP| + |Polyphosphate(n + 1)|'
         '''
@@ -502,9 +502,9 @@ class KEGG(object):
         >>> KEGG.parse('C00013 + C00001 <=> 2 C00009')
         Reaction('<=>', ((Compound('C00013'), 1, None), (Compound('C00001'), 1, None)), ((Compound('C00009'), 2, None),))
         >>> KEGG.parse('C00404 + n C00001 <=> (n+1) C02174')
-        Reaction('<=>', ((Compound('C00404'), 1, None), (Compound('C00001'), <Expression 'n'>, None)), ((Compound('C02174'), <Expression 'n + 1'>, None),))
+        Reaction('<=>', ((Compound('C00404'), 1, None), (Compound('C00001'), Expression('n'), None)), ((Compound('C02174'), Expression('n + 1'), None),))
         >>> KEGG.parse('C00039(n) <=> C00013 + C00039(n+1)')
-        Reaction('<=>', ((Compound('C00039', (<Expression 'n'>,)), 1, None),), ((Compound('C00013'), 1, None), (Compound('C00039', (<Expression 'n + 1'>,)), 1, None)))
+        Reaction('<=>', ((Compound('C00039', (Expression('n'),)), 1, None),), ((Compound('C00013'), 1, None), (Compound('C00039', (Expression('n + 1'),)), 1, None)))
         '''
         def parse_count(s):
             m = re.match(r'\((.+)\)', s)
@@ -515,12 +515,12 @@ class KEGG(object):
             if m is not None:
                 return int(m.group(0))
 
-            return Expression.parse(s)
+            return Expression(s)
 
         def parse_compound(s):
             m = re.match(r'(.+)\((.+)\)', s)
             if m is not None:
-                return Compound(m.group(1), [Expression.parse(m.group(2))])
+                return Compound(m.group(1), [Expression(m.group(2))])
             return Compound(s)
 
         def parse_compound_list(s):

@@ -168,7 +168,7 @@ class Formula(object):
         >>> Formula({Atom('H'): 2, Atom('O'): 1}) + Formula({Atom('N'): 1, Atom('O'): 2})
         Formula({Atom('H'): 2, Atom('N'): 1, Atom('O'): 3})
 
-        >>> Formula({Atom('H'): Expression.parse('n')}) + Formula({Atom('H'): Expression.parse('-n')})
+        >>> Formula({Atom('H'): Expression('n')}) + Formula({Atom('H'): Expression('-n')})
         Formula({})'''
 
         if isinstance(other, FormulaElement):
@@ -310,7 +310,7 @@ class Formula(object):
                     if token.isdigit():
                         formula += int(token) * transform_subformula(subformula)
                     else:
-                        expr = Expression.parse(token)
+                        expr = Expression(token)
                         formula += expr * transform_subformula(subformula)
                     continue
                 else:
