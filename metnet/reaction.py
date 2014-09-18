@@ -83,7 +83,13 @@ class Reaction(object):
     normally interact unless a reaction specifically allows this to happen.
     '''
 
+    Bidir = '<=>'
+    Left = '<='
+    Right = '=>'
+
     def __init__(self, direction, left, right):
+        if direction not in (Reaction.Bidir, Reaction.Left, Reaction.Right):
+            raise ValueError('Invalid direction: {}'.format(direction))
         self._direction = direction
         self._left = tuple(left)
         self._right = tuple(right)
@@ -111,12 +117,12 @@ class Reaction(object):
     def normalized(self):
         '''Return normalized reaction
 
-        >>> Reaction('<=', [(Compound('Au'), 1, None)], [(Compound('Pb'), 1, None)]).normalized()
+        >>> Reaction(Reaction.Left, [(Compound('Au'), 1, None)], [(Compound('Pb'), 1, None)]).normalized()
         Reaction('=>', ((Compound('Pb'), 1, None),), ((Compound('Au'), 1, None),))
         '''
 
-        if self._direction == '<=':
-            direction = '=>'
+        if self._direction == Reaction.Left:
+            direction = Reaction.Right
             left = self._right
             right = self._left
         else:
@@ -133,7 +139,7 @@ class Reaction(object):
         and the returned value is used as the new compound name. A new reaction is
         returned with the substituted compound names.
 
-        >>> rx = Reaction('=>', [(Compound('Pb'), 1, None)], [(Compound('Au'), 1, None)])
+        >>> rx = Reaction(Reaction.Right, [(Compound('Pb'), 1, None)], [(Compound('Au'), 1, None)])
         >>> rx.translated_compounds(lambda name: name.lower())
         Reaction('=>', ((Compound('pb'), 1, None),), ((Compound('au'), 1, None),))
         '''
@@ -172,10 +178,10 @@ class Reaction(object):
     def __eq__(self, other):
         '''Indicate equality of self and other
 
-        >>> rx = Reaction('=>', [('Pb', 1, None)], [('Au', 1, None)])
-        >>> rx == Reaction('=>', [('Pb', 1, None)], [('Au', 1, None)])
+        >>> rx = Reaction(Reaction.Right, [('Pb', 1, None)], [('Au', 1, None)])
+        >>> rx == Reaction(Reaction.Right, [('Pb', 1, None)], [('Au', 1, None)])
         True
-        >>> rx == Reaction('=>', [('Au', 1, None)], [('Pb', 1, None)])
+        >>> rx == Reaction(Reaction.Right, [('Au', 1, None)], [('Pb', 1, None)])
         False
         '''
         return (self._direction == other._direction and
