@@ -8,6 +8,7 @@ particular variables.'''
 import re
 import numbers
 import functools
+from collections import Counter
 
 @functools.total_ordering
 class Variable(object):
@@ -89,6 +90,8 @@ class Variable(object):
         False
         >>> Variable('x') == 5
         False'''
+        if isinstance(other, Expression):
+            return other == self
         return isinstance(other, Variable) and self._symbol == other._symbol
 
     def __ne__(self, other):
@@ -100,7 +103,7 @@ class Variable(object):
         return NotImplemented
 
     def __hash__(self):
-        return hash('TemplateVariable') ^ hash(self._symbol)
+        return hash('Variable') ^ hash(self._symbol)
 
     def __repr__(self):
         return 'Variable({})'.format(repr(self._symbol))
@@ -183,15 +186,10 @@ class Expression(object):
         elif isinstance(other, Variable):
             return self + Expression({ other: 1 })
         elif isinstance(other, Expression):
-            result = self.__class__()
-            for f in (self._variables, other._variables):
-                for var, value in f.iteritems():
-                    if var in result._variables:
-                        result._variables[var] += value
-                    else:
-                        result._variables[var] = value
-            result._offset = self._offset + other._offset
-            return result
+            variables = Counter(self._variables)
+            variables.update(other._variables)
+            variables = { var: value for var, value in variables.iteritems() if value != 0 }
+            return self.__class__(variables, self._offset + other._offset)
         return NotImplemented
 
     def __radd__(self, other):
@@ -220,6 +218,8 @@ class Expression(object):
         >>> Expression({ Variable('x'): 1 }, 3) * 4
         <Expression '4x + 12'>'''
         if isinstance(other, numbers.Number):
+            if other == 0:
+                return self.__class__()
             return self.__class__({ var: value*other for var, value in self._variables.iteritems()}, self._offset*other)
         return NotImplemented
 
@@ -228,6 +228,47 @@ class Expression(object):
 
     def __neg__(self):
         return self * -1
+
+    def __eq__(self, other):
+        '''Expression equality
+
+        >>> Expression({ Variable('x'): 2, Variable('y'): 5 }) == Expression({ Variable('y'): 5, Variable('x'): 2 })
+        True
+        >>> Expression({ Variable('x'): 2, Variable('y'): 5 }) == Expression({ Variable('y'): 2, Variable('x'): -5 })
+        False
+        >>> Expression({ Variable('x'): 2, Variable('y'): 5 }) == Expression({ Variable('y'): 2, Variable('x'): -5, Variable('z'): 1 })
+        False
+        >>> Expression({ Variable('x'): 2, Variable('y'): 5 }, 4) == Expression({ Variable('y'): 5, Variable('x'): 2 })
+        False
+        >>> Expression({ Variable('x'): 1 }) == Variable('x')
+        True
+        >>> Expression({ Variable('x'): 2 }) == Variable('x')
+        False
+        >>> Expression({ Variable('x'): 1 }, 4) == Variable('x')
+        False
+        >>> Expression({ Variable('x'): 1, Variable('y'): 1 }) == Variable('x')
+        False
+        >>> Expression({}, 3) == 3
+        True
+        >>> Expression({}, -3) == 3
+        False
+        >>> Expression({ Variable('x'): 1 }, 3) == 3
+        False
+        '''
+        if isinstance(other, Expression):
+            return self._variables == other._variables and self._offset == other._offset
+        elif isinstance(other, Variable):
+            # Check that there is just one variable in the expression
+            # with a coefficient of one.
+            return (self._offset == 0 and len(self._variables) == 1 and
+                    next(self._variables.iterkeys()) == other and
+                    next(self._variables.itervalues()) == 1)
+        elif isinstance(other, numbers.Number):
+            return len(self._variables) == 0 and self._offset == other
+        return False
+
+    def __ne__(self, other):
+        return not self == other
 
     def __str__(self):
         def all_terms():
