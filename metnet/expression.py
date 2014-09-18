@@ -8,7 +8,7 @@ particular variables.'''
 import re
 import numbers
 import functools
-from collections import Counter
+from collections import Counter, defaultdict
 
 @functools.total_ordering
 class Variable(object):
@@ -126,6 +126,64 @@ class Expression(object):
                 raise ValueError('Not a variable: {}'.format(var))
             if value != 0:
                 self._variables[var] = value
+
+    @classmethod
+    def parse(cls, s):
+        return Expression(*cls._parse_string(s))
+
+    @classmethod
+    def _parse_string(cls, s):
+        '''Parse expression string
+
+        Variables must be valid variable symbols and
+        coefficients must be integers.'''
+
+        scanner = re.compile(r'''
+            (\s+) |         # whitespace
+            ([^\d\W]\w*) |  # variable
+            (\d+) |         # number
+            ([+-]) |        # sign
+            (\Z) |          # end
+            (.)             # error
+        ''', re.DOTALL | re.VERBOSE)
+
+        variables = defaultdict(int)
+        offset = 0
+
+        # Parse using four states:
+        # 0: expect sign, variable, number or end (start state)
+        # 1: expect sign or end
+        # 2: expect variable or number
+        # 3: expect sign, variable or end
+        # All whitespace is ignored
+        state = 0
+        state_number = 1
+        for match in re.finditer(scanner, s):
+            whitespace, variable, number, sign, end, error = match.groups()
+            if error is not None:
+                raise ValueError('Invalid token in expression string: {}'.format(match.group(0)))
+            elif whitespace is not None:
+                continue
+            elif variable is not None and state in (0, 2, 3):
+                variables[Variable(variable)] += state_number
+                state = 1
+            elif sign is not None and state in (0, 1, 3):
+                if state == 3:
+                    offset += state_number
+                state_number = 1 if sign == '+' else -1
+                state = 2
+            elif number is not None and state in (0, 2):
+                state_number = state_number * int(number)
+                state = 3
+            elif end is not None and state in (0, 1, 3):
+                if state == 3:
+                    offset += state_number
+            else:
+                raise ValueError('Invalid token in expression string: {}'.format(match.group(0)))
+
+        # Remove zero-coefficient elements
+        variables = { var: value for var, value in variables.iteritems() if value != 0 }
+        return variables, offset
 
     def simplify(self):
         '''Return simplified expression
@@ -253,30 +311,6 @@ class Expression(object):
 
     def __repr__(self):
         return '<Expression \'{}\'>'.format(str(self))
-
-    @classmethod
-    def parse(cls, s):
-        '''Parse expression string
-
-        Variables must be valid variable symbols and
-        coefficients must be integers.'''
-
-        expr = Expression()
-        s = s.strip()
-        if len(s) == 0:
-            return expr
-
-        if s[0] not in '+-':
-            s = '+'+s
-        for m in re.finditer(r'([+-])\s*(\d+)?([^\d\W]\w*)?', s):
-            term = 1 if m.group(1) == '+' else -1
-            if m.group(2) is not None:
-                term *= int(m.group(2))
-            if m.group(3) is not None:
-                term *= Variable(m.group(3))
-            expr += term
-
-        return expr
 
 
 if __name__ == '__main__':
