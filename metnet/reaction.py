@@ -255,6 +255,9 @@ class ModelSEED(object):
         if direction is None:
             raise ParseError('Failed to parse reaction: {}'.format(tokens))
 
+        if direction in ('?', ''):
+            direction = '<=>'
+
         return Reaction(direction, list(cls._parse_compound_list(left)),
                         list(cls._parse_compound_list(right)))
 
