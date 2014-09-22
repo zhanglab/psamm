@@ -189,8 +189,8 @@ point out why a reaction is inconsistent. This check can be done using the
 following script
 
 ``` shell
-$ ~/model_script/check_formula_balance.py ModelSEED_database.tsv \
-        ModelSEED_cpds.tsv
+$ ~/model_script/check_formula_balance.py --database ModelSEED_database.tsv \
+        --database custom_database.tsv --compounds ModelSEED_cpds.tsv rxn_list
 ```
 
 For each inconsistent reaction, the reaction id will be printed followed by
