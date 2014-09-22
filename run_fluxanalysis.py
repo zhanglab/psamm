@@ -16,6 +16,9 @@ if __name__ == '__main__':
     parser.add_argument('--compounds', metavar='compoundfile', action='append',
                         type=argparse.FileType('r'), default=[],
                         help='Optional compound information table')
+    parser.add_argument('--limits', metavar='limitsfile', action='append',
+                        type=argparse.FileType('r'), default=[],
+                        help='Optional limits on flux of reactions')
     parser.add_argument('reactionlist', type=argparse.FileType('r'), help='Model definition')
     parser.add_argument('reaction', help='Reaction to maximize')
     args = parser.parse_args()
@@ -38,7 +41,8 @@ if __name__ == '__main__':
         sys.stderr.write('Specified reaction is not in model: {}\n'.format(reaction))
         sys.exit(-1)
 
-    model.load_exchange_limits()
+    for limits_table in args.limits:
+        model.load_reaction_limits(limits_table)
 
     epsilon = 1e-5
 

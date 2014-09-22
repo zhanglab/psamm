@@ -19,6 +19,9 @@ if __name__ == '__main__':
     parser.add_argument('--compounds', metavar='compoundfile', action='append',
                         type=argparse.FileType('r'), default=[],
                         help='Optional compound information table')
+    parser.add_argument('--limits', metavar='limitsfile', action='append',
+                        type=argparse.FileType('r'), default=[],
+                        help='Optional limits on flux of reactions')
     parser.add_argument('--penalty', metavar='penaltyfile', type=argparse.FileType('r'),
                         help='List of penalty scores for database reactions')
     parser.add_argument('reactionlist', type=argparse.FileType('r'), help='Model definition')
@@ -76,7 +79,8 @@ if __name__ == '__main__':
     print 'Extended: |E| = {}, E = {}'.format(len(added_reactions), added_reactions)
 
     # Load bounds on exchange reactions
-    #model.load_exchange_limits()
+    for limits_table in args.limits:
+        model.load_reaction_limits(limits_table)
 
     print 'Flux balance on induced model maximizing {}...'.format(args.reaction)
     model_induced = model.copy()

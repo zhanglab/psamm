@@ -129,11 +129,18 @@ $ ~/model_script/parse_fluxbalance.py FluxBalance.lst rxn_list
 Alternatively, the python implementation of FBA can be used. This will operate
 directly on the reaction database and model definition, and we will avoid
 having to export the `txt` files entirely. The `exchangelimit.txt` can still be
-used to define the exchange reaction limits. This method can be run using
+used to define the exchange reaction limits with the `--limits` option. This method
+can be run using
 
 ``` shell
 $ ~/model_script/run_fluxanalysis.py --database ModelSEED_database.tsv \
         --database custom_database.tsv rxn_list Biomass
+```
+
+More options can be seen by running
+
+``` shell
+$ ~/model_script/run_fluxanalysis.py --help
 ```
 
 More advanced analysis and data processing can be done by using the python

@@ -14,6 +14,9 @@ if __name__ == '__main__':
     parser.add_argument('--database', required=True, metavar='reactionfile', action='append',
                         type=argparse.FileType('r'), default=[],
                         help='Reaction definition list to usa as database')
+    parser.add_argument('--limits', metavar='limitsfile', action='append',
+                        type=argparse.FileType('r'), default=[],
+                        help='Optional limits on flux of reactions')
     parser.add_argument('reactionlist', type=argparse.FileType('r'), help='Model definition')
     parser.add_argument('reaction', help='Name of the biomass reaction')
     args = parser.parse_args()
@@ -22,7 +25,9 @@ if __name__ == '__main__':
 
     database = MetabolicDatabase.load_from_files(*args.database)
     model = database.load_model_from_file(args.reactionlist)
-    model.load_exchange_limits()
+
+    for limits_table in args.limits:
+        model.load_reaction_limits(limits_table)
 
     # Obtain normal biomass flux
     fluxes = dict(metnet.fluxanalysis.flux_balance(model, biomass_reaction))

@@ -24,11 +24,14 @@ if __name__ == '__main__':
     parser.add_argument('--compounds', metavar='compoundfile', action='append',
                         type=argparse.FileType('r'), default=[],
                         help='Optional compound information table')
+    parser.add_argument('--limits', metavar='limitsfile', action='append',
+                        type=argparse.FileType('r'), default=[],
+                        help='Optional limits on flux of reactions')
     parser.add_argument('reactionlist', type=argparse.FileType('r'), help='Model definition')
     parser.add_argument('reaction', help='Reaction to maximize')
-    parser.add_argument('varying', help='Reaction to vary')
     parser.add_argument('--steps', metavar='N', help='Number of flux value steps for varying reaction',
                         type=int, default=10)
+    parser.add_argument('varying', help='Reaction to vary')
     args = parser.parse_args()
 
     database = MetabolicDatabase.load_from_files(*args.database)
@@ -63,7 +66,9 @@ if __name__ == '__main__':
     flux_min = model.limits[varying_reaction].lower
     flux_max = model.limits[varying_reaction].upper
 
-    model.load_exchange_limits()
+    # Load reaction limits
+    for limits_table in args.limits:
+        model.load_reaction_limits(limits_table)
 
     for i in xrange(steps):
         fixed_flux = flux_min + i*(flux_max - flux_min)/float(steps-1)
