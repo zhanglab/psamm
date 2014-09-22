@@ -8,7 +8,7 @@ from metnet.massconsistency import MassConsistencyCheck
 
 if __name__ == '__main__':
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Run FastGapFill on a metabolic model')
+    parser = argparse.ArgumentParser(description='Run mass consistency check on a model or database')
     parser.add_argument('--database', required=True, metavar='reactionfile', action='append',
                         type=argparse.FileType('r'), default=[],
                         help='Reaction definition list to use as database')
@@ -39,7 +39,6 @@ if __name__ == '__main__':
 
     # Create a set of known mass-inconsistent reactions
     exchange = set()
-
     for rxnid in model.reaction_set:
         rx = database.get_reaction(rxnid)
         if len(rx.left) == 0 or len(rx.right) == 0:
@@ -59,12 +58,13 @@ if __name__ == '__main__':
     print 'Compound consistency...'
     good = 0
     total = 0
-    for compound, mass in sorted(compound_iter, key=lambda x: x[1], reverse=True):
+    for compound, mass in sorted(compound_iter, key=lambda x: (x[1], x[0]), reverse=True):
         compound_id, comp = compound
         if mass >= 1-epsilon or compound_id in zeromass:
             good += 1
         total += 1
-        print '{}: {}'.format(compounds.get(compound_id, compound_id), mass)
+        print '{}{}: {}'.format(compounds.get(compound_id, compound_id),
+                                '' if comp is None else '[{}]'.format(comp), mass)
     print 'Consistent compounds: {}/{}'.format(good, total)
 
     print 'Is consistent? {}'.format(mass_consistency.is_consistent(model, exchange, zeromass))
