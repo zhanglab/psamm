@@ -63,8 +63,9 @@ if __name__ == '__main__':
 
     if args.penalty:
         for line in args.penalty:
+            line, _, comment = line.partition('#')
             line = line.strip()
-            if len(line) == 0 or line[0] == '#':
+            if line == '':
                 continue
             rxnid, weight = line.split(None, 1)
             weights[rxnid] = float(weight)

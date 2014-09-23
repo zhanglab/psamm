@@ -221,12 +221,13 @@ class MetabolicDatabase(object):
     def load_model_from_file(self, file):
         '''Load model defined by given reaction list file
 
-        Lines starting with pound sign (#) are skipped.'''
+        Comments, indicated by pound sign (#), are skipped.'''
 
         def reaction_file_iter(f):
             for line in f:
+                line, _, comment = line.partition('#')
                 line = line.strip()
-                if len(line) == 0 or line[0] == '#':
+                if line == '':
                     continue
                 yield line
 
@@ -253,8 +254,9 @@ class MetabolicDatabase(object):
 
         for file in files:
             for line in file:
+                line, _, comment = line.partition('#')
                 line = line.strip()
-                if len(line) == 0 or line[0] == '#':
+                if line == '':
                     continue
                 rxnid, equation = line.split(None, 1)
                 rx = ModelSEED.parse(equation).normalized()
@@ -397,11 +399,12 @@ class MetabolicModel(object):
         '''Load reaction limits from external file'''
 
         for line in limits_file:
+            line, _, comment = line.partition('#')
             line = line.strip()
             # TODO Comments can start with an asterisk to remain
             # compatible with GAMS files. Can be removed when
             # compatibility is no longer needed.
-            if line == '' or line[0] == '#' or line[0] == '*':
+            if line == '' or line[0] == '*':
                 continue
 
             # A line can specify lower limit only (useful for
