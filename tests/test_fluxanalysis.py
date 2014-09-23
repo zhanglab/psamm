@@ -51,7 +51,7 @@ class TestNaiveConsistency(unittest.TestCase):
         self.database.set_reaction('rxn_4', ModelSEED.parse('|A| => |C|'))
         self.database.set_reaction('rxn_5', ModelSEED.parse('|C| => |D|'))
         self.database.set_reaction('rxn_6', ModelSEED.parse('|D| =>'))
-        self.model = self.database.load_model_from_file(iter(self.database.reactions))
+        self.model = self.database.get_model(self.database.reactions)
         self.solver = lpsolver.CplexSolver(None)
 
     def test_check_inconsistent(self):
