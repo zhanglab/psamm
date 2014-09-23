@@ -31,6 +31,10 @@ if __name__ == '__main__':
     parser.add_argument('reaction', help='Reaction to maximize')
     parser.add_argument('--steps', metavar='N', help='Number of flux value steps for varying reaction',
                         type=int, default=10)
+    parser.add_argument('--minimum', metavar='V', help='Minumum flux value of varying reacton',
+                        type=float)
+    parser.add_argument('--maximum', metavar='V', help='Maximum flux value of varying reacton',
+                        type=float)
     parser.add_argument('varying', help='Reaction to vary')
     args = parser.parse_args()
 
@@ -63,8 +67,12 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     # Run FBA on model at different fixed flux values
-    flux_min = model.limits[varying_reaction].lower
-    flux_max = model.limits[varying_reaction].upper
+    flux_min = model.limits[varying_reaction].lower if args.minimum is None else args.minimum
+    flux_max = model.limits[varying_reaction].upper if args.maximum is None else args.maximum
+
+    if flux_min > flux_max:
+        sys.stderr.write('Invalid flux range: {}, {}'.format(flux_min, flux_max))
+        sys.exit(-1)
 
     # Load reaction limits
     for limits_table in args.limits:
