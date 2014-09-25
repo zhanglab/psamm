@@ -13,7 +13,7 @@ import argparse
 import csv
 
 from metnet.metabolicmodel import MetabolicDatabase
-from metnet.fluxanalysis import flux_balance
+from metnet.fluxanalysis import flux_balance, flux_minimization
 
 if __name__ == '__main__':
     # Parse command line arguments
@@ -85,8 +85,9 @@ if __name__ == '__main__':
 
         try:
             fba_fluxes = dict(flux_balance(test_model, reaction))
-            for reaction, flux in fba_fluxes.iteritems():
-                rx = database.get_reaction(reaction)
-                print '{}\t{}\t{}\t{}'.format(reaction, fixed_flux, flux, rx.translated_compounds(lambda x: compounds.get(x, x)))
+            optimum = fba_fluxes[reaction]
+            fmin_fluxes = dict(flux_minimization(test_model, { reaction: optimum }))
+            for other_reaction, flux in fmin_fluxes.iteritems():
+                print '{}\t{}\t{}'.format(other_reaction, fixed_flux, flux)
         except Exception:
             pass
