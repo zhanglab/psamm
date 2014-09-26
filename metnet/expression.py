@@ -104,6 +104,9 @@ class Variable(object):
     def __hash__(self):
         return hash('Variable') ^ hash(self._symbol)
 
+    def __str__(self):
+        return self._symbol
+
     def __repr__(self):
         return 'Variable({})'.format(repr(self._symbol))
 
