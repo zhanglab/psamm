@@ -29,8 +29,6 @@ class FormulaElement(object):
             return NotImplemented
 
     def __mul__(self, other):
-        if not isinstance(other, numbers.Number):
-            return NotImplemented
         return Formula({ self: other })
 
     def __rmul__(self, other):
