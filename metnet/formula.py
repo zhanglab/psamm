@@ -111,6 +111,22 @@ class Formula(object):
             result += value * element
         return result
 
+    def flattened(self):
+        '''Return formula where subformulas have been extracted'''
+        stack = [(self, 1)]
+        result = {}
+        while len(stack) > 0:
+            var, value = stack.pop()
+            if isinstance(var, Formula):
+                for sub_var, sub_value in var._values.iteritems():
+                    stack.append((sub_var, value*sub_value))
+            else:
+                if var in result:
+                    result[var] += value
+                else:
+                    result[var] = value
+        return Formula(result)
+
     def variables(self):
         return iter(self._variables)
 
