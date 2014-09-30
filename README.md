@@ -217,8 +217,8 @@ use the built-in `unittest` module.
 In addition, some modules have documentation that can be tested using the `doctest`
 module. These test suites should also run without failure before any commits. They
 can be run from the `model_script` directory by specifying the particular module
-(e.g the `expression` module) using
+(e.g the `affine` module in `expression`) using
 
 ``` shell
-$ python -m metnet.expression -v
+$ python -m metnet.expression.affine -v
 ```

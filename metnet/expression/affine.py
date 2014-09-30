@@ -1,8 +1,8 @@
 
 '''Representations of affine expressions and variables
 
-These classes can be used to represent affince expressions
-and do manipulation and evalutaion with substitutions of
+These classes can be used to represent affine expressions
+and do manipulation and evaluation with substitutions of
 particular variables.'''
 
 import re

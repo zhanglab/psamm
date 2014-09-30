@@ -5,7 +5,7 @@ import re
 import functools
 from decimal import Decimal
 
-from .expression import Expression
+from .expression.affine import Expression
 
 @functools.total_ordering
 class Compound(object):
