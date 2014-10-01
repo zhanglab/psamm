@@ -17,25 +17,9 @@ class MassConsistencyCheck(object):
     def __init__(self, solver=lpsolver.CplexSolver()):
         self._solver = solver
 
-    def _cpdid_str(self, compound):
-        cpdid, comp = compound.name, compound.compartment
-        if comp is None:
-            return cpdid
-        return cpdid+'_'+comp
-
-    def _cplex_add_compound_mass(self, prob, model, zeromass=set(), lower=1):
-        '''Add variables for compound mass'''
-        for compound in model.compound_set:
-            prob.define('m_'+self._cpdid_str(compound), lower=(0 if compound.name in zeromass else lower))
-
-    def _cplex_constrain_identical(self, prob, model):
-        '''Constrain identical compounds in different compartments to the same mass'''
-        compound_id_constr = []
-        for compound in model.compound_set:
-            if compound.compartment is not None and (compound.name, None) in model.compound_set:
-                mass_c = prob.var('m_'+compound.name)
-                mass_other = prob.var('m_'+self._cpdid_str(compound))
-                prob.add_linear_constraints(mass_c == mass_other)
+    def _non_localized_compounds(self, model):
+        '''Return set of non-localized compounds in model (i.e. in compartment None)'''
+        return set(compound.in_compartment(None) for compound in model.compound_set)
 
     def is_consistent(self, model, exchange=set(), zeromass=set()):
         '''Try to assign a positive mass to each compound and return True on success
@@ -44,19 +28,20 @@ class MassConsistencyCheck(object):
         under these conditions proves that the model is mass consistent.'''
 
         prob = self._solver.create_problem()
+        compound_set = self._non_localized_compounds(model)
 
         # Define mass variables
-        self._cplex_add_compound_mass(prob, model, zeromass)
-        self._cplex_constrain_identical(prob, model)
-        prob.set_linear_objective(sum(prob.var('m_'+self._cpdid_str(compound)) for compound in model.compound_set))
+        for compound in compound_set:
+            prob.define('m_'+compound.id, lower=(0 if compound in zeromass else 1))
+        prob.set_linear_objective(sum(prob.var('m_'+compound.id) for compound in compound_set))
 
         # Define constraints
-        massbalance_lhs = { rxnid: 0 for rxnid in model.reaction_set }
+        massbalance_lhs = { reaction: 0 for reaction in model.reaction_set }
         for spec, value in model.matrix.iteritems():
-            cpdid, rxnid = spec
-            massbalance_lhs[rxnid] += prob.var('m_'+self._cpdid_str(cpdid)) * value
-        for rxnid, lhs in massbalance_lhs.iteritems():
-            if rxnid not in exchange:
+            compound, reaction = spec
+            massbalance_lhs[reaction] += prob.var('m_'+compound.in_compartment(None).id) * value
+        for reaction, lhs in massbalance_lhs.iteritems():
+            if reaction not in exchange:
                 prob.add_linear_constraints(lhs == 0)
 
         prob.solve(lpsolver.CplexProblem.Minimize)
@@ -78,10 +63,11 @@ class MassConsistencyCheck(object):
 
         # Create Flux balance problem
         prob = self._solver.create_problem()
+        compound_set = self._non_localized_compounds(model)
 
         # Define mass variables
-        self._cplex_add_compound_mass(prob, model, zeromass)
-        self._cplex_constrain_identical(prob, model)
+        for compound in compound_set:
+            prob.define('m_'+compound.id, lower=(0 if compound in zeromass else 1))
 
         # Define residual mass variables and objective constriants
         prob.define(*('z_'+rxnid for rxnid in model.reaction_set), lower=0)
@@ -97,7 +83,7 @@ class MassConsistencyCheck(object):
         massbalance_lhs = { rxnid: 0 for rxnid in model.reaction_set }
         for spec, value in model.matrix.iteritems():
             compound, rxnid = spec
-            massbalance_lhs[rxnid] += prob.var('m_'+self._cpdid_str(compound)) * value
+            massbalance_lhs[rxnid] += prob.var('m_'+compound.in_compartment(None).id) * value
         for rxnid, lhs in massbalance_lhs.iteritems():
             if rxnid not in exchange:
                 r = prob.var('r_'+rxnid)
@@ -115,8 +101,8 @@ class MassConsistencyCheck(object):
                 yield rxnid, residual
 
         def iterate_compounds():
-            for compound in model.compound_set:
-                yield self._cpdid_str(compound), prob.get_value('m_'+self._cpdid_str(compound))
+            for compound in compound_set:
+                yield compound, prob.get_value('m_'+compound.id)
 
         return iterate_reactions(), iterate_compounds()
 
@@ -136,23 +122,23 @@ class MassConsistencyCheck(object):
 
         # Create mass balance problem
         prob = self._solver.create_problem()
+        compound_set = self._non_localized_compounds(model)
 
         # Define mass variables
-        self._cplex_add_compound_mass(prob, model, zeromass, 0)
-        self._cplex_constrain_identical(prob, model)
+        prob.define(*('m_'+compound.id for compound in compound_set), lower=0)
 
         # Define z variables
-        prob.define(*('z_'+self._cpdid_str(compound) for compound in model.compound_set), lower=0, upper=1)
-        prob.set_linear_objective(sum(prob.var('z_'+self._cpdid_str(compound)) for compound in model.compound_set))
+        prob.define(*('z_'+compound.id for compound in compound_set), lower=0, upper=1)
+        prob.set_linear_objective(sum(prob.var('z_'+compound.id) for compound in compound_set))
 
-        z = prob.set('z_'+self._cpdid_str(compound) for compound in model.compound_set)
-        m = prob.set('m_'+self._cpdid_str(compound) for compound in model.compound_set)
+        z = prob.set('z_'+compound.id for compound in compound_set)
+        m = prob.set('m_'+compound.id for compound in compound_set)
         prob.add_linear_constraints(m >= z)
 
         massbalance_lhs = { rxnid: 0 for rxnid in model.reaction_set }
         for spec, value in model.matrix.iteritems():
             compound, rxnid = spec
-            massbalance_lhs[rxnid] += prob.var('m_'+compound.id) * value
+            massbalance_lhs[rxnid] += prob.var('m_'+compound.in_compartment(None).id) * value
         for rxnid, lhs in massbalance_lhs.iteritems():
             if rxnid not in exchange:
                 prob.add_linear_constraints(lhs == 0)
@@ -163,5 +149,5 @@ class MassConsistencyCheck(object):
         if status != 1:
             raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
-        for compound in model.compound_set:
-            yield compound, prob.get_value('m_'+self._cpdid_str(compound))
+        for compound in compound_set:
+            yield compound, prob.get_value('m_'+compound.id)
