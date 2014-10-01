@@ -151,8 +151,8 @@ class MassConsistencyCheck(object):
 
         massbalance_lhs = { rxnid: 0 for rxnid in model.reaction_set }
         for spec, value in model.matrix.iteritems():
-            cpdid, rxnid = spec
-            massbalance_lhs[rxnid] += prob.var('m_'+self._cpdid_str(cpdid)) * value
+            compound, rxnid = spec
+            massbalance_lhs[rxnid] += prob.var('m_'+compound.id) * value
         for rxnid, lhs in massbalance_lhs.iteritems():
             if rxnid not in exchange:
                 prob.add_linear_constraints(lhs == 0)

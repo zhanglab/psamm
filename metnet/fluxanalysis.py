@@ -4,12 +4,6 @@
 from .metabolicmodel import FlipableModelView
 from . import lpsolver
 
-def cpdid_str(compound):
-    cpdid, comp = compound
-    if comp is None:
-        return cpdid
-    return cpdid+'_'+comp
-
 def flux_balance(model, reaction='Biomass', solver=lpsolver.CplexSolver()):
     '''Maximize the flux of a specific reaction
 

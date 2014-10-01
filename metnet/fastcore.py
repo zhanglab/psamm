@@ -46,13 +46,6 @@ class Fastcore(object):
     def __init__(self, solver=lpsolver.CplexSolver()):
         self._solver = solver
 
-    def _cpdid_str(self, compound):
-        '''Create string identifier for compound with compartment'''
-        cpdid, comp = compound
-        if comp is None:
-            return cpdid
-        return cpdid+'_'+comp
-
     def lp7(self, model, reaction_subset, epsilon):
         # This is similar to FBA but approximately maximizing the number
         # of reactions in subset with flux > epsilon, instead of just

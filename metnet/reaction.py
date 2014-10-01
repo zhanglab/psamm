@@ -37,6 +37,26 @@ class Compound(object):
         '''Expression argument for generalized compounds'''
         return self._arguments
 
+    @property
+    def id(self):
+        '''Encode compound to unique identifier string
+
+        >>> Compound('C1234').id
+        'C1234'
+        >>> Compound('D-Glucose 1-phosphate').id
+        'D_Glucose_1_phosphate'
+        >>> Compound('2-Oxoglutarate').id
+        '_2_Oxoglutarate'
+        >>> Compound('L-Glutamine', 'e').id
+        'L_Glutamine_e'
+        '''
+        s = self._name + '_'.join(self._arguments)
+        if self._compartment is not None:
+            s += '_'+self._compartment
+        if len(s) > 0 and s[0].isdigit():
+            s = '_'+s
+        return re.sub('[^\w]', '_', s)
+
     def translate(self, func):
         '''Translate compound name using given function
 

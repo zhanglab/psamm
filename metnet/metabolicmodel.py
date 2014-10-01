@@ -348,7 +348,7 @@ class MetabolicModel(object):
 
         added = set()
         for compound in sorted(self.compound_set):
-            rxnid_ex = 'rxnex_'+cpdid
+            rxnid_ex = 'rxnex_'+compound.id
             if rxnid_ex not in self._database.reactions:
                 reaction_ex = Reaction(Reaction.Bidir, [(compound.in_compartment('e'), 1)], [])
                 if reaction_ex not in all_reactions:
