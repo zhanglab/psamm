@@ -265,8 +265,8 @@ class ModelSEED(object):
     def format(cls, rx):
         '''Format reaction as string
 
-        >>> ModelSEED.format(Reaction('<=', [(Compound('H2O'), 2, None)], [(Compound('H2'), 2, None), (Compound('O2'), 1, None)]))
-        '(2) |H2| + |O2| => (2) |H2O|'
+        >>> ModelSEED.format(Reaction(Reaction.Left, [(Compound('H2O'), 2, None)], [(Compound('H2'), 2, None), (Compound('O2'), 1, None)]))
+        '(2) |H2O| <= (2) |H2| + |O2|'
         '''
 
         # Define helper functions
@@ -283,7 +283,6 @@ class ModelSEED(object):
             '''Format compound list'''
             return ' + '.join(format_compound(compound, count, comp) for compound, count, comp in cmpds)
 
-        rx = rx.normalized()
         return '{} {} {}'.format(format_compound_list(rx.left),
                                  '?' if rx.direction == '' else rx.direction,
                                  format_compound_list(rx.right))
