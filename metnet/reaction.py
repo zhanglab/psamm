@@ -462,10 +462,10 @@ class MetNet(object):
         '''Parse a reaction string
 
         >>> MetNet.parse('[c] : akg + ala-L <==> glu-L + pyr')
-        Reaction('<=>', ((Compound('cpd_akg'), 1), (Compound('cpd_ala-L'), 1)), ((Compound('cpd_glu-L'), 1), (Compound('cpd_pyr'), 1)))
+        Reaction('<=>', ((Compound('cpd_akg', 'c'), 1), (Compound('cpd_ala-L', 'c'), 1)), ((Compound('cpd_glu-L', 'c'), 1), (Compound('cpd_pyr', 'c'), 1)))
 
         >>> MetNet.parse('(2) ficytcc553[c] + so3[c] + h2o[c] --> (2) focytcc553[c] + so4[c] + (2) h[e]')
-        Reaction('=>', ((Compound('cpd_ficytcc553'), 2), (Compound('cpd_so3'), 1), (Compound('cpd_h2o'), 1)), ((Compound('cpd_focytcc553'), 2), (Compound('cpd_so4'), 1), (Compound('cpd_h', 'e'), 2)))
+        Reaction('=>', ((Compound('cpd_ficytcc553', 'c'), 2), (Compound('cpd_so3', 'c'), 1), (Compound('cpd_h2o', 'c'), 1)), ((Compound('cpd_focytcc553', 'c'), 2), (Compound('cpd_so4', 'c'), 1), (Compound('cpd_h', 'e'), 2)))
         '''
 
         def parse_compound_list(s, global_comp):
@@ -494,10 +494,6 @@ class MetNet(object):
                 else:
                     cpdid = cpdspec
                     comp = global_comp
-
-                # By convention we set the cytosol compartment to None
-                if comp == 'c':
-                    comp = None
 
                 yield Compound(cpdid, compartment=comp), count
 
