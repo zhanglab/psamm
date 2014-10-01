@@ -59,12 +59,10 @@ if __name__ == '__main__':
     good = 0
     total = 0
     for compound, mass in sorted(compound_iter, key=lambda x: (x[1], x[0]), reverse=True):
-        compound_id, comp = compound
-        if mass >= 1-epsilon or compound_id in zeromass:
+        if mass >= 1-epsilon or compound.name in zeromass:
             good += 1
         total += 1
-        print '{}{}: {}'.format(compounds.get(compound_id, compound_id),
-                                '' if comp is None else '[{}]'.format(comp), mass)
+        print '{}: {}'.format(compound.translate(lambda x: compounds.get(x, x)), mass)
     print 'Consistent compounds: {}/{}'.format(good, total)
 
     print 'Is consistent? {}'.format(mass_consistency.is_consistent(model, exchange, zeromass))

@@ -3,7 +3,7 @@
 import unittest
 
 from metnet import metabolicmodel
-from metnet.reaction import ModelSEED
+from metnet.reaction import ModelSEED, Compound
 
 class TestMetabolicDatabase(unittest.TestCase):
     def setUp(self):
@@ -38,18 +38,18 @@ class TestMetabolicModel(unittest.TestCase):
         self.assertEqual(set(self.model.reaction_set), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
 
     def test_compound_set(self):
-        self.assertEqual(set(self.model.compound_set), { ('A', None), ('B', None), ('C', None), ('D', None) })
+        self.assertEqual(set(self.model.compound_set), { Compound('A'), Compound('B'), Compound('C'), Compound('D') })
 
     def test_add_reaction_new(self):
         self.database.set_reaction('rxn_7', ModelSEED.parse('|D| => |E|'))
         self.model.add_reaction('rxn_7')
         self.assertIn('rxn_7', set(self.model.reaction_set))
-        self.assertIn(('E', None), set(self.model.compound_set))
+        self.assertIn(Compound('E'), set(self.model.compound_set))
 
     def test_add_reaction_existing(self):
         self.model.add_reaction('rxn_1')
         self.assertEqual(set(self.model.reaction_set), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
-        self.assertEqual(set(self.model.compound_set), { ('A', None), ('B', None), ('C', None), ('D', None) })
+        self.assertEqual(set(self.model.compound_set), { Compound('A'), Compound('B'), Compound('C'), Compound('D') })
 
     def test_add_reaction_invalid(self):
         with self.assertRaises(Exception):
@@ -58,7 +58,7 @@ class TestMetabolicModel(unittest.TestCase):
     def test_remove_reaction_existing(self):
         self.model.remove_reaction('rxn_2')
         self.assertEqual(set(self.model.reaction_set), { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
-        self.assertEqual(set(self.model.compound_set), { ('A', None), ('C', None), ('D', None) })
+        self.assertEqual(set(self.model.compound_set), { Compound('A'), Compound('C'), Compound('D') })
 
     def test_add_all_database_reactions(self):
         self.database.set_reaction('rxn_7', ModelSEED.parse('|D| => |E|'))
@@ -72,35 +72,35 @@ class TestMetabolicModel(unittest.TestCase):
         self.assertEqual(set(self.model.reaction_set), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
 
     def test_matrix_get_item(self):
-        self.assertEqual(self.model.matrix[('A', None), 'rxn_1'], 2)
-        self.assertEqual(self.model.matrix[('A', None), 'rxn_2'], -1)
-        self.assertEqual(self.model.matrix[('B', None), 'rxn_2'], 1)
-        self.assertEqual(self.model.matrix[('A', None), 'rxn_4'], -1)
-        self.assertEqual(self.model.matrix[('C', None), 'rxn_4'], 1)
-        self.assertEqual(self.model.matrix[('C', None), 'rxn_5'], -1)
-        self.assertEqual(self.model.matrix[('D', None), 'rxn_5'], 1)
+        self.assertEqual(self.model.matrix[Compound('A'), 'rxn_1'], 2)
+        self.assertEqual(self.model.matrix[Compound('A'), 'rxn_2'], -1)
+        self.assertEqual(self.model.matrix[Compound('B'), 'rxn_2'], 1)
+        self.assertEqual(self.model.matrix[Compound('A'), 'rxn_4'], -1)
+        self.assertEqual(self.model.matrix[Compound('C'), 'rxn_4'], 1)
+        self.assertEqual(self.model.matrix[Compound('C'), 'rxn_5'], -1)
+        self.assertEqual(self.model.matrix[Compound('D'), 'rxn_5'], 1)
 
     def test_matrix_get_item_invalid_key(self):
         with self.assertRaises(KeyError):
-            a = self.model.matrix[('A', None), 'rxn_5']
+            a = self.model.matrix[Compound('A'), 'rxn_5']
         with self.assertRaises(KeyError):
             b = self.model.matrix['rxn_1']
 
     def test_matrix_set_item_is_invalid(self):
         with self.assertRaises(TypeError):
-            self.model.matrix[('A', None), 'rxn_1'] = 4
+            self.model.matrix[Compound('A'), 'rxn_1'] = 4
 
     def test_matrix_iter(self):
-        matrix_keys = { (('A', None), 'rxn_1'),
-                         (('A', None), 'rxn_2'),
-                         (('B', None), 'rxn_2'),
-                         (('A', None), 'rxn_3'),
-                         (('D', None), 'rxn_3'),
-                         (('A', None), 'rxn_4'),
-                         (('C', None), 'rxn_4'),
-                         (('C', None), 'rxn_5'),
-                         (('D', None), 'rxn_5'),
-                         (('D', None), 'rxn_6') }
+        matrix_keys = { (Compound('A'), 'rxn_1'),
+                        (Compound('A'), 'rxn_2'),
+                        (Compound('B'), 'rxn_2'),
+                        (Compound('A'), 'rxn_3'),
+                        (Compound('D'), 'rxn_3'),
+                        (Compound('A'), 'rxn_4'),
+                        (Compound('C'), 'rxn_4'),
+                        (Compound('C'), 'rxn_5'),
+                        (Compound('D'), 'rxn_5'),
+                        (Compound('D'), 'rxn_6') }
         self.assertEqual(set(iter(self.model.matrix)), matrix_keys)
 
     def test_matrix_len(self):
@@ -200,21 +200,21 @@ class TestMetabolicModelFlipableView(unittest.TestCase):
 
     def test_flipable_model_view_matrix_get_item_after_flip(self):
         self.model.flip({ 'rxn_4' })
-        self.assertEqual(self.model.matrix[('A', None), 'rxn_1'], 2)
-        self.assertEqual(self.model.matrix[('A', None), 'rxn_2'], -1)
-        self.assertEqual(self.model.matrix[('A', None), 'rxn_4'], 1)
-        self.assertEqual(self.model.matrix[('C', None), 'rxn_4'], -1)
+        self.assertEqual(self.model.matrix[Compound('A'), 'rxn_1'], 2)
+        self.assertEqual(self.model.matrix[Compound('A'), 'rxn_2'], -1)
+        self.assertEqual(self.model.matrix[Compound('A'), 'rxn_4'], 1)
+        self.assertEqual(self.model.matrix[Compound('C'), 'rxn_4'], -1)
 
     def test_flipable_model_view_matrix_get_item_after_double_flip(self):
         self.model.flip({ 'rxn_4', 'rxn_5' })
         self.model.flip({ 'rxn_1', 'rxn_4', 'rxn_2' })
-        self.assertEqual(self.model.matrix[('A', None), 'rxn_1'], -2)
-        self.assertEqual(self.model.matrix[('A', None), 'rxn_2'], 1)
-        self.assertEqual(self.model.matrix[('B', None), 'rxn_2'], -1)
-        self.assertEqual(self.model.matrix[('A', None), 'rxn_4'], -1)
-        self.assertEqual(self.model.matrix[('C', None), 'rxn_4'], 1)
-        self.assertEqual(self.model.matrix[('C', None), 'rxn_5'], 1)
-        self.assertEqual(self.model.matrix[('D', None), 'rxn_5'], -1)
+        self.assertEqual(self.model.matrix[Compound('A'), 'rxn_1'], -2)
+        self.assertEqual(self.model.matrix[Compound('A'), 'rxn_2'], 1)
+        self.assertEqual(self.model.matrix[Compound('B'), 'rxn_2'], -1)
+        self.assertEqual(self.model.matrix[Compound('A'), 'rxn_4'], -1)
+        self.assertEqual(self.model.matrix[Compound('C'), 'rxn_4'], 1)
+        self.assertEqual(self.model.matrix[Compound('C'), 'rxn_5'], 1)
+        self.assertEqual(self.model.matrix[Compound('D'), 'rxn_5'], -1)
 
     def test_flipable_model_view_limits_get_item_after_flip(self):
         self.model.flip({ 'rxn_1', 'rxn_2' })

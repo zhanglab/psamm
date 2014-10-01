@@ -35,8 +35,11 @@ if __name__ == '__main__':
 
     # Run GapFind on model
     print 'Searching for blocked compounds...'
-    blocked = set((cpdid, comp) for cpdid, comp in gapfind(model) if comp is None)
-    print 'Blocked: {}'.format(blocked)
+    blocked = set(compound for compound in gapfind(model) if compound.compartment is not 'e')
+    if len(blocked) > 0:
+        print 'Blocked:'
+        for compound in blocked:
+            print compound.translate(lambda x: compounds.get(x, x))
 
     if len(blocked) > 0:
         # Add exchange and transport reactions to database

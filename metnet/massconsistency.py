@@ -18,7 +18,7 @@ class MassConsistencyCheck(object):
         self._solver = solver
 
     def _cpdid_str(self, compound):
-        cpdid, comp = compound
+        cpdid, comp = compound.name, compound.compartment
         if comp is None:
             return cpdid
         return cpdid+'_'+comp
@@ -26,14 +26,14 @@ class MassConsistencyCheck(object):
     def _cplex_add_compound_mass(self, prob, model, zeromass=set(), lower=1):
         '''Add variables for compound mass'''
         for compound in model.compound_set:
-            prob.define('m_'+self._cpdid_str(compound), lower=(0 if compound[0] in zeromass else lower))
+            prob.define('m_'+self._cpdid_str(compound), lower=(0 if compound.name in zeromass else lower))
 
     def _cplex_constrain_identical(self, prob, model):
         '''Constrain identical compounds in different compartments to the same mass'''
         compound_id_constr = []
         for compound in model.compound_set:
-            if compound[1] is not None and (compound[0], None) in model.compound_set:
-                mass_c = prob.var('m_'+compound[0])
+            if compound.compartment is not None and (compound.name, None) in model.compound_set:
+                mass_c = prob.var('m_'+compound.name)
                 mass_other = prob.var('m_'+self._cpdid_str(compound))
                 prob.add_linear_constraints(mass_c == mass_other)
 
