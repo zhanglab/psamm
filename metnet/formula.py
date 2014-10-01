@@ -7,7 +7,7 @@ import re
 from collections import defaultdict
 import functools
 
-from .expression import Variable, Expression
+from .expression.affine import Variable, Expression
 
 class FormulaElement(object):
     def __add__(self, other):
