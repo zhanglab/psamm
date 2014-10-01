@@ -39,7 +39,7 @@ class Compound(object):
         return self.__class__(func(self._name), self._arguments)
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
+        return (isinstance(other, Compound) and
             self._name == other._name and
             self._arguments == other._arguments)
 
