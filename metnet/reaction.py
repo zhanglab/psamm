@@ -41,12 +41,6 @@ class Compound(object):
     def id(self):
         '''Encode compound to unique identifier string
 
-        >>> Compound('C1234').id
-        'C1234'
-        >>> Compound('D-Glucose 1-phosphate').id
-        'D_Glucose_1_phosphate'
-        >>> Compound('2-Oxoglutarate').id
-        '_2_Oxoglutarate'
         >>> Compound('L-Glutamine', 'e').id
         'L_Glutamine_e'
         '''
@@ -65,7 +59,11 @@ class Compound(object):
         return self.__class__(func(self._name), self._compartment, self._arguments)
 
     def in_compartment(self, compartment):
-        '''Return an instance of this compound in the specified compartment'''
+        '''Return an instance of this compound in the specified compartment
+
+        >>> Compound('H+').in_compartment('e')
+        Compound('H+', 'e')
+        '''
         return self.__class__(self._name, compartment, self._arguments)
 
     def __eq__(self, other):
@@ -155,9 +153,7 @@ class Reaction(object):
     def normalized(self):
         '''Return normalized reaction
 
-        >>> Reaction(Reaction.Left, [(Compound('Au'), 1)], [(Compound('Pb'), 1)]).normalized()
-        Reaction('=>', ((Compound('Pb'), 1),), ((Compound('Au'), 1),))
-        '''
+        The normalized reaction will have direction Bidir or Right.'''
 
         if self._direction == Reaction.Left:
             direction = Reaction.Right
@@ -175,12 +171,7 @@ class Reaction(object):
 
         For each compound the translate function is called with the compound name
         and the returned value is used as the new compound name. A new reaction is
-        returned with the substituted compound names.
-
-        >>> rx = Reaction(Reaction.Right, [(Compound('Pb'), 1)], [(Compound('Au'), 1)])
-        >>> rx.translated_compounds(lambda name: name.lower())
-        Reaction('=>', ((Compound('pb'), 1),), ((Compound('au'), 1),))
-        '''
+        returned with the substituted compound names.'''
 
         left = ((compound.translate(translate), count) for compound, count in self._left)
         right = ((compound.translate(translate), count) for compound, count in self._right)
@@ -188,16 +179,7 @@ class Reaction(object):
         return Reaction(self._direction, left, right)
 
     def format(self, formatter=None):
-        '''Format reaction as string using specified formatter
-
-        >>> Reaction(Reaction.Right, [(Compound('Pb'), 1)], [(Compound('Au'), 1)]).format()
-        '|Pb| => |Au|'
-
-        >>> pp1 = Compound('Polyphosphate', arguments=[Expression('n')])
-        >>> pp2 = Compound('Polyphosphate', arguments=[Expression('n+1')])
-        >>> Reaction(Reaction.Right, [(Compound('ATP'), 1), (pp1, 1)], [(Compound('ADP'), 1), (pp2, 1)]).format()
-        '|ATP| + |Polyphosphate(n)| => |ADP| + |Polyphosphate(n + 1)|'
-        '''
+        '''Format reaction as string using specified formatter'''
 
         if formatter is None:
             formatter = ModelSEED
@@ -214,14 +196,7 @@ class Reaction(object):
         return 'Reaction({}, {}, {})'.format(repr(self._direction), repr(self._left), repr(self._right))
 
     def __eq__(self, other):
-        '''Indicate equality of self and other
-
-        >>> rx = Reaction(Reaction.Right, [(Compound('Pb'), 1)], [(Compound('Au'), 1)])
-        >>> rx == Reaction(Reaction.Right, [(Compound('Pb'), 1)], [(Compound('Au'), 1)])
-        True
-        >>> rx == Reaction(Reaction.Right, [(Compound('Au'), 1)], [(Compound('Pb'), 1)])
-        False
-        '''
+        '''Indicate equality of self and other'''
         return (self._direction == other._direction and
                 self._left == other._left and
                 self._right == other._right)
@@ -273,14 +248,7 @@ class ModelSEED(object):
 
     @classmethod
     def parse(cls, s):
-        '''Parse a reaction string
-
-        >>> ModelSEED.parse('|H2O| + |PPi| => (2) |Phosphate| + (2) |H+|')
-        Reaction('=>', ((Compound('H2O'), 1), (Compound('PPi'), 1)), ((Compound('Phosphate'), 2), (Compound('H+'), 2)))
-
-        >>> ModelSEED.parse('|H2| + (0.5) |O2| => |H2O|')
-        Reaction('=>', ((Compound('H2'), 1), (Compound('O2'), Decimal('0.5'))), ((Compound('H2O'), 1),))
-        '''
+        '''Parse a reaction string'''
 
         tokens = list(cls._tokenize(s))
         direction = None
@@ -302,11 +270,7 @@ class ModelSEED(object):
 
     @classmethod
     def format(cls, rx):
-        '''Format reaction as string
-
-        >>> ModelSEED.format(Reaction(Reaction.Left, [(Compound('H2O'), 2)], [(Compound('H2'), 2), (Compound('O2'), 1)]))
-        '(2) |H2O| <= (2) |H2| + |O2|'
-        '''
+        '''Format reaction as string'''
 
         # Define helper functions
         def format_compound(compound, count):
@@ -423,14 +387,8 @@ class SudenSimple(object):
 
     @classmethod
     def parse(cls, s):
-        '''Parse a reaction string
+        '''Parse a reaction string'''
 
-        >>> SudenSimple.parse('1 H2O + 1 PPi <=> 2 Phosphate + 2 proton')
-        Reaction('<=>', ((Compound('H2O'), 1), (Compound('PPi'), 1)), ((Compound('Phosphate'), 2), (Compound('proton'), 2)))
-
-        >>> SudenSimple.parse('1 H2 + 0.5 O2 <=> 1 H2O')
-        Reaction('<=>', ((Compound('H2'), 1), (Compound('O2'), Decimal('0.5'))), ((Compound('H2O'), 1),))
-        '''
         def parse_compound_list(s):
             for cpd in s.split('+'):
                 if cpd == '':
@@ -460,14 +418,7 @@ class MetNet(object):
 
     @classmethod
     def parse(cls, s):
-        '''Parse a reaction string
-
-        >>> MetNet.parse('[c] : akg + ala-L <==> glu-L + pyr')
-        Reaction('<=>', ((Compound('cpd_akg', 'c'), 1), (Compound('cpd_ala-L', 'c'), 1)), ((Compound('cpd_glu-L', 'c'), 1), (Compound('cpd_pyr', 'c'), 1)))
-
-        >>> MetNet.parse('(2) ficytcc553[c] + so3[c] + h2o[c] --> (2) focytcc553[c] + so4[c] + (2) h[e]')
-        Reaction('=>', ((Compound('cpd_ficytcc553', 'c'), 2), (Compound('cpd_so3', 'c'), 1), (Compound('cpd_h2o', 'c'), 1)), ((Compound('cpd_focytcc553', 'c'), 2), (Compound('cpd_so4', 'c'), 1), (Compound('cpd_h', 'e'), 2)))
-        '''
+        '''Parse a reaction string'''
 
         def parse_compound_list(s, global_comp):
             if s.strip() == '':
@@ -532,21 +483,14 @@ class KEGG(object):
 
     @classmethod
     def parse(cls, s):
-        '''Parse a KEGG reaction string
+        '''Parse a KEGG reaction string'''
 
-        >>> KEGG.parse('C00013 + C00001 <=> 2 C00009')
-        Reaction('<=>', ((Compound('C00013'), 1), (Compound('C00001'), 1)), ((Compound('C00009'), 2),))
-        >>> KEGG.parse('C00404 + n C00001 <=> (n+1) C02174')
-        Reaction('<=>', ((Compound('C00404'), 1), (Compound('C00001'), Expression('n'))), ((Compound('C02174'), Expression('n + 1')),))
-        >>> KEGG.parse('C00039(n) <=> C00013 + C00039(n+1)')
-        Reaction('<=>', ((Compound('C00039', None, (Expression('n'),)), 1),), ((Compound('C00013'), 1), (Compound('C00039', None, (Expression('n + 1'),)), 1)))
-        '''
         def parse_count(s):
-            m = re.match(r'\((.+)\)', s)
+            m = re.match(r'^\((.+)\)$', s)
             if m is not None:
                 s = m.group(1)
 
-            m = re.match(r'\d+', s)
+            m = re.match(r'^\d+$', s)
             if m is not None:
                 return int(m.group(0))
 
