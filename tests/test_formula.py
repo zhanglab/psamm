@@ -71,6 +71,22 @@ class TestFormula(unittest.TestCase):
         self.assertEquals(f, Formula({Atom('C'): 2, Atom('H'): 6, Atom('O'): 2,
                                       Formula({Atom('C'): 1, Atom('H'): 1}): 2}))
 
+    def test_formula_parse_with_two_identical_counted_subgroups(self):
+        f = Formula.parse('C2H6O2(CH)2(CH)2')
+        self.assertEquals(f, Formula({Atom('C'): 2, Atom('H'): 6, Atom('O'): 2,
+                                      Formula({Atom('C'): 1, Atom('H'): 1}): 4}))
+
+    def test_formula_parse_with_two_distinct_counted_subgroups(self):
+        f = Formula.parse('C2H6O2(CH)2(CH2)2')
+        self.assertEquals(f, Formula({Atom('C'): 2, Atom('H'): 6, Atom('O'): 2,
+                                      Formula({Atom('C'): 1, Atom('H'): 1}): 2,
+                                      Formula({Atom('C'): 1, Atom('H'): 2}): 2}))
+
+    def test_formula_parse_with_wide_counted_subgroup(self):
+        f = Formula.parse('C2(CH)10NO2')
+        self.assertEquals(f, Formula({Atom('C'): 2, Atom('N'): 1, Atom('O'): 2,
+                                        Formula({Atom('C'): 1, Atom('H'): 1}): 10}))
+
     def test_formula_parse_with_radical(self):
         f = Formula.parse('C2H4NO2R')
         self.assertEquals(f, Formula({Atom('C'): 2, Atom('H'): 4, Atom('N'): 1,

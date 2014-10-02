@@ -236,36 +236,19 @@ class Formula(object):
     def parse(cls, s):
         '''Parse a formula string (e.g. C6H10O2)'''
 
-        def tokenize(s):
-            '''Tokenize formula string'''
-            token = ''
-            for c in s:
-                if c == ' ':
-                    continue
-                elif c in '().':
-                    if token != '':
-                        yield token
-                        token = ''
-                    yield c
-                elif c.isupper():
-                    if token != '':
-                        yield token
-                    token = c
-                else:
-                    token += c
-            if token != '':
-                yield token
-
-        def split_atom_string(a):
-            '''Split atom string into name and count'''
-            for i, c in enumerate(a):
-                if c.isdigit():
-                    return a[:i], int(a[i:])
-            return a, 1
+        scanner = re.compile(r'''
+            (\s+) |         # whitespace
+            (\(|\)) |       # group
+            ([A-Z][a-z]*) | # element
+            (\d+) |         # number
+            ([a-z]) |       # variable
+            (\Z) |          # end
+            (.)             # error
+        ''', re.DOTALL | re.VERBOSE)
 
         def transform_subformula(form):
             '''Extract radical if subformula is a singleton with a radical'''
-            if len(form._values) == 1:
+            if isinstance(form, Formula) and len(form._values) == 1:
                 # A radical in a singleton subformula is interpreted as a
                 # numbered radical.
                 element, value = next(form._values.iteritems())
@@ -275,46 +258,58 @@ class Formula(object):
 
         stack = []
         formula = Formula()
-        expect_group_spec = False
-        for token in tokenize(s):
-            if expect_group_spec:
-                expect_group_spec = False
-                subformula = transform_subformula(formula)
-                if token.islower() or token.isdigit():
-                    if token.isdigit():
-                        coefficient = int(token)
-                    else:
-                        coefficient = Expression(token)
+        expect_count = False
 
-                    formula = stack.pop()
-                    if subformula not in formula._values:
-                        formula._values[subformula] = 0
-                    formula._values[subformula] += coefficient
-                    continue
-                else:
-                    formula = stack.pop()
-                    if subformula not in formula._values:
-                        formula._values[subformula] = 0
-                    formula._values[subformula] += 1
-
-            if token == '(':
-                stack.append(formula)
-                formula = Formula()
-            elif token == ')':
-                expect_group_spec = True
-            else:
-                symbol, value = split_atom_string(token)
-                if symbol in 'RX':
-                    formula += value * Radical(symbol)
-                else:
-                    formula += value * Atom(symbol)
-
-        if expect_group_spec:
+        def close(formula, count=1):
+            if len(stack) == 0:
+                raise ValueError('Unbalanced parenthesis group in formula')
             subformula = transform_subformula(formula)
             formula = stack.pop()
             if subformula not in formula._values:
                 formula._values[subformula] = 0
-            formula._values[subformula] += 1
+            formula._values[subformula] += count
+            return formula
+
+        for match in re.finditer(scanner, s):
+            whitespace, group, element, number, variable, end, error = match.groups()
+
+            if error is not None:
+                raise ValueError('Invalid token in formula string: {}'.format(match.group(0)))
+            elif whitespace is not None:
+                continue
+            elif group is not None and group == '(':
+                if expect_count:
+                    formula = close(formula)
+                stack.append(formula)
+                formula = Formula()
+                expect_count = False
+            elif group is not None and group == ')':
+                if expect_count:
+                    formula = close(formula)
+                expect_count = True
+            elif element is not None:
+                if expect_count:
+                    formula = close(formula)
+                stack.append(formula)
+                if element in 'RX':
+                    formula = Radical(element)
+                else:
+                    formula = Atom(element)
+                expect_count = True
+            elif number is not None and expect_count:
+                formula = close(formula, int(number))
+                expect_count = False
+            elif variable is not None and expect_count:
+                formula = close(formula, Expression(variable))
+                expect_count = False
+            elif end is not None:
+                if expect_count:
+                    formula = close(formula)
+            else:
+                raise ValueError('Invalid token in formula string: {}'.format(match.group(0)))
+
+        if len(stack) > 0:
+            raise ValueError('Unbalanced parenthesis group in formula')
 
         return formula
 
