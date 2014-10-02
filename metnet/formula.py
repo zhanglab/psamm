@@ -1,7 +1,6 @@
 
 '''Parser for chemical formulas'''
 
-import pprint
 import numbers
 import re
 from collections import defaultdict
@@ -174,16 +173,10 @@ class Formula(object):
         return s
 
     def __repr__(self):
-        return 'Formula({})'.format(pprint.pformat(self._values))
+        return 'Formula({})'.format(repr(self._values))
 
     def __add__(self, other):
-        '''Sum of self and other
-
-        >>> Formula({Atom('H'): 2, Atom('O'): 1}) + Formula({Atom('N'): 1, Atom('O'): 2})
-        Formula({Atom('H'): 2, Atom('N'): 1, Atom('O'): 3})
-
-        >>> Formula({Atom('H'): Expression('n')}) + Formula({Atom('H'): Expression('-n')})
-        Formula({})'''
+        '''Addition operator'''
 
         if isinstance(other, FormulaElement):
             result = Formula(self._values)
@@ -211,10 +204,7 @@ class Formula(object):
         return self + other
 
     def __mul__(self, other):
-        '''Multiply each count by other
-
-        >>> Formula({Atom('H'): 2, Atom('O'): 1}) * 4
-        Formula({Atom('H'): 8, Atom('O'): 4})'''
+        '''Multiply each count by other'''
 
         if isinstance(other, numbers.Number):
             result = Formula({ key: value*other for key, value in self._values.items() })
@@ -227,11 +217,7 @@ class Formula(object):
         return result
 
     def __rmul__(self, other):
-        '''Multiply each count by other
-
-        >>> 2 * Formula({Atom('H'): 2, Atom('O'): 1})
-        Formula({Atom('H'): 4, Atom('O'): 2})'''
-
+        '''Multiply each count by other'''
         return self * other
 
     def __hash__(self):
@@ -241,39 +227,14 @@ class Formula(object):
         return h
 
     def __eq__(self, other):
-        '''Equality of self and other
-
-        >>> Formula({Atom('H'): 2, Atom('O'): 1}) == Formula({Atom('O'): 1, Atom('H'): 2})
-        True
-        >>> Formula({Atom('Au'): 1}) == Formula({Atom('Ag'): 1})
-        False'''
-
         return isinstance(other, Formula) and self._values == other._values
 
     def __ne__(self, other):
-        '''Not equality of self and other
-
-        >>> Formula({Atom('Au'): 1}) != Formula({Atom('Ag'): 1})
-        True'''
-
         return not self == other
 
     @classmethod
     def parse(cls, s):
-        '''Parse a formula string (e.g. C6H10O2)
-
-        >>> Formula.parse('H2O2')
-        Formula({Atom('H'): 2, Atom('O'): 2})
-
-        >>> Formula.parse('H2O')
-        Formula({Atom('H'): 2, Atom('O'): 1})
-
-        >>> Formula.parse('Zn')
-        Formula({Atom('Zn'): 1})
-
-        >>> Formula.parse('C2H5NO2')
-        Formula({Atom('C'): 2, Atom('H'): 5, Atom('N'): 1, Atom('O'): 2})
-        '''
+        '''Parse a formula string (e.g. C6H10O2)'''
 
         def tokenize(s):
             '''Tokenize formula string'''
@@ -318,19 +279,23 @@ class Formula(object):
         for token in tokenize(s):
             if expect_group_spec:
                 expect_group_spec = False
+                subformula = transform_subformula(formula)
                 if token.islower() or token.isdigit():
-                    subformula = formula
-                    formula = stack.pop()
                     if token.isdigit():
-                        formula += int(token) * transform_subformula(subformula)
+                        coefficient = int(token)
                     else:
-                        expr = Expression(token)
-                        formula += expr * transform_subformula(subformula)
+                        coefficient = Expression(token)
+
+                    formula = stack.pop()
+                    if subformula not in formula._values:
+                        formula._values[subformula] = 0
+                    formula._values[subformula] += coefficient
                     continue
                 else:
-                    subformula = formula
                     formula = stack.pop()
-                    formula += transform_subformula(subformula)
+                    if subformula not in formula._values:
+                        formula._values[subformula] = 0
+                    formula._values[subformula] += 1
 
             if token == '(':
                 stack.append(formula)
@@ -345,9 +310,11 @@ class Formula(object):
                     formula += value * Atom(symbol)
 
         if expect_group_spec:
-            subformula = formula
+            subformula = transform_subformula(formula)
             formula = stack.pop()
-            formula += transform_subformula(subformula)
+            if subformula not in formula._values:
+                formula._values[subformula] = 0
+            formula._values[subformula] += 1
 
         return formula
 
@@ -357,16 +324,7 @@ class Formula(object):
 
         Given complete formulas for right side and left side of a reaction,
         calculate formulas for the missing compounds on both sides. Return
-        as a left, right tuple.
-
-        >>> Formula.balance(Formula.parse('H2O'), Formula.parse('OH'))
-        (Formula({}), Formula({Atom('H'): 1}))
-
-        >>> Formula.balance(Formula.parse('C3H6OH'), Formula.parse('CH6O2'))
-        (Formula({Atom('O'): 1}), Formula({Atom('C'): 2, Atom('H'): 1}))
-
-        >>> Formula.balance(Formula.parse('H2(CH2)n'), Formula.parse('CH3O(CH2)n'))
-        (Formula({Atom('C'): 1, Atom('H'): 1, Atom('O'): 1}), Formula({}))'''
+        as a left, right tuple.'''
 
         def missing(formula, other):
             for element, value in formula._values.iteritems():
