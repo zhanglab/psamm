@@ -7,12 +7,6 @@ Vinay Satish, Madhukar S. Dasika, and Costas D. Maranas.
 
 from . import lpsolver
 
-def cpdid_str(compound):
-    cpdid, comp = compound
-    if comp is None:
-        return cpdid
-    return cpdid+'_'+comp
-
 def gapfind(model, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
     '''Identify compounds in the model that cannot be produced
 
@@ -40,9 +34,9 @@ def gapfind(model, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
     for spec, value in model.matrix.iteritems():
         compound, rxnid = spec
         if value != 0 and (rxnid in model.reversible or value > 0):
-            prob.define('w_'+rxnid+'_'+cpdid_str(compound), types=lpsolver.CplexProblem.Binary)
+            prob.define('w_'+rxnid+'_'+compound.id, types=lpsolver.CplexProblem.Binary)
 
-            w = prob.var('w_'+rxnid+'_'+cpdid_str(compound))
+            w = prob.var('w_'+rxnid+'_'+compound.id)
             sv = float(value) * prob.var('v_'+rxnid)
 
             prob.add_linear_constraints(sv <= v_max*w)
@@ -53,13 +47,13 @@ def gapfind(model, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
 
             binary_cons_lhs[compound] += w
 
-    prob.define(*('xp_'+cpdid_str(compound) for compound in model.compound_set), types=lpsolver.CplexProblem.Binary)
+    prob.define(*('xp_'+compound.id for compound in model.compound_set), types=lpsolver.CplexProblem.Binary)
 
-    objective = sum(prob.var('xp_'+cpdid_str(compound)) for compound in model.compound_set)
+    objective = sum(prob.var('xp_'+compound.id) for compound in model.compound_set)
     prob.set_linear_objective(objective)
 
     for compound, lhs in binary_cons_lhs.iteritems():
-        prob.add_linear_constraints(lhs >= prob.var('xp_'+cpdid_str(compound)))
+        prob.add_linear_constraints(lhs >= prob.var('xp_'+compound.id))
 
     # Define mass balance constraints
     massbalance_lhs = { compound: 0 for compound in model.compound_set }
@@ -78,7 +72,7 @@ def gapfind(model, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
         raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
     for compound in model.compound_set:
-        if prob.get_value('xp_'+cpdid_str(compound)) == 0:
+        if prob.get_value('xp_'+compound.id) == 0:
             yield compound
 
 def gapfill(model, core, blocked, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
@@ -136,9 +130,9 @@ def gapfill(model, core, blocked, epsilon=1e-5, v_max=1000, solver=lpsolver.Cple
     for spec, value in model.matrix.iteritems():
         compound, rxnid = spec
         if compound in blocked and value != 0:
-            prob.define('w_'+rxnid+'_'+cpdid_str(compound), types=lpsolver.CplexProblem.Binary)
+            prob.define('w_'+rxnid+'_'+compound.id, types=lpsolver.CplexProblem.Binary)
 
-            w = prob.var('w_'+rxnid+'_'+cpdid_str(compound))
+            w = prob.var('w_'+rxnid+'_'+compound.id)
             sv = float(value) * prob.var('v_'+rxnid)
 
             prob.add_linear_constraints(sv >= epsilon-v_max*(1 - w))

@@ -160,11 +160,17 @@ class MetabolicReaction(object):
 
     @classmethod
     def from_reaction(cls, reaction):
-        if reaction.direction not in ('=>', '<=>'):
+        if reaction.direction not in (Reaction.Right, Reaction.Bidir):
             raise ValueError('Invalid direction in reaction: {}'.format(reaction.direction))
-        reversible = reaction.direction == '<=>'
-        return cls(reversible, chain((((cpdid, comp), -value) for cpdid, value, comp in reaction.left),
-                                        (((cpdid, comp), value) for cpdid, value, comp in reaction.right)))
+        reversible = reaction.direction == Reaction.Bidir
+
+        metabolites = {}
+        for compound, value in reaction.left:
+            metabolites[compound] -= value
+        for compound, value in reaction.right:
+            metabolites[compound] += value
+
+        return cls(reversible, metabolites)
 
     def __repr__(self):
         return 'MetabolicReaction({}, {})'.format(repr(self.reversible), repr(self.metabolites))
@@ -185,12 +191,9 @@ class MetabolicDatabase(object):
         if rxnid not in self.reactions:
             raise ValueError('Unknown reaction {}'.format(repr(rxnid)))
 
-        direction = '=>'
-        if rxnid in self.reversible:
-            direction = '<=>'
-
-        left = ((Compound(compound[0]), -value, compound[1]) for compound, value in self.reactions[rxnid].iteritems() if value < 0)
-        right = ((Compound(compound[0]), value, compound[1]) for compound, value in self.reactions[rxnid].iteritems() if value > 0)
+        direction = Reaction.Bidir if rxnid in self.reversible else Reaction.Right
+        left = ((compound, -value) for compound, value in self.reactions[rxnid].iteritems() if value < 0)
+        right = ((compound, value) for compound, value in self.reactions[rxnid].iteritems() if value > 0)
         return Reaction(direction, left, right)
 
     def set_reaction(self, rxnid, reaction):
@@ -206,14 +209,14 @@ class MetabolicDatabase(object):
         # Add values to global (sparse) stoichiometric matrix
         # Compounds that occur on both sides will get a stoichiometric
         # value based on the sum of the signed values on each side.
-        for compound, value, comp in reaction.compounds:
-            if (compound.name, comp) not in self.reactions[rxnid] and value != 0:
-                self.reactions[rxnid][compound.name, comp] = 0
-                self.compound_reactions[compound.name, comp].add(rxnid)
-        for compound, value, comp in reaction.left:
-            self.reactions[rxnid][(compound.name, comp)] -= value
-        for compound, value, comp in reaction.right:
-            self.reactions[rxnid][(compound.name, comp)] += value
+        for compound, value in reaction.compounds:
+            if compound not in self.reactions[rxnid] and value != 0:
+                self.reactions[rxnid][compound] = 0
+                self.compound_reactions[compound].add(rxnid)
+        for compound, value in reaction.left:
+            self.reactions[rxnid][compound] -= value
+        for compound, value in reaction.right:
+            self.reactions[rxnid][compound] += value
 
         if reaction.direction != '=>':
             self.reversible.add(rxnid)
@@ -325,7 +328,7 @@ class MetabolicModel(object):
         added = set()
         for rxnid in self._database.reactions:
             reaction = self._database.get_reaction(rxnid)
-            if all(comp in compartments for compound, value, comp in reaction.compounds):
+            if all(compound.compartment in compartments for compound, value in reaction.compounds):
                 if rxnid not in self.reaction_set:
                     added.add(rxnid)
                 self.add_reaction(rxnid)
@@ -344,10 +347,10 @@ class MetabolicModel(object):
                 all_reactions[rx] = rxnid
 
         added = set()
-        for cpdid, comp in sorted(self.compound_set):
-            rxnid_ex = 'rxnex_'+cpdid
+        for compound in sorted(self.compound_set):
+            rxnid_ex = 'rxnex_'+compound.id
             if rxnid_ex not in self._database.reactions:
-                reaction_ex = Reaction('<=>', [(Compound(cpdid), 1, 'e')], [])
+                reaction_ex = Reaction(Reaction.Bidir, [(compound.in_compartment('e'), 1)], [])
                 if reaction_ex not in all_reactions:
                     self._database.set_reaction(rxnid_ex, reaction_ex)
                 else:
@@ -370,20 +373,16 @@ class MetabolicModel(object):
                 rx = self._database.get_reaction(rxnid)
                 all_reactions[rx] = rxnid
 
-        def tp_id(cpdid, comp):
-            if comp is None:
-                return 'rxntp_'+cpdid
-            return 'rxntp_'+cpdid+'_'+comp
-
         added = set()
-        for cpdid, comp in sorted(self.compound_set):
-            if comp == 'e':
+        for compound in sorted(self.compound_set):
+            if compound.compartment == 'e':
                 # A transport reaction with exchange would not be valid
                 continue
 
-            rxnid_tp = tp_id(cpdid, comp)
+            rxnid_tp = 'rxntp_'+compound.id
             if rxnid_tp not in self._database.reactions:
-                reaction_tp = Reaction('<=>', [(Compound(cpdid), 1, 'e')], [(Compound(cpdid), 1, comp)])
+                reaction_tp = Reaction(Reaction.Bidir, [(compound.in_compartment('e'), 1)],
+                                        [(compound, 1)])
                 if reaction_tp not in all_reactions:
                     self._database.set_reaction(rxnid_tp, reaction_tp)
                 else:

@@ -6,6 +6,7 @@ import argparse
 import csv
 import re
 
+from metnet.reaction import Compound
 from metnet.metabolicmodel import MetabolicDatabase
 from metnet.formula import Formula
 
@@ -13,8 +14,8 @@ def parse_compound(s):
     '''Parse a compound specification with optional compartment'''
     m = re.match(r'([^\[]+)\[(\w+)\]', s)
     if m is not None:
-        return (m.group(1), m.group(2))
-    return (s, None)
+        return Compound(m.group(1), compartment=m.group(2))
+    return Compound(s)
 
 def filter_search_term(s):
     return re.sub(r'[^a-z0-9]+', '', s.lower())

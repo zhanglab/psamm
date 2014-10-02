@@ -59,9 +59,8 @@ if __name__ == '__main__':
             exchange.add(rxnid)
 
     def multiply_formula(compound_list):
-        for compound, count, comp in compound_list:
-            if compound.name in compound_formula:
-                yield count * compound_formula[compound.name]
+        for compound, count in compound_list:
+            yield count * compound_formula.get(compound.name, Formula())
 
     for reaction in model.reaction_set:
         if reaction not in exchange:
