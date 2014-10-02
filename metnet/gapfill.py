@@ -108,7 +108,7 @@ def gapfill(model, core, blocked, epsilon=1e-5, v_max=1000, solver=lpsolver.Cple
     prob.define(*('v_'+rxnid for rxnid in model.reaction_set), lower=-v_max, upper=v_max)
 
     # Add binary indicator variables
-    database_reactions = model.reaction_set - core
+    database_reactions = set(model.reaction_set).difference(core)
     prob.define(*('ym_'+rxnid for rxnid in core), types=lpsolver.CplexProblem.Binary)
     prob.define(*('yd_'+rxnid for rxnid in database_reactions), types=lpsolver.CplexProblem.Binary)
 
