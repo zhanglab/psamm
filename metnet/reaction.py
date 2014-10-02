@@ -296,8 +296,9 @@ class ModelSEED(object):
         if direction in ('?', ''):
             direction = Reaction.Bidir
 
-        return Reaction(direction, list(cls._parse_compound_list(left)),
-                        list(cls._parse_compound_list(right)))
+        left = cls._parse_compound_list(left)
+        right = cls._parse_compound_list(right)
+        return Reaction(direction, left, right)
 
     @classmethod
     def format(cls, rx):
