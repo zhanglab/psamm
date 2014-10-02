@@ -5,12 +5,12 @@ import unittest
 from metnet.formula import Formula, Atom, Radical
 
 class TestFormula(unittest.TestCase):
-    def test_formula_add_same_formulas_with_same_atoms(self):
-        f = Formula({Atom('H'): 2, Atom('O'): 1}) + Formula({Atom('N'): 1, Atom('O'): 2})
+    def test_formula_merge_same_formulas_with_same_atoms(self):
+        f = Formula({Atom('H'): 2, Atom('O'): 1}) | Formula({Atom('N'): 1, Atom('O'): 2})
         self.assertEquals(f, Formula({Atom('H'): 2, Atom('N'): 1, Atom('O'): 3}))
 
-    def test_formula_add_formulas_that_cancel_out(self):
-        f = Formula({Atom('H'): 3}) + Formula({Atom('H'): -3})
+    def test_formula_merge_formulas_that_cancel_out(self):
+        f = Formula({Atom('H'): 3}) | Formula({Atom('H'): -3})
         self.assertEquals(f, Formula())
 
     def test_formula_multiply_number(self):
@@ -28,6 +28,10 @@ class TestFormula(unittest.TestCase):
     def test_formula_right_multiply_number(self):
         f = 2 * Formula({Atom('H'): 2, Atom('O'): 1})
         self.assertEquals(f, Formula({Atom('H'): 4, Atom('O'): 2}))
+
+    def test_formula_repeat(self):
+        f = Formula({Atom('H'): 2, Atom('O'): 1}).repeat(4)
+        self.assertEquals(f, Formula({ Formula({Atom('H'): 2, Atom('O'): 1}): 4 }))
 
     def test_formula_equals_other_formula(self):
         f = Formula({Atom('H'): 2, Atom('O'): 1})
@@ -70,6 +74,22 @@ class TestFormula(unittest.TestCase):
         f = Formula.parse('C2H6O2(CH)2')
         self.assertEquals(f, Formula({Atom('C'): 2, Atom('H'): 6, Atom('O'): 2,
                                       Formula({Atom('C'): 1, Atom('H'): 1}): 2}))
+
+    def test_formula_parse_with_two_identical_counted_subgroups(self):
+        f = Formula.parse('C2H6O2(CH)2(CH)2')
+        self.assertEquals(f, Formula({Atom('C'): 2, Atom('H'): 6, Atom('O'): 2,
+                                      Formula({Atom('C'): 1, Atom('H'): 1}): 4}))
+
+    def test_formula_parse_with_two_distinct_counted_subgroups(self):
+        f = Formula.parse('C2H6O2(CH)2(CH2)2')
+        self.assertEquals(f, Formula({Atom('C'): 2, Atom('H'): 6, Atom('O'): 2,
+                                      Formula({Atom('C'): 1, Atom('H'): 1}): 2,
+                                      Formula({Atom('C'): 1, Atom('H'): 2}): 2}))
+
+    def test_formula_parse_with_wide_counted_subgroup(self):
+        f = Formula.parse('C2(CH)10NO2')
+        self.assertEquals(f, Formula({Atom('C'): 2, Atom('N'): 1, Atom('O'): 2,
+                                        Formula({Atom('C'): 1, Atom('H'): 1}): 10}))
 
     def test_formula_parse_with_radical(self):
         f = Formula.parse('C2H4NO2R')

@@ -8,6 +8,8 @@ Reactions that are not balanced will be printed out.'''
 
 import csv
 import argparse
+import re
+import operator
 
 from metnet.metabolicmodel import MetabolicDatabase
 from metnet.formula import Formula, Radical
@@ -42,13 +44,27 @@ if __name__ == '__main__':
         for row in csv.reader(compound_table, delimiter='\t'):
             compound_id, names, formula = row[:3]
 
+            # ModelSEED sometimes uses an asterisk and number at
+            # the end of formulas. This seems to have a similar
+            # meaning as '(...)n'.
+            m = re.match(r'^(.*)\*(\d*)$', formula)
+            if m is not None:
+                if m.group(2) != '':
+                    formula = '({}){}'.format(m.group(1), m.group(2))
+                else:
+                    formula = '({})n'.format(m.group(1))
+
             # Create pseudo-radical group for compounds with
             # missing formula, so they don't match up. Only
             # cpd11632 (Photon) is allowed to have an empty formula.
-            if (formula.strip() == '' and compound_id != 'cpd11632') or '*' in formula:
+            if ((formula.strip() == '' and compound_id != 'cpd11632') or
+                formula == 'noformula'):
                 f = Formula({Radical('R'+compound_id): 1})
             else:
-                f = Formula.parse(formula)
+                try:
+                    f = Formula.parse(formula).flattened()
+                except ValueError as e:
+                    print 'Error in {}: {}'.format(formula, e)
             compound_formula[compound_id] = f
 
     # Create a set of known mass-inconsistent reactions
@@ -65,8 +81,8 @@ if __name__ == '__main__':
     for reaction in model.reaction_set:
         if reaction not in exchange:
             rx = database.get_reaction(reaction)
-            left_form = sum(multiply_formula(rx.left), Formula())
-            right_form = sum(multiply_formula(rx.right), Formula())
+            left_form = reduce(operator.or_, multiply_formula(rx.left), Formula())
+            right_form = reduce(operator.or_, multiply_formula(rx.right), Formula())
 
             if right_form != left_form:
                 right_missing, left_missing = Formula.balance(right_form, left_form)

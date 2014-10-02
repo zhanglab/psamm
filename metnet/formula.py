@@ -3,35 +3,49 @@
 
 import numbers
 import re
-from collections import defaultdict
+from collections import Counter
 import functools
+import operator
 
 from .expression.affine import Variable, Expression
 
 class FormulaElement(object):
     def __add__(self, other):
-        if isinstance(other, numbers.Number) and other == 0:
-            return Formula({ self: 1 })
-        elif isinstance(other, FormulaElement):
+        '''Add formula elements creating subformulas'''
+        if isinstance(other, FormulaElement):
             if self == other:
                 return Formula({ self: 2 })
             return Formula({ self: 1, other: 1 })
-        elif isinstance(other, Formula):
-            return other + self
-        else:
-            return NotImplemented
+        return NotImplemented
 
     def __radd__(self, other):
-        if isinstance(other, numbers.Number) and other == 0:
-            return self + other
-        else:
-            return NotImplemented
+        return self + other
+
+    def __or__(self, other):
+        '''Merge formula elements into one formula'''
+        return Formula({ self: 1 }) | other
+
+    def __ror__(self, other):
+        return self | other
 
     def __mul__(self, other):
+        '''Multiply formula element by other'''
         return Formula({ self: other })
 
     def __rmul__(self, other):
         return self * other
+
+    def repeat(self, count):
+        '''Repeat formula element by creating a subformula'''
+        return Formula({ self: count })
+
+    def variables(self):
+        '''Iterator over variables in formula element'''
+        return iter([])
+
+    def substitute(self, **kwargs):
+        '''Return formula element with substitutions performed'''
+        return self
 
 @functools.total_ordering
 class Atom(FormulaElement):
@@ -85,18 +99,22 @@ class Radical(FormulaElement):
     def __repr__(self):
         return 'Radical({})'.format(repr(self._symbol))
 
-class Formula(object):
+class Formula(FormulaElement):
     def __init__(self, values={}):
-        self._values = dict(values)
-
+        self._values = {}
         self._variables = set()
-        for element, value in self._values.iteritems():
+
+        for element, value in values.iteritems():
+            if not isinstance(element, FormulaElement):
+                raise ValueError('Not a formula element: {}'.format(repr(element)))
+            if element != Formula() and value != 0:
+                self._values[element] = value
+
             if callable(getattr(value, 'variables', None)):
                 for var in value.variables():
                     self._variables.add(var)
-            if callable(getattr(element, 'variables', None)):
-                for var in element.variables():
-                    self._variables.add(var)
+            for var in element.variables():
+                self._variables.add(var)
 
     def substitute(self, **kwargs):
         result = self.__class__()
@@ -105,9 +123,7 @@ class Formula(object):
                 value = value.substitute(**kwargs)
                 if isinstance(value, int) and value <= 0:
                     raise ValueError('Expression evaluated to non-positive number')
-            if callable(getattr(element, 'substitute', None)):
-                element = element.substitute(**kwargs)
-            result += value * element
+            result += value * element.substitute(**kwargs)
         return result
 
     def flattened(self):
@@ -131,9 +147,6 @@ class Formula(object):
 
     def is_variable(self):
         return len(self._variables) > 0
-
-    def __call__(self, **kwargs):
-        return self.substitute(**kwargs)
 
     def __str__(self):
         '''Return formula represented using Hill notation system'''
@@ -175,50 +188,20 @@ class Formula(object):
     def __repr__(self):
         return 'Formula({})'.format(repr(self._values))
 
-    def __add__(self, other):
-        '''Addition operator'''
-
-        if isinstance(other, FormulaElement):
-            result = Formula(self._values)
-            if other in self._values:
-                result._values[other] += 1
-                if isinstance(result._values[other], Expression):
-                    result._values[other] = result._values[other].simplify()
-            else:
-                result._values[other] = 1
-        elif isinstance(other, Formula):
-            values = defaultdict(int)
-            for f in (self._values, other._values):
-                for key, value in f.items():
-                    values[key] += value
-                    if isinstance(values[key], Expression):
-                        values[key] = values[key].simplify()
-            result = Formula(values)
-        else:
-            return NotImplemented
-
-        result._values = { key: value for key, value in result._values.items() if value != 0 }
-        return result
-
-    def __radd__(self, other):
-        return self + other
+    def __or__(self, other):
+        '''Merge formulas into one formula'''
+        if isinstance(other, Formula):
+            values = Counter(self._values)
+            values.update(other._values)
+            return Formula(values)
+        elif isinstance(other, FormulaElement):
+            return self | Formula({ other: 1 })
+        return NotImplemented
 
     def __mul__(self, other):
-        '''Multiply each count by other'''
-
-        if isinstance(other, numbers.Number):
-            result = Formula({ key: value*other for key, value in self._values.items() })
-        elif isinstance(other, Variable) or isinstance(other, Expression):
-            result = Formula({ self: other.simplify() })
-        else:
-            return NotImplemented
-
-        result._values = { key: value for key, value in result._values.items() if value != 0 }
-        return result
-
-    def __rmul__(self, other):
-        '''Multiply each count by other'''
-        return self * other
+        '''Multiply formula element by other'''
+        values = { key: value*other for key, value in self._values.iteritems() }
+        return Formula(values)
 
     def __hash__(self):
         h = hash('Formula')
@@ -236,36 +219,19 @@ class Formula(object):
     def parse(cls, s):
         '''Parse a formula string (e.g. C6H10O2)'''
 
-        def tokenize(s):
-            '''Tokenize formula string'''
-            token = ''
-            for c in s:
-                if c == ' ':
-                    continue
-                elif c in '().':
-                    if token != '':
-                        yield token
-                        token = ''
-                    yield c
-                elif c.isupper():
-                    if token != '':
-                        yield token
-                    token = c
-                else:
-                    token += c
-            if token != '':
-                yield token
-
-        def split_atom_string(a):
-            '''Split atom string into name and count'''
-            for i, c in enumerate(a):
-                if c.isdigit():
-                    return a[:i], int(a[i:])
-            return a, 1
+        scanner = re.compile(r'''
+            (\s+) |         # whitespace
+            (\(|\)) |       # group
+            ([A-Z][a-z]*) | # element
+            (\d+) |         # number
+            ([a-z]) |       # variable
+            (\Z) |          # end
+            (.)             # error
+        ''', re.DOTALL | re.VERBOSE)
 
         def transform_subformula(form):
             '''Extract radical if subformula is a singleton with a radical'''
-            if len(form._values) == 1:
+            if isinstance(form, Formula) and len(form._values) == 1:
                 # A radical in a singleton subformula is interpreted as a
                 # numbered radical.
                 element, value = next(form._values.iteritems())
@@ -275,46 +241,58 @@ class Formula(object):
 
         stack = []
         formula = Formula()
-        expect_group_spec = False
-        for token in tokenize(s):
-            if expect_group_spec:
-                expect_group_spec = False
-                subformula = transform_subformula(formula)
-                if token.islower() or token.isdigit():
-                    if token.isdigit():
-                        coefficient = int(token)
-                    else:
-                        coefficient = Expression(token)
+        expect_count = False
 
-                    formula = stack.pop()
-                    if subformula not in formula._values:
-                        formula._values[subformula] = 0
-                    formula._values[subformula] += coefficient
-                    continue
-                else:
-                    formula = stack.pop()
-                    if subformula not in formula._values:
-                        formula._values[subformula] = 0
-                    formula._values[subformula] += 1
-
-            if token == '(':
-                stack.append(formula)
-                formula = Formula()
-            elif token == ')':
-                expect_group_spec = True
-            else:
-                symbol, value = split_atom_string(token)
-                if symbol in 'RX':
-                    formula += value * Radical(symbol)
-                else:
-                    formula += value * Atom(symbol)
-
-        if expect_group_spec:
+        def close(formula, count=1):
+            if len(stack) == 0:
+                raise ValueError('Unbalanced parenthesis group in formula')
             subformula = transform_subformula(formula)
             formula = stack.pop()
             if subformula not in formula._values:
                 formula._values[subformula] = 0
-            formula._values[subformula] += 1
+            formula._values[subformula] += count
+            return formula
+
+        for match in re.finditer(scanner, s):
+            whitespace, group, element, number, variable, end, error = match.groups()
+
+            if error is not None:
+                raise ValueError('Invalid token in formula string: {}'.format(match.group(0)))
+            elif whitespace is not None:
+                continue
+            elif group is not None and group == '(':
+                if expect_count:
+                    formula = close(formula)
+                stack.append(formula)
+                formula = Formula()
+                expect_count = False
+            elif group is not None and group == ')':
+                if expect_count:
+                    formula = close(formula)
+                expect_count = True
+            elif element is not None:
+                if expect_count:
+                    formula = close(formula)
+                stack.append(formula)
+                if element in 'RX':
+                    formula = Radical(element)
+                else:
+                    formula = Atom(element)
+                expect_count = True
+            elif number is not None and expect_count:
+                formula = close(formula, int(number))
+                expect_count = False
+            elif variable is not None and expect_count:
+                formula = close(formula, Expression(variable))
+                expect_count = False
+            elif end is not None:
+                if expect_count:
+                    formula = close(formula)
+            else:
+                raise ValueError('Invalid token in formula string: {}'.format(match.group(0)))
+
+        if len(stack) > 0:
+            raise ValueError('Unbalanced parenthesis group in formula')
 
         return formula
 
@@ -324,18 +302,19 @@ class Formula(object):
 
         Given complete formulas for right side and left side of a reaction,
         calculate formulas for the missing compounds on both sides. Return
-        as a left, right tuple.'''
+        as a left, right tuple. Formulas can be flattened before balancing
+        to diregard grouping structure.'''
 
         def missing(formula, other):
             for element, value in formula._values.iteritems():
                 if element not in other._values:
                     yield value*element
-                # Check that
                 elif value - other._values[element] > 0:
                     delta = value - other._values[element]
                     yield delta*element
 
-        return sum(missing(rhs, lhs), Formula()), sum(missing(lhs, rhs), Formula())
+        return (reduce(operator.or_, missing(rhs, lhs), Formula()),
+                reduce(operator.or_, missing(lhs, rhs), Formula()))
 
 if __name__ == '__main__':
     import doctest
