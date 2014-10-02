@@ -9,6 +9,7 @@ Reactions that are not balanced will be printed out.'''
 import csv
 import argparse
 import re
+import operator
 
 from metnet.metabolicmodel import MetabolicDatabase
 from metnet.formula import Formula, Radical
@@ -80,8 +81,8 @@ if __name__ == '__main__':
     for reaction in model.reaction_set:
         if reaction not in exchange:
             rx = database.get_reaction(reaction)
-            left_form = sum(multiply_formula(rx.left), Formula())
-            right_form = sum(multiply_formula(rx.right), Formula())
+            left_form = reduce(operator.or_, multiply_formula(rx.left), Formula())
+            right_form = reduce(operator.or_, multiply_formula(rx.right), Formula())
 
             if right_form != left_form:
                 right_missing, left_missing = Formula.balance(right_form, left_form)
