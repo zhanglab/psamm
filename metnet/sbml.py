@@ -61,12 +61,12 @@ def parse_sbml_file(file):
         left = []
         for species_id, value in parse_species_references(reaction, sbml_name('listOfReactants')):
             species_name, species_comp = model_compounds[species_id]
-            left.append((Compound(species_id), value, species_comp))
+            left.append((Compound(species_id, compartment=species_comp), value))
 
         right = []
         for species_id, value in parse_species_references(reaction, sbml_name('listOfProducts')):
             species_name, species_comp = model_compounds[species_id]
-            right.append((Compound(species_id), value, species_comp))
+            right.append((Compound(species_id, compartment=species_comp), value))
 
         # Add reaction to database
         direction = Reaction.Bidir if reaction_rev else Reaction.Right
