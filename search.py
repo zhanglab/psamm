@@ -73,7 +73,17 @@ if __name__ == '__main__':
                 n = filter_search_term(n)
                 compound_for_name[n] = compound_id
 
-            if formula != '' and '*' not in formula:
+            # ModelSEED sometimes uses an asterisk and number at
+            # the end of formulas. This seems to have a similar
+            # meaning as '(...)n'.
+            m = re.match(r'^(.*)\*(\d*)$', formula)
+            if m is not None:
+                if m.group(2) != '':
+                    formula = '({}){}'.format(m.group(1), m.group(2))
+                else:
+                    formula = '({})n'.format(m.group(1))
+
+            if formula.strip() != '' and formula != 'noformula' and not '.' in formula:
                 compound_formula[compound_id] = Formula.parse(formula)
 
     if args.which == 'compound':

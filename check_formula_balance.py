@@ -58,7 +58,7 @@ if __name__ == '__main__':
             # missing formula, so they don't match up. Only
             # cpd11632 (Photon) is allowed to have an empty formula.
             if ((formula.strip() == '' and compound_id != 'cpd11632') or
-                formula == 'noformula'):
+                formula == 'noformula' or '.' in formula):
                 f = Formula({Radical('R'+compound_id): 1})
             else:
                 try:
