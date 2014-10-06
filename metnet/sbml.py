@@ -17,7 +17,7 @@ def parse_species_references(root, tag_name):
     '''Yield species id and parsed value for a speciesReference list'''
     for species in root.findall('./{}/{}'.format(tag_name, sbml_name('speciesReference'))):
         species_id = species.get('species')
-        species_value = species.get('stoichiometry')
+        species_value = species.get('stoichiometry', 1)
 
         value = Decimal(species_value)
         if value % 1 == 0:
@@ -56,7 +56,7 @@ def parse_sbml_file(file):
     for reaction in model.findall('./{}/{}'.format(sbml_name('listOfReactions'), sbml_name('reaction'))):
         reaction_id = reaction.get('id')
         reaction_name = reaction.get('name')
-        reaction_rev = reaction.get('reversible').lower() in ('true', 'yes', '1')
+        reaction_rev = reaction.get('reversible', 'true').lower() in ('true', 'yes', '1')
 
         left = []
         for species_id, value in parse_species_references(reaction, sbml_name('listOfReactants')):
