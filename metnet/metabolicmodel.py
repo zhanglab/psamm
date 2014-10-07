@@ -241,11 +241,8 @@ class MetabolicDatabase(object):
 
         The model will contain all reactions of the iterator.'''
         model = MetabolicModel(self)
-        for rxnid in reaction_iter:
-            model.add_reaction(rxnid)
-
-        for rxnid in model.reaction_set:
-            del model.limits[rxnid].bounds
+        for reaction_id in reaction_iter:
+            model.add_reaction(reaction_id)
 
         return model
 
@@ -286,11 +283,11 @@ class MetabolicModel(object):
         return self._database
 
     @property
-    def reaction_set(self):
+    def reactions(self):
         return iter(self._reaction_set)
 
     @property
-    def compound_set(self):
+    def compounds(self):
         return iter(self._compound_set)
 
     def add_reaction(self, reaction):
@@ -329,7 +326,7 @@ class MetabolicModel(object):
         for rxnid in self._database.reactions:
             reaction = self._database.get_reaction(rxnid)
             if all(compound.compartment in compartments for compound, value in reaction.compounds):
-                if rxnid not in self.reaction_set:
+                if rxnid not in self.reactions:
                     added.add(rxnid)
                 self.add_reaction(rxnid)
 
@@ -347,7 +344,7 @@ class MetabolicModel(object):
                 all_reactions[rx] = rxnid
 
         added = set()
-        for compound in sorted(self.compound_set):
+        for compound in sorted(self.compounds):
             rxnid_ex = 'rxnex_'+compound.id
             if rxnid_ex not in self._database.reactions:
                 reaction_ex = Reaction(Reaction.Bidir, [(compound.in_compartment('e'), 1)], [])
@@ -356,7 +353,7 @@ class MetabolicModel(object):
                 else:
                     rxnid_ex = all_reactions[reaction_ex]
 
-            if rxnid_ex not in self.reaction_set:
+            if rxnid_ex not in self.reactions:
                 added.add(rxnid_ex)
             self.add_reaction(rxnid_ex)
 
@@ -374,7 +371,7 @@ class MetabolicModel(object):
                 all_reactions[rx] = rxnid
 
         added = set()
-        for compound in sorted(self.compound_set):
+        for compound in sorted(self.compounds):
             if compound.compartment == 'e':
                 # A transport reaction with exchange would not be valid
                 continue
@@ -388,7 +385,7 @@ class MetabolicModel(object):
                 else:
                     rxnid_tp = all_reactions[reaction_tp]
 
-            if rxnid_tp not in self.reaction_set:
+            if rxnid_tp not in self.reactions:
                 added.add(rxnid_tp)
             self.add_reaction(rxnid_tp)
 

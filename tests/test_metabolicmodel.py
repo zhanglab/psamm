@@ -35,21 +35,21 @@ class TestMetabolicModel(unittest.TestCase):
         self.assertIs(self.model.database, self.database)
 
     def test_reaction_set(self):
-        self.assertEqual(set(self.model.reaction_set), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
+        self.assertEqual(set(self.model.reactions), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
 
     def test_compound_set(self):
-        self.assertEqual(set(self.model.compound_set), { Compound('A'), Compound('B'), Compound('C'), Compound('D') })
+        self.assertEqual(set(self.model.compounds), { Compound('A'), Compound('B'), Compound('C'), Compound('D') })
 
     def test_add_reaction_new(self):
         self.database.set_reaction('rxn_7', ModelSEED.parse('|D| => |E|'))
         self.model.add_reaction('rxn_7')
-        self.assertIn('rxn_7', set(self.model.reaction_set))
-        self.assertIn(Compound('E'), set(self.model.compound_set))
+        self.assertIn('rxn_7', set(self.model.reactions))
+        self.assertIn(Compound('E'), set(self.model.compounds))
 
     def test_add_reaction_existing(self):
         self.model.add_reaction('rxn_1')
-        self.assertEqual(set(self.model.reaction_set), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
-        self.assertEqual(set(self.model.compound_set), { Compound('A'), Compound('B'), Compound('C'), Compound('D') })
+        self.assertEqual(set(self.model.reactions), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
+        self.assertEqual(set(self.model.compounds), { Compound('A'), Compound('B'), Compound('C'), Compound('D') })
 
     def test_add_reaction_invalid(self):
         with self.assertRaises(Exception):
@@ -57,19 +57,19 @@ class TestMetabolicModel(unittest.TestCase):
 
     def test_remove_reaction_existing(self):
         self.model.remove_reaction('rxn_2')
-        self.assertEqual(set(self.model.reaction_set), { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
-        self.assertEqual(set(self.model.compound_set), { Compound('A'), Compound('C'), Compound('D') })
+        self.assertEqual(set(self.model.reactions), { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
+        self.assertEqual(set(self.model.compounds), { Compound('A'), Compound('C'), Compound('D') })
 
     def test_add_all_database_reactions(self):
         self.database.set_reaction('rxn_7', ModelSEED.parse('|D| => |E|'))
         added = self.model.add_all_database_reactions()
         self.assertEqual(added, { 'rxn_7' })
-        self.assertEqual(set(self.model.reaction_set), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6', 'rxn_7' })
+        self.assertEqual(set(self.model.reactions), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6', 'rxn_7' })
 
     def test_add_all_database_reactions_none(self):
         added = self.model.add_all_database_reactions()
         self.assertEqual(added, set())
-        self.assertEqual(set(self.model.reaction_set), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
+        self.assertEqual(set(self.model.reactions), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
 
     def test_matrix_get_item(self):
         self.assertEqual(self.model.matrix[Compound('A'), 'rxn_1'], 2)

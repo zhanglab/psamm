@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
     # Create a set of known mass-inconsistent reactions
     exchange = set()
-    for rxnid in model.reaction_set:
+    for rxnid in model.reactions:
         rx = database.get_reaction(rxnid)
         if len(rx.left) == 0 or len(rx.right) == 0:
             exchange.add(rxnid)
@@ -78,7 +78,7 @@ if __name__ == '__main__':
         for compound, count in compound_list:
             yield count * compound_formula.get(compound.name, Formula())
 
-    for reaction in model.reaction_set:
+    for reaction in model.reactions:
         if reaction not in exchange:
             rx = database.get_reaction(reaction)
             left_form = reduce(operator.or_, multiply_formula(rx.left), Formula())

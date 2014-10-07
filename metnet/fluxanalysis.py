@@ -13,7 +13,7 @@ def flux_balance(model, reaction='Biomass', solver=lpsolver.CplexSolver()):
     prob = solver.create_problem()
 
     # Define flux variables
-    for rxnid in model.reaction_set:
+    for rxnid in model.reactions:
         lower, upper = model.limits[rxnid]
         prob.define('v_'+rxnid, lower=lower, upper=upper)
 
@@ -21,7 +21,7 @@ def flux_balance(model, reaction='Biomass', solver=lpsolver.CplexSolver()):
     prob.set_linear_objective(objective)
 
     # Define constraints
-    massbalance_lhs = { compound: 0 for compound in model.compound_set }
+    massbalance_lhs = { compound: 0 for compound in model.compounds }
     for spec, value in model.matrix.iteritems():
         compound, rxnid = spec
         massbalance_lhs[compound] += prob.var('v_'+rxnid) * value
@@ -34,7 +34,7 @@ def flux_balance(model, reaction='Biomass', solver=lpsolver.CplexSolver()):
     if status != 1:
         raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
-    for rxnid in model.reaction_set:
+    for rxnid in model.reactions:
         yield rxnid, prob.get_value('v_'+rxnid)
 
 def flux_minimization(model, fixed, weights={}, solver=lpsolver.CplexSolver()):
@@ -46,23 +46,23 @@ def flux_minimization(model, fixed, weights={}, solver=lpsolver.CplexSolver()):
     prob = solver.create_problem()
 
     # Define flux variables
-    for rxnid in model.reaction_set:
-        lower, upper = model.limits[rxnid]
-        if rxnid in fixed:
-            lower = max(lower, fixed[rxnid])
-        prob.define('v_'+rxnid, lower=lower, upper=upper)
+    for reaction_id in model.reactions:
+        lower, upper = model.limits[reaction_id]
+        if reaction_id in fixed:
+            lower = max(lower, fixed[reaction_id])
+        prob.define('v_'+reaction_id, lower=lower, upper=upper)
 
     # Define z variables
-    prob.define(*('z_'+rxnid for rxnid in model.reaction_set), lower=0)
-    objective = sum(prob.var('z_'+rxnid) * weights.get(rxnid, 1) for rxnid in model.reaction_set)
+    prob.define(*('z_'+reaction_id for reaction_id in model.reactions), lower=0)
+    objective = sum(prob.var('z_'+reaction_id) * weights.get(reaction_id, 1) for reaction_id in model.reactions)
     prob.set_linear_objective(objective)
 
     # Define constraints
-    v = prob.set('v_'+rxnid for rxnid in model.reaction_set)
-    z = prob.set('z_'+rxnid for rxnid in model.reaction_set)
+    v = prob.set('v_'+rxnid for rxnid in model.reactions)
+    z = prob.set('z_'+rxnid for rxnid in model.reactions)
     prob.add_linear_constraints(z >= v, v >= -z)
 
-    massbalance_lhs = { compound: 0 for compound in model.compound_set }
+    massbalance_lhs = { compound: 0 for compound in model.compounds }
     for spec, value in model.matrix.iteritems():
         compound, rxnid = spec
         massbalance_lhs[compound] += value * prob.var('v_'+rxnid)
@@ -75,7 +75,7 @@ def flux_minimization(model, fixed, weights={}, solver=lpsolver.CplexSolver()):
     if status != 1:
         raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
-    return ((rxnid, prob.get_value('v_'+rxnid)) for rxnid in model.reaction_set)
+    return ((reaction_id, prob.get_value('v_'+reaction_id)) for reaction_id in model.reactions)
 
 def naive_consistency_check(model, subset, epsilon, solver=lpsolver.CplexSolver()):
     '''Check that reaction subset of model is consistent using FBA

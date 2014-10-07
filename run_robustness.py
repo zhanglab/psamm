@@ -52,12 +52,12 @@ if __name__ == '__main__':
             compounds[cpdid] = name
 
     reaction = args.reaction
-    if reaction not in model.reaction_set:
+    if reaction not in model.reactions:
         sys.stderr.write('Specified reaction is not in model: {}\n'.format(reaction))
         sys.exit(-1)
 
     varying_reaction = args.varying
-    if varying_reaction not in model.reaction_set:
+    if varying_reaction not in model.reactions:
         sys.stderr.write('Specified reaction is not in model: {}\n'.format(varying_reaction))
         sys.exit(-1)
 

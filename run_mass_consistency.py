@@ -39,10 +39,10 @@ if __name__ == '__main__':
 
     # Create a set of known mass-inconsistent reactions
     exchange = set()
-    for rxnid in model.reaction_set:
-        rx = database.get_reaction(rxnid)
+    for reaction_id in model.reactions:
+        rx = database.get_reaction(reaction_id)
         if len(rx.left) == 0 or len(rx.right) == 0:
-            exchange.add(rxnid)
+            exchange.add(reaction_id)
 
     # Create set of compounds allowed to have mass zero
     zeromass = set()

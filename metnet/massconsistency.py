@@ -19,7 +19,7 @@ class MassConsistencyCheck(object):
 
     def _non_localized_compounds(self, model):
         '''Return set of non-localized compounds in model (i.e. in compartment None)'''
-        return set(compound.in_compartment(None) for compound in model.compound_set)
+        return set(compound.in_compartment(None) for compound in model.compounds)
 
     def is_consistent(self, model, exchange=set(), zeromass=set()):
         '''Try to assign a positive mass to each compound and return True on success
@@ -36,7 +36,7 @@ class MassConsistencyCheck(object):
         prob.set_linear_objective(sum(prob.var('m_'+compound.id) for compound in compound_set))
 
         # Define constraints
-        massbalance_lhs = { reaction: 0 for reaction in model.reaction_set }
+        massbalance_lhs = { reaction: 0 for reaction in model.reactions }
         for spec, value in model.matrix.iteritems():
             compound, reaction = spec
             massbalance_lhs[reaction] += prob.var('m_'+compound.in_compartment(None).id) * value
@@ -70,23 +70,23 @@ class MassConsistencyCheck(object):
             prob.define('m_'+compound.id, lower=(0 if compound in zeromass else 1))
 
         # Define residual mass variables and objective constriants
-        prob.define(*('z_'+rxnid for rxnid in model.reaction_set), lower=0)
-        prob.define(*('r_'+rxnid for rxnid in model.reaction_set))
+        prob.define(*('z_'+reaction_id for reaction_id in model.reactions), lower=0)
+        prob.define(*('r_'+reaction_id for reaction_id in model.reactions))
 
-        objective = sum(prob.var('z_'+rxnid) * weights.get(rxnid, 1) for rxnid in model.reaction_set)
+        objective = sum(prob.var('z_'+reaction_id) * weights.get(reaction_id, 1) for reaction_id in model.reactions)
         prob.set_linear_objective(objective)
 
-        r = prob.set('r_'+rxnid for rxnid in model.reaction_set)
-        z = prob.set('z_'+rxnid for rxnid in model.reaction_set)
+        r = prob.set('r_'+reaction_id for reaction_id in model.reactions)
+        z = prob.set('z_'+reaction_id for reaction_id in model.reactions)
         prob.add_linear_constraints(z >= r, r >= -z)
 
-        massbalance_lhs = { rxnid: 0 for rxnid in model.reaction_set }
+        massbalance_lhs = { reaction_id: 0 for reaction_id in model.reactions }
         for spec, value in model.matrix.iteritems():
-            compound, rxnid = spec
-            massbalance_lhs[rxnid] += prob.var('m_'+compound.in_compartment(None).id) * value
-        for rxnid, lhs in massbalance_lhs.iteritems():
-            if rxnid not in exchange:
-                r = prob.var('r_'+rxnid)
+            compound, reaction_id = spec
+            massbalance_lhs[reaction_id] += prob.var('m_'+compound.in_compartment(None).id) * value
+        for reaction_id, lhs in massbalance_lhs.iteritems():
+            if reaction_id not in exchange:
+                r = prob.var('r_'+reaction_id) # residual
                 prob.add_linear_constraints(lhs + r == 0)
 
         # Solve
@@ -96,12 +96,12 @@ class MassConsistencyCheck(object):
             raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
         def iterate_reactions():
-            for rxnid in model.reaction_set:
-                residual = prob.get_value('r_'+rxnid)
-                yield rxnid, residual
+            for reaction_id in model.reactions:
+                residual = prob.get_value('r_'+reaction_id)
+                yield reaction_id, residual
 
         def iterate_compounds():
-            for compound in compound_set:
+            for compound in compounds:
                 yield compound, prob.get_value('m_'+compound.id)
 
         return iterate_reactions(), iterate_compounds()
@@ -135,12 +135,12 @@ class MassConsistencyCheck(object):
         m = prob.set('m_'+compound.id for compound in compound_set)
         prob.add_linear_constraints(m >= z)
 
-        massbalance_lhs = { rxnid: 0 for rxnid in model.reaction_set }
+        massbalance_lhs = { reaction_id: 0 for reaction_id in model.reactions }
         for spec, value in model.matrix.iteritems():
-            compound, rxnid = spec
-            massbalance_lhs[rxnid] += prob.var('m_'+compound.in_compartment(None).id) * value
-        for rxnid, lhs in massbalance_lhs.iteritems():
-            if rxnid not in exchange:
+            compound, reaction_id = spec
+            massbalance_lhs[reaction_id] += prob.var('m_'+compound.in_compartment(None).id) * value
+        for reaction_id, lhs in massbalance_lhs.iteritems():
+            if reaction_id not in exchange:
                 prob.add_linear_constraints(lhs == 0)
 
         # Solve

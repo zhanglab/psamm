@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     # Run Fastcore and print the induced reaction set
     print 'Calculating Fastcore induced set on model...'
-    core = set(model.reaction_set)
+    core = set(model.reactions)
 
     induced = fastcore.fastcore(model_complete, core, epsilon, weights=weights)
     print 'Result: |A| = {}, A = {}'.format(len(induced), induced)
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     for rxnid, flux in sorted(flux_balance(model_induced, args.reaction)):
         reaction_class = 'Dbase'
         weight = weights.get(rxnid, 1)
-        if rxnid in model.reaction_set:
+        if rxnid in model.reactions:
             reaction_class = 'Model'
             weight = 0
         reaction = database.get_reaction(rxnid).translated_compounds(lambda x: compounds.get(x, x))
@@ -99,5 +99,5 @@ if __name__ == '__main__':
     print 'Calculating Fastcc consistent subset of induced model...'
     consistent_core = fastcore.fastcc_consistent_subset(model_induced, epsilon)
     print 'Result: |A| = {}, A = {}'.format(len(consistent_core), consistent_core)
-    removed_reactions = set(model_induced.reaction_set) - consistent_core
+    removed_reactions = set(model_induced.reactions) - consistent_core
     print 'Removed: |R| = {}, R = {}'.format(len(removed_reactions), removed_reactions)

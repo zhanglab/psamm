@@ -50,7 +50,7 @@ if __name__ == '__main__':
         model_complete.add_all_transport_reactions()
 
         print 'Searching for reactions to fill gaps...'
-        added_reactions, reversed_reactions = gapfill(model_complete, model.reaction_set, blocked)
+        added_reactions, reversed_reactions = gapfill(model_complete, model.reactions, blocked)
 
         for rxnid in added_reactions:
             rx = database.get_reaction(rxnid).translated_compounds(lambda x: compounds.get(x, x))

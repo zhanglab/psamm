@@ -13,7 +13,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Find random minimal set of reactions that keep biomass above a threshold')
     parser.add_argument('--database', required=True, metavar='reactionfile', action='append',
                         type=argparse.FileType('r'), default=[],
-                        help='Reaction definition list to usa as database')
+                        help='Reaction definition list to use as database')
     parser.add_argument('--limits', metavar='limitsfile', action='append',
                         type=argparse.FileType('r'), default=[],
                         help='Optional limits on flux of reactions')
@@ -37,7 +37,7 @@ if __name__ == '__main__':
     model_test = model.copy()
     essential = { biomass_reaction }
     deleted = set()
-    test_set = model_test.reaction_set - essential
+    test_set = set(model_test.reactions) - essential
 
     while len(test_set) > 0:
         testing_rxn = random.sample(test_set, 1)[0]
@@ -58,6 +58,6 @@ if __name__ == '__main__':
         else:
             deleted.add(testing_rxn)
 
-    for rxnid in model_test.reaction_set:
-        value = 0 if rxnid in deleted else 1
-        print '{}\t{}'.format(rxnid, value)
+    for reaction_id in model_test.reactions:
+        value = 0 if reaction_id in deleted else 1
+        print '{}\t{}'.format(reaction_id, value)
