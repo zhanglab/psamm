@@ -207,6 +207,30 @@ class MetabolicDatabase(object):
         right = ((compound, value) for compound, value in self.get_reaction_values(reaction_id) if value > 0)
         return Reaction(direction, left, right)
 
+    def load_model_from_file(self, file):
+        '''Load model defined by given reaction list file
+
+        Comments, indicated by pound sign (#), are skipped.'''
+
+        def reaction_file_iter(f):
+            for line in f:
+                line, _, comment = line.partition('#')
+                line = line.strip()
+                if line == '':
+                    continue
+                yield line
+
+        return self.get_model(reaction_file_iter(file))
+
+    def get_model(self, reaction_iter):
+        '''Get model from reaction name iterator
+
+        The model will contain all reactions of the iterator.'''
+        model = MetabolicModel(self)
+        for reaction_id in reaction_iter:
+            model.add_reaction(reaction_id)
+        return model
+
 class DictDatabase(MetabolicDatabase):
     '''Metabolic database backed by in-memory dictionaries'''
 
@@ -261,47 +285,20 @@ class DictDatabase(MetabolicDatabase):
         if reaction.direction != '=>':
             self.reversible.add(rxnid)
 
-    def load_model_from_file(self, file):
-        '''Load model defined by given reaction list file
-
-        Comments, indicated by pound sign (#), are skipped.'''
-
-        def reaction_file_iter(f):
-            for line in f:
-                line, _, comment = line.partition('#')
-                line = line.strip()
-                if line == '':
-                    continue
-                yield line
-
-        return self.get_model(reaction_file_iter(file))
-
-    def get_model(self, reaction_iter):
-        '''Get model from reaction name iterator
-
-        The model will contain all reactions of the iterator.'''
-        model = MetabolicModel(self)
-        for reaction_id in reaction_iter:
-            model.add_reaction(reaction_id)
-
-        return model
-
     @classmethod
     def load_from_files(cls, *files):
         '''Load database from given reactions definition lists'''
 
         database = cls()
-
         for file in files:
             for line in file:
                 line, _, comment = line.partition('#')
                 line = line.strip()
                 if line == '':
                     continue
-                rxnid, equation = line.split(None, 1)
-                rx = ModelSEED.parse(equation).normalized()
-                database.set_reaction(rxnid, rx)
-
+                reaction_id, equation = line.split(None, 1)
+                reaction = ModelSEED.parse(equation).normalized()
+                database.set_reaction(reaction_id, reaction)
         return database
 
 class MetabolicModel(object):
