@@ -377,6 +377,10 @@ class MetabolicModel(MetabolicDatabase):
             raise ValueError('Reaction not in model: {}'.format(reaction_id))
         return self._database.is_reversible(reaction_id)
 
+    @property
+    def limits(self):
+        return LimitsView(self)
+
     def add_reaction(self, reaction_id):
         '''Add reaction to model'''
 
@@ -502,10 +506,6 @@ class MetabolicModel(MetabolicDatabase):
                     self.limits[reaction_id].bounds = float(lower), float(upper)
             else:
                 raise ValueError('Malformed reaction limit: {}'.format(fields))
-
-    @property
-    def limits(self):
-        return LimitsView(self)
 
     def copy(self):
         '''Return copy of model'''
