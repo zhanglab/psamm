@@ -99,7 +99,7 @@ class FluxBounds(object):
         return '{}({}, {})'.format(self.__class__.__name__, repr(self.lower), repr(self.upper))
 
 class StoichiometricMatrixView(Mapping):
-    '''Provides a sparse matrix view on the stoichiometry of a model
+    '''Provides a sparse matrix view on the stoichiometry of a database
 
     This object is used internally in the MetabolicModel to expose
     a sparse matrix view of the model stoichiometry.
@@ -108,26 +108,28 @@ class StoichiometricMatrixView(Mapping):
     corresponding stoichiometric value. If the value is not
     defined (implicitly zero) a KeyError will be raised.'''
 
-    def __init__(self, model):
+    def __init__(self, database):
         super(StoichiometricMatrixView, self).__init__()
-        self._model = model
+        self._database = database
 
     def __getitem__(self, key):
         if len(key) != 2:
             raise KeyError(key)
         compound, reaction = key
-        if reaction not in self._model._reaction_set:
+        if not self._database.has_reaction(reaction):
             raise KeyError(key)
-        value = self._model._database._reactions[reaction][compound]
-        return value
+        reaction_values = dict(self._database.get_reaction_values(reaction))
+        if compound not in reaction_values:
+            raise KeyError(key)
+        return reaction_values[compound]
 
     def __iter__(self):
-        for reaction in self._model._reaction_set:
-            for compound in self._model._database._reactions[reaction]:
+        for reaction in self._database.reactions:
+            for compound, _ in self._database.get_reaction_values(reaction):
                 yield compound, reaction
 
     def __len__(self):
-        return sum(len(self._model._database._reactions[reaction]) for reaction in self._model._reaction_set)
+        return sum(sum(1 for _ in self._database.get_reaction_values(reaction)) for reaction in self._database.reactions)
 
 class LimitsView(Mapping):
     '''Provides a view of the flux bounds defined in the model
@@ -209,6 +211,11 @@ class MetabolicDatabase(object):
     def reversible(self):
         '''The set of reversible reactions'''
         return set(reaction_id for reaction_id in self.reactions if self.is_reversible(reaction_id))
+
+    @property
+    def matrix(self):
+        '''Mapping from compound, reaction to stoichiometric value'''
+        return StoichiometricMatrixView(self)
 
     def get_reaction(self, reaction_id):
         direction = Reaction.Bidir if self.is_reversible(reaction_id) else Reaction.Right
@@ -495,11 +502,6 @@ class MetabolicModel(MetabolicDatabase):
                     self.limits[reaction_id].bounds = float(lower), float(upper)
             else:
                 raise ValueError('Malformed reaction limit: {}'.format(fields))
-
-    @property
-    def matrix(self):
-        '''Mapping from compound, reaction to stoichiometric value'''
-        return StoichiometricMatrixView(self)
 
     @property
     def limits(self):
