@@ -56,7 +56,7 @@ class Fastcore(object):
         prob = self._solver.create_problem()
 
         # Define flux variables
-        for rxnid in model.reaction_set:
+        for rxnid in model.reactions:
             lower, upper = model.limits[rxnid]
             prob.define('v_'+rxnid, lower=lower, upper=upper)
 
@@ -67,7 +67,7 @@ class Fastcore(object):
         z = prob.set('z_'+rxnid for rxnid in reaction_subset)
         prob.add_linear_constraints(v >= z)
 
-        massbalance_lhs = { compound: 0 for compound in model.compound_set }
+        massbalance_lhs = { compound: 0 for compound in model.compounds }
         for spec, value in model.matrix.iteritems():
             compound, rxnid = spec
             massbalance_lhs[compound] += prob.var('v_'+rxnid) * value
@@ -79,7 +79,7 @@ class Fastcore(object):
         if status != 1:
             raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
-        for rxnid in sorted(model.reaction_set):
+        for rxnid in sorted(model.reactions):
             yield rxnid, prob.get_value('v_'+rxnid)
 
     def lp10(self, model, subset_k, subset_p, epsilon, scaling, weights={}):
@@ -94,7 +94,7 @@ class Fastcore(object):
         prob = self._solver.create_problem()
 
         # Define flux variables
-        for rxnid in model.reaction_set:
+        for rxnid in model.reactions:
             lower, upper = model.limits[rxnid]
             if rxnid in subset_k:
                 lower = max(lower, epsilon)
@@ -108,7 +108,7 @@ class Fastcore(object):
         v = prob.set('v_'+rxnid for rxnid in subset_p)
         prob.add_linear_constraints(z >= v, v >= -z)
 
-        massbalance_lhs = { compound: 0 for compound in model.compound_set }
+        massbalance_lhs = { compound: 0 for compound in model.compounds }
         for spec, value in model.matrix.iteritems():
             compound, rxnid = spec
             massbalance_lhs[compound] += prob.var('v_'+rxnid) * value
@@ -120,7 +120,7 @@ class Fastcore(object):
         if status != 1:
             raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
-        for rxnid in sorted(model.reaction_set):
+        for rxnid in sorted(model.reactions):
             yield rxnid, prob.get_value('v_'+rxnid)
 
     def fastcc(self, model, epsilon):
@@ -129,8 +129,8 @@ class Fastcore(object):
         Yields all reactions in the model that are not part
         of the consistent subset.'''
 
-        reaction_set = set(model.reaction_set)
-        subset = reaction_set - model.reversible
+        reaction_set = set(model.reactions)
+        subset = reaction_set.difference(model.reversible)
         #print '|J| = {}'.format(len(subset))
         #print 'J = {}'.format(subset)
 
@@ -204,7 +204,7 @@ class Fastcore(object):
 
         The largest consistent subset is returned as
         a set of reaction names.'''
-        reaction_set = set(model.reaction_set)
+        reaction_set = set(model.reactions)
         return reaction_set.difference(self.fastcc(model, epsilon))
 
     def find_sparse_mode(self, model, core, additional, epsilon, scaling, weights={}):
@@ -232,7 +232,7 @@ class Fastcore(object):
         reactions as possible.'''
 
         consistent_subset = set()
-        reaction_set = set(model.reaction_set)
+        reaction_set = set(model.reactions)
 
         subset = core - model.reversible
         #print '|J| = {}, J = {}'.format(len(subset), subset)

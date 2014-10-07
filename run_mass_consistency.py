@@ -3,7 +3,7 @@
 import argparse
 import csv
 
-from metnet.metabolicmodel import MetabolicDatabase
+from metnet.metabolicmodel import DictDatabase
 from metnet.massconsistency import MassConsistencyCheck
 
 if __name__ == '__main__':
@@ -19,7 +19,7 @@ if __name__ == '__main__':
                         help='Model definition')
     args = parser.parse_args()
 
-    database = MetabolicDatabase.load_from_files(*args.database)
+    database = DictDatabase.load_from_files(*args.database)
 
     # Load model from file if given, otherwise run on full database
     if args.reactionlist:
@@ -39,10 +39,10 @@ if __name__ == '__main__':
 
     # Create a set of known mass-inconsistent reactions
     exchange = set()
-    for rxnid in model.reaction_set:
-        rx = database.get_reaction(rxnid)
+    for reaction_id in model.reactions:
+        rx = database.get_reaction(reaction_id)
         if len(rx.left) == 0 or len(rx.right) == 0:
-            exchange.add(rxnid)
+            exchange.add(reaction_id)
 
     # Create set of compounds allowed to have mass zero
     zeromass = set()

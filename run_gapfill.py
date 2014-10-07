@@ -3,7 +3,7 @@
 import argparse
 import csv
 
-from metnet.metabolicmodel import MetabolicDatabase
+from metnet.metabolicmodel import DictDatabase
 from metnet.gapfill import gapfind, gapfill
 
 if __name__ == '__main__':
@@ -18,7 +18,7 @@ if __name__ == '__main__':
                         help='Optional compound information table')
     args = parser.parse_args()
 
-    database = MetabolicDatabase.load_from_files(*args.database)
+    database = DictDatabase.load_from_files(*args.database)
     model = database.load_model_from_file(args.reactionlist)
 
     # Load compound information
@@ -50,7 +50,7 @@ if __name__ == '__main__':
         model_complete.add_all_transport_reactions()
 
         print 'Searching for reactions to fill gaps...'
-        added_reactions, reversed_reactions = gapfill(model_complete, model.reaction_set, blocked)
+        added_reactions, reversed_reactions = gapfill(model_complete, model.reactions, blocked)
 
         for rxnid in added_reactions:
             rx = database.get_reaction(rxnid).translated_compounds(lambda x: compounds.get(x, x))

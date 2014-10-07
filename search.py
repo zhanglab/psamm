@@ -7,7 +7,7 @@ import csv
 import re
 
 from metnet.reaction import Compound
-from metnet.metabolicmodel import MetabolicDatabase
+from metnet.metabolicmodel import DictDatabase
 from metnet.formula import Formula
 
 def parse_compound(s):
@@ -51,7 +51,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Load reaction database
-    database = MetabolicDatabase.load_from_files(*args.database)
+    database = DictDatabase.load_from_files(*args.database)
+    if args.model:
+        database = database.load_model_from_file(args.model)
 
     # Load compound information
     compounds = {}
@@ -116,7 +118,7 @@ if __name__ == '__main__':
             for compound_spec in compound_list.split(','):
                 compound = parse_compound(compound_spec.strip())
                 if matched_reactions is None:
-                    matched_reactions = set(database.compound_reactions.get(compound, set()))
+                    matched_reactions = set(database.get_compound_reactions(compound))
                 else:
                     matched_reactions &= database.compound_reactions.get(compound, set())
             if matched_reactions is not None:

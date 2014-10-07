@@ -4,7 +4,7 @@ import sys
 import argparse
 import csv
 
-from metnet.metabolicmodel import MetabolicDatabase
+from metnet.metabolicmodel import DictDatabase
 from metnet.fluxanalysis import flux_balance, flux_minimization
 
 if __name__ == '__main__':
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('reaction', help='Reaction to maximize')
     args = parser.parse_args()
 
-    database = MetabolicDatabase.load_from_files(*args.database)
+    database = DictDatabase.load_from_files(*args.database)
     model = database.load_model_from_file(args.reactionlist)
 
     # Load compound information
@@ -37,7 +37,7 @@ if __name__ == '__main__':
             compounds[cpdid] = name
 
     reaction = args.reaction
-    if reaction not in model.reaction_set:
+    if not model.has_reaction(reaction):
         sys.stderr.write('Specified reaction is not in model: {}\n'.format(reaction))
         sys.exit(-1)
 

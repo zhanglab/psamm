@@ -11,7 +11,7 @@ import argparse
 import re
 import operator
 
-from metnet.metabolicmodel import MetabolicDatabase
+from metnet.metabolicmodel import DictDatabase
 from metnet.formula import Formula, Radical
 from metnet.reaction import ModelSEED
 
@@ -29,7 +29,7 @@ if __name__ == '__main__':
                         help='Model definition')
     args = parser.parse_args()
 
-    database = MetabolicDatabase.load_from_files(*args.database)
+    database = DictDatabase.load_from_files(*args.database)
 
     # Load model from file if given, otherwise run on full database
     if args.reactionlist:
@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
     # Create a set of known mass-inconsistent reactions
     exchange = set()
-    for rxnid in model.reaction_set:
+    for rxnid in model.reactions:
         rx = database.get_reaction(rxnid)
         if len(rx.left) == 0 or len(rx.right) == 0:
             exchange.add(rxnid)
@@ -78,7 +78,7 @@ if __name__ == '__main__':
         for compound, count in compound_list:
             yield count * compound_formula.get(compound.name, Formula())
 
-    for reaction in model.reaction_set:
+    for reaction in model.reactions:
         if reaction not in exchange:
             rx = database.get_reaction(reaction)
             left_form = reduce(operator.or_, multiply_formula(rx.left), Formula())
