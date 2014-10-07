@@ -4,7 +4,7 @@
 import xml.etree.ElementTree as ET
 from decimal import Decimal
 
-from .metabolicmodel import MetabolicDatabase
+from .metabolicmodel import DictDatabase
 from .reaction import Reaction, Compound
 
 SBML_NS = 'http://www.sbml.org/sbml/level2'
@@ -50,7 +50,7 @@ def parse_sbml_file(file):
         species_comp = species.get('compartment')
         model_compounds[species_id] = species_name, species_comp
 
-    database = MetabolicDatabase()
+    database = DictDatabase()
 
     # Reactions
     for reaction in model.findall('./{}/{}'.format(sbml_name('listOfReactions'), sbml_name('reaction'))):
