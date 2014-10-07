@@ -201,6 +201,10 @@ class MetabolicDatabase(object):
     def get_reaction_values(self, reaction_id):
         pass
 
+    @abc.abstractmethod
+    def get_compound_reactions(self, compound_id):
+        pass
+
     def get_reaction(self, reaction_id):
         direction = Reaction.Bidir if self.is_reversible(reaction_id) else Reaction.Right
         left = ((compound, -value) for compound, value in self.get_reaction_values(reaction_id) if value < 0)
@@ -259,6 +263,10 @@ class DictDatabase(MetabolicDatabase):
         if reaction_id not in self._reactions:
             raise ValueError('Unknown reaction: {}'.format(repr(reaction_id)))
         return self._reactions[reaction_id].iteritems()
+
+    def get_compound_reactions(self, compound_id):
+        '''Iterator of reactions that include the given compound'''
+        return iter(self.compound_reactions[compound_id])
 
     def set_reaction(self, rxnid, reaction):
         # Overwrite previous reaction if the same id is used
@@ -352,8 +360,9 @@ class MetabolicModel(object):
 
         # Remove compound from compound_set if it is not referenced
         # by any other reactions in the model.
-        for compound, value in self._database._reactions[reaction].iteritems():
-            if all(other_reaction not in self._reaction_set for other_reaction in self._database.compound_reactions[compound]):
+        for compound, value in self._database.get_reaction_values(reaction):
+            reactions = frozenset(self._database.get_compound_reactions(compound))
+            if all(other_reaction not in self._reaction_set for other_reaction in reactions):
                 self._compound_set.remove(compound)
 
     def add_all_database_reactions(self, compartments={None, 'e'}):

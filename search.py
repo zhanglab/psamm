@@ -116,7 +116,7 @@ if __name__ == '__main__':
             for compound_spec in compound_list.split(','):
                 compound = parse_compound(compound_spec.strip())
                 if matched_reactions is None:
-                    matched_reactions = set(database.compound_reactions.get(compound, set()))
+                    matched_reactions = set(database.get_compound_reactions(compound))
                 else:
                     matched_reactions &= database.compound_reactions.get(compound, set())
             if matched_reactions is not None:
