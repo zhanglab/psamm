@@ -197,8 +197,15 @@ class MetabolicDatabase(object):
     def is_reversible(self, reaction_id):
         pass
 
-    def get_reaction(self, reaction_id):
+    @abc.abstractmethod
+    def get_reaction_values(self, reaction_id):
         pass
+
+    def get_reaction(self, reaction_id):
+        direction = Reaction.Bidir if self.is_reversible(reaction_id) else Reaction.Right
+        left = ((compound, -value) for compound, value in self.get_reaction_values(reaction_id) if value < 0)
+        right = ((compound, value) for compound, value in self.get_reaction_values(reaction_id) if value > 0)
+        return Reaction(direction, left, right)
 
 class DictDatabase(MetabolicDatabase):
     '''Metabolic database backed by in-memory dictionaries'''
@@ -223,14 +230,11 @@ class DictDatabase(MetabolicDatabase):
     def is_reversible(self, reaction_id):
         return reaction_id in self.reversible
 
-    def get_reaction(self, rxnid):
-        if rxnid not in self._reactions:
-            raise ValueError('Unknown reaction {}'.format(repr(rxnid)))
-
-        direction = Reaction.Bidir if rxnid in self.reversible else Reaction.Right
-        left = ((compound, -value) for compound, value in self._reactions[rxnid].iteritems() if value < 0)
-        right = ((compound, value) for compound, value in self._reactions[rxnid].iteritems() if value > 0)
-        return Reaction(direction, left, right)
+    def get_reaction_values(self, reaction_id):
+        '''Yield compound and stoichiometric values of reaction as tuples'''
+        if reaction_id not in self._reactions:
+            raise ValueError('Unknown reaction: {}'.format(repr(reaction_id)))
+        return self._reactions[reaction_id].iteritems()
 
     def set_reaction(self, rxnid, reaction):
         # Overwrite previous reaction if the same id is used
