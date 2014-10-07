@@ -43,7 +43,7 @@ class FluxBounds(object):
         try:
             return self._model._limits_lower[self._reaction]
         except KeyError:
-            return -self._model._v_max if self._reaction in self._model._database.reversible else 0
+            return -self._model._v_max if self._model._database.is_reversible(self._reaction) else 0
 
     @lower.setter
     def lower(self, value):
@@ -205,6 +205,11 @@ class MetabolicDatabase(object):
     def get_compound_reactions(self, compound_id):
         pass
 
+    @property
+    def reversible(self):
+        '''The set of reversible reactions'''
+        return set(reaction_id for reaction_id in self.reactions if self.is_reversible(reaction_id))
+
     def get_reaction(self, reaction_id):
         direction = Reaction.Bidir if self.is_reversible(reaction_id) else Reaction.Right
         left = ((compound, -value) for compound, value in self.get_reaction_values(reaction_id) if value < 0)
@@ -241,8 +246,8 @@ class DictDatabase(MetabolicDatabase):
     def __init__(self):
         super(DictDatabase, self).__init__()
         self._reactions = defaultdict(dict)
-        self.compound_reactions = defaultdict(set)
-        self.reversible = set()
+        self._compound_reactions = defaultdict(set)
+        self._reversible = set()
 
     @property
     def reactions(self):
@@ -250,13 +255,14 @@ class DictDatabase(MetabolicDatabase):
 
     @property
     def compounds(self):
-        return iter(self.compound_reactions)
+        return iter(self._compound_reactions)
 
     def has_reaction(self, reaction_id):
         return reaction_id in self._reactions
 
     def is_reversible(self, reaction_id):
-        return reaction_id in self.reversible
+        '''Whether reaction is reversible'''
+        return reaction_id in self._reversible
 
     def get_reaction_values(self, reaction_id):
         '''Yield compound and stoichiometric values of reaction as tuples'''
@@ -266,32 +272,32 @@ class DictDatabase(MetabolicDatabase):
 
     def get_compound_reactions(self, compound_id):
         '''Iterator of reactions that include the given compound'''
-        return iter(self.compound_reactions[compound_id])
+        return iter(self._compound_reactions[compound_id])
 
-    def set_reaction(self, rxnid, reaction):
+    def set_reaction(self, reaction_id, reaction):
         # Overwrite previous reaction if the same id is used
-        if rxnid in self._reactions:
+        if reaction_id in self._reactions:
             # Clean up compound to reaction mapping
-            for compound in self._reactions[rxnid]:
-                self.compound_reactions[compound].remove(rxnid)
+            for compound in self._reactions[reaction_id]:
+                self._compound_reactions[compound].remove(reaction_id)
 
-            self.reversible.discard(rxnid)
-            del self._reactions[rxnid]
+            self._reversible.discard(reaction_id)
+            del self._reactions[reaction_id]
 
         # Add values to global (sparse) stoichiometric matrix
         # Compounds that occur on both sides will get a stoichiometric
         # value based on the sum of the signed values on each side.
         for compound, value in reaction.compounds:
-            if compound not in self._reactions[rxnid] and value != 0:
-                self._reactions[rxnid][compound] = 0
-                self.compound_reactions[compound].add(rxnid)
+            if compound not in self._reactions[reaction_id] and value != 0:
+                self._reactions[reaction_id][compound] = 0
+                self._compound_reactions[compound].add(reaction_id)
         for compound, value in reaction.left:
-            self._reactions[rxnid][compound] -= value
+            self._reactions[reaction_id][compound] -= value
         for compound, value in reaction.right:
-            self._reactions[rxnid][compound] += value
+            self._reactions[reaction_id][compound] += value
 
         if reaction.direction != '=>':
-            self.reversible.add(rxnid)
+            self._reversible.add(reaction_id)
 
     @classmethod
     def load_from_files(cls, *files):
