@@ -341,17 +341,15 @@ class MetabolicModel(object):
     def compounds(self):
         return iter(self._compound_set)
 
-    def add_reaction(self, reaction):
+    def add_reaction(self, reaction_id):
         '''Add reaction to model'''
 
-        if reaction in self._reaction_set:
+        if reaction_id in self._reaction_set:
             return
 
-        if not self._database.has_reaction(reaction):
-            raise Exception('Model reaction does not reference a database reaction: {}'.format(reaction))
-
-        self._reaction_set.add(reaction)
-        for compound, value in self._database._reactions[reaction].iteritems():
+        reaction = self._database.get_reaction(reaction_id)
+        self._reaction_set.add(reaction_id)
+        for compound, value in reaction.compounds:
             self._compound_set.add(compound)
 
     def remove_reaction(self, reaction):
