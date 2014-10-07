@@ -1,6 +1,7 @@
 
 '''Representation of metabolic networks'''
 
+import abc
 from collections import defaultdict, Mapping
 from itertools import chain
 
@@ -117,16 +118,16 @@ class StoichiometricMatrixView(Mapping):
         compound, reaction = key
         if reaction not in self._model._reaction_set:
             raise KeyError(key)
-        value = self._model._database.reactions[reaction][compound]
+        value = self._model._database._reactions[reaction][compound]
         return value
 
     def __iter__(self):
         for reaction in self._model._reaction_set:
-            for compound in self._model._database.reactions[reaction]:
+            for compound in self._model._database._reactions[reaction]:
                 yield compound, reaction
 
     def __len__(self):
-        return sum(len(self._model._database.reactions[reaction]) for reaction in self._model._reaction_set)
+        return sum(len(self._model._database._reactions[reaction]) for reaction in self._model._reaction_set)
 
 class LimitsView(Mapping):
     '''Provides a view of the flux bounds defined in the model
@@ -176,51 +177,69 @@ class MetabolicReaction(object):
         return 'MetabolicReaction({}, {})'.format(repr(self.reversible), repr(self.metabolites))
 
 class MetabolicDatabase(object):
-    def __init__(self):
-        raise Exception('Abstract base class')
-
-class DictDatabase(MetabolicDatabase):
     '''Database of metabolic reactions'''
 
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractproperty
+    def reactions(self):
+        pass
+
+    @abc.abstractproperty
+    def compounds(self):
+        pass
+
+    @abc.abstractmethod
+    def get_reaction(self, reaction_id):
+        pass
+
+class DictDatabase(MetabolicDatabase):
+    '''Metabolic database backed by in-memory dictionaries'''
+
     def __init__(self):
-        self.reactions = defaultdict(dict)
+        super(DictDatabase, self).__init__()
+        self._reactions = defaultdict(dict)
         self.compound_reactions = defaultdict(set)
         self.reversible = set()
+
+    @property
+    def reactions(self):
+        return iter(self._reactions)
 
     @property
     def compounds(self):
         return iter(self.compound_reactions)
 
     def get_reaction(self, rxnid):
-        if rxnid not in self.reactions:
+        if rxnid not in self._reactions:
             raise ValueError('Unknown reaction {}'.format(repr(rxnid)))
 
         direction = Reaction.Bidir if rxnid in self.reversible else Reaction.Right
-        left = ((compound, -value) for compound, value in self.reactions[rxnid].iteritems() if value < 0)
-        right = ((compound, value) for compound, value in self.reactions[rxnid].iteritems() if value > 0)
+        left = ((compound, -value) for compound, value in self._reactions[rxnid].iteritems() if value < 0)
+        right = ((compound, value) for compound, value in self._reactions[rxnid].iteritems() if value > 0)
         return Reaction(direction, left, right)
 
     def set_reaction(self, rxnid, reaction):
         # Overwrite previous reaction if the same id is used
-        if rxnid in self.reactions:
+        if rxnid in self._reactions:
             # Clean up compound to reaction mapping
-            for compound in self.reactions[rxnid]:
+            for compound in self._reactions[rxnid]:
                 self.compound_reactions[compound].remove(rxnid)
 
             self.reversible.discard(rxnid)
-            del self.reactions[rxnid]
+            del self._reactions[rxnid]
 
         # Add values to global (sparse) stoichiometric matrix
         # Compounds that occur on both sides will get a stoichiometric
         # value based on the sum of the signed values on each side.
         for compound, value in reaction.compounds:
-            if compound not in self.reactions[rxnid] and value != 0:
-                self.reactions[rxnid][compound] = 0
+            if compound not in self._reactions[rxnid] and value != 0:
+                self._reactions[rxnid][compound] = 0
                 self.compound_reactions[compound].add(rxnid)
         for compound, value in reaction.left:
-            self.reactions[rxnid][compound] -= value
+            self._reactions[rxnid][compound] -= value
         for compound, value in reaction.right:
-            self.reactions[rxnid][compound] += value
+            self._reactions[rxnid][compound] += value
 
         if reaction.direction != '=>':
             self.reversible.add(rxnid)
@@ -304,7 +323,7 @@ class MetabolicModel(object):
             raise Exception('Model reaction does not reference a database reaction: {}'.format(reaction))
 
         self._reaction_set.add(reaction)
-        for compound, value in self._database.reactions[reaction].iteritems():
+        for compound, value in self._database._reactions[reaction].iteritems():
             self._compound_set.add(compound)
 
     def remove_reaction(self, reaction):
@@ -319,7 +338,7 @@ class MetabolicModel(object):
 
         # Remove compound from compound_set if it is not referenced
         # by any other reactions in the model.
-        for compound, value in self._database.reactions[reaction].iteritems():
+        for compound, value in self._database._reactions[reaction].iteritems():
             if all(other_reaction not in self._reaction_set for other_reaction in self._database.compound_reactions[compound]):
                 self._compound_set.remove(compound)
 
@@ -330,7 +349,7 @@ class MetabolicModel(object):
         for rxnid in self._database.reactions:
             reaction = self._database.get_reaction(rxnid)
             if all(compound.compartment in compartments for compound, value in reaction.compounds):
-                if rxnid not in self.reactions:
+                if rxnid not in self._reaction_set:
                     added.add(rxnid)
                 self.add_reaction(rxnid)
 
@@ -357,7 +376,7 @@ class MetabolicModel(object):
                 else:
                     rxnid_ex = all_reactions[reaction_ex]
 
-            if rxnid_ex not in self.reactions:
+            if rxnid_ex not in self._reaction_set:
                 added.add(rxnid_ex)
             self.add_reaction(rxnid_ex)
 
@@ -389,7 +408,7 @@ class MetabolicModel(object):
                 else:
                     rxnid_tp = all_reactions[reaction_tp]
 
-            if rxnid_tp not in self.reactions:
+            if rxnid_tp not in self._reaction_set:
                 added.add(rxnid_tp)
             self.add_reaction(rxnid_tp)
 
