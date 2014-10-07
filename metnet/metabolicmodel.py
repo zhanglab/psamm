@@ -190,6 +190,13 @@ class MetabolicDatabase(object):
         pass
 
     @abc.abstractmethod
+    def has_reaction(self, reaction_id):
+        pass
+
+    @abc.abstractmethod
+    def is_reversible(self, reaction_id):
+        pass
+
     def get_reaction(self, reaction_id):
         pass
 
@@ -209,6 +216,12 @@ class DictDatabase(MetabolicDatabase):
     @property
     def compounds(self):
         return iter(self.compound_reactions)
+
+    def has_reaction(self, reaction_id):
+        return reaction_id in self._reactions
+
+    def is_reversible(self, reaction_id):
+        return reaction_id in self.reversible
 
     def get_reaction(self, rxnid):
         if rxnid not in self._reactions:
@@ -319,7 +332,7 @@ class MetabolicModel(object):
         if reaction in self._reaction_set:
             return
 
-        if reaction not in self._database.reactions:
+        if not self._database.has_reaction(reaction):
             raise Exception('Model reaction does not reference a database reaction: {}'.format(reaction))
 
         self._reaction_set.add(reaction)
@@ -369,7 +382,7 @@ class MetabolicModel(object):
         added = set()
         for compound in sorted(self.compounds):
             rxnid_ex = 'rxnex_'+compound.id
-            if rxnid_ex not in self._database.reactions:
+            if not self._database.has_reaction(rxnid_ex):
                 reaction_ex = Reaction(Reaction.Bidir, [(compound.in_compartment('e'), 1)], [])
                 if reaction_ex not in all_reactions:
                     self._database.set_reaction(rxnid_ex, reaction_ex)
@@ -400,7 +413,7 @@ class MetabolicModel(object):
                 continue
 
             rxnid_tp = 'rxntp_'+compound.id
-            if rxnid_tp not in self._database.reactions:
+            if not self._database.has_reaction(rxnid_tp):
                 reaction_tp = Reaction(Reaction.Bidir, [(compound.in_compartment('e'), 1)],
                                         [(compound, 1)])
                 if reaction_tp not in all_reactions:
