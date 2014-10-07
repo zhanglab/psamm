@@ -12,7 +12,7 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
 
     def setUp(self):
         # TODO use mock model instead of actual model
-        self.database = metabolicmodel.MetabolicDatabase()
+        self.database = metabolicmodel.DictDatabase()
         self.database.set_reaction('rxn_1', ModelSEED.parse('=> (2) |A|'))
         self.database.set_reaction('rxn_2', ModelSEED.parse('|A| <=> |B|'))
         self.database.set_reaction('rxn_3', ModelSEED.parse('|A| => |D|'))
@@ -116,7 +116,7 @@ class TestFastcoreTinyBiomassModel(unittest.TestCase):
 
     def setUp(self):
         # TODO use mock model instead of actual model
-        self.database = metabolicmodel.MetabolicDatabase()
+        self.database = metabolicmodel.DictDatabase()
         self.database.set_reaction('rxn_1', ModelSEED.parse('=> |A|'))
         self.database.set_reaction('rxn_2', ModelSEED.parse('(0.000001) |A| =>'))
         self.model = self.database.get_model(self.database.reactions)
@@ -138,7 +138,7 @@ class TestFlippingModel(unittest.TestCase):
 
     def setUp(self):
         # TODO use mock model instead of actual model
-        self.database = metabolicmodel.MetabolicDatabase()
+        self.database = metabolicmodel.DictDatabase()
         self.database.set_reaction('rxn_1', ModelSEED.parse('|A| <=>'))
         self.database.set_reaction('rxn_2', ModelSEED.parse('|A| <=> |B|'))
         self.database.set_reaction('rxn_3', ModelSEED.parse('|C| <=> |B|'))

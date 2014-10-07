@@ -176,6 +176,10 @@ class MetabolicReaction(object):
         return 'MetabolicReaction({}, {})'.format(repr(self.reversible), repr(self.metabolites))
 
 class MetabolicDatabase(object):
+    def __init__(self):
+        raise Exception('Abstract base class')
+
+class DictDatabase(MetabolicDatabase):
     '''Database of metabolic reactions'''
 
     def __init__(self):

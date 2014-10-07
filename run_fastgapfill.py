@@ -4,7 +4,7 @@ import argparse
 import csv
 from itertools import chain
 
-from metnet.metabolicmodel import MetabolicDatabase
+from metnet.metabolicmodel import DictDatabase
 from metnet.reaction import Reaction, Compound
 from metnet.fastcore import Fastcore
 from metnet.fluxanalysis import flux_balance
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     parser.add_argument('reaction', help='Reaction to maximize')
     args = parser.parse_args()
 
-    database = MetabolicDatabase.load_from_files(*args.database)
+    database = DictDatabase.load_from_files(*args.database)
     model = database.load_model_from_file(args.reactionlist)
 
     # Create fastcore object

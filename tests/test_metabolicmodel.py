@@ -7,7 +7,7 @@ from metnet.reaction import ModelSEED, Compound
 
 class TestMetabolicDatabase(unittest.TestCase):
     def setUp(self):
-        self.database = metabolicmodel.MetabolicDatabase()
+        self.database = metabolicmodel.DictDatabase()
         self.database.set_reaction('rxn_1', ModelSEED.parse('=> (2) |A|'))
         self.database.set_reaction('rxn_2', ModelSEED.parse('|A| <=> |B|'))
         self.database.set_reaction('rxn_3', ModelSEED.parse('|A| => |D|'))
@@ -22,7 +22,7 @@ class TestMetabolicDatabase(unittest.TestCase):
 class TestMetabolicModel(unittest.TestCase):
     def setUp(self):
         # TODO use mock database instead of actual database
-        self.database = metabolicmodel.MetabolicDatabase()
+        self.database = metabolicmodel.DictDatabase()
         self.database.set_reaction('rxn_1', ModelSEED.parse('=> (2) |A|'))
         self.database.set_reaction('rxn_2', ModelSEED.parse('|A| <=> |B|'))
         self.database.set_reaction('rxn_3', ModelSEED.parse('|A| => |D|'))
@@ -187,7 +187,7 @@ class TestMetabolicModel(unittest.TestCase):
 class TestMetabolicModelFlipableView(unittest.TestCase):
     def setUp(self):
         # TODO use mock database instead of actual database
-        self.database = metabolicmodel.MetabolicDatabase()
+        self.database = metabolicmodel.DictDatabase()
         self.database.set_reaction('rxn_1', ModelSEED.parse('=> (2) |A|'))
         self.database.set_reaction('rxn_2', ModelSEED.parse('|A| <=> |B|'))
         self.database.set_reaction('rxn_3', ModelSEED.parse('|A| => |D|'))

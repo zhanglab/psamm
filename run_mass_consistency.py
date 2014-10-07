@@ -3,7 +3,7 @@
 import argparse
 import csv
 
-from metnet.metabolicmodel import MetabolicDatabase
+from metnet.metabolicmodel import DictDatabase
 from metnet.massconsistency import MassConsistencyCheck
 
 if __name__ == '__main__':
@@ -19,7 +19,7 @@ if __name__ == '__main__':
                         help='Model definition')
     args = parser.parse_args()
 
-    database = MetabolicDatabase.load_from_files(*args.database)
+    database = DictDatabase.load_from_files(*args.database)
 
     # Load model from file if given, otherwise run on full database
     if args.reactionlist:

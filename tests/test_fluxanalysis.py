@@ -9,7 +9,7 @@ from metnet.reaction import ModelSEED
 
 class TestFluxBalance(unittest.TestCase):
     def setUp(self):
-        self.database = metabolicmodel.MetabolicDatabase()
+        self.database = metabolicmodel.DictDatabase()
         self.database.set_reaction('rxn_1', ModelSEED.parse('=> (2) |A|'))
         self.database.set_reaction('rxn_2', ModelSEED.parse('|A| <=> |B|'))
         self.database.set_reaction('rxn_3', ModelSEED.parse('|A| => |D|'))
@@ -44,7 +44,7 @@ class TestFluxBalance(unittest.TestCase):
 
 class TestNaiveConsistency(unittest.TestCase):
     def setUp(self):
-        self.database = metabolicmodel.MetabolicDatabase()
+        self.database = metabolicmodel.DictDatabase()
         self.database.set_reaction('rxn_1', ModelSEED.parse('=> (2) |A|'))
         self.database.set_reaction('rxn_2', ModelSEED.parse('|A| <=> |B|'))
         self.database.set_reaction('rxn_3', ModelSEED.parse('|A| => |D|'))

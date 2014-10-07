@@ -11,7 +11,7 @@ import argparse
 import re
 import operator
 
-from metnet.metabolicmodel import MetabolicDatabase
+from metnet.metabolicmodel import DictDatabase
 from metnet.formula import Formula, Radical
 from metnet.reaction import ModelSEED
 
@@ -29,7 +29,7 @@ if __name__ == '__main__':
                         help='Model definition')
     args = parser.parse_args()
 
-    database = MetabolicDatabase.load_from_files(*args.database)
+    database = DictDatabase.load_from_files(*args.database)
 
     # Load model from file if given, otherwise run on full database
     if args.reactionlist:
