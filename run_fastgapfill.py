@@ -90,7 +90,7 @@ if __name__ == '__main__':
     for rxnid, flux in sorted(flux_balance(model_induced, args.reaction)):
         reaction_class = 'Dbase'
         weight = weights.get(rxnid, 1)
-        if rxnid in model.reactions:
+        if model.has_reaction(rxnid):
             reaction_class = 'Model'
             weight = 0
         reaction = database.get_reaction(rxnid).translated_compounds(lambda x: compounds.get(x, x))

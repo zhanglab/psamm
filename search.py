@@ -52,6 +52,8 @@ if __name__ == '__main__':
 
     # Load reaction database
     database = DictDatabase.load_from_files(*args.database)
+    if args.model:
+        database = database.load_model_from_file(args.model)
 
     # Load compound information
     compounds = {}

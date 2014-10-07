@@ -43,7 +43,7 @@ class FluxBounds(object):
         try:
             return self._model._limits_lower[self._reaction]
         except KeyError:
-            return -self._model._v_max if self._model._database.is_reversible(self._reaction) else 0
+            return -self._model._v_max if self._model.is_reversible(self._reaction) else 0
 
     @lower.setter
     def lower(self, value):
@@ -144,15 +144,15 @@ class LimitsView(Mapping):
         return FluxBounds(self._model, reaction)
 
     def __getitem__(self, key):
-        if key not in self._model._reaction_set:
+        if not self._model.has_reaction(key):
             raise KeyError(key)
         return self._create_bounds(key)
 
     def __iter__(self):
-        return iter(self._model._reaction_set)
+        return self._model.reactions
 
     def __len__(self):
-        return len(self._model._reaction_set)
+        return sum(1 for _ in self._model.reactions)
 
 class MetabolicReaction(object):
     def __init__(self, reversible, metabolites):
@@ -315,7 +315,7 @@ class DictDatabase(MetabolicDatabase):
                 database.set_reaction(reaction_id, reaction)
         return database
 
-class MetabolicModel(object):
+class MetabolicModel(MetabolicDatabase):
     '''Represents a metabolic model containing a set of reactions
 
     The model contains a list of reactions referencing the reactions
@@ -340,6 +340,35 @@ class MetabolicModel(object):
     @property
     def compounds(self):
         return iter(self._compound_set)
+
+    def has_reaction(self, reaction_id):
+        return reaction_id in self._reaction_set
+
+    def get_reaction(self, reaction_id):
+        if reaction_id not in self._reaction_set:
+            raise ValueError('Reaction not in model: {}'.format(reaction_id))
+        return self._database.get_reaction(reaction_id)
+
+    def get_reaction_values(self, reaction_id):
+        '''Return stoichiometric values of reaction as a dictionary'''
+        if reaction_id not in self._reaction_set:
+            raise ValueError('Unknown reaction: {}'.format(repr(reaction_id)))
+        return self._database.get_reaction_values(reaction_id)
+
+    def get_compound_reactions(self, compound_id):
+        '''Iterate over all reaction ids the includes the given compound'''
+        if compound_id not in self._compound_set:
+            raise ValueError('Compound not in model: {}'.format(compound_id))
+
+        for reaction_id in self._database.get_compound_reactions(compound_id):
+            if reaction_id in self._reaction_set:
+                yield reaction_id
+
+    def is_reversible(self, reaction_id):
+        '''Whether the given reaction is reversible'''
+        if reaction_id not in self._reaction_set:
+            raise ValueError('Reaction not in model: {}'.format(reaction_id))
+        return self._database.is_reversible(reaction_id)
 
     def add_reaction(self, reaction_id):
         '''Add reaction to model'''
@@ -466,11 +495,6 @@ class MetabolicModel(object):
                     self.limits[reaction_id].bounds = float(lower), float(upper)
             else:
                 raise ValueError('Malformed reaction limit: {}'.format(fields))
-
-    @property
-    def reversible(self):
-        '''The set of reversible reactions'''
-        return self._database.reversible & self._reaction_set
 
     @property
     def matrix(self):

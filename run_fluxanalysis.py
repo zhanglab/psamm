@@ -37,7 +37,7 @@ if __name__ == '__main__':
             compounds[cpdid] = name
 
     reaction = args.reaction
-    if reaction not in model.reactions:
+    if not model.has_reaction(reaction):
         sys.stderr.write('Specified reaction is not in model: {}\n'.format(reaction))
         sys.exit(-1)
 
