@@ -14,7 +14,7 @@ if __name__ == '__main__':
     parser.add_argument('sbmlfile', type=argparse.FileType('r'), help='SBML file')
     args = parser.parse_args()
 
-    database = sbml.parse_sbml_file(args.sbmlfile)
+    database = sbml.SBMLDatabase(args.sbmlfile)
 
     for reaction in database.reactions:
         rx = database.get_reaction(reaction).normalized()
