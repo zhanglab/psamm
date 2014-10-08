@@ -83,3 +83,15 @@ class SBMLDatabase(MetabolicDatabase):
 
     def get_compound_reactions(self, compound):
         return self._database.get_compound_reactions(compound)
+
+    def get_reaction_notes_elements(self):
+        '''Yield tuples of reaction ids, and notes as ElementTree elements'''
+        for reaction in self._reactions.iterfind(sbml_name('reaction')):
+            reaction_id = reaction.get('id')
+            yield reaction_id, reaction.find(sbml_name('notes'))
+
+    def get_compound_notes_elements(self):
+        '''Yield tuples of compound ids, and notes as ElementTree elements'''
+        for compound in self._species.iterfind(sbml_name('species')):
+            compound_id = compound.get('id')
+            yield compound_id, compound.find(sbml_name('notes'))
