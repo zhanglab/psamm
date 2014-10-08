@@ -84,6 +84,13 @@ class SBMLDatabase(MetabolicDatabase):
     def get_compound_reactions(self, compound):
         return self._database.get_compound_reactions(compound)
 
+    def get_compound_name(self, compound):
+        '''Name of compound'''
+        if compound.name not in self._model_compounds:
+            raise ValueError('Unknown compound: {}'.format(compound))
+        name, comp = self._model_compounds[compound.name]
+        return name
+
     def get_reaction_notes_elements(self):
         '''Yield tuples of reaction ids, and notes as ElementTree elements'''
         for reaction in self._reactions.iterfind(sbml_name('reaction')):
