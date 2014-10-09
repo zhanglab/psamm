@@ -134,7 +134,8 @@ can be run using
 
 ``` shell
 $ ~/model_script/run_fluxanalysis.py --database ModelSEED_database.tsv \
-        --database custom_database.tsv rxn_list Biomass
+        --database custom_database.tsv \
+	--model rxn_list Biomass
 ```
 
 More options can be seen by running
@@ -156,7 +157,9 @@ programs:
 
 ``` shell
 $ ~/model_script/run_robustness.py --database ModelSEED_database.tsv \
-        --database custom_database.tsv rxn_list Biomass EX_Oxygen
+        --database custom_database.tsv \
+	--model rxn_list \
+	Biomass EX_Oxygen
 ```
 
 In the example above, the `Biomass` reaction will be maximized while the
@@ -181,7 +184,8 @@ The mass consistency check can also be run using
 
 ``` shell
 $ ~/model_script/run_fluxanalysis.py --database ModelSEED_database.tsv \
-        --database custom_database.tsv --compounds ModelSEED_cpds.tsv rxn_list
+        --database custom_database.tsv --compounds ModelSEED_cpds.tsv \
+	--model rxn_list
 ```
 
 In addition, the chemical formula of compounds can be used to more closely
@@ -190,7 +194,8 @@ following script
 
 ``` shell
 $ ~/model_script/check_formula_balance.py --database ModelSEED_database.tsv \
-        --database custom_database.tsv --compounds ModelSEED_cpds.tsv rxn_list
+        --database custom_database.tsv --compounds ModelSEED_cpds.tsv \
+	--model rxn_list
 ```
 
 For each inconsistent reaction, the reaction id will be printed followed by
