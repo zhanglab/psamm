@@ -8,7 +8,7 @@ from metnet.massconsistency import MassConsistencyCheck
 
 if __name__ == '__main__':
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Run mass consistency check on a model or database')
+    parser = argparse.ArgumentParser(description='Run mass consistency check on a database')
     parser.add_argument('--database', required=True, metavar='reactionfile', action='append',
                         type=argparse.FileType('r'), default=[],
                         help='Reaction definition list to use as database')
@@ -23,11 +23,9 @@ if __name__ == '__main__':
 
     database = DictDatabase.load_from_files(*args.database)
 
-    # Load model from file if given, otherwise run on full database
+    # Load subset of database from model definition, if given
     if args.reactionlist:
-        model = database.load_model_from_file(args.reactionlist)
-    else:
-        model = database.get_model(database.reactions)
+        database = database.load_model_from_file(args.reactionlist)
 
     # Load compound information
     compounds = {}
@@ -41,7 +39,7 @@ if __name__ == '__main__':
 
     # Create a set of known mass-inconsistent reactions
     exchange = set()
-    for reaction_id in model.reactions:
+    for reaction_id in database.reactions:
         rx = database.get_reaction(reaction_id)
         if len(rx.left) == 0 or len(rx.right) == 0:
             exchange.add(reaction_id)
@@ -57,9 +55,9 @@ if __name__ == '__main__':
     mass_consistency = MassConsistencyCheck()
     known_inconsistent = exclude | exchange
 
-    print 'Mass consistency on model (database)...'
+    print 'Mass consistency on database...'
     epsilon = 1e-5
-    compound_iter = mass_consistency.check_compound_consistency(model, known_inconsistent, zeromass)
+    compound_iter = mass_consistency.check_compound_consistency(database, known_inconsistent, zeromass)
 
     print 'Compound consistency...'
     good = 0
@@ -71,10 +69,10 @@ if __name__ == '__main__':
         print '{}: {}'.format(compound.translate(lambda x: compounds.get(x, x)), mass)
     print 'Consistent compounds: {}/{}'.format(good, total)
 
-    print 'Is consistent? {}'.format(mass_consistency.is_consistent(model, known_inconsistent, zeromass))
+    print 'Is consistent? {}'.format(mass_consistency.is_consistent(database, known_inconsistent, zeromass))
 
     print 'Reaction consistency...'
-    reaction_iter, compound_iter = mass_consistency.check_reaction_consistency(model, known_inconsistent, zeromass)
+    reaction_iter, compound_iter = mass_consistency.check_reaction_consistency(database, known_inconsistent, zeromass)
     for reaction_id, residual in sorted(reaction_iter, key=lambda x: abs(x[1]), reverse=True):
         if abs(residual) >= epsilon:
             reaction = database.get_reaction(reaction_id).translated_compounds(lambda x: compounds.get(x, x))

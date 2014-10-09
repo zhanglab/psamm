@@ -1,12 +1,12 @@
 
-'''Mass consistency analysis of metabolic models
+'''Mass consistency analysis of metabolic databases
 
 A stoichiometric matrix, S, is said to be mass-consistent if
 S^Tm = 0 has a positive solution (m_i > 0). This corresponds to
 assigning a positive mass to each compound in the stoichiometric
 matrix and having each reaction preserve mass. Exchange reactions
 will have to be excluded from this check, as they are not able to
-preserve mass (by definition). In addition some models may contain
+preserve mass (by definition). In addition some databases may contain
 pseudo-compounds (e.g. "photon") that also has to be excluded.'''
 
 import cplex
@@ -17,18 +17,18 @@ class MassConsistencyCheck(object):
     def __init__(self, solver=lpsolver.CplexSolver()):
         self._solver = solver
 
-    def _non_localized_compounds(self, model):
-        '''Return set of non-localized compounds in model (i.e. in compartment None)'''
-        return set(compound.in_compartment(None) for compound in model.compounds)
+    def _non_localized_compounds(self, database):
+        '''Return set of non-localized compounds in database (i.e. in compartment None)'''
+        return set(compound.in_compartment(None) for compound in database.compounds)
 
-    def is_consistent(self, model, exchange=set(), zeromass=set()):
+    def is_consistent(self, database, exchange=set(), zeromass=set()):
         '''Try to assign a positive mass to each compound and return True on success
 
         The masses are simply constrained by m_i > 1 and finding a solution
-        under these conditions proves that the model is mass consistent.'''
+        under these conditions proves that the database is mass consistent.'''
 
         prob = self._solver.create_problem()
-        compound_set = self._non_localized_compounds(model)
+        compound_set = self._non_localized_compounds(database)
 
         # Define mass variables
         for compound in compound_set:
@@ -36,8 +36,8 @@ class MassConsistencyCheck(object):
         prob.set_linear_objective(sum(prob.var('m_'+compound.id) for compound in compound_set))
 
         # Define constraints
-        massbalance_lhs = { reaction: 0 for reaction in model.reactions }
-        for spec, value in model.matrix.iteritems():
+        massbalance_lhs = { reaction: 0 for reaction in database.reactions }
+        for spec, value in database.matrix.iteritems():
             compound, reaction = spec
             massbalance_lhs[reaction] += prob.var('m_'+compound.in_compartment(None).id) * value
         for reaction, lhs in massbalance_lhs.iteritems():
@@ -49,7 +49,7 @@ class MassConsistencyCheck(object):
 
         return status == 1
 
-    def check_reaction_consistency(self, model, exchange=set(), zeromass=set(), weights={}):
+    def check_reaction_consistency(self, database, exchange=set(), zeromass=set(), weights={}):
         '''Check inconsistent reactions by minimizing mass residuals for each reaction
 
         Returns a reaction iterable, and compound iterable. The
@@ -63,25 +63,25 @@ class MassConsistencyCheck(object):
 
         # Create Flux balance problem
         prob = self._solver.create_problem()
-        compound_set = self._non_localized_compounds(model)
+        compound_set = self._non_localized_compounds(database)
 
         # Define mass variables
         for compound in compound_set:
             prob.define('m_'+compound.id, lower=(0 if compound in zeromass else 1))
 
         # Define residual mass variables and objective constriants
-        prob.define(*('z_'+reaction_id for reaction_id in model.reactions), lower=0)
-        prob.define(*('r_'+reaction_id for reaction_id in model.reactions))
+        prob.define(*('z_'+reaction_id for reaction_id in database.reactions), lower=0)
+        prob.define(*('r_'+reaction_id for reaction_id in database.reactions))
 
-        objective = sum(prob.var('z_'+reaction_id) * weights.get(reaction_id, 1) for reaction_id in model.reactions)
+        objective = sum(prob.var('z_'+reaction_id) * weights.get(reaction_id, 1) for reaction_id in database.reactions)
         prob.set_linear_objective(objective)
 
-        r = prob.set('r_'+reaction_id for reaction_id in model.reactions)
-        z = prob.set('z_'+reaction_id for reaction_id in model.reactions)
+        r = prob.set('r_'+reaction_id for reaction_id in database.reactions)
+        z = prob.set('z_'+reaction_id for reaction_id in database.reactions)
         prob.add_linear_constraints(z >= r, r >= -z)
 
-        massbalance_lhs = { reaction_id: 0 for reaction_id in model.reactions }
-        for spec, value in model.matrix.iteritems():
+        massbalance_lhs = { reaction_id: 0 for reaction_id in database.reactions }
+        for spec, value in database.matrix.iteritems():
             compound, reaction_id = spec
             massbalance_lhs[reaction_id] += prob.var('m_'+compound.in_compartment(None).id) * value
         for reaction_id, lhs in massbalance_lhs.iteritems():
@@ -96,7 +96,7 @@ class MassConsistencyCheck(object):
             raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
         def iterate_reactions():
-            for reaction_id in model.reactions:
+            for reaction_id in database.reactions:
                 residual = prob.get_value('r_'+reaction_id)
                 yield reaction_id, residual
 
@@ -106,8 +106,8 @@ class MassConsistencyCheck(object):
 
         return iterate_reactions(), iterate_compounds()
 
-    def check_compound_consistency(self, model, exchange=set(), zeromass=set()):
-        '''Yield each compound in the model with assigned mass
+    def check_compound_consistency(self, database, exchange=set(), zeromass=set()):
+        '''Yield each compound in the database with assigned mass
 
         Each compound will be assigned a mass and the number of compounds
         having a positive mass will be approximately maximized.
@@ -122,7 +122,7 @@ class MassConsistencyCheck(object):
 
         # Create mass balance problem
         prob = self._solver.create_problem()
-        compound_set = self._non_localized_compounds(model)
+        compound_set = self._non_localized_compounds(database)
 
         # Define mass variables
         prob.define(*('m_'+compound.id for compound in compound_set), lower=0)
@@ -135,8 +135,8 @@ class MassConsistencyCheck(object):
         m = prob.set('m_'+compound.id for compound in compound_set)
         prob.add_linear_constraints(m >= z)
 
-        massbalance_lhs = { reaction_id: 0 for reaction_id in model.reactions }
-        for spec, value in model.matrix.iteritems():
+        massbalance_lhs = { reaction_id: 0 for reaction_id in database.reactions }
+        for spec, value in database.matrix.iteritems():
             compound, reaction_id = spec
             massbalance_lhs[reaction_id] += prob.var('m_'+compound.in_compartment(None).id) * value
         for reaction_id, lhs in massbalance_lhs.iteritems():
