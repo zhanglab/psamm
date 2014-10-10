@@ -52,7 +52,7 @@ class ConsoleCommand(Command):
         readline.set_completer(rlcompleter.Completer(kwargs).complete)
         readline.parse_and_bind('tab: complete')
         console = InteractiveConsole(kwargs)
-        console.interact('Metabolic model has been loaded into "model", "database" and "compounds".')
+        console.interact('Metabolic model has been loaded into "model" and "compounds".')
 
 class FastGapFillCommand(Command):
     '''Run FastGapFill algorithm on a metabolic model'''
@@ -68,7 +68,7 @@ class FastGapFillCommand(Command):
                             help='List of penalty scores for database reactions')
         parser.add_argument('reaction', help='Reaction to maximize')
 
-    def __call__(self, database, model, compounds=[], **kwargs):
+    def __call__(self, model, compounds=[], **kwargs):
         '''Run FastGapFill command'''
 
         if model is None:
@@ -155,7 +155,7 @@ class FluxAnalysisCommand(Command):
                             help='Optional limits on flux of reactions')
         parser.add_argument('reaction', help='Reaction to maximize')
 
-    def __call__(self, database, model, compounds=[], **kwargs):
+    def __call__(self, model, compounds=[], **kwargs):
         '''Run flux analysis command'''
 
         if model is None:
@@ -188,7 +188,7 @@ class FluxAnalysisCommand(Command):
         for rxnid, flux in sorted(fmin_fluxes.iteritems()):
             if fba_fluxes[rxnid] - epsilon > flux:
                 count += 1
-            rx = database.get_reaction(rxnid)
+            rx = model.get_reaction(rxnid)
             print '{}\t{}\t{}\t{}'.format(rxnid, fba_fluxes[rxnid], flux,
                                             rx.translated_compounds(lambda x: compound_name.get(x, x)))
         print 'Maximum flux: {}'.format(optimum)
@@ -204,7 +204,7 @@ class FormulaBalanceCommand(Command):
     name = 'formulacheck'
     title = 'Check formula balance on a model or database'
 
-    def __call__(self, database, model, compounds):
+    def __call__(self, model, compounds):
         '''Run formula balance command'''
 
         # Mapping from compound id to formula
@@ -228,8 +228,8 @@ class FormulaBalanceCommand(Command):
 
         # Create a set of known mass-inconsistent reactions
         exchange = set()
-        for rxnid in database.reactions:
-            rx = database.get_reaction(rxnid)
+        for rxnid in model.reactions:
+            rx = model.get_reaction(rxnid)
             if len(rx.left) == 0 or len(rx.right) == 0:
                 exchange.add(rxnid)
 
@@ -237,9 +237,9 @@ class FormulaBalanceCommand(Command):
             for compound, count in compound_list:
                 yield count * compound_formula.get(compound.name, Formula())
 
-        for reaction in database.reactions:
+        for reaction in model.reactions:
             if reaction not in exchange:
-                rx = database.get_reaction(reaction)
+                rx = model.get_reaction(reaction)
                 left_form = reduce(operator.or_, multiply_formula(rx.left), Formula())
                 right_form = reduce(operator.or_, multiply_formula(rx.right), Formula())
 
@@ -253,7 +253,7 @@ class GapFillCommand(Command):
     name = 'gapfill'
     title = 'Run GapFind and GapFill on a metabolic model'
 
-    def __call__(self, database, model, compounds=[]):
+    def __call__(self, model, compounds=[]):
         '''Run GapFill command'''
 
         if model is None:
@@ -307,7 +307,7 @@ class MassConsistencyCommand(Command):
         parser.add_argument('--exclude', metavar='reaction', action='append',
                             type=str, default=[], help='Exclude reaction from mass consistency')
 
-    def __call__(self, database, model, compounds=[], **kwargs):
+    def __call__(self, model, compounds=[], **kwargs):
         # Load compound information
         compound_name = {}
         for compound_table in compounds:
@@ -316,8 +316,8 @@ class MassConsistencyCommand(Command):
 
         # Create a set of known mass-inconsistent reactions
         exchange = set()
-        for reaction_id in database.reactions:
-            rx = database.get_reaction(reaction_id)
+        for reaction_id in model.reactions:
+            rx = model.get_reaction(reaction_id)
             if len(rx.left) == 0 or len(rx.right) == 0:
                 exchange.add(reaction_id)
 
@@ -334,7 +334,7 @@ class MassConsistencyCommand(Command):
 
         print 'Mass consistency on database...'
         epsilon = 1e-5
-        compound_iter = mass_consistency.check_compound_consistency(database, known_inconsistent, zeromass)
+        compound_iter = mass_consistency.check_compound_consistency(model, known_inconsistent, zeromass)
 
         print 'Compound consistency...'
         good = 0
@@ -346,13 +346,13 @@ class MassConsistencyCommand(Command):
             print '{}: {}'.format(compound.translate(lambda x: compound_name.get(x, x)), mass)
         print 'Consistent compounds: {}/{}'.format(good, total)
 
-        print 'Is consistent? {}'.format(mass_consistency.is_consistent(database, known_inconsistent, zeromass))
+        print 'Is consistent? {}'.format(mass_consistency.is_consistent(model, known_inconsistent, zeromass))
 
         print 'Reaction consistency...'
-        reaction_iter, compound_iter = mass_consistency.check_reaction_consistency(database, known_inconsistent, zeromass)
+        reaction_iter, compound_iter = mass_consistency.check_reaction_consistency(model, known_inconsistent, zeromass)
         for reaction_id, residual in sorted(reaction_iter, key=lambda x: abs(x[1]), reverse=True):
             if abs(residual) >= epsilon:
-                reaction = database.get_reaction(reaction_id).translated_compounds(lambda x: compound_name.get(x, x))
+                reaction = model.get_reaction(reaction_id).translated_compounds(lambda x: compound_name.get(x, x))
                 print '{}\t{}\t{}'.format(reaction_id, residual, reaction)
 
 class RobustnessCommand(Command):
@@ -380,7 +380,7 @@ class RobustnessCommand(Command):
         parser.add_argument('reaction', help='Reaction to maximize')
         parser.add_argument('varying', help='Reaction to vary')
 
-    def __call__(self, database, model, compounds=[], **kwargs):
+    def __call__(self, model, compounds=[], **kwargs):
         '''Run flux analysis command'''
 
         if model is None:
@@ -460,7 +460,7 @@ class SearchCommand(Command):
         parser_reaction.add_argument('--compound', '-c', dest='compound', metavar='compound', type=str,
                                         default=[], action='append', help='Comma-separated list of compound IDs')
 
-    def __call__(self, database, model, compounds=[], **kwargs):
+    def __call__(self, model, compounds=[], **kwargs):
         '''Run search command'''
 
         def parse_compound(s):
@@ -514,16 +514,16 @@ class SearchCommand(Command):
         elif which_command == 'reaction':
             reaction_ids = []
             for reaction_id in kwargs['id']:
-                if reaction_id in database.reactions:
+                if reaction_id in model.reactions:
                     reaction_ids.append(reaction_id)
             for compound_list in kwargs['compound']:
                 matched_reactions = None
                 for compound_spec in compound_list.split(','):
                     compound = parse_compound(compound_spec.strip())
                     if matched_reactions is None:
-                        matched_reactions = set(database.get_compound_reactions(compound))
+                        matched_reactions = set(model.get_compound_reactions(compound))
                     else:
-                        matched_reactions &= database.compound_reactions.get(compound, set())
+                        matched_reactions &= model.compound_reactions.get(compound, set())
                 if matched_reactions is not None:
                     reaction_ids.extend(matched_reactions)
 
@@ -531,8 +531,8 @@ class SearchCommand(Command):
             for reaction_id in reaction_ids:
                 print 'ID: {}'.format(reaction_id)
 
-                reaction = database.get_reaction(reaction_id)
-                print 'Reaction (IDs): {}'.format(database.get_reaction(reaction_id))
+                reaction = model.get_reaction(reaction_id)
+                print 'Reaction (IDs): {}'.format(model.get_reaction(reaction_id))
                 translated_reaction = reaction.translated_compounds(lambda x: compound_name.get(x, x))
                 if reaction != translated_reaction:
                     print 'Reaction (names): {}'.format(translated_reaction)
@@ -589,15 +589,16 @@ def main(command=None):
         sys.exit(-1)
 
     database = DictDatabase.load_from_files(*args.database)
-    model = None
     if args.model is not None:
         # Set database and model to the database subset
-        database = database.load_model_from_file(args.model[0])
-        model = database
+        model = database.load_model_from_file(args.model[0])
+    else:
+        # Build model from all database reactions
+        model = database.get_model(database.reactions)
 
     compounds = args.compounds
 
     # Call command
     arg_filter = ('database', 'compounds', 'model', 'command')
     kwargs = { key: value for key, value in vars(args).iteritems() if key not in arg_filter }
-    command(database=database, model=model, compounds=compounds, **kwargs)
+    command(model=model, compounds=compounds, **kwargs)
