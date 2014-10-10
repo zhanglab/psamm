@@ -514,10 +514,14 @@ class SearchCommand(Command):
                 print
 
 
-def main(command):
+def main(command=None):
     '''Run the command line interface with the given Command'''
 
-    parser = argparse.ArgumentParser(description=command.title)
+    title = 'Metabolic modeling tools'
+    if command is not None:
+        title = command.title
+
+    parser = argparse.ArgumentParser(description=title)
     parser.add_argument('--database', metavar='file', action='append',
                         type=argparse.FileType('r'), default=[],
                         help='Files to use as reaction database')
@@ -528,8 +532,30 @@ def main(command):
                         type=argparse.FileType('r'),
                         help='File to use as model definition (database subset)')
 
-    command.init_parser(parser)
+    if command is not None:
+        # Command explicitly given, only allow that command
+        command.init_parser(parser)
+        parser.set_defaults(command=command)
+    else:
+        # Allow all commands as subcommands
+        subcommands = {
+            'fastgapfill': FastGapFillCommand(),
+            'fba': FluxAnalysisCommand(),
+            'formulacheck': FormulaBalanceCommand(),
+            'gapfill': GapFillCommand(),
+            'masscheck': MassConsistencyCommand(),
+            'robustness': RobustnessCommand(),
+            'search': SearchCommand()
+        }
+
+        subparsers = parser.add_subparsers(title='Command')
+        for name, command in sorted(subcommands.iteritems()):
+            subparser = subparsers.add_parser(name, help=command.title)
+            subparser.set_defaults(command=command)
+            command.init_parser(subparser)
+
     args = parser.parse_args()
+    command = args.command
 
     # Load reaction database from file
     database = DictDatabase.load_from_files(*args.database)
