@@ -3,12 +3,12 @@
 '''Search the database of reactions or compounds'''
 
 import argparse
-import csv
 import re
 
 from metnet.reaction import Compound
 from metnet.metabolicmodel import DictDatabase
 from metnet.formula import Formula
+from metnet import modelseed
 
 def parse_compound(s):
     '''Parse a compound specification with optional compartment'''
@@ -61,32 +61,16 @@ if __name__ == '__main__':
     compound_formula = {}
     compound_for_name = {}
     for compound_table in args.compounds:
-        compound_table.readline() # Skip header
-        for row in csv.reader(compound_table, delimiter='\t'):
-            compound_id, names, formula = row[:3]
+        for compound in modelseed.parse_compound_file(compound_table):
+            compounds[compound.id] = compound.name if compound.name is not None else compound.id
+            compound_synonyms[compound.id] = compound.names
 
-            synonyms = names.split(',<br>')
-            name = synonyms.pop()
-
-            compounds[compound_id] = name
-            compound_synonyms[compound_id] = synonyms
-
-            for n in synonyms + [name]:
+            for n in compound.names:
                 n = filter_search_term(n)
-                compound_for_name[n] = compound_id
+                compound_for_name[n] = compound.id
 
-            # ModelSEED sometimes uses an asterisk and number at
-            # the end of formulas. This seems to have a similar
-            # meaning as '(...)n'.
-            m = re.match(r'^(.*)\*(\d*)$', formula)
-            if m is not None:
-                if m.group(2) != '':
-                    formula = '({}){}'.format(m.group(1), m.group(2))
-                else:
-                    formula = '({})n'.format(m.group(1))
-
-            if formula.strip() != '' and formula != 'noformula' and not '.' in formula:
-                compound_formula[compound_id] = Formula.parse(formula)
+            if compound.formula is not None and not '.' in compound.formula:
+                compound_formula[compound.id] = Formula.parse(compound.formula)
 
     if args.which == 'compound':
         compound_ids = []

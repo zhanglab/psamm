@@ -10,10 +10,10 @@ minimum and maximum flux value specified in the model.'''
 
 import sys
 import argparse
-import csv
 
 from metnet.metabolicmodel import DictDatabase
 from metnet.fluxanalysis import flux_balance, flux_minimization
+from metnet import modelseed
 
 if __name__ == '__main__':
     # Parse command line arguments
@@ -44,12 +44,8 @@ if __name__ == '__main__':
     # Load compound information
     compounds = {}
     for compound_table in args.compounds:
-        compound_table.readline() # Skip header
-        for row in csv.reader(compound_table, delimiter='\t'):
-            cpdid, names = row[:2]
-            synonyms = names.split(',<br>')
-            name = synonyms.pop()
-            compounds[cpdid] = name
+        for compound in modelseed.parse_compound_file(compound_table):
+            compounds[compound.id] = compound.name if compound.name is not None else compound.id
 
     reaction = args.reaction
     if not model.has_reaction(reaction):

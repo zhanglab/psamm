@@ -6,7 +6,6 @@ Balanced reactions are those reactions where the number of atoms
 is consistent on the left and right side of the reaction equation.
 Reactions that are not balanced will be printed out.'''
 
-import csv
 import argparse
 import re
 import operator
@@ -14,6 +13,7 @@ import operator
 from metnet.metabolicmodel import DictDatabase
 from metnet.formula import Formula, Radical
 from metnet.reaction import ModelSEED
+from metnet import modelseed
 
 # Main program
 if __name__ == '__main__':
@@ -40,32 +40,21 @@ if __name__ == '__main__':
     # Mapping from compound id to formula
     compound_formula = {}
     for compound_table in args.compounds:
-        compound_table.readline() # Skip header
-        for row in csv.reader(compound_table, delimiter='\t'):
-            compound_id, names, formula = row[:3]
-
-            # ModelSEED sometimes uses an asterisk and number at
-            # the end of formulas. This seems to have a similar
-            # meaning as '(...)n'.
-            m = re.match(r'^(.*)\*(\d*)$', formula)
-            if m is not None:
-                if m.group(2) != '':
-                    formula = '({}){}'.format(m.group(1), m.group(2))
-                else:
-                    formula = '({})n'.format(m.group(1))
-
+        for compound in modelseed.parse_compound_file(compound_table):
             # Create pseudo-radical group for compounds with
             # missing formula, so they don't match up. Only
             # cpd11632 (Photon) is allowed to have an empty formula.
-            if ((formula.strip() == '' and compound_id != 'cpd11632') or
-                formula == 'noformula' or '.' in formula):
-                f = Formula({Radical('R'+compound_id): 1})
+            if compound.formula is None or '.' in compound.formula:
+                if compound.id != 'cpd11632':
+                    f = Formula({Radical('R'+compound.id): 1})
+                else:
+                    f = Formula()
             else:
                 try:
-                    f = Formula.parse(formula).flattened()
+                    f = Formula.parse(compound.formula).flattened()
                 except ValueError as e:
-                    print 'Error in {}: {}'.format(formula, e)
-            compound_formula[compound_id] = f
+                    print 'Error parsing {}: {}'.format(compound.formula, e)
+            compound_formula[compound.id] = f
 
     # Create a set of known mass-inconsistent reactions
     exchange = set()
