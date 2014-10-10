@@ -21,6 +21,13 @@ class CompoundEntry(object):
         return self._id
 
     @property
+    def name(self):
+        try:
+            return next(self.names)
+        except StopIteration:
+            return None
+
+    @property
     def names(self):
         if 'name' in self.values:
             for line in self.values['name']:
