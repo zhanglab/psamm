@@ -584,6 +584,10 @@ def main(command=None):
     command = args.command
 
     # Load reaction database from file
+    if len(args.database) == 0:
+        sys.stderr.write('No database provided. Use --help for more information.\n')
+        sys.exit(-1)
+
     database = DictDatabase.load_from_files(*args.database)
     model = None
     if args.model is not None:
