@@ -18,22 +18,14 @@ from . import lpsolver, modelseed
 class Command(object):
     '''Represents a command in the interface, operating on a model or database
 
-    Subclasses must implement __call__ to handle command execution. Arguments
-    will be given as keyword arguments. The keywords database, model and
-    compounds will be set.
+    Subclasses must define name and title as class attributes, and implement
+    __call__ to handle command execution. Arguments will be given as keyword
+    arguments. The keywords database, model and compounds will be set.
 
     In addition, init_parser() can be implemented which will allow the
     command to initialize an instance of ArgumentParser as desired. The
     resulting arguments will be given as keyword arguments to __call__.
     '''
-
-    def __init__(self, title=None):
-        self._title = title
-
-    @property
-    def title(self):
-        '''Command title'''
-        return self._title
 
     def init_parser(self, parser):
         '''Initialize command line parser (argparse.ArgumentParser)'''
@@ -46,8 +38,8 @@ class Command(object):
 class ConsoleCommand(Command):
     '''Start an interactive Python console with the given model loaded'''
 
-    def __init__(self):
-        super(ConsoleCommand, self).__init__('Start Python console with metabolic model loaded')
+    name = 'console'
+    title = 'Start Python console with metabolic model loaded'
 
     def __call__(self, **kwargs):
         # Importing readline will in some cases print weird escape
@@ -63,8 +55,10 @@ class ConsoleCommand(Command):
         console.interact('Metabolic model has been loaded into "model", "database" and "compounds".')
 
 class FastGapFillCommand(Command):
-    def __init__(self):
-        super(FastGapFillCommand, self).__init__('Run FastGapFill on a metabolic model')
+    '''Run FastGapFill algorithm on a metabolic model'''
+
+    name = 'fastgapfill'
+    title = 'Run FastGapFill on a metabolic model'
 
     def init_parser(self, parser):
         parser.add_argument('--limits', metavar='file', action='append',
@@ -150,8 +144,10 @@ class FastGapFillCommand(Command):
         print 'Removed: |R| = {}, R = {}'.format(len(removed_reactions), removed_reactions)
 
 class FluxAnalysisCommand(Command):
-    def __init__(self):
-        super(FluxAnalysisCommand, self).__init__('Run flux analysis on a metabolic model')
+    '''Run FBA and flux minimization on a metabolic model'''
+
+    name = 'fba'
+    title = 'Run FBA and flux minimization on a metabolic model'
 
     def init_parser(self, parser):
         parser.add_argument('--limits', metavar='limitsfile', action='append',
@@ -199,8 +195,14 @@ class FluxAnalysisCommand(Command):
         print 'Minimized reactions: {}'.format(count)
 
 class FormulaBalanceCommand(Command):
-    def __init__(self):
-        super(FormulaBalanceCommand, self).__init__('Check formula balance on a model or database')
+    '''Check whether reactions in a given database or model are balanced
+
+    Balanced reactions are those reactions where the number of atoms
+    is consistent on the left and right side of the reaction equation.
+    Reactions that are not balanced will be printed out.'''
+
+    name = 'formulacheck'
+    title = 'Check formula balance on a model or database'
 
     def __call__(self, database, model, compounds):
         '''Run formula balance command'''
@@ -246,8 +248,10 @@ class FormulaBalanceCommand(Command):
                     print '{}\t{}\t{}\t{}\t{}'.format(reaction, left_form, right_form, left_missing, right_missing)
 
 class GapFillCommand(Command):
-    def __init__(self):
-        super(GapFillCommand, self).__init__('Run GapFind and GapFill on a metabolic model')
+    '''Command that runs GapFind and GapFill on a metabolic model'''
+
+    name = 'gapfill'
+    title = 'Run GapFind and GapFill on a metabolic model'
 
     def __call__(self, database, model, compounds=[]):
         '''Run GapFill command'''
@@ -294,8 +298,10 @@ class GapFillCommand(Command):
             print 'No blocked compounds found'
 
 class MassConsistencyCommand(Command):
-    def __init__(self):
-        super(MassConsistencyCommand, self).__init__('Run mass consistency check on a database')
+    '''Command that checks whether a database is mass consistent'''
+
+    name = 'masscheck'
+    title = 'Run mass consistency check on a database'
 
     def init_parser(self, parser):
         parser.add_argument('--exclude', metavar='reaction', action='append',
@@ -358,8 +364,8 @@ class RobustnessCommand(Command):
     be fixed at the specified number of steps between the
     minimum and maximum flux value specified in the model.'''
 
-    def __init__(self):
-        super(RobustnessCommand, self).__init__('Run robustness analysis on a metabolic model')
+    name = 'robustness'
+    title = 'Run robustness analysis on a metabolic model'
 
     def init_parser(self, parser):
         parser.add_argument('--limits', metavar='limitsfile', action='append',
@@ -431,8 +437,8 @@ class RobustnessCommand(Command):
 class SearchCommand(Command):
     '''Defines the search command'''
 
-    def __init__(self):
-        super(SearchCommand, self).__init__('Search the database of reactions or compounds')
+    name = 'search'
+    title = 'Search the database of reactions or compounds'
 
     def init_parser(self, parser):
         '''Initialize argument parser'''
@@ -556,21 +562,21 @@ def main(command=None):
         command.init_parser(parser)
         parser.set_defaults(command=command)
     else:
-        # Allow all commands as subcommands
-        subcommands = {
-            'console': ConsoleCommand(),
-            'fastgapfill': FastGapFillCommand(),
-            'fba': FluxAnalysisCommand(),
-            'formulacheck': FormulaBalanceCommand(),
-            'gapfill': GapFillCommand(),
-            'masscheck': MassConsistencyCommand(),
-            'robustness': RobustnessCommand(),
-            'search': SearchCommand()
-        }
+        # Discover all available commands
+        commands = {}
+        for command_class in Command.__subclasses__():
+            command_name = getattr(command_class, 'name', None)
+            if command_name is not None and command_name not in commands:
+                try:
+                    commands[command_name] = command_class.title, command_class()
+                except:
+                    pass
 
+        # Create parsers for subcommands
         subparsers = parser.add_subparsers(title='Command')
-        for name, command in sorted(subcommands.iteritems()):
-            subparser = subparsers.add_parser(name, help=command.title)
+        for name, values in sorted(commands.iteritems()):
+            title, command = values
+            subparser = subparsers.add_parser(name, help=title)
             subparser.set_defaults(command=command)
             command.init_parser(subparser)
 
