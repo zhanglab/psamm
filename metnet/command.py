@@ -43,6 +43,25 @@ class Command(object):
         '''Execute command'''
         pass
 
+class ConsoleCommand(Command):
+    '''Start an interactive Python console with the given model loaded'''
+
+    def __init__(self):
+        super(ConsoleCommand, self).__init__('Start Python console with metabolic model loaded')
+
+    def __call__(self, **kwargs):
+        # Importing readline will in some cases print weird escape
+        # characters to stdout. To avoid this we only import readline
+        # and related packages at this point when we are certain
+        # they are needed.
+        from code import InteractiveConsole
+        import readline, rlcompleter
+
+        readline.set_completer(rlcompleter.Completer(kwargs).complete)
+        readline.parse_and_bind('tab: complete')
+        console = InteractiveConsole(kwargs)
+        console.interact('Metabolic model has been loaded into "model", "database" and "compounds".')
+
 class FastGapFillCommand(Command):
     def __init__(self):
         super(FastGapFillCommand, self).__init__('Run FastGapFill on a metabolic model')
@@ -539,6 +558,7 @@ def main(command=None):
     else:
         # Allow all commands as subcommands
         subcommands = {
+            'console': ConsoleCommand(),
             'fastgapfill': FastGapFillCommand(),
             'fba': FluxAnalysisCommand(),
             'formulacheck': FormulaBalanceCommand(),
