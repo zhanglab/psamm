@@ -13,6 +13,8 @@ $/home/ying/model/model_script/make_rxn_table.pl /home/ying/model/Cjr/Cjr_networ
 GapFind/GapFill
 ---------------
 
+### GAMS-based
+
 The scripts in this repository can be used to convert a definition of reactions
 of an organism model into a problem that can be solved by GAMS. The organism
 definition is simply a list of reaction ids, identifying which reactions from
@@ -79,7 +81,7 @@ available. Lastly, we can add any number of additional database files.
 ``` shell
 $ ~/model_script/export_gapfind_parameters.py --exchange --transport \
 	--database ModelSEED_database.tsv \
-        --database custom_database.tsv rxn_list
+    --database custom_database.tsv rxn_list
 ```
 
 This command will recreate the output files with the additional reactions
@@ -95,6 +97,17 @@ of reactions that had to be added from the database.
 
 ``` shell
 $ ~/model_script/parse_gapfill.py GapFill.lst
+```
+
+### Python/Cplex-based
+
+In addition to the GAMS-based implementation described above, the GapFind and GapFill algorithms
+have been implemented as a Cplex-based script. This implementation has not been tested as
+extensively. It can be run using
+
+``` shell
+$ ~/model_script/model.py --database database.tsv --compounds compounds.tsv \
+	--model model.tsv gapfill
 ```
 
 Flux balance analysis
@@ -133,33 +146,30 @@ used to define the exchange reaction limits with the `--limits` option. This met
 can be run using
 
 ``` shell
-$ ~/model_script/run_fluxanalysis.py --database ModelSEED_database.tsv \
-        --database custom_database.tsv \
-	--model rxn_list Biomass
+$ ~/model_script/model.py --database database.tsv --compounds compounds.tsv \
+	--model model.tsv fba --limits limits.tsv Biomass
 ```
 
 More options can be seen by running
 
 ``` shell
-$ ~/model_script/run_fluxanalysis.py --help
+$ ~/model_script/model.py fba --help
 ```
 
 More advanced analysis and data processing can be done by using the python
 module `metnet.fluxanalysis` directly. A demonstration of how to accomplish
-this can be seen in the `run_fluxanalysis.py` script.
+this can be seen in the `FluxAnalysisCommand` in the 'metnet.command'-module.
 
 Robustness analysis
 -------------------
 
-Robustness analysis can be run using `run_robustness.py`. The options
+Robustness analysis can be run using the `robustness` command. The options
 that can be given are similar to the ones given to the previously described
 programs:
 
 ``` shell
-$ ~/model_script/run_robustness.py --database ModelSEED_database.tsv \
-        --database custom_database.tsv \
-	--model rxn_list \
-	Biomass EX_Oxygen
+$ ~/model_script/model.py --database database.tsv --compounds compounds.tsv \
+	--model model.tsv robustness --limits limits.tsv Biomass EX_Oxygen
 ```
 
 In the example above, the `Biomass` reaction will be maximized while the
@@ -183,9 +193,8 @@ Some variants of this idea is implemented in the `metnet.massconsistency` module
 The mass consistency check can also be run using
 
 ``` shell
-$ ~/model_script/run_fluxanalysis.py --database ModelSEED_database.tsv \
-        --database custom_database.tsv --compounds ModelSEED_cpds.tsv \
-	--model rxn_list
+$ ~/model_script/model.py --database database.tsv --compounds compounds.tsv \
+	--model model.tsv masscheck
 ```
 
 In addition, the chemical formula of compounds can be used to more closely
@@ -193,9 +202,8 @@ point out why a reaction is inconsistent. This check can be done using the
 following script
 
 ``` shell
-$ ~/model_script/check_formula_balance.py --database ModelSEED_database.tsv \
-        --database custom_database.tsv --compounds ModelSEED_cpds.tsv \
-	--model rxn_list
+$ ~/model_script/model.py --database database.tsv --compounds compounds.tsv \
+	--model model.tsv formulacheck
 ```
 
 For each inconsistent reaction, the reaction id will be printed followed by
