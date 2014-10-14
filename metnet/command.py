@@ -68,7 +68,7 @@ class FastGapFillCommand(Command):
                             help='List of penalty scores for database reactions')
         parser.add_argument('reaction', help='Reaction to maximize')
 
-    def __call__(self, model, compounds=[], **kwargs):
+    def __call__(self, model, compounds, **kwargs):
         '''Run FastGapFill command'''
 
         if model is None:
@@ -81,9 +81,8 @@ class FastGapFillCommand(Command):
 
         # Load compound information
         compound_name = {}
-        for compound_table in compounds:
-            for compound in modelseed.parse_compound_file(compound_table):
-                compound_name[compound.id] = compound.name if compound.name is not None else compound.id
+        for compound in compounds:
+            compound_name[compound.id] = compound.name if compound.name is not None else compound.id
 
         epsilon = 1e-5
         model_compartments = { None, 'e' }
@@ -155,7 +154,7 @@ class FluxAnalysisCommand(Command):
                             help='Optional limits on flux of reactions')
         parser.add_argument('reaction', help='Reaction to maximize')
 
-    def __call__(self, model, compounds=[], **kwargs):
+    def __call__(self, model, compounds, **kwargs):
         '''Run flux analysis command'''
 
         if model is None:
@@ -164,9 +163,8 @@ class FluxAnalysisCommand(Command):
 
         # Load compound information
         compound_name = {}
-        for compound_table in compounds:
-            for compound in modelseed.parse_compound_file(compound_table):
-                compound_name[compound.id] = compound.name if compound.name is not None else compound.id
+        for compound in compounds:
+            compound_name[compound.id] = compound.name if compound.name is not None else compound.id
 
         reaction = kwargs['reaction']
         if not model.has_reaction(reaction):
@@ -209,22 +207,21 @@ class FormulaBalanceCommand(Command):
 
         # Mapping from compound id to formula
         compound_formula = {}
-        for compound_table in compounds:
-            for compound in modelseed.parse_compound_file(compound_table):
-                # Create pseudo-radical group for compounds with
-                # missing formula, so they don't match up. Only
-                # cpd11632 (Photon) is allowed to have an empty formula.
-                if compound.formula is None or '.' in compound.formula:
-                    if compound.id != 'cpd11632':
-                        f = Formula({Radical('R'+compound.id): 1})
-                    else:
-                        f = Formula()
+        for compound in compounds:
+            # Create pseudo-radical group for compounds with
+            # missing formula, so they don't match up. Only
+            # cpd11632 (Photon) is allowed to have an empty formula.
+            if compound.formula is None or '.' in compound.formula:
+                if compound.id != 'cpd11632':
+                    f = Formula({Radical('R'+compound.id): 1})
                 else:
-                    try:
-                        f = Formula.parse(compound.formula).flattened()
-                    except ValueError as e:
-                        print 'Error parsing {}: {}'.format(compound.formula, e)
-                compound_formula[compound.id] = f
+                    f = Formula()
+            else:
+                try:
+                    f = Formula.parse(compound.formula).flattened()
+                except ValueError as e:
+                    print 'Error parsing {}: {}'.format(compound.formula, e)
+            compound_formula[compound.id] = f
 
         # Create a set of known mass-inconsistent reactions
         exchange = set()
@@ -253,7 +250,7 @@ class GapFillCommand(Command):
     name = 'gapfill'
     title = 'Run GapFind and GapFill on a metabolic model'
 
-    def __call__(self, model, compounds=[]):
+    def __call__(self, model, compounds):
         '''Run GapFill command'''
 
         if model is None:
@@ -262,9 +259,8 @@ class GapFillCommand(Command):
 
         # Load compound information
         compound_name = {}
-        for compound_table in compounds:
-            for compound in modelseed.parse_compound_file(compound_table):
-                compound_name[compound.id] = compound.name if compound.name is not None else compound.id
+        for compound in compounds:
+            compound_name[compound.id] = compound.name if compound.name is not None else compound.id
 
         model_compartments = { None, 'e' }
 
@@ -307,12 +303,11 @@ class MassConsistencyCommand(Command):
         parser.add_argument('--exclude', metavar='reaction', action='append',
                             type=str, default=[], help='Exclude reaction from mass consistency')
 
-    def __call__(self, model, compounds=[], **kwargs):
+    def __call__(self, model, compounds, **kwargs):
         # Load compound information
         compound_name = {}
-        for compound_table in compounds:
-            for compound in modelseed.parse_compound_file(compound_table):
-                compound_name[compound.id] = compound.name if compound.name is not None else compound.id
+        for compound in compounds:
+            compound_name[compound.id] = compound.name if compound.name is not None else compound.id
 
         # Create a set of known mass-inconsistent reactions
         exchange = set()
@@ -380,7 +375,7 @@ class RobustnessCommand(Command):
         parser.add_argument('reaction', help='Reaction to maximize')
         parser.add_argument('varying', help='Reaction to vary')
 
-    def __call__(self, model, compounds=[], **kwargs):
+    def __call__(self, model, compounds, **kwargs):
         '''Run flux analysis command'''
 
         if model is None:
@@ -389,9 +384,8 @@ class RobustnessCommand(Command):
 
         # Load compound information
         compound_name = {}
-        for compound_table in compounds:
-            for compound in modelseed.parse_compound_file(compound_table):
-                compound_name[compound.id] = compound.name if compound.name is not None else compound.id
+        for compound in compounds:
+            compound_name[compound.id] = compound.name if compound.name is not None else compound.id
 
         reaction = kwargs['reaction']
         if not model.has_reaction(reaction):
@@ -460,7 +454,7 @@ class SearchCommand(Command):
         parser_reaction.add_argument('--compound', '-c', dest='compound', metavar='compound', type=str,
                                         default=[], action='append', help='Comma-separated list of compound IDs')
 
-    def __call__(self, model, compounds=[], **kwargs):
+    def __call__(self, model, compounds, **kwargs):
         '''Run search command'''
 
         def parse_compound(s):
@@ -478,17 +472,16 @@ class SearchCommand(Command):
         compound_synonyms = {}
         compound_formula = {}
         compound_for_name = {}
-        for compound_table in compounds:
-            for compound in modelseed.parse_compound_file(compound_table):
-                compound_name[compound.id] = compound.name if compound.name is not None else compound.id
-                compound_synonyms[compound.id] = compound.names
+        for compound in compounds:
+            compound_name[compound.id] = compound.name if compound.name is not None else compound.id
+            compound_synonyms[compound.id] = compound.names
 
-                for n in compound.names:
-                    n = filter_search_term(n)
-                    compound_for_name[n] = compound.id
+            for n in compound.names:
+                n = filter_search_term(n)
+                compound_for_name[n] = compound.id
 
-                if compound.formula is not None and not '.' in compound.formula:
-                    compound_formula[compound.id] = Formula.parse(compound.formula)
+            if compound.formula is not None and not '.' in compound.formula:
+                compound_formula[compound.id] = Formula.parse(compound.formula)
 
         which_command = kwargs['which']
         if which_command == 'compound':
@@ -596,9 +589,13 @@ def main(command=None):
         # Build model from all database reactions
         model = database.get_model(database.reactions)
 
-    compounds = args.compounds
+    # Parse compound tables
+    def compound_iter():
+        for compound_table in args.compounds:
+            for compound in modelseed.parse_compound_file(compound_table):
+                yield compound
 
     # Call command
     arg_filter = ('database', 'compounds', 'model', 'command')
     kwargs = { key: value for key, value in vars(args).iteritems() if key not in arg_filter }
-    command(model=model, compounds=compounds, **kwargs)
+    command(model=model, compounds=compound_iter(), **kwargs)
