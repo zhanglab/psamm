@@ -1,47 +1,212 @@
-model_script
-=================
+Metabolic modeling tools
+=========================
 
-Scripts related to metabolic reconstruction, data parsing and formating, preparation for GAMS simulation
+Tools related to metabolic modeling, reconstruction, data parsing and formatting.
 
-#-parse the annotation to build rxn, cpd, and gene files
-$/home/ying/model/model_script/make_rxn_table.pl /home/ying/model/Suden/Suden_network /home/ying/db/ModelSEED_04032014/ModelSEED_rxns_edited.tsv /home/ying/db/ModelSEED_04032014/ModelSEED_cpds_edited.tsv
+Parsing annotations
+-------------------
 
-$/home/ying/model/model_script/make_rxn_table.pl /home/ying/model/Suaut/Suaut_network /home/ying/db/ModelSEED_04032014/ModelSEED_rxns_edited.tsv /home/ying/db/ModelSEED_04032014/ModelSEED_cpds_edited.tsv
+This script is run to parse the annotation in order to build reaction, compound,
+and gene files.
 
-$/home/ying/model/model_script/make_rxn_table.pl /home/ying/model/Cjr/Cjr_network /home/ying/db/ModelSEED_04032014/ModelSEED_rxns_edited.tsv /home/ying/db/ModelSEED_04032014/ModelSEED_cpds_edited.tsv
+``` shell
+$ ~/model_script/make_rxn_table.pl Suden_network \
+	ModelSEED_rxns_edited.tsv ModelSEED_cpds_edited.tsv
+$ ~/model_script/make_rxn_table.pl Suaut_network \
+	ModelSEED_rxns_edited.tsv ModelSEED_cpds_edited.tsv
+$ ~/model_script/make_rxn_table.pl Cjr_network \
+	ModelSEED_rxns_edited.tsv ModelSEED_cpds_edited.tsv
+```
 
-GapFind/GapFill
----------------
+Model conversion
+----------------
 
-### GAMS-based
-
-The scripts in this repository can be used to convert a definition of reactions
-of an organism model into a problem that can be solved by GAMS. The organism
-definition is simply a list of reaction ids, identifying which reactions from
-a larger database that constitute the model. The reaction database is given as
-a table of reaction ids and equations. The reaction database can be generated
-from multiple sources using the appropriate `XX_format_conversion.py` script,
-for example:
+To use the model tools we need to convert our existing models into the format
+expected by the tool. The **model definition** is simply a list of reaction identifiers,
+identifying which reactions from a parent database that constitute the model.
+The **reaction database** is given as a table of reaction identifiers and equations.
+The reaction database can be generated from multiple sources using the appropriate
+`XX_format_conversion.py` script, for example:
 
 ``` shell
 $ ~/model_script/ModelSEED_format_conversion.py ModelSEED_rxns.tsv \
 	ModelSEED_cpds.tsv > ModelSEED_database.tsv
 ```
 
-The first problem is the GapFind problem which allows us to identify the compounds
-that cannot be produced but are consumed by the model. The input files for GapFind
-need to be prepared by running
+Model tools
+-----------
+
+The tools that can be applied to metabolic models are run through the `model.py` program.
+To see the full help text of the program use
+
+``` shell
+$ ~/model_script/model.py --help
+```
+
+This program allows you to specify a metabolic model and a command to apply to the
+given model. The available commands can be seen using the help command given above, and
+are also described in more details below.
+
+To run the program with a model, use
+
+``` shell
+$ ~/model_script/model.py --database database.tsv --compounds compounds.tsv \
+	--model model.tsv command [...]
+```
+
+More than one reaction database and compound database file can be supplied by adding
+multiple `--database file.tsv` or `--compounds file.tsv` options.
+
+To see the help text of a command use
+
+``` shell
+$ ~/model_script/model.py command --help
+```
+
+### Flux balance analysis (`fba`)
+
+This command will first try to maximize the flux of the given reaction (i.e. typically
+the "biomass" or "growth" reaction). Next, it will fix the flux of this reaction while
+minimizing the flux of all reactions in the model. Both results are presented in a table.
+
+A file specifying the flux limits of certain reactions can be given using `--limits`. This
+can be used for example to limit the flux on exchange reactions or entirely restrict a
+reaction to only run in one direction.
+
+``` shell
+$ ~/model_script/model.py [...] fba --limits limits.tsv Biomass
+```
+
+### Robustness (`robustness`)
+
+Given a reaction to maximize and a reaction to vary, the robustness analysis will run
+flux balance analysis and flux minimization while fixing the reaction to vary at each
+iteration. The reaction will be fixed at a given number of steps between the
+minimum and maximum flux value specified in the model.
+
+``` shell
+$ ~/model_script/model.py [...] robustness --limits limits.tsv \
+	--steps 200 --minimum -20 --maximum 160 Biomass EX_Oxygen
+```
+
+In the example above, the `Biomass` reaction will be maximized while the `EX_Oxygen`
+(oxygen exchange) reaction is fixed at a certain flux in each iteration. The fixed
+flux will vary between the minimum and maximum flux. The number of iterations can be
+set using `--steps`. In each iteration, all reactions and the corresponding fluxes will
+be shown in a table, as well as the value of the fixed flux. If the fixed flux results
+in an infeasible model, no output will be shown for that iteration.
+
+### Mass consistency check (`masscheck`)
+
+A model or reaction database can be checked for mass inconsistencies. The basic
+idea is that we should be able to assign a positive mass to each compound in the
+model and have each reaction be balanced with respect to these mass assignments.
+If it can be shown that assigning the masses is impossible, we have discovered
+an inconsistency.
+
+Some variants of this idea is implemented in the `metnet.massconsistency` module.
+The mass consistency check can be run using
+
+``` shell
+$ ~/model_script/model.py [...] masscheck
+```
+
+This will first try to assign a positive mass to as many compounds as possible. This
+will indicate whether or not the model is consistent but in case it is _not_ consistent
+it is often hard to figure out how to fix the model from this list of masses.
+
+Next, a different check is run where the residual mass is minimized for all reactions
+in the model. This will often give a better idea of which reactions need fixing.
+
+### Formula consistency check (`formulacheck`)
+
+Similarly, a model or reaction database can be checked for formula inconsistencies
+when the chemical formulae of the compounds in the model are known.
+
+``` shell
+$ ~/model_script/model.py [...] formulacheck
+```
+
+For each inconsistent reaction, the reaction identifier will be printed followed by
+the elements ("atoms") in, respectively, the left- and right-hand side of the reaction,
+followed by the elements needed to balance the left- and right-hand side,
+respectively.
+
+### GapFind/GapFill (`gapfill`)
+
+The GapFind algorithms can be used to identify the compounds that are needed by reactions
+in the model but cannot be produced in the model. The GapFill algorithm will extend the
+model with reactions from the parent database and try to find a minimal subset that allows
+all blocked compounds to be produced. This command will run GapFind to identify the
+blocked compounds and then uses GapFill to try to reconstruct a model that allows these
+compounds to be produced.
+
+These algorithms are defined in terms of MILP problems and are therefore (particularly
+GapFill) computationally expensive to run for larger models.
+
+``` shell
+$ ~/model_script/model.py [...] gapfill
+```
+
+### FastGapFill (`fastgapfill`)
+
+The FastGapFill algorithm tries to reconstruct a flux consistent model (i.e. a model
+where every reaction takes a non-zero flux for at least one solutions). This is done by
+extending the model with reactions from the parent database and trying to find a minimal
+subset that is flux consistent. The solution is approximate.
+
+The database reactions can be assigned a weight (or "cost") using the `--penalty` option.
+These weights are taken into account when determining the minimal solution.
+
+``` shell
+$ ~/model_script/model.py [...] fastgapfill --limits limits.tsv \
+	--penalty penalty.tsv
+```
+
+### Search (`search`)
+
+This command can be used to search in a database for compounds or reactions. To search
+for a compound use
+
+``` shell
+$ ~/model_script/model.py [...] search compound [...]
+```
+
+Use the `--name` option to search for a compound with a specific name or use the
+`--id` option to search for a compound with a specific identifier.
+
+To search for a reaction use
+
+``` shell
+$ ~/model_script/model.py [...] search reaction [...]
+```
+
+Use the `--id` option to search for a reaction with a specific identifier. The `--compound`
+option can be used to search for reactions that include a specific compound. If more that
+one compound identifier is given (comma-separated) this will find reactions that include
+all of the given compounds.
+
+### Console (`console`)
+
+This command will start a Python session where the database, model and compounds have
+been loaded into the corresponding Python object representation.
+
+``` shell
+$ ~/model_script/model.py [...] console
+```
+
+GAMS models
+-----------
+
+In order to use the GAMS models it is necessary to convert the model into a format
+that can be loaded by the GAMS models. This can be done using
 
 ``` shell
 $ ~/model_script/export_gapfind_parameters.py --database database.tsv \
-	rxn_list
+	model.tsv
 ```
 
-In this case the `database.tsv` file could be `ModelSEED_database.tsv` as
-prepared previously, and `rxn_list` would be a file containing each reaction id
-on a separate line for each reaction included in the model. This script will
-produce the necessary output files that will be read by the GAMS solver.
-
+This script will produce the necessary output files that will be read by the GAMS solver.
 These files include
 
 * `rxnnames.txt`: a list of all reaction ids
@@ -52,14 +217,15 @@ These files include
 * `modelrxn.txt`: a list of reactions defined by the model
 * `databaserxn.txt`: a list of reactions in the database
 
-Now GAMS can be used to solve the GapFind problem using the list of parameters
-that was just produced.
+### GapFind/GapFill
+
+After exporting the GAMS parameter files the GAMS model can be run using
 
 ``` shell
 $ gams ~/model_script/GAMS/GapFind.gms ps=0
 ```
 
-A script is used to parse the output from running GapFind.
+The output of the GapFind model can be parsed using
 
 ``` shell
 $ ~/model_script/parse_gapfind_noproduction.py GapFind.lst
@@ -80,8 +246,8 @@ available. Lastly, we can add any number of additional database files.
 
 ``` shell
 $ ~/model_script/export_gapfind_parameters.py --exchange --transport \
-	--database ModelSEED_database.tsv \
-    --database custom_database.tsv rxn_list
+	--database database.tsv \
+    --database custom_database.tsv model.tsv
 ```
 
 This command will recreate the output files with the additional reactions
@@ -92,30 +258,14 @@ $ gams ~/model_script/GAMS/GapFill.gms ps=0
 ```
 
 The output will provide a list of added exchange reactions and/or reversed
-reactions that resolved the model. We can use a script to obtain the list
+reactions that resolved the model. We can run the following command to obtain the list
 of reactions that had to be added from the database.
 
 ``` shell
 $ ~/model_script/parse_gapfill.py GapFill.lst
 ```
 
-### Python/Cplex-based
-
-In addition to the GAMS-based implementation described above, the GapFind and GapFill algorithms
-have been implemented as a Cplex-based script. This implementation has not been tested as
-extensively. It can be run using
-
-``` shell
-$ ~/model_script/model.py --database database.tsv --compounds compounds.tsv \
-	--model model.tsv gapfill
-```
-
-Flux balance analysis
----------------------
-
-We can use the same files as produced for GapFind and GapFill to actually run
-a flux balance analysis on the model. To do this we will first need to define
-the boundary conditions of the simulation (i.e. the simulated growth medium).
+### Flux balance analysis
 
 First we need a file listing the exchange reactions that are defined in the
 model (`exchangerxn.txt`). Secondly the lower limits of the exchange reactions
@@ -138,78 +288,6 @@ The resulting flux values can be parsed out using
 ``` shell
 $ ~/model_script/parse_fluxbalance.py FluxBalance.lst rxn_list
 ```
-
-Alternatively, the python implementation of FBA can be used. This will operate
-directly on the reaction database and model definition, and we will avoid
-having to export the `txt` files entirely. The `exchangelimit.txt` can still be
-used to define the exchange reaction limits with the `--limits` option. This method
-can be run using
-
-``` shell
-$ ~/model_script/model.py --database database.tsv --compounds compounds.tsv \
-	--model model.tsv fba --limits limits.tsv Biomass
-```
-
-More options can be seen by running
-
-``` shell
-$ ~/model_script/model.py fba --help
-```
-
-More advanced analysis and data processing can be done by using the python
-module `metnet.fluxanalysis` directly. A demonstration of how to accomplish
-this can be seen in the `FluxAnalysisCommand` in the 'metnet.command'-module.
-
-Robustness analysis
--------------------
-
-Robustness analysis can be run using the `robustness` command. The options
-that can be given are similar to the ones given to the previously described
-programs:
-
-``` shell
-$ ~/model_script/model.py --database database.tsv --compounds compounds.tsv \
-	--model model.tsv robustness --limits limits.tsv Biomass EX_Oxygen
-```
-
-In the example above, the `Biomass` reaction will be maximized while the
-`EX_Oxygen` (oxygen exchange) reaction is fixed at a certain flux in each
-iteration. The fixed flux will vary between the minimum and maximum flux.
-The number of iterations can be set using `--steps`. In each iteration,
-all reactions and the corresponding fluxes will be printed, as well as
-the value of the fixed flux. If the fixed flux results in an infeasible
-model, no output will be printed for that iteration.
-
-Mass consistency
-----------------
-
-A model or reaction database can be checked for mass inconsistencies. The basic
-idea is that we should be able to assign a positive mass to each compound in the
-model and have each reaction be balanced with respect to these mass assignments.
-If it can be shown that assigning the masses is impossible, we have discovered
-an inconsistency.
-
-Some variants of this idea is implemented in the `metnet.massconsistency` module.
-The mass consistency check can also be run using
-
-``` shell
-$ ~/model_script/model.py --database database.tsv --compounds compounds.tsv \
-	--model model.tsv masscheck
-```
-
-In addition, the chemical formula of compounds can be used to more closely
-point out why a reaction is inconsistent. This check can be done using the
-following script
-
-``` shell
-$ ~/model_script/model.py --database database.tsv --compounds compounds.tsv \
-	--model model.tsv formulacheck
-```
-
-For each inconsistent reaction, the reaction id will be printed followed by
-the elements in, respectively, the left- and right-hand side of the reaction,
-followed by the elements needed to balance the left- and right-hand side,
-respectively.
 
 Test suite
 ----------
