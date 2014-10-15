@@ -165,22 +165,6 @@ class DictDatabase(MetabolicDatabase):
         if reaction.direction != '=>':
             self._reversible.add(reaction_id)
 
-    @classmethod
-    def load_from_files(cls, *files):
-        '''Load database from given reactions definition lists'''
-
-        database = cls()
-        for file in files:
-            for line in file:
-                line, _, comment = line.partition('#')
-                line = line.strip()
-                if line == '':
-                    continue
-                reaction_id, equation = line.split(None, 1)
-                reaction = ModelSEED.parse(equation).normalized()
-                database.set_reaction(reaction_id, reaction)
-        return database
-
 class ChainedDatabase(MetabolicDatabase):
     '''Links a number of databases so they can be treated a single database'''
 
@@ -247,3 +231,17 @@ class ChainedDatabase(MetabolicDatabase):
             self._databases[0].set_reaction(reaction_id, reaction)
         else:
             raise ValueError('First database is immutable')
+
+def load_tsv_database(file):
+    '''Load database from given reactions definition lists'''
+
+    database = DictDatabase()
+    for line in file:
+        line, _, comment = line.partition('#')
+        line = line.strip()
+        if line == '':
+            continue
+        reaction_id, equation = line.split(None, 1)
+        reaction = ModelSEED.parse(equation).normalized()
+        database.set_reaction(reaction_id, reaction)
+    return database
