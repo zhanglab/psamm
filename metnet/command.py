@@ -11,7 +11,8 @@ from .fluxanalysis import flux_balance, flux_minimization
 from .formula import Formula, Radical
 from .gapfill import gapfind, gapfill
 from .massconsistency import MassConsistencyCheck
-from .metabolicmodel import DictDatabase
+from .database import DictDatabase
+from .metabolicmodel import MetabolicModel
 from .reaction import Reaction, Compound
 from . import lpsolver, modelseed
 
@@ -567,10 +568,10 @@ def main(command=None):
     database = DictDatabase.load_from_files(*args.database)
     if args.model is not None:
         # Set database and model to the database subset
-        model = database.load_model_from_file(args.model[0])
+        model = MetabolicModel.load_model_from_file(database, args.model[0])
     else:
         # Build model from all database reactions
-        model = database.get_model(database.reactions)
+        model = MetabolicModel.load_model(database, database.reactions)
 
     # Load bounds on exchange reactions
     for limits_table in args.limits:

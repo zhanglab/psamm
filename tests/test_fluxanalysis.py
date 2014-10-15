@@ -2,21 +2,22 @@
 
 import unittest
 
-from metnet import metabolicmodel
+from metnet.metabolicmodel import MetabolicModel
+from metnet.database import DictDatabase
 from metnet import fluxanalysis
 from metnet import lpsolver
 from metnet.reaction import ModelSEED
 
 class TestFluxBalance(unittest.TestCase):
     def setUp(self):
-        self.database = metabolicmodel.DictDatabase()
+        self.database = DictDatabase()
         self.database.set_reaction('rxn_1', ModelSEED.parse('=> (2) |A|'))
         self.database.set_reaction('rxn_2', ModelSEED.parse('|A| <=> |B|'))
         self.database.set_reaction('rxn_3', ModelSEED.parse('|A| => |D|'))
         self.database.set_reaction('rxn_4', ModelSEED.parse('|A| => |C|'))
         self.database.set_reaction('rxn_5', ModelSEED.parse('|C| => |D|'))
         self.database.set_reaction('rxn_6', ModelSEED.parse('|D| =>'))
-        self.model = self.database.get_model(self.database.reactions)
+        self.model = MetabolicModel.load_model(self.database, self.database.reactions)
         self.solver = lpsolver.CplexSolver(None)
 
     def test_flux_balance_rxn_1(self):
@@ -44,14 +45,14 @@ class TestFluxBalance(unittest.TestCase):
 
 class TestNaiveConsistency(unittest.TestCase):
     def setUp(self):
-        self.database = metabolicmodel.DictDatabase()
+        self.database = DictDatabase()
         self.database.set_reaction('rxn_1', ModelSEED.parse('=> (2) |A|'))
         self.database.set_reaction('rxn_2', ModelSEED.parse('|A| <=> |B|'))
         self.database.set_reaction('rxn_3', ModelSEED.parse('|A| => |D|'))
         self.database.set_reaction('rxn_4', ModelSEED.parse('|A| => |C|'))
         self.database.set_reaction('rxn_5', ModelSEED.parse('|C| => |D|'))
         self.database.set_reaction('rxn_6', ModelSEED.parse('|D| =>'))
-        self.model = self.database.get_model(self.database.reactions)
+        self.model = MetabolicModel.load_model(self.database, self.database.reactions)
         self.solver = lpsolver.CplexSolver(None)
 
     def test_check_inconsistent(self):
