@@ -11,7 +11,7 @@ from .fluxanalysis import flux_balance, flux_minimization
 from .formula import Formula, Radical
 from .gapfill import gapfind, gapfill
 from .massconsistency import MassConsistencyCheck
-from .database import DictDatabase
+from .database import load_tsv_database, ChainedDatabase
 from .metabolicmodel import MetabolicModel
 from .reaction import Reaction, Compound
 from . import lpsolver, modelseed
@@ -565,7 +565,11 @@ def main(command=None):
         sys.stderr.write('No database provided. Use --help for more information.\n')
         sys.exit(-1)
 
-    database = DictDatabase.load_from_files(*args.database)
+    databases = []
+    for database_file in args.database:
+        databases.append(load_tsv_database(database_file))
+    database = ChainedDatabase(*databases)
+
     if args.model is not None:
         # Set database and model to the database subset
         model = MetabolicModel.load_model_from_file(database, args.model[0])
