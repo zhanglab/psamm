@@ -51,11 +51,14 @@ To run the program with a model, use
 
 ``` shell
 $ ~/model_script/model.py --database database.tsv --compounds compounds.tsv \
-	--model model.tsv command [...]
+	--model model.tsv --limits limits.tsv command [...]
 ```
 
 More than one reaction database and compound database file can be supplied by adding
-multiple `--database file.tsv` or `--compounds file.tsv` options.
+multiple `--database file.tsv` or `--compounds file.tsv` options. A file specifying the flux
+limits of certain reactions can be given using `--limits`. This can be used for example to
+limit the flux on exchange reactions or entirely restrict a reaction to only run in one
+direction.
 
 To see the help text of a command use
 
@@ -69,12 +72,8 @@ This command will first try to maximize the flux of the given reaction (i.e. typ
 the "biomass" or "growth" reaction). Next, it will fix the flux of this reaction while
 minimizing the flux of all reactions in the model. Both results are presented in a table.
 
-A file specifying the flux limits of certain reactions can be given using `--limits`. This
-can be used for example to limit the flux on exchange reactions or entirely restrict a
-reaction to only run in one direction.
-
 ``` shell
-$ ~/model_script/model.py [...] fba --limits limits.tsv Biomass
+$ ~/model_script/model.py [...] fba Biomass
 ```
 
 ### Robustness (`robustness`)
@@ -85,7 +84,7 @@ iteration. The reaction will be fixed at a given number of steps between the
 minimum and maximum flux value specified in the model.
 
 ``` shell
-$ ~/model_script/model.py [...] robustness --limits limits.tsv \
+$ ~/model_script/model.py [...] robustness \
 	--steps 200 --minimum -20 --maximum 160 Biomass EX_Oxygen
 ```
 
@@ -159,8 +158,8 @@ The database reactions can be assigned a weight (or "cost") using the `--penalty
 These weights are taken into account when determining the minimal solution.
 
 ``` shell
-$ ~/model_script/model.py [...] fastgapfill --limits limits.tsv \
-	--penalty penalty.tsv
+$ ~/model_script/model.py [...] fastgapfill \
+	--penalty penalty.tsv Growth
 ```
 
 ### Search (`search`)

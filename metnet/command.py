@@ -61,9 +61,6 @@ class FastGapFillCommand(Command):
     title = 'Run FastGapFill on a metabolic model'
 
     def init_parser(self, parser):
-        parser.add_argument('--limits', metavar='file', action='append',
-                            type=argparse.FileType('r'), default=[],
-                            help='Optional limits on flux of reactions')
         parser.add_argument('--penalty', metavar='file', type=argparse.FileType('r'),
                             help='List of penalty scores for database reactions')
         parser.add_argument('reaction', help='Reaction to maximize')
@@ -118,10 +115,6 @@ class FastGapFillCommand(Command):
         added_reactions = induced - core
         print 'Extended: |E| = {}, E = {}'.format(len(added_reactions), added_reactions)
 
-        # Load bounds on exchange reactions
-        for limits_table in kwargs['limits']:
-            model.load_reaction_limits(limits_table)
-
         maximized_reaction = kwargs['reaction']
         print 'Flux balance on induced model maximizing {}...'.format(maximized_reaction)
         model_induced = model.copy()
@@ -149,9 +142,6 @@ class FluxAnalysisCommand(Command):
     title = 'Run FBA and flux minimization on a metabolic model'
 
     def init_parser(self, parser):
-        parser.add_argument('--limits', metavar='limitsfile', action='append',
-                            type=argparse.FileType('r'), default=[],
-                            help='Optional limits on flux of reactions')
         parser.add_argument('reaction', help='Reaction to maximize')
 
     def __call__(self, model, compounds, **kwargs):
@@ -170,9 +160,6 @@ class FluxAnalysisCommand(Command):
         if not model.has_reaction(reaction):
             sys.stderr.write('Specified reaction is not in model: {}\n'.format(reaction))
             sys.exit(-1)
-
-        for limits_table in kwargs['limits']:
-            model.load_reaction_limits(limits_table)
 
         epsilon = 1e-5
 
@@ -363,9 +350,6 @@ class RobustnessCommand(Command):
     title = 'Run robustness analysis on a metabolic model'
 
     def init_parser(self, parser):
-        parser.add_argument('--limits', metavar='limitsfile', action='append',
-                            type=argparse.FileType('r'), default=[],
-                            help='Optional limits on flux of reactions')
         parser.add_argument('--steps', metavar='N', help='Number of flux value steps for varying reaction',
                             type=int, default=10)
         parser.add_argument('--minimum', metavar='V', help='Minumum flux value of varying reacton',
@@ -409,10 +393,6 @@ class RobustnessCommand(Command):
         if flux_min > flux_max:
             sys.stderr.write('Invalid flux range: {}, {}\n'.format(flux_min, flux_max))
             sys.exit(-1)
-
-        # Load reaction limits
-        for limits_table in kwargs['limits']:
-            model.load_reaction_limits(limits_table)
 
         for i in xrange(steps):
             fixed_flux = flux_min + i*(flux_max - flux_min)/float(steps-1)
@@ -549,6 +529,9 @@ def main(command=None):
     parser.add_argument('--model', metavar='model', nargs=1,
                         type=argparse.FileType('r'),
                         help='File to use as model definition (database subset)')
+    parser.add_argument('--limits', metavar='file', action='append',
+                        type=argparse.FileType('r'), default=[],
+                        help='Optional limits on flux of reactions')
 
     if command is not None:
         # Command explicitly given, only allow that command
@@ -589,6 +572,10 @@ def main(command=None):
         # Build model from all database reactions
         model = database.get_model(database.reactions)
 
+    # Load bounds on exchange reactions
+    for limits_table in args.limits:
+        model.load_reaction_limits(limits_table)
+
     # Parse compound tables
     def compound_iter():
         for compound_table in args.compounds:
@@ -596,6 +583,6 @@ def main(command=None):
                 yield compound
 
     # Call command
-    arg_filter = ('database', 'compounds', 'model', 'command')
+    arg_filter = ('database', 'compounds', 'model', 'limits', 'command')
     kwargs = { key: value for key, value in vars(args).iteritems() if key not in arg_filter }
     command(model=model, compounds=compound_iter(), **kwargs)
