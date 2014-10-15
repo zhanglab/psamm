@@ -403,8 +403,8 @@ class RobustnessCommand(Command):
             sys.exit(-1)
 
         # Run FBA on model at different fixed flux values
-        flux_min = kwargs.get('minimum', model.limits[varying_reaction].lower)
-        flux_max = kwargs.get('maximum', model.limits[varying_reaction].upper)
+        flux_min = kwargs['minimum'] if kwargs['minimum'] is not None else model.limits[varying_reaction].lower
+        flux_max = kwargs['maximum'] if kwargs['maximum'] is not None else model.limits[varying_reaction].upper
 
         if flux_min > flux_max:
             sys.stderr.write('Invalid flux range: {}, {}\n'.format(flux_min, flux_max))
