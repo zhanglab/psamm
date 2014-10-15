@@ -2,7 +2,7 @@
 
 import unittest
 
-from metnet.database import DictDatabase
+from metnet.database import DictDatabase, ChainedDatabase
 from metnet.reaction import ModelSEED, Compound
 
 class TestMetabolicDatabase(unittest.TestCase):
@@ -84,6 +84,56 @@ class TestMetabolicDatabase(unittest.TestCase):
 
     def test_matrix_len(self):
         self.assertEqual(len(self.database.matrix), 10)
+
+class TestChainedDatabase(unittest.TestCase):
+    def setUp(self):
+        database1 = DictDatabase()
+        database1.set_reaction('rxn_1', ModelSEED.parse('|A| => |B|'))
+        database1.set_reaction('rxn_2', ModelSEED.parse('|B| => |C| + |D|'))
+        database1.set_reaction('rxn_3', ModelSEED.parse('|D| <=> |E|'))
+        database1.set_reaction('rxn_4', ModelSEED.parse('|F| => |G|'))
+
+        database2 = DictDatabase()
+        database2.set_reaction('rxn_2', ModelSEED.parse('|B| => |C|'))
+        database2.set_reaction('rxn_3', ModelSEED.parse('|C| => |D|'))
+        database2.set_reaction('rxn_4', ModelSEED.parse('|F| <=> |G|'))
+        database2.set_reaction('rxn_5', ModelSEED.parse('|G| + |I| <=> |H|'))
+
+        self.database = ChainedDatabase(database2, database1)
+
+    def test_has_reaction_in_lower_database(self):
+        self.assertTrue(self.database.has_reaction('rxn_1'))
+
+    def test_has_reaction_in_upper_new(self):
+        self.assertTrue(self.database.has_reaction('rxn_5'))
+
+    def test_has_reaction_in_upper_shadowing(self):
+        self.assertTrue(self.database.has_reaction('rxn_3'))
+
+    def test_is_reversible_in_lower_database(self):
+        self.assertFalse(self.database.is_reversible('rxn_1'))
+
+    def test_is_reversible_in_upper_new(self):
+        self.assertTrue(self.database.is_reversible('rxn_5'))
+
+    def test_is_reversible_in_upper_shadowing(self):
+        self.assertFalse(self.database.is_reversible('rxn_3'))
+
+    def test_get_compound_reactions_in_upper(self):
+        reactions = set(self.database.get_compound_reactions(Compound('H')))
+        self.assertEquals(reactions, { 'rxn_5' })
+
+    def test_get_compound_reactions_in_lower(self):
+        reactions = set(self.database.get_compound_reactions(Compound('A')))
+        self.assertEquals(reactions, { 'rxn_1' })
+
+    def test_get_compound_reactions_in_both(self):
+        reactions = set(self.database.get_compound_reactions(Compound('B')))
+        self.assertEquals(reactions, { 'rxn_1', 'rxn_2' })
+
+    def test_get_compound_reactions_in_both_and_shadowed(self):
+        reactions = set(self.database.get_compound_reactions(Compound('D')))
+        self.assertEquals(reactions, { 'rxn_3' })
 
 if __name__ == '__main__':
     unittest.main()
