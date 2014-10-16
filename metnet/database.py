@@ -4,6 +4,13 @@
 import abc
 from collections import defaultdict, Mapping
 
+# Do not require numpy, but expose numpy protocol if
+# the module is available.
+try:
+    import numpy
+except:
+    numpy = None
+
 from .reaction import ModelSEED, Reaction
 
 class StoichiometricMatrixView(Mapping):
@@ -38,6 +45,27 @@ class StoichiometricMatrixView(Mapping):
 
     def __len__(self):
         return sum(sum(1 for _ in self._database.get_reaction_values(reaction)) for reaction in self._database.reactions)
+
+    def __array__(self):
+        '''Return Numpy ndarray instance of matrix with sorted compound, reaction-keys'''
+
+        if numpy is None:
+            raise Exception('Numpy module is not available')
+
+        compound_list = sorted(self._database.compounds)
+        reaction_list = sorted(self._database.reactions)
+        matrix = numpy.zeros((len(compound_list), len(reaction_list)))
+
+        compound_map = dict((compound, i) for i, compound in enumerate(compound_list))
+        reaction_map = dict((reaction_id, i) for i, reaction_id in enumerate(reaction_list))
+
+        for reaction_id in self._database.reactions:
+            for compound, value in self._database.get_reaction_values(reaction_id):
+                c_index = compound_map[compound]
+                r_index = reaction_map[reaction_id]
+                matrix[c_index, r_index] = value
+
+        return matrix
 
 class MetabolicReaction(object):
     def __init__(self, reversible, metabolites):
