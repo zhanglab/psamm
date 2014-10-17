@@ -4,6 +4,11 @@
 import csv
 import re
 
+def decode_name(s):
+    '''Decode names in ModelSEED files'''
+    # Some names contain XML-like entity codes
+    return re.sub(r'&#(\d+);', lambda x: chr(int(x.group(1))), s)
+
 class CompoundEntry(object):
     '''Representation of entry in a ModelSEED compound table'''
 
@@ -46,7 +51,7 @@ def parse_compound_file(f):
     f.readline() # Skip header
     for row in csv.reader(f, delimiter='\t'):
         compound_id, names, formula = row[:3]
-        names = names.split(',<br>')
+        names = (decode_name(name) for name in names.split(',<br>'))
 
         # ModelSEED sometimes uses an asterisk and number at
         # the end of formulas. This seems to have a similar
