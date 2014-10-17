@@ -120,8 +120,8 @@ class Fastcore(object):
         if status != 1:
             raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
-        for rxnid in sorted(model.reactions):
-            yield rxnid, prob.get_value('v_'+rxnid)
+        for reaction_id in model.reactions:
+            yield reaction_id, prob.get_value('v_'+reaction_id)
 
     def fastcc(self, model, epsilon):
         '''Check consistency of model reactions
