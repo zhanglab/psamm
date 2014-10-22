@@ -2,6 +2,7 @@
 '''Implementation of Flux Balance Analysis'''
 
 import logging
+import random
 
 from .lpsolver import lp
 
@@ -199,6 +200,31 @@ def flux_minimization(model, fixed, solver, weights={}):
         raise FluxBalanceError('Non-optimal solution: {}'.format(result.status))
 
     return ((reaction_id, result.get_value(('v', reaction_id))) for reaction_id in model.reactions)
+
+def flux_randomization(model, fixed, solver):
+    """Find a uniformly random flux mode in the solution space
+
+    This can be used to generate a random sample from the solution
+    space. If many random samples are needed more efficient methods
+    (e.g. random walk) are useful.
+
+    The reactions in the fixed dictionary are constrained with the
+    associated lower bound."""
+
+    optimize = {}
+    for reaction_id in model.reactions:
+        if model.is_reversible(reaction_id):
+            optimize[reaction_id] = 2*random.random() - 1.0
+        else:
+            optimize[reaction_id] = random.random()
+
+    fba = FluxBalanceProblem(model, solver=solver)
+    for reaction_id, value in fixed.iteritems():
+        fba.prob.add_linear_constraints(fba.get_flux_var(reaction_id) >= value)
+
+    fba.solve(optimize)
+    for reaction_id in model.reactions:
+        yield reaction_id, fba.get_flux(reaction_id)
 
 def consistency_check(model, subset, epsilon, solver):
     '''Check that reaction subset of model is consistent using FBA
