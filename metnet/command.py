@@ -135,7 +135,7 @@ class FastGapFillCommand(Command):
         removed_reactions = set(model_induced.reactions) - consistent_core
         print 'Removed: |R| = {}, R = {}'.format(len(removed_reactions), removed_reactions)
 
-class FluxAnalysisCommand(Command):
+class FluxBalanceCommand(Command):
     '''Run flux balance analysis on a metabolic model'''
 
     name = 'fba'
