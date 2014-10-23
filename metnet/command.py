@@ -354,11 +354,26 @@ class RobustnessCommand(Command):
                             type=float)
         parser.add_argument('--maximum', metavar='V', help='Maximum flux value of varying reacton',
                             type=float)
+        parser.add_argument('--no-tfba', help='Disable thermodynamic constraints on FBA',
+                            action='store_true')
         parser.add_argument('reaction', help='Reaction to maximize')
         parser.add_argument('varying', help='Reaction to vary')
 
     def __call__(self, model, compounds, **kwargs):
         '''Run flux analysis command'''
+
+        def run_fba_fmin(model, reaction):
+            fba_fluxes = dict(fluxanalysis.flux_balance(model, reaction))
+            optimum = fba_fluxes[reaction]
+            return fluxanalysis.flux_minimization(model, { reaction: optimum })
+
+        def run_tfba(model, reaction):
+            return fluxanalysis.flux_balance_td(model, reaction)
+
+        if kwargs['no_tfba']:
+            run_fba = run_fba_fmin
+        else:
+            run_fba = run_tfba
 
         if model is None:
             sys.stderr.write('Please specify a model. Use --help for more information.\n')
@@ -398,10 +413,7 @@ class RobustnessCommand(Command):
             test_model.limits[varying_reaction].bounds = fixed_flux, fixed_flux
 
             try:
-                fba_fluxes = dict(fluxanalysis.flux_balance(test_model, reaction))
-                optimum = fba_fluxes[reaction]
-                fmin_fluxes = dict(fluxanalysis.flux_minimization(test_model, { reaction: optimum }))
-                for other_reaction, flux in fmin_fluxes.iteritems():
+                for other_reaction, flux in run_fba(test_model, reaction):
                     print '{}\t{}\t{}'.format(other_reaction, fixed_flux, flux)
             except Exception:
                 pass
