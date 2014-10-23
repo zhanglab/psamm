@@ -204,6 +204,36 @@ class FluxBalanceCommand(Command):
         for reaction_id, flux in fluxes.iteritems():
             yield reaction_id, fba_fluxes[reaction_id], flux
 
+class FluxVariabilityCommand(Command):
+    '''Run flux variablity analysis on a metabolic model'''
+
+    name = 'fva'
+    title = 'Run flux variability analysis on a metabolic model'
+
+    def init_parser(self, parser):
+        parser.add_argument('reaction', help='Reaction to maximize')
+
+    def __call__(self, model, compounds, **kwargs):
+        '''Run flux variability command'''
+
+        # Load compound information
+        compound_name = {}
+        for compound in compounds:
+            compound_name[compound.id] = compound.name if compound.name is not None else compound.id
+
+        reaction = kwargs['reaction']
+        if not model.has_reaction(reaction):
+            sys.stderr.write('Specified reaction is not in model: {}\n'.format(reaction))
+            sys.exit(-1)
+
+        fba_fluxes = dict(fluxanalysis.flux_balance(model, reaction))
+        optimum = fba_fluxes[reaction]
+
+        flux_bounds = sorted(fluxanalysis.flux_variability(model, model.reactions, { reaction: optimum}))
+        for reaction_id, bounds in flux_bounds:
+            rx = model.get_reaction(reaction_id).translated_compounds(lambda x: compound_name.get(x, x))
+            print '{}\t{}\t{}\t{}'.format(reaction_id, bounds[0], bounds[1], rx)
+
 class FormulaBalanceCommand(Command):
     '''Check whether reactions in a given database or model are balanced
 
