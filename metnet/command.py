@@ -136,12 +136,14 @@ class FastGapFillCommand(Command):
         print 'Removed: |R| = {}, R = {}'.format(len(removed_reactions), removed_reactions)
 
 class FluxAnalysisCommand(Command):
-    '''Run FBA and flux minimization on a metabolic model'''
+    '''Run flux balance analysis on a metabolic model'''
 
     name = 'fba'
-    title = 'Run FBA and flux minimization on a metabolic model'
+    title = 'Run flux balance analysis on a metabolic model'
 
     def init_parser(self, parser):
+        parser.add_argument('--no-tfba', help='Disable thermodynamic constraints on FBA',
+                            action='store_true')
         parser.add_argument('reaction', help='Reaction to maximize')
 
     def __call__(self, model, compounds, **kwargs):
@@ -161,23 +163,46 @@ class FluxAnalysisCommand(Command):
             sys.stderr.write('Specified reaction is not in model: {}\n'.format(reaction))
             sys.exit(-1)
 
-        epsilon = 1e-5
+        if kwargs['no_tfba']:
+            result = self.run_fba_minimized(model, reaction)
+        else:
+            result = self.run_tfba(model, reaction)
 
-        # Run FBA on model
+        optimum = None
+        for reaction_id, fba_flux, flux in sorted(result):
+            rx = model.get_reaction(reaction_id)
+            print '{}\t{}\t{}\t{}'.format(reaction_id, fba_flux, flux,
+                                            rx.translated_compounds(lambda x: compound_name.get(x, x)))
+            # Remember flux of requested reaction
+            if reaction_id == reaction:
+                optimum = flux
+
+        sys.stderr.write('Maximum flux: {}\n'.format(optimum))
+
+    def run_fba_minimized(self, model, reaction):
+        '''Run normal FBA and flux minimization on model, then print output'''
+
         fba_fluxes = dict(fluxanalysis.flux_balance(model, reaction))
         optimum = fba_fluxes[reaction]
+
+        epsilon = 1e-5
 
         # Run flux minimization
         fmin_fluxes = dict(fluxanalysis.flux_minimization(model, { reaction: optimum }))
         count = 0
-        for rxnid, flux in sorted(fmin_fluxes.iteritems()):
-            if fba_fluxes[rxnid] - epsilon > flux:
+        for reaction_id, flux in fmin_fluxes.iteritems():
+            if fba_fluxes[reaction_id] - epsilon > flux:
                 count += 1
-            rx = model.get_reaction(rxnid)
-            print '{}\t{}\t{}\t{}'.format(rxnid, fba_fluxes[rxnid], flux,
-                                            rx.translated_compounds(lambda x: compound_name.get(x, x)))
-        print 'Maximum flux: {}'.format(optimum)
-        print 'Minimized reactions: {}'.format(count)
+            yield reaction_id, fba_fluxes[reaction_id], flux
+        sys.stderr.write('Minimized reactions: {}\n'.format(count))
+
+    def run_tfba(self, model, reaction):
+        '''Run FBA and tFBA on model'''
+
+        fba_fluxes = dict(fluxanalysis.flux_balance(model, reaction))
+        fluxes = dict(fluxanalysis.flux_balance_td(model, reaction))
+        for reaction_id, flux in fluxes.iteritems():
+            yield reaction_id, fba_fluxes[reaction_id], flux
 
 class FormulaBalanceCommand(Command):
     '''Check whether reactions in a given database or model are balanced
