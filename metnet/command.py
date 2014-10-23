@@ -213,10 +213,9 @@ class FormulaBalanceCommand(Command):
 
         # Create a set of known mass-inconsistent reactions
         exchange = set()
-        for rxnid in model.reactions:
-            rx = model.get_reaction(rxnid)
-            if len(rx.left) == 0 or len(rx.right) == 0:
-                exchange.add(rxnid)
+        for reaction_id in model.reactions:
+            if model.is_exchange(reaction_id):
+                exchange.add(reaction_id)
 
         def multiply_formula(compound_list):
             for compound, count in compound_list:
@@ -300,8 +299,7 @@ class MassConsistencyCommand(Command):
         # Create a set of known mass-inconsistent reactions
         exchange = set()
         for reaction_id in model.reactions:
-            rx = model.get_reaction(reaction_id)
-            if len(rx.left) == 0 or len(rx.right) == 0:
+            if model.is_exchange(reaction_id):
                 exchange.add(reaction_id)
 
         # Other reactions to exclude from consistency check
