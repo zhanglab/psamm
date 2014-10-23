@@ -4,40 +4,47 @@
 from .metabolicmodel import FlipableModelView
 from . import lpsolver
 
-def flux_balance(model, reaction='Biomass', solver=lpsolver.CplexSolver()):
+class FluxBalanceProblem(object):
     '''Maximize the flux of a specific reaction
 
-    Yields tuples of reaction id and flux for all model reactions.'''
+    The solve method solves the problem for a specific parameter. After solving, the
+    flux can be obtained using the get_flux method.'''
 
-    # Create Flux balance problem
-    prob = solver.create_problem()
+    def __init__(self, model, solver=None):
+        if solver is None:
+            solver = lpsolver.CplexSolver()
+        self._prob = solver.create_problem()
 
-    # Define flux variables
-    for rxnid in model.reactions:
-        lower, upper = model.limits[rxnid]
-        prob.define('v_'+rxnid, lower=lower, upper=upper)
+        # Define flux variables
+        for reaction_id in model.reactions:
+            lower, upper = model.limits[reaction_id]
+            self._prob.define('v_'+reaction_id, lower=lower, upper=upper)
 
-    objective = prob.var('v_'+reaction)
-    prob.set_linear_objective(objective)
+        # Define constraints
+        massbalance_lhs = { compound: 0 for compound in model.compounds }
+        for spec, value in model.matrix.iteritems():
+            compound, reaction_id = spec
+            massbalance_lhs[compound] += self._prob.var('v_'+reaction_id) * value
+        for compound, lhs in massbalance_lhs.iteritems():
+            self._prob.add_linear_constraints(lhs == 0)
 
-    # Define constraints
-    massbalance_lhs = { compound: 0 for compound in model.compounds }
-    for spec, value in model.matrix.iteritems():
-        compound, rxnid = spec
-        massbalance_lhs[compound] += prob.var('v_'+rxnid) * value
-    for compound, lhs in massbalance_lhs.iteritems():
-        prob.add_linear_constraints(lhs == 0)
+    def solve(self, reaction):
+        '''Solve problem maximizing the given reaction'''
 
-    # Solve
-    prob.solve(lpsolver.CplexProblem.Maximize)
-    status = prob.cplex.solution.get_status()
-    if status != 1:
-        raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
+        objective = self._prob.var('v_'+reaction)
 
-    for rxnid in model.reactions:
-        yield rxnid, prob.get_value('v_'+rxnid)
+        # Set objective and solve
+        self._prob.set_linear_objective(objective)
+        self._prob.solve(lpsolver.CplexProblem.Maximize)
+        status = self._prob.cplex.solution.get_status()
+        if status not in (1, 101):
+            raise Exception('Non-optimal solution: {}'.format(self._prob.cplex.solution.get_status_string()))
 
-def flux_balance_td(model, reaction, solver=lpsolver.CplexSolver()):
+    def get_flux(self, reaction):
+        '''Get resulting flux value for reaction'''
+        return self._prob.get_value('v_'+reaction)
+
+class FluxBalanceTDProblem(FluxBalanceProblem):
     '''Maximize the flux of a specific reaction with thermodynamic constraints
 
     Like FBA, but with the additional constraint that the flux must be
@@ -47,60 +54,71 @@ def flux_balance_td(model, reaction, solver=lpsolver.CplexSolver()):
     Described by Muller, Arne C., and Alexander Bockmayr. "Fast thermodynamically
     constrained flux variability analysis." Bioinformatics (2013): btt059.'''
 
-    em = 1e5
-    epsilon = 1e-5
+    def __init__(self, model, solver=None):
+        super(FluxBalanceTDProblem, self).__init__(model, solver)
+        p = self._prob
 
-    # Create Flux balance problem
-    prob = solver.create_problem()
+        em = 1e5
+        epsilon = 1e-5
 
-    # Define flux variables
-    for reaction_id in model.reactions:
-        lower, upper = model.limits[reaction_id]
-        prob.define('v_'+reaction_id, lower=lower, upper=upper)
+        for reaction_id in model.reactions:
+            # Constrain internal reactions to a direction determined
+            # by alpha.
+            if not model.is_exchange(reaction_id):
+                p.define('alpha_'+reaction_id, types=lpsolver.CplexProblem.Binary)
+                p.define('dmu_'+reaction_id) # Delta mu
 
-        # Constrain internal reactions to a direction determined
-        # by alpha.
-        if not model.is_exchange(reaction_id):
-            prob.define('alpha_'+reaction_id, types=lpsolver.CplexProblem.Binary)
-            prob.define('dmu_'+reaction_id) # Delta mu
+                flux = p.var('v_'+reaction_id)
+                alpha = p.var('alpha_'+reaction_id)
+                dmu = p.var('dmu_'+reaction_id)
 
-            flux = prob.var('v_'+reaction_id)
-            alpha = prob.var('alpha_'+reaction_id)
-            dmu = prob.var('dmu_'+reaction_id)
+                lower, upper = model.limits[reaction_id]
+                p.add_linear_constraints(flux >= lower*(1 - alpha),
+                                            flux <= upper*alpha,
+                                            dmu >= -em*alpha + epsilon,
+                                            dmu <= em*(1 - alpha) - epsilon)
 
-            prob.add_linear_constraints(flux >= lower*(1 - alpha),
-                                        flux <= upper*alpha,
-                                        dmu >= -em*alpha + epsilon,
-                                        dmu <= em*(1 - alpha) - epsilon)
+        # Define mu variables
+        p.define(*('mu_'+compound.id for compound in model.compounds))
 
-    objective = prob.var('v_'+reaction)
-    prob.set_linear_objective(objective)
+        tdbalance_lhs = { reaction_id: 0 for reaction_id in model.reactions }
+        for spec, value in model.matrix.iteritems():
+            compound, reaction_id = spec
+            if not model.is_exchange(reaction_id):
+                tdbalance_lhs[reaction_id] += p.var('mu_'+compound.id) * value
+        for reaction_id, lhs in tdbalance_lhs.iteritems():
+            if not model.is_exchange(reaction_id):
+                p.add_linear_constraints(lhs == p.var('dmu_'+reaction_id))
 
-    # Define mu variables
-    prob.define(*('mu_'+compound.id for compound in model.compounds))
+def flux_balance(model, reaction, solver=None):
+    '''Run flux balance analysis on the given model
 
-    # Define constraints
-    massbalance_lhs = { compound: 0 for compound in model.compounds }
-    tdbalance_lhs = { reaction_id: 0 for reaction_id in model.reactions }
-    for spec, value in model.matrix.iteritems():
-        compound, reaction_id = spec
-        massbalance_lhs[compound] += prob.var('v_'+reaction_id) * value
-        if not model.is_exchange(reaction_id):
-            tdbalance_lhs[reaction_id] += prob.var('mu_'+compound.id) * value
-    for compound, lhs in massbalance_lhs.iteritems():
-        prob.add_linear_constraints(lhs == 0)
-    for reaction_id, lhs in tdbalance_lhs.iteritems():
-        if not model.is_exchange(reaction_id):
-            prob.add_linear_constraints(lhs == prob.var('dmu_'+reaction_id))
+    Yields the reaction id and flux value for each reaction in the model.
 
-    # Solve
-    prob.solve(lpsolver.CplexProblem.Maximize)
-    status = prob.cplex.solution.get_status()
-    if status != 101:
-        raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
+    This is a convenience function for sertting up and running the
+    FluxBalanceProblem. If the FBA is solved for more than one parameter
+    it is recommended to setup and reuse the FluxBalanceProblem manually
+    for a speed up.'''
 
-    for reaction_id in model.reactions:
-        yield reaction_id, prob.get_value('v_'+reaction_id)
+    fba = FluxBalanceProblem(model, solver=solver)
+    fba.solve(reaction)
+    for reaction in model.reactions:
+        yield reaction, fba.get_flux(reaction)
+
+def flux_balance_td(model, reaction, solver=None):
+    '''Run flux balance analysis with thermodynamic constraints
+
+    Yields the reaction id and flux value for each reaction in the model.
+
+    This is a convenience function for sertting up and running the
+    FluxBalanceTDProblem. If the tFBA is solved for more than one parameter
+    it is recommended to setup and reuse the FluxBalanceTDProblem manually
+    for a speed up.'''
+
+    tfba = FluxBalanceTDProblem(model, solver=solver)
+    tfba.solve(reaction)
+    for reaction in model.reactions:
+        yield reaction, tfba.get_flux(reaction)
 
 def flux_variability(model, reactions, fixed, solver=lpsolver.CplexSolver()):
     '''Find the variability of each reaction while fixing certain fluxes
