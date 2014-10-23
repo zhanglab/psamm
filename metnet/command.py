@@ -94,7 +94,13 @@ class ConsoleCommand(Command):
     name = 'console'
     title = 'Start Python console with metabolic model loaded'
 
-    def __call__(self, **kwargs):
+    def init_parser(self, parser):
+        parser.add_argument('--type', choices=('python', 'ipython', 'ipython-kernel'),
+                            default='python', help='type of console to open')
+
+    def open_python(self, message, namespace):
+        '''Open interactive python console'''
+
         # Importing readline will in some cases print weird escape
         # characters to stdout. To avoid this we only import readline
         # and related packages at this point when we are certain
@@ -102,10 +108,30 @@ class ConsoleCommand(Command):
         from code import InteractiveConsole
         import readline, rlcompleter
 
-        readline.set_completer(rlcompleter.Completer(kwargs).complete)
+        readline.set_completer(rlcompleter.Completer(namespace).complete)
         readline.parse_and_bind('tab: complete')
-        console = InteractiveConsole(kwargs)
-        console.interact('Metabolic model has been loaded into "model" and "compounds".')
+        console = InteractiveConsole(namespace)
+        console.interact(message)
+
+    def open_ipython(self, message, namespace):
+        from IPython.terminal.embed import InteractiveShellEmbed
+        console = InteractiveShellEmbed(user_ns=namespace, banner2=message)
+        console()
+
+    def open_ipython_kernel(self, message, namespace):
+        from IPython import embed_kernel
+        embed_kernel(local_ns=namespace)
+
+    def __call__(self, **kwargs):
+        message = 'Metabolic model has been loaded into "model" and "compounds".'
+        console_type = kwargs['type']
+
+        if console_type == 'python':
+            self.open_python(message, kwargs)
+        elif console_type == 'ipython':
+            self.open_ipython(message, kwargs)
+        elif console_type == 'ipython-kernel':
+            self.open_ipython_kernel(message, kwargs)
 
 class FastGapFillCommand(Command):
     '''Run FastGapFill algorithm on a metabolic model'''
