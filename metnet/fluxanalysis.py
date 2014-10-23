@@ -37,6 +37,71 @@ def flux_balance(model, reaction='Biomass', solver=lpsolver.CplexSolver()):
     for rxnid in model.reactions:
         yield rxnid, prob.get_value('v_'+rxnid)
 
+def flux_balance_td(model, reaction, solver=lpsolver.CplexSolver()):
+    '''Maximize the flux of a specific reaction with thermodynamic constraints
+
+    Like FBA, but with the additional constraint that the flux must be
+    thermodynamically feasible. This is solved as a MILP problem and the
+    problem has been shown to be NP-hard in general.
+
+    Described by Muller, Arne C., and Alexander Bockmayr. "Fast thermodynamically
+    constrained flux variability analysis." Bioinformatics (2013): btt059.'''
+
+    em = 1e5
+    epsilon = 1e-5
+
+    # Create Flux balance problem
+    prob = solver.create_problem()
+
+    # Define flux variables
+    for reaction_id in model.reactions:
+        lower, upper = model.limits[reaction_id]
+        prob.define('v_'+reaction_id, lower=lower, upper=upper)
+
+        # Constrain internal reactions to a direction determined
+        # by alpha.
+        if not model.is_exchange(reaction_id):
+            prob.define('alpha_'+reaction_id, types=lpsolver.CplexProblem.Binary)
+            prob.define('dmu_'+reaction_id) # Delta mu
+
+            flux = prob.var('v_'+reaction_id)
+            alpha = prob.var('alpha_'+reaction_id)
+            dmu = prob.var('dmu_'+reaction_id)
+
+            prob.add_linear_constraints(flux >= lower*(1 - alpha),
+                                        flux <= upper*alpha,
+                                        dmu >= -em*alpha + epsilon,
+                                        dmu <= em*(1 - alpha) - epsilon)
+
+    objective = prob.var('v_'+reaction)
+    prob.set_linear_objective(objective)
+
+    # Define mu variables
+    prob.define(*('mu_'+compound.id for compound in model.compounds))
+
+    # Define constraints
+    massbalance_lhs = { compound: 0 for compound in model.compounds }
+    tdbalance_lhs = { reaction_id: 0 for reaction_id in model.reactions }
+    for spec, value in model.matrix.iteritems():
+        compound, reaction_id = spec
+        massbalance_lhs[compound] += prob.var('v_'+reaction_id) * value
+        if not model.is_exchange(reaction_id):
+            tdbalance_lhs[reaction_id] += prob.var('mu_'+compound.id) * value
+    for compound, lhs in massbalance_lhs.iteritems():
+        prob.add_linear_constraints(lhs == 0)
+    for reaction_id, lhs in tdbalance_lhs.iteritems():
+        if not model.is_exchange(reaction_id):
+            prob.add_linear_constraints(lhs == prob.var('dmu_'+reaction_id))
+
+    # Solve
+    prob.solve(lpsolver.CplexProblem.Maximize)
+    status = prob.cplex.solution.get_status()
+    if status != 101:
+        raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
+
+    for reaction_id in model.reactions:
+        yield reaction_id, prob.get_value('v_'+reaction_id)
+
 def flux_variability(model, reactions, fixed, solver=lpsolver.CplexSolver()):
     '''Find the variability of each reaction while fixing certain fluxes
 
