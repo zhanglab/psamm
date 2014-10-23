@@ -47,6 +47,21 @@ class TestMetabolicModel(unittest.TestCase):
         self.assertEqual(set(self.model.reactions), { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
         self.assertEqual(set(self.model.compounds), { Compound('A'), Compound('C'), Compound('D') })
 
+    def test_is_reversible_on_reversible(self):
+        self.assertTrue(self.model.is_reversible('rxn_2'))
+
+    def test_is_reversible_on_irreversible(self):
+        self.assertFalse(self.model.is_reversible('rxn_1'))
+        self.assertFalse(self.model.is_reversible('rxn_3'))
+
+    def test_is_exchange_on_exchange(self):
+        self.assertTrue(self.model.is_exchange('rxn_1'))
+        self.assertTrue(self.model.is_exchange('rxn_6'))
+
+    def test_is_exchange_on_internal(self):
+        self.assertFalse(self.model.is_exchange('rxn_2'))
+        self.assertFalse(self.model.is_exchange('rxn_5'))
+
     def test_add_all_database_reactions(self):
         self.database.set_reaction('rxn_7', ModelSEED.parse('|D| => |E|'))
         added = self.model.add_all_database_reactions()
