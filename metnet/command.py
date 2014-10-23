@@ -7,14 +7,13 @@ import operator
 import re
 
 from .fastcore import Fastcore
-from .fluxanalysis import flux_balance, flux_minimization
 from .formula import Formula, Radical
 from .gapfill import gapfind, gapfill
 from .massconsistency import MassConsistencyCheck
 from .database import load_tsv_database, ChainedDatabase
 from .metabolicmodel import MetabolicModel
 from .reaction import Reaction, Compound
-from . import lpsolver, modelseed
+from . import lpsolver, modelseed, fluxanalysis
 
 class Command(object):
     '''Represents a command in the interface, operating on a model or database
@@ -121,7 +120,7 @@ class FastGapFillCommand(Command):
         model_induced = model.copy()
         for rxnid in induced:
             model_induced.add_reaction(rxnid)
-        for rxnid, flux in sorted(flux_balance(model_induced, maximized_reaction)):
+        for rxnid, flux in sorted(fluxanalysis.flux_balance(model_induced, maximized_reaction)):
             reaction_class = 'Dbase'
             weight = weights.get(rxnid, 1)
             if model.has_reaction(rxnid):
@@ -165,11 +164,11 @@ class FluxAnalysisCommand(Command):
         epsilon = 1e-5
 
         # Run FBA on model
-        fba_fluxes = dict(flux_balance(model, reaction))
+        fba_fluxes = dict(fluxanalysis.flux_balance(model, reaction))
         optimum = fba_fluxes[reaction]
 
         # Run flux minimization
-        fmin_fluxes = dict(flux_minimization(model, { reaction: optimum }))
+        fmin_fluxes = dict(fluxanalysis.flux_minimization(model, { reaction: optimum }))
         count = 0
         for rxnid, flux in sorted(fmin_fluxes.iteritems()):
             if fba_fluxes[rxnid] - epsilon > flux:
@@ -399,9 +398,9 @@ class RobustnessCommand(Command):
             test_model.limits[varying_reaction].bounds = fixed_flux, fixed_flux
 
             try:
-                fba_fluxes = dict(flux_balance(test_model, reaction))
+                fba_fluxes = dict(fluxanalysis.flux_balance(test_model, reaction))
                 optimum = fba_fluxes[reaction]
-                fmin_fluxes = dict(flux_minimization(test_model, { reaction: optimum }))
+                fmin_fluxes = dict(fluxanalysis.flux_minimization(test_model, { reaction: optimum }))
                 for other_reaction, flux in fmin_fluxes.iteritems():
                     print '{}\t{}\t{}'.format(other_reaction, fixed_flux, flux)
             except Exception:
