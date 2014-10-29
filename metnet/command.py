@@ -561,7 +561,7 @@ class SearchCommand(Command):
                     if matched_reactions is None:
                         matched_reactions = set(model.get_compound_reactions(compound))
                     else:
-                        matched_reactions &= model.compound_reactions.get(compound, set())
+                        matched_reactions &= set(model.get_compound_reactions(compound))
                 if matched_reactions is not None:
                     reaction_ids.extend(matched_reactions)
 
