@@ -35,6 +35,59 @@ class Command(object):
         '''Execute command'''
         pass
 
+class ChargeBalanceCommand(Command):
+    '''Check whether compound charge in a given database or model is balanced
+
+    Balanced reactions are those reactions where the total charge
+    is consistent on the left and right side of the reaction equation.
+    Reactions that are not balanced will be printed out.'''
+
+    name = 'chargecheck'
+    title = 'Check charge balance on a model or database'
+
+    def init_parser(self, parser):
+        parser.add_argument('charge', metavar='file', type=argparse.FileType('r'),
+                            help='List of charges for database compounds')
+
+    def __call__(self, model, compounds, **kwargs):
+        '''Run charge balance command'''
+
+        # Load compound information
+        compound_name = {}
+        for compound in compounds:
+            compound_name[compound.id] = compound.name if compound.name is not None else compound.id
+
+        # Mapping from compound id to charge
+        compound_charge = {}
+        for line in kwargs['charge']:
+            line, _, comment = line.partition('#')
+            line = line.strip()
+            if line == '':
+                continue
+            compound_id, charge = line.split(None, 1)
+            compound_charge[compound_id] = int(charge)
+
+        # Create a set of known charge-inconsistent reactions
+        exchange = set()
+        for reaction_id in model.reactions:
+            if model.is_exchange(reaction_id):
+                exchange.add(reaction_id)
+
+        def reaction_charges(reaction_id):
+            for compound, value in model.get_reaction_values(reaction_id):
+                yield compound_charge.get(compound.name, 0) * value
+
+        count = 0
+        for reaction in sorted(model.reactions):
+            if reaction not in exchange:
+                charge = sum(reaction_charges(reaction))
+                if charge != 0:
+                    count += 1
+                    rx = model.get_reaction(reaction).translated_compounds(lambda x: compound_name.get(x, x))
+                    print '{}\t{}\t{}'.format(reaction, charge, rx)
+
+        sys.stderr.write('Unbalanced reactions: {}\n'.format(count))
+
 class ConsoleCommand(Command):
     '''Start an interactive Python console with the given model loaded'''
 
