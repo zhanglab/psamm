@@ -497,8 +497,9 @@ class RobustnessCommand(Command):
         '''Run flux analysis command'''
 
         def run_fba_fmin(model, reaction):
-            fba_fluxes = dict(fluxanalysis.flux_balance(model, reaction))
-            optimum = fba_fluxes[reaction]
+            fba = fluxanalysis.FluxBalanceProblem(model)
+            fba.solve(reaction)
+            optimum = fba.get_flux(reaction)
             return fluxanalysis.flux_minimization(model, { reaction: optimum })
 
         def run_tfba(model, reaction):
