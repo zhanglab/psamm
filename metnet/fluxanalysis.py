@@ -133,33 +133,19 @@ def flux_variability(model, reactions, fixed, solver=lpsolver.CplexSolver()):
     of the given reactions. The fixed reactions are given in a dictionary as
     a reaction id to value mapping.'''
 
-    prob = solver.create_problem()
+    test_model = model.copy()
+    for reaction_id, value in fixed.iteritems():
+        test_model.limits[reaction_id].lower = value
 
-    # Define flux variables
-    for reaction_id in model.reactions:
-        lower, upper = model.limits[reaction_id]
-        if reaction_id in fixed:
-            lower = max(lower, fixed[reaction_id])
-        prob.define('v_'+reaction_id, lower=lower, upper=upper)
-
-    massbalance_lhs = { compound: 0 for compound in model.compounds }
-    for spec, value in model.matrix.iteritems():
-        compound, rxnid = spec
-        massbalance_lhs[compound] += value * prob.var('v_'+rxnid)
-    for compound, lhs in massbalance_lhs.iteritems():
-        prob.add_linear_constraints(lhs == 0)
+    fba = FluxBalanceProblem(test_model, solver=solver)
 
     def min_max_solve(reaction_id):
-        for direction in (lpsolver.CplexProblem.Minimize, lpsolver.CplexProblem.Maximize):
-            prob.solve(direction)
-            status = prob.cplex.solution.get_status()
-            if status != 1:
-                raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
-            yield prob.get_value('v_'+reaction_id)
+        for direction in (-1, 1):
+            fba.solve({ reaction_id: direction })
+            yield fba.get_flux(reaction_id)
 
     # Solve for each reaction
     for reaction_id in reactions:
-        prob.set_linear_objective(prob.var('v_'+reaction_id))
         yield reaction_id, tuple(min_max_solve(reaction_id))
 
 def flux_minimization(model, fixed, weights={}, solver=lpsolver.CplexSolver()):
