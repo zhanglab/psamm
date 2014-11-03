@@ -29,9 +29,15 @@ class FluxBalanceProblem(object):
             self._prob.add_linear_constraints(lhs == 0)
 
     def solve(self, reaction):
-        '''Solve problem maximizing the given reaction'''
+        '''Solve problem maximizing the given reaction
 
-        objective = self._prob.var('v_'+reaction)
+        If reaction is a dictionary object, each entry is interpreted as a weight on
+        the objective for that reaction (non-existent reaction will have zero weight).'''
+
+        if isinstance(reaction, dict):
+            objective = sum(v * self._prob.var('v_'+r) for r, v in reaction.iteritems())
+        else:
+            objective = self._prob.var('v_'+reaction)
 
         # Set objective and solve
         self._prob.set_linear_objective(objective)
