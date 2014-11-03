@@ -1,7 +1,6 @@
 
 '''Implementation of Flux Balance Analysis'''
 
-from .metabolicmodel import FlipableModelView
 from . import lpsolver
 
 class FluxBalanceProblem(object):
@@ -204,22 +203,20 @@ def naive_consistency_check(model, subset, epsilon, solver=lpsolver.CplexSolver(
     checking one reaction results in flux in another unchecked reaction,
     that reaction will immediately be marked flux consistent.'''
 
-    # Wrap model in flipable proxy so reactions can be flipped
-    model = FlipableModelView(model)
+    fba = FluxBalanceProblem(model, solver=solver)
 
     subset = set(subset)
     while len(subset) > 0:
         reaction = next(iter(subset))
         print '{} left, checking {}...'.format(len(subset), reaction)
-        fluxiter = flux_balance(model, reaction, solver)
-        support = set(rxnid for rxnid, v in fluxiter if abs(v) >= epsilon)
+        fba.solve(reaction)
+        support = set(rxnid for rxnid in model.reactions if abs(fba.get_flux(rxnid)) >= epsilon)
         subset -= support
         if reaction in support:
             continue
-        elif reaction in model.reversible:
-            model.flip({ reaction })
-            fluxiter = flux_balance(model, reaction, solver)
-            support = set(rxnid for rxnid, v in fluxiter if abs(v) >= epsilon)
+        elif model.is_reversible(reaction):
+            fba.solve({ reaction: -1 })
+            support = set(rxnid for rxnid in model.reactions if abs(fba.get_flux(rxnid)) >= epsilon)
             subset -= support
             if reaction in support:
                 continue
