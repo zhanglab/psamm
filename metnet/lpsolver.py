@@ -123,11 +123,13 @@ class CplexProblem(object):
 
     def set_linear_objective(self, expression):
         '''Set linear objective of problem'''
+
         if isinstance(expression, numbers.Number):
             # Allow expressions with no variables as objective,
             # represented as a number
-            return
-        self._cp.objective.set_linear(expression.values())
+            expression = Expression()
+
+        self._cp.objective.set_linear((var, expression.value(var)) for var in self._cp.variables.get_names())
 
     def set_objective_sense(self, sense):
         '''Set type of problem (maximize or minimize)'''
@@ -176,6 +178,9 @@ class Expression(object):
     def values(self):
         '''Iterator of variable, value-pairs in expression'''
         return self._variables.iteritems()
+
+    def value(self, variable):
+        return self._variables.get(variable, 0)
 
     def value_sets(self):
         '''Iterator of expression sets
