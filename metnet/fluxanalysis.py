@@ -1,7 +1,6 @@
 
 '''Implementation of Flux Balance Analysis'''
 
-from .metabolicmodel import FlipableModelView
 from . import lpsolver
 
 class FluxBalanceProblem(object):
@@ -29,9 +28,15 @@ class FluxBalanceProblem(object):
             self._prob.add_linear_constraints(lhs == 0)
 
     def solve(self, reaction):
-        '''Solve problem maximizing the given reaction'''
+        '''Solve problem maximizing the given reaction
 
-        objective = self._prob.var('v_'+reaction)
+        If reaction is a dictionary object, each entry is interpreted as a weight on
+        the objective for that reaction (non-existent reaction will have zero weight).'''
+
+        if isinstance(reaction, dict):
+            objective = sum(v * self._prob.var('v_'+r) for r, v in reaction.iteritems())
+        else:
+            objective = self._prob.var('v_'+reaction)
 
         # Set objective and solve
         self._prob.set_linear_objective(objective)
@@ -127,33 +132,19 @@ def flux_variability(model, reactions, fixed, solver=lpsolver.CplexSolver()):
     of the given reactions. The fixed reactions are given in a dictionary as
     a reaction id to value mapping.'''
 
-    prob = solver.create_problem()
+    test_model = model.copy()
+    for reaction_id, value in fixed.iteritems():
+        test_model.limits[reaction_id].lower = value
 
-    # Define flux variables
-    for reaction_id in model.reactions:
-        lower, upper = model.limits[reaction_id]
-        if reaction_id in fixed:
-            lower = max(lower, fixed[reaction_id])
-        prob.define('v_'+reaction_id, lower=lower, upper=upper)
-
-    massbalance_lhs = { compound: 0 for compound in model.compounds }
-    for spec, value in model.matrix.iteritems():
-        compound, rxnid = spec
-        massbalance_lhs[compound] += value * prob.var('v_'+rxnid)
-    for compound, lhs in massbalance_lhs.iteritems():
-        prob.add_linear_constraints(lhs == 0)
+    fba = FluxBalanceProblem(test_model, solver=solver)
 
     def min_max_solve(reaction_id):
-        for direction in (lpsolver.CplexProblem.Minimize, lpsolver.CplexProblem.Maximize):
-            prob.solve(direction)
-            status = prob.cplex.solution.get_status()
-            if status != 1:
-                raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
-            yield prob.get_value('v_'+reaction_id)
+        for direction in (-1, 1):
+            fba.solve({ reaction_id: direction })
+            yield fba.get_flux(reaction_id)
 
     # Solve for each reaction
     for reaction_id in reactions:
-        prob.set_linear_objective(prob.var('v_'+reaction_id))
         yield reaction_id, tuple(min_max_solve(reaction_id))
 
 def flux_minimization(model, fixed, weights={}, solver=lpsolver.CplexSolver()):
@@ -212,22 +203,20 @@ def naive_consistency_check(model, subset, epsilon, solver=lpsolver.CplexSolver(
     checking one reaction results in flux in another unchecked reaction,
     that reaction will immediately be marked flux consistent.'''
 
-    # Wrap model in flipable proxy so reactions can be flipped
-    model = FlipableModelView(model)
+    fba = FluxBalanceProblem(model, solver=solver)
 
     subset = set(subset)
     while len(subset) > 0:
         reaction = next(iter(subset))
         print '{} left, checking {}...'.format(len(subset), reaction)
-        fluxiter = flux_balance(model, reaction, solver)
-        support = set(rxnid for rxnid, v in fluxiter if abs(v) >= epsilon)
+        fba.solve(reaction)
+        support = set(rxnid for rxnid in model.reactions if abs(fba.get_flux(rxnid)) >= epsilon)
         subset -= support
         if reaction in support:
             continue
-        elif reaction in model.reversible:
-            model.flip({ reaction })
-            fluxiter = flux_balance(model, reaction, solver)
-            support = set(rxnid for rxnid, v in fluxiter if abs(v) >= epsilon)
+        elif model.is_reversible(reaction):
+            fba.solve({ reaction: -1 })
+            support = set(rxnid for rxnid in model.reactions if abs(fba.get_flux(rxnid)) >= epsilon)
             subset -= support
             if reaction in support:
                 continue
