@@ -155,8 +155,9 @@ def Expression(s):
     }
 
     scanner = re.compile(r'''
+        (\s+) |              # space
         (\(|\)) |            # group
-        (\s+(?:or|and)\s+) | # operator
+        ((?:or|and)\b) |     # operator
         ([^\d\W]\w*) |       # variable
         (\Z) |               # end
         (.)                  # error
@@ -176,11 +177,12 @@ def Expression(s):
         return prev_op, prev_clause
 
     for match in re.finditer(scanner, s):
-        group, operator, variable, end, error = match.groups()
-        operator = operator.strip() if operator is not None else None
+        space, group, operator, variable, end, error = match.groups()
 
         if error is not None:
-            raise ValueError('Invalid token in expression string: {}'.format(match.group(0)))
+            raise ValueError('Invalid token in expression string: {}'.format(repr(match.group(0))))
+        elif space is not None:
+            continue
         elif expect_operator and operator is not None:
             if operator == 'and' and clause_operator != 'and':
                 prev_term = current_clause.pop()
@@ -207,7 +209,7 @@ def Expression(s):
             current_clause = []
             clause_operator = None
         else:
-            raise ValueError('Invalid token in expression string: {}'.format(match.group(0)))
+            raise ValueError('Invalid token in expression string: {}'.format(repr(match.group(0))))
 
     if len(clause_stack) > 0:
         raise ValueError('Unbalanced parenthesis group in expression')

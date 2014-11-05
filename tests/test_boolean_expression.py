@@ -94,6 +94,14 @@ class TestExpression(unittest.TestCase):
         e = Expression('(b1 or b2) and (b3 or b4)')
         self.assertEquals(e, And(Or(Variable('b1'), Variable('b2')), Or(Variable('b3'), Variable('b4'))))
 
+    def test_expression_parse_parenthesis_with_space_right(self):
+        e = Expression('(b1 and b2 )')
+        self.assertEquals(e, And(Variable('b1'), Variable('b2')))
+
+    def test_expression_parse_parenthesis_with_space_left(self):
+        e = Expression('( b1 and b2)')
+        self.assertEquals(e, And(Variable('b1'), Variable('b2')))
+
     def test_expression_parse_parentheses_right_nested(self):
         e = Expression('(b1 or (b2 and (b3 or (b4 and (b5)))))')
         self.assertEquals(e, Or(Variable('b1'), And(Variable('b2'), Or(Variable('b3'), And(Variable('b4'), Variable('b5'))))))
