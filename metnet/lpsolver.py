@@ -4,7 +4,7 @@
 import sys
 import math
 import numbers
-from itertools import repeat
+from itertools import repeat, count, izip
 from collections import Counter
 
 import cplex as cp
@@ -35,7 +35,8 @@ class CplexProblem(object):
         self._cp.set_error_stream(stream)
         self._cp.set_log_stream(stream)
 
-        self._variables = set()
+        self._variables = {}
+        self._var_names = ('x'+str(i) for i in count(1))
 
     @property
     def cplex(self):
@@ -65,18 +66,20 @@ class CplexProblem(object):
         if vartype is None or vartype in (CplexProblem.Continuous, CplexProblem.Binary, CplexProblem.Integer):
             vartype = repeat(vartype, len(names))
 
+        lp_names = tuple(next(self._var_names) for name in names)
+
         # Assign default values
         lower = (-cp.infinity if value is None else value for value in lower)
         upper = (cp.infinity if value is None else value for value in upper)
         vartype = tuple(CplexProblem.Continuous if value is None else value for value in vartype)
 
-        args = { 'names': names, 'lb': tuple(lower), 'ub': tuple(upper) }
+        args = { 'names': lp_names, 'lb': tuple(lower), 'ub': tuple(upper) }
         if any(value != CplexProblem.Continuous for value in vartype):
             # Set types only if some are integer (otherwise Cplex will change
             # the solver to MILP).
             args['types'] = vartype
 
-        self._variables.update(names)
+        self._variables.update(izip(names, lp_names))
         self._cp.variables.add(**args)
 
     def var(self, name):
@@ -86,14 +89,10 @@ class CplexProblem(object):
         return Expression({ name: 1 })
 
     def set(self, names):
-        '''Return the set of variables as an expression
-
-        If any of the variables do not exist in the
-        problem, they will be created with the given
-        bounds.'''
+        '''Return the set of variables as an expression'''
         names = tuple(names)
-        if not self._variables.issuperset(names):
-            raise ValueError('Undefined variables: {}'.format(set(names) - self._variables))
+        if any(name not in self._variables for name in names):
+            raise ValueError('Undefined variables: {}'.format(set(names) - set(self._variables)))
         return Expression({ VariableSet(names): 1 })
 
     def add_linear_constraints(self, *relations):
@@ -116,7 +115,7 @@ class CplexProblem(object):
                 expression = relation.expression
                 pairs = []
                 for value_set in expression.value_sets():
-                    ind, val = zip(*((variable, float(value)) for variable, value in value_set))
+                    ind, val = zip(*((self._variables[variable], float(value)) for variable, value in value_set))
                     pairs.append(cp.SparsePair(ind=ind, val=val))
                 self._cp.linear_constraints.add(lin_expr=pairs, senses=tuple(repeat(relation.sense, len(pairs))),
                                                 rhs=tuple(repeat(float(-expression.offset), len(pairs))))
@@ -129,7 +128,7 @@ class CplexProblem(object):
             # represented as a number
             expression = Expression()
 
-        self._cp.objective.set_linear((var, expression.value(var)) for var in self._cp.variables.get_names())
+        self._cp.objective.set_linear((lp_name, expression.value(var)) for var, lp_name in self._variables.iteritems())
 
     def set_objective_sense(self, sense):
         '''Set type of problem (maximize or minimize)'''
@@ -149,10 +148,10 @@ class CplexProblem(object):
     def get_value(self, expression):
         '''Return value of expression'''
         if isinstance(expression, Expression):
-            return sum(self._cp.solution.get_values(var)*value for var, value in expression.values())
+            return sum(self._cp.solution.get_values(self._variables[var])*value for var, value in expression.values())
         elif expression not in self._variables:
             raise ValueError('Unknown expression: {}'.format(expression))
-        return self._cp.solution.get_values(expression)
+        return self._cp.solution.get_values(self._variables[expression])
 
 class VariableSet(tuple):
     '''A tuple used to represent sets of variables'''
