@@ -240,7 +240,7 @@ class MetabolicModel(MetabolicDatabase):
 
         added = set()
         for compound in sorted(self.compounds):
-            rxnid_ex = 'rxnex_'+compound.id
+            rxnid_ex = ('rxnex', compound)
             if not self._database.has_reaction(rxnid_ex):
                 reaction_ex = Reaction(Reaction.Bidir, [(compound.in_compartment('e'), 1)], [])
                 if reaction_ex not in all_reactions:
@@ -271,7 +271,7 @@ class MetabolicModel(MetabolicDatabase):
                 # A transport reaction with exchange would not be valid
                 continue
 
-            rxnid_tp = 'rxntp_'+compound.id
+            rxnid_tp = ('rxntp', compound)
             if not self._database.has_reaction(rxnid_tp):
                 reaction_tp = Reaction(Reaction.Bidir, [(compound.in_compartment('e'), 1)],
                                         [(compound, 1)])

@@ -49,18 +49,6 @@ class TestCompound(unittest.TestCase):
         c = Compound('Phosphate')
         self.assertEquals(list(c.arguments), [])
 
-    def test_compound_id_basic(self):
-        self.assertEquals(Compound('C1234').id, 'C1234')
-
-    def test_compound_id_from_invalid_characters(self):
-        self.assertEquals(Compound('D-Glucose 1-phosphate').id, 'D_Glucose_1_phosphate')
-
-    def test_compound_id_from_digit_prefix(self):
-        self.assertEquals(Compound('2-Oxoglutarate').id, '_2_Oxoglutarate')
-
-    def test_compound_id_with_compartment(self):
-        self.assertEquals(Compound('L-Glutamine', 'e').id, 'L_Glutamine_e')
-
     def test_compound_translate_name(self):
         c = Compound('Pb')
         self.assertEquals(c.translate(lambda x: x.lower()), Compound('pb'))
