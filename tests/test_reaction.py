@@ -236,6 +236,20 @@ class TestMetNet(unittest.TestCase):
                                       [(Compound('cpd_focytcc553', 'c'), 2), (Compound('cpd_so4', 'c'), 1),
                                        (Compound('cpd_h', 'e'), 2)]))
 
+    def test_metnet_parse_global_with_colon_in_name(self):
+        r = MetNet.parse('[c] : fdxr-4:2 + h + nadp <==> fdxo-4:2 + nadph')
+        self.assertEquals(r, Reaction(Reaction.Bidir,
+                                        [(Compound('cpd_fdxr-4:2', 'c'), 1), (Compound('cpd_h', 'c'), 1),
+                                         (Compound('cpd_nadp', 'c'), 1)],
+                                        [(Compound('cpd_fdxo-4:2', 'c'), 1), (Compound('cpd_nadph', 'c'), 1)]))
+
+    def test_metnet_parse_local_with_colon_in_name(self):
+        r = MetNet.parse('fdxr-4:2[c] + h[c] + nadp[c] <==> fdxo-4:2[c] + nadph[c]')
+        self.assertEquals(r, Reaction(Reaction.Bidir,
+                                        [(Compound('cpd_fdxr-4:2', 'c'), 1), (Compound('cpd_h', 'c'), 1),
+                                         (Compound('cpd_nadp', 'c'), 1)],
+                                        [(Compound('cpd_fdxo-4:2', 'c'), 1), (Compound('cpd_nadph', 'c'), 1)]))
+
 class TestKEGG(unittest.TestCase):
     def test_kegg_parse(self):
         r = KEGG.parse('C00013 + C00001 <=> 2 C00009')

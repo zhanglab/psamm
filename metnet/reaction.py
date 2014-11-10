@@ -450,21 +450,19 @@ class MetNet(object):
                 yield Compound(cpdid, compartment=comp), count
 
         # Split by colon for compartment information
-        eq_split = s.split(':')
-
-        if len(eq_split) == 2:
-            global_comp, second = eq_split
-            global_comp = global_comp.strip('[] ')
+        m = re.match(r'^\s*\[(\w+)\]\s*:\s*(.*)', s)
+        if m is not None:
+            global_comp = m.group(1)
+            s = m.group(2)
         else:
-            second = eq_split[0]
             global_comp = None
 
         # Split by equation arrow
-        direction = '=>'
-        left_right = second.split('-->')
+        direction = Reaction.Right
+        left_right = s.split('-->')
         if len(left_right) == 1:
-            direction = '<=>'
-            cpd_left, cpd_right = second.split('<==>')
+            direction = Reaction.Bidir
+            cpd_left, cpd_right = s.split('<==>')
         else:
             cpd_left, cpd_right = left_right
 
