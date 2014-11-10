@@ -27,17 +27,17 @@ def gapfind(model, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
     # Define flux variables
     for reaction_id in model.reactions:
         lower, upper = model.limits[reaction_id]
-        prob.define('v_'+reaction_id, lower=lower, upper=upper)
+        prob.define(('v', reaction_id), lower=lower, upper=upper)
 
     # Define constraints on production of metabolites in reaction
     binary_cons_lhs = { compound: 0 for compound in model.compounds }
     for spec, value in model.matrix.iteritems():
         compound, reaction_id = spec
         if value != 0 and (reaction_id in model.reversible or value > 0):
-            prob.define('w_'+reaction_id+'_'+compound.id, types=lpsolver.CplexProblem.Binary)
+            prob.define(('w', reaction_id, compound), types=lpsolver.CplexProblem.Binary)
 
-            w = prob.var('w_'+reaction_id+'_'+compound.id)
-            sv = float(value) * prob.var('v_'+reaction_id)
+            w = prob.var(('w', reaction_id, compound))
+            sv = float(value) * prob.var(('v', reaction_id))
 
             prob.add_linear_constraints(sv <= v_max*w)
             if model.is_reversible(reaction_id):
@@ -47,19 +47,19 @@ def gapfind(model, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
 
             binary_cons_lhs[compound] += w
 
-    prob.define(*('xp_'+compound.id for compound in model.compounds), types=lpsolver.CplexProblem.Binary)
+    prob.define(*(('xp', compound) for compound in model.compounds), types=lpsolver.CplexProblem.Binary)
 
-    objective = sum(prob.var('xp_'+compound.id) for compound in model.compounds)
+    objective = sum(prob.var(('xp', compound)) for compound in model.compounds)
     prob.set_linear_objective(objective)
 
     for compound, lhs in binary_cons_lhs.iteritems():
-        prob.add_linear_constraints(lhs >= prob.var('xp_'+compound.id))
+        prob.add_linear_constraints(lhs >= prob.var(('xp', compound)))
 
     # Define mass balance constraints
     massbalance_lhs = { compound: 0 for compound in model.compounds }
     for spec, value in model.matrix.iteritems():
         compound, reaction_id = spec
-        massbalance_lhs[compound] += prob.var('v_'+reaction_id) * value
+        massbalance_lhs[compound] += prob.var(('v', reaction_id)) * value
     for compound, lhs in massbalance_lhs.iteritems():
         # The constraint is merely >0 meaning that we have implicit sinks
         # for all compounds.
@@ -72,7 +72,7 @@ def gapfind(model, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
         raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
     for compound in model.compounds:
-        if prob.get_value('xp_'+compound.id) == 0:
+        if prob.get_value(('xp', compound)) == 0:
             yield compound
 
 def gapfill(model, core, blocked, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
@@ -99,30 +99,30 @@ def gapfill(model, core, blocked, epsilon=1e-5, v_max=1000, solver=lpsolver.Cple
     prob = solver.create_problem()
 
     # Define flux variables
-    prob.define(*('v_'+reaction_id for reaction_id in model.reactions), lower=-v_max, upper=v_max)
+    prob.define(*(('v', reaction_id) for reaction_id in model.reactions), lower=-v_max, upper=v_max)
 
     # Add binary indicator variables
     database_reactions = set(model.reactions).difference(core)
-    prob.define(*('ym_'+reaction_id for reaction_id in core), types=lpsolver.CplexProblem.Binary)
-    prob.define(*('yd_'+reaction_id for reaction_id in database_reactions), types=lpsolver.CplexProblem.Binary)
+    prob.define(*(('ym', reaction_id) for reaction_id in core), types=lpsolver.CplexProblem.Binary)
+    prob.define(*(('yd', reaction_id) for reaction_id in database_reactions), types=lpsolver.CplexProblem.Binary)
 
-    objective = (sum(prob.var('ym_'+reaction_id) for reaction_id in core) +
-                    sum(prob.var('yd_'+reaction_id) for reaction_id in database_reactions))
+    objective = (sum(prob.var(('ym', reaction_id)) for reaction_id in core) +
+                    sum(prob.var(('yd', reaction_id)) for reaction_id in database_reactions))
     prob.set_linear_objective(objective)
 
     # Add constraints on core reactions
     for reaction_id in core:
-        v = prob.var('v_'+reaction_id)
+        v = prob.var(('v', reaction_id))
         if model.is_reversible(reaction_id):
             prob.add_linear_constraints(v >= model.limits[reaction_id].lower)
         else:
-            prob.add_linear_constraints(v >= -v_max*prob.var('ym_'+reaction_id))
+            prob.add_linear_constraints(v >= -v_max*prob.var(('ym', reaction_id)))
         prob.add_linear_constraints(v <= model.limits[reaction_id].upper)
 
     # Add constraints on database reactions
     for reaction_id in database_reactions:
-        v = prob.var('v_'+reaction_id)
-        yd = prob.var('yd_'+reaction_id)
+        v = prob.var(('v', reaction_id))
+        yd = prob.var(('yd', reaction_id))
         prob.add_linear_constraints(v >= yd * model.limits[reaction_id].lower)
         prob.add_linear_constraints(v <= yd * model.limits[reaction_id].upper)
 
@@ -131,10 +131,10 @@ def gapfill(model, core, blocked, epsilon=1e-5, v_max=1000, solver=lpsolver.Cple
     for spec, value in model.matrix.iteritems():
         compound, reaction_id = spec
         if compound in blocked and value != 0:
-            prob.define('w_'+reaction_id+'_'+compound.id, types=lpsolver.CplexProblem.Binary)
+            prob.define(('w', reaction_id, compound), types=lpsolver.CplexProblem.Binary)
 
-            w = prob.var('w_'+reaction_id+'_'+compound.id)
-            sv = float(value) * prob.var('v_'+reaction_id)
+            w = prob.var(('w', reaction_id, compound))
+            sv = float(value) * prob.var(('v', reaction_id))
 
             prob.add_linear_constraints(sv >= epsilon-v_max*(1 - w))
             prob.add_linear_constraints(sv <= v_max*w)
@@ -150,7 +150,7 @@ def gapfill(model, core, blocked, epsilon=1e-5, v_max=1000, solver=lpsolver.Cple
     massbalance_lhs = { compound: 0 for compound in model.compounds }
     for spec, value in model.matrix.iteritems():
         compound, reaction_id = spec
-        massbalance_lhs[compound] += prob.var('v_'+reaction_id) * value
+        massbalance_lhs[compound] += prob.var(('v', reaction_id)) * value
     for compound, lhs in massbalance_lhs.iteritems():
         # The constraint is merely >0 meaning that we have implicit sinks
         # for all compounds.
@@ -164,12 +164,12 @@ def gapfill(model, core, blocked, epsilon=1e-5, v_max=1000, solver=lpsolver.Cple
 
     def added_iter():
         for reaction_id in database_reactions:
-            if prob.get_value('yd_'+reaction_id) > 0:
+            if prob.get_value(('yd', reaction_id)) > 0:
                 yield reaction_id
 
     def reversed_iter():
         for reaction_id in core:
-            if prob.get_value('ym_'+reaction_id) > 0:
+            if prob.get_value(('ym', reaction_id)) > 0:
                 yield reaction_id
 
     return added_iter(), reversed_iter()

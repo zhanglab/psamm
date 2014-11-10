@@ -17,13 +17,13 @@ class FluxBalanceProblem(object):
         # Define flux variables
         for reaction_id in model.reactions:
             lower, upper = model.limits[reaction_id]
-            self._prob.define('v_'+reaction_id, lower=lower, upper=upper)
+            self._prob.define(('v', reaction_id), lower=lower, upper=upper)
 
         # Define constraints
         massbalance_lhs = { compound: 0 for compound in model.compounds }
         for spec, value in model.matrix.iteritems():
             compound, reaction_id = spec
-            massbalance_lhs[compound] += self._prob.var('v_'+reaction_id) * value
+            massbalance_lhs[compound] += self._prob.var(('v', reaction_id)) * value
         for compound, lhs in massbalance_lhs.iteritems():
             self._prob.add_linear_constraints(lhs == 0)
 
@@ -34,9 +34,9 @@ class FluxBalanceProblem(object):
         the objective for that reaction (non-existent reaction will have zero weight).'''
 
         if isinstance(reaction, dict):
-            objective = sum(v * self._prob.var('v_'+r) for r, v in reaction.iteritems())
+            objective = sum(v * self._prob.var(('v', r)) for r, v in reaction.iteritems())
         else:
-            objective = self._prob.var('v_'+reaction)
+            objective = self._prob.var(('v', reaction))
 
         # Set objective and solve
         self._prob.set_linear_objective(objective)
@@ -47,7 +47,7 @@ class FluxBalanceProblem(object):
 
     def get_flux(self, reaction):
         '''Get resulting flux value for reaction'''
-        return self._prob.get_value('v_'+reaction)
+        return self._prob.get_value(('v', reaction))
 
 class FluxBalanceTDProblem(FluxBalanceProblem):
     '''Maximize the flux of a specific reaction with thermodynamic constraints
@@ -70,12 +70,12 @@ class FluxBalanceTDProblem(FluxBalanceProblem):
             # Constrain internal reactions to a direction determined
             # by alpha.
             if not model.is_exchange(reaction_id):
-                p.define('alpha_'+reaction_id, types=lpsolver.CplexProblem.Binary)
-                p.define('dmu_'+reaction_id) # Delta mu
+                p.define(('alpha', reaction_id), types=lpsolver.CplexProblem.Binary)
+                p.define(('dmu', reaction_id)) # Delta mu
 
-                flux = p.var('v_'+reaction_id)
-                alpha = p.var('alpha_'+reaction_id)
-                dmu = p.var('dmu_'+reaction_id)
+                flux = p.var(('v', reaction_id))
+                alpha = p.var(('alpha', reaction_id))
+                dmu = p.var(('dmu', reaction_id))
 
                 lower, upper = model.limits[reaction_id]
                 p.add_linear_constraints(flux >= lower*(1 - alpha),
@@ -84,16 +84,16 @@ class FluxBalanceTDProblem(FluxBalanceProblem):
                                             dmu <= em*(1 - alpha) - epsilon)
 
         # Define mu variables
-        p.define(*('mu_'+compound.id for compound in model.compounds))
+        p.define(*(('mu', compound) for compound in model.compounds))
 
         tdbalance_lhs = { reaction_id: 0 for reaction_id in model.reactions }
         for spec, value in model.matrix.iteritems():
             compound, reaction_id = spec
             if not model.is_exchange(reaction_id):
-                tdbalance_lhs[reaction_id] += p.var('mu_'+compound.id) * value
+                tdbalance_lhs[reaction_id] += p.var(('mu', compound)) * value
         for reaction_id, lhs in tdbalance_lhs.iteritems():
             if not model.is_exchange(reaction_id):
-                p.add_linear_constraints(lhs == p.var('dmu_'+reaction_id))
+                p.add_linear_constraints(lhs == p.var(('dmu', reaction_id)))
 
 def flux_balance(model, reaction, solver=None):
     '''Run flux balance analysis on the given model
@@ -160,22 +160,22 @@ def flux_minimization(model, fixed, weights={}, solver=lpsolver.CplexSolver()):
         lower, upper = model.limits[reaction_id]
         if reaction_id in fixed:
             lower = max(lower, fixed[reaction_id])
-        prob.define('v_'+reaction_id, lower=lower, upper=upper)
+        prob.define(('v', reaction_id), lower=lower, upper=upper)
 
     # Define z variables
     prob.define(*('z_'+reaction_id for reaction_id in model.reactions), lower=0)
-    objective = sum(prob.var('z_'+reaction_id) * weights.get(reaction_id, 1) for reaction_id in model.reactions)
+    objective = sum(prob.var(('z', reaction_id)) * weights.get(reaction_id, 1) for reaction_id in model.reactions)
     prob.set_linear_objective(objective)
 
     # Define constraints
-    v = prob.set('v_'+rxnid for rxnid in model.reactions)
-    z = prob.set('z_'+rxnid for rxnid in model.reactions)
+    v = prob.set(('v', rxnid) for rxnid in model.reactions)
+    z = prob.set(('z', rxnid) for rxnid in model.reactions)
     prob.add_linear_constraints(z >= v, v >= -z)
 
     massbalance_lhs = { compound: 0 for compound in model.compounds }
     for spec, value in model.matrix.iteritems():
         compound, rxnid = spec
-        massbalance_lhs[compound] += value * prob.var('v_'+rxnid)
+        massbalance_lhs[compound] += value * prob.var(('v', rxnid))
     for compound, lhs in massbalance_lhs.iteritems():
         prob.add_linear_constraints(lhs == 0)
 
@@ -185,7 +185,7 @@ def flux_minimization(model, fixed, weights={}, solver=lpsolver.CplexSolver()):
     if status != 1:
         raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
-    return ((reaction_id, prob.get_value('v_'+reaction_id)) for reaction_id in model.reactions)
+    return ((reaction_id, prob.get_value(('v', reaction_id))) for reaction_id in model.reactions)
 
 def naive_consistency_check(model, subset, epsilon, solver=lpsolver.CplexSolver()):
     '''Check that reaction subset of model is consistent using FBA

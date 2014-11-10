@@ -58,19 +58,19 @@ class Fastcore(object):
         # Define flux variables
         for rxnid in model.reactions:
             lower, upper = model.limits[rxnid]
-            prob.define('v_'+rxnid, lower=lower, upper=upper)
+            prob.define(('v', rxnid), lower=lower, upper=upper)
 
         # Define z variables
-        prob.define(*('z_'+rxnid for rxnid in reaction_subset), lower=0, upper=epsilon)
-        prob.set_linear_objective(sum(prob.var('z_'+rxnid) for rxnid in reaction_subset))
-        v = prob.set('v_'+rxnid for rxnid in reaction_subset)
-        z = prob.set('z_'+rxnid for rxnid in reaction_subset)
+        prob.define(*(('z', rxnid) for rxnid in reaction_subset), lower=0, upper=epsilon)
+        prob.set_linear_objective(sum(prob.var(('z', rxnid)) for rxnid in reaction_subset))
+        v = prob.set(('v', rxnid) for rxnid in reaction_subset)
+        z = prob.set(('z', rxnid) for rxnid in reaction_subset)
         prob.add_linear_constraints(v >= z)
 
         massbalance_lhs = { compound: 0 for compound in model.compounds }
         for spec, value in model.matrix.iteritems():
             compound, rxnid = spec
-            massbalance_lhs[compound] += prob.var('v_'+rxnid) * value
+            massbalance_lhs[compound] += prob.var(('v', rxnid)) * value
         prob.add_linear_constraints(*(lhs == 0 for compound, lhs in massbalance_lhs.iteritems()))
 
         # Solve
@@ -80,7 +80,7 @@ class Fastcore(object):
             raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
         for rxnid in sorted(model.reactions):
-            yield rxnid, prob.get_value('v_'+rxnid)
+            yield rxnid, prob.get_value(('v', rxnid))
 
     def lp10(self, model, subset_k, subset_p, epsilon, scaling, weights={}):
         # This program forces reactions in subset K to attain flux > epsilon
@@ -98,20 +98,20 @@ class Fastcore(object):
             lower, upper = model.limits[rxnid]
             if rxnid in subset_k:
                 lower = max(lower, epsilon)
-            prob.define('v_'+rxnid, lower=lower*scaling, upper=upper*scaling)
+            prob.define(('v', rxnid), lower=lower*scaling, upper=upper*scaling)
 
         # Define z variables
-        prob.define(*('z_'+rxnid for rxnid in subset_p), lower=0)
-        prob.set_linear_objective(sum(prob.var('z_'+rxnid) * weights.get(rxnid, 1) for rxnid in subset_p))
+        prob.define(*(('z', rxnid) for rxnid in subset_p), lower=0)
+        prob.set_linear_objective(sum(prob.var(('z', rxnid)) * weights.get(rxnid, 1) for rxnid in subset_p))
 
-        z = prob.set('z_'+rxnid for rxnid in subset_p)
-        v = prob.set('v_'+rxnid for rxnid in subset_p)
+        z = prob.set(('z', rxnid) for rxnid in subset_p)
+        v = prob.set(('v', rxnid) for rxnid in subset_p)
         prob.add_linear_constraints(z >= v, v >= -z)
 
         massbalance_lhs = { compound: 0 for compound in model.compounds }
         for spec, value in model.matrix.iteritems():
             compound, rxnid = spec
-            massbalance_lhs[compound] += prob.var('v_'+rxnid) * value
+            massbalance_lhs[compound] += prob.var(('v', rxnid)) * value
         prob.add_linear_constraints(*(lhs == 0 for compound, lhs in massbalance_lhs.iteritems()))
 
         # Solve
@@ -121,7 +121,7 @@ class Fastcore(object):
             raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
 
         for reaction_id in model.reactions:
-            yield reaction_id, prob.get_value('v_'+reaction_id)
+            yield reaction_id, prob.get_value(('v', reaction_id))
 
     def fastcc(self, model, epsilon):
         '''Check consistency of model reactions
