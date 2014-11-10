@@ -94,7 +94,7 @@ class CplexProblem(object):
         names = tuple(names)
         if not self._variables.issuperset(names):
             raise ValueError('Undefined variables: {}'.format(set(names) - self._variables))
-        return Expression({ tuple(names): 1 })
+        return Expression({ VariableSet(names): 1 })
 
     def add_linear_constraints(self, *relations):
         '''Add constraints to the problem
@@ -154,14 +154,17 @@ class CplexProblem(object):
             raise ValueError('Unknown expression: {}'.format(expression))
         return self._cp.solution.get_values(expression)
 
+class VariableSet(tuple):
+    '''A tuple used to represent sets of variables'''
+
 class Expression(object):
     '''Represents a linear expression
 
-    The variables can be ordinary strings which will result
-    in a linear expression. If one or more variables are instead
-    tuples of strings, then this will be taken to represent a set
+    The variables can be any hashable objects. If one or more variables
+    are instead VariableSets, this will be taken to represent a set
     of expressions separately using a different element of the
-    tuple.'''
+    VariableSet.'''
+
     def __init__(self, variables={}, offset=0):
         self._variables = Counter(variables)
         self._offset = offset
@@ -189,10 +192,10 @@ class Expression(object):
         each expression in the expression set (each equivalent to
         values()). If none of the variables is a set variable then
         a single iterator will be yielded.'''
-        count = max(1 if not isinstance(var, tuple) else len(var) for var in self._variables)
+        count = max(1 if not isinstance(var, VariableSet) else len(var) for var in self._variables)
         def value_set(n):
             for variable, value in self._variables.iteritems():
-                if isinstance(variable, tuple):
+                if isinstance(variable, VariableSet):
                     yield variable[n], value
                 else:
                     yield variable, value
@@ -270,7 +273,7 @@ class Expression(object):
             for name, value in sorted(self._variables.iteritems()):
                 if value != 0:
                     count_vars += 1
-                    if isinstance(name, tuple):
+                    if isinstance(name, VariableSet):
                         yield '<set>', value
                     else:
                         yield name, value
