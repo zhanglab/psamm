@@ -66,13 +66,12 @@ def gapfind(model, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
         prob.add_linear_constraints(lhs >= 0)
 
     # Solve
-    prob.solve(lpsolver.CplexProblem.Maximize)
-    status = prob.cplex.solution.get_status()
-    if status != 101: # MILP solution
-        raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
+    result = prob.solve(lpsolver.CplexProblem.Maximize)
+    if not result:
+        raise Exception('Non-optimal solution: {}'.format(result.status))
 
     for compound in model.compounds:
-        if prob.get_value(('xp', compound)) == 0:
+        if result.get_value(('xp', compound)) == 0:
             yield compound
 
 def gapfill(model, core, blocked, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
@@ -157,19 +156,18 @@ def gapfill(model, core, blocked, epsilon=1e-5, v_max=1000, solver=lpsolver.Cple
         prob.add_linear_constraints(lhs >= 0)
 
     # Solve
-    prob.solve(lpsolver.CplexProblem.Minimize)
-    status = prob.cplex.solution.get_status()
-    if status != 101: # MILP solution
-        raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
+    result = prob.solve(lpsolver.CplexProblem.Minimize)
+    if not result:
+        raise Exception('Non-optimal solution: {}'.format(result.status))
 
     def added_iter():
         for reaction_id in database_reactions:
-            if prob.get_value(('yd', reaction_id)) > 0:
+            if result.get_value(('yd', reaction_id)) > 0:
                 yield reaction_id
 
     def reversed_iter():
         for reaction_id in core:
-            if prob.get_value(('ym', reaction_id)) > 0:
+            if result.get_value(('ym', reaction_id)) > 0:
                 yield reaction_id
 
     return added_iter(), reversed_iter()

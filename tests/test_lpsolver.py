@@ -16,15 +16,15 @@ class TestCplexProblem(unittest.TestCase):
 
         # Solve first time, maximize x
         prob.set_linear_objective(2*prob.var('x'))
-        prob.solve()
-        self.assertAlmostEqual(prob.get_value('x'), 10)
+        result = prob.solve()
+        self.assertAlmostEqual(result.get_value('x'), 10)
 
         # Solve second time, maximize y
         # If the objective is not properly cleared,
         # the second solve will still maximize x.
         prob.set_linear_objective(prob.var('y'))
-        prob.solve()
-        self.assertAlmostEqual(prob.get_value('y'), 10)
+        result = prob.solve()
+        self.assertAlmostEqual(result.get_value('y'), 10)
 
 if __name__ == '__main__':
     unittest.main()

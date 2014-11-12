@@ -38,6 +38,8 @@ class CplexProblem(object):
         self._variables = {}
         self._var_names = ('x'+str(i) for i in count(1))
 
+        self._result = None
+
     @property
     def cplex(self):
         '''The underlying Cplex object'''
@@ -145,13 +147,55 @@ class CplexProblem(object):
             self.set_objective_sense(sense)
         self._cp.solve()
 
+        self._result = CplexResult(self)
+        return self._result
+
+    @property
+    def result(self):
+        return self._result
+
+class CplexResult(object):
+    '''Represents the solution to a CplexProblem
+
+    This object will be returned from the CplexProblem.solve() method or by
+    accessing the CplexProblem.result property after solving a problem. This
+    class should not be instantiated manually.
+
+    CplexResult will evaluate to a boolean according to the success of the
+    solution, so checking the truth value of the result will immediately
+    indicate whether solving was successful.'''
+
+    def __init__(self, prob):
+        self._problem = prob
+
+    def _check_valid(self):
+        if self._problem.result != self:
+            raise Exception('Previous result is no longer valid as problem has been solved again')
+
+    @property
+    def success(self):
+        '''Return boolean indicating whether a solution was found'''
+        self._check_valid()
+        return self._problem._cp.solution.get_status() in (1, 101)
+
+    def __bool__(self):
+        return self.success
+
+    @property
+    def status(self):
+        '''Return string indicating the error encountered on failure'''
+        self._check_valid()
+        return self._problem._cp.solution.get_status_string()
+
     def get_value(self, expression):
         '''Return value of expression'''
+
+        self._check_valid()
         if isinstance(expression, Expression):
-            return sum(self._cp.solution.get_values(self._variables[var])*value for var, value in expression.values())
-        elif expression not in self._variables:
+            return sum(self._problem._cp.solution.get_values(self._problem._variables[var])*value for var, value in expression.values())
+        elif expression not in self._problem._variables:
             raise ValueError('Unknown expression: {}'.format(expression))
-        return self._cp.solution.get_values(self._variables[expression])
+        return self._problem._cp.solution.get_values(self._problem._variables[expression])
 
 class VariableSet(tuple):
     '''A tuple used to represent sets of variables'''

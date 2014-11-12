@@ -74,13 +74,12 @@ class Fastcore(object):
         prob.add_linear_constraints(*(lhs == 0 for compound, lhs in massbalance_lhs.iteritems()))
 
         # Solve
-        prob.solve(lpsolver.CplexProblem.Maximize)
-        status = prob.cplex.solution.get_status()
-        if status != 1:
-            raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
+        result = prob.solve(lpsolver.CplexProblem.Maximize)
+        if not result:
+            raise Exception('Non-optimal solution: {}'.format(result.status))
 
         for rxnid in sorted(model.reactions):
-            yield rxnid, prob.get_value(('v', rxnid))
+            yield rxnid, result.get_value(('v', rxnid))
 
     def lp10(self, model, subset_k, subset_p, epsilon, scaling, weights={}):
         # This program forces reactions in subset K to attain flux > epsilon
@@ -115,13 +114,12 @@ class Fastcore(object):
         prob.add_linear_constraints(*(lhs == 0 for compound, lhs in massbalance_lhs.iteritems()))
 
         # Solve
-        prob.solve(lpsolver.CplexProblem.Minimize)
-        status = prob.cplex.solution.get_status()
-        if status != 1:
-            raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
+        result = prob.solve(lpsolver.CplexProblem.Minimize)
+        if not result:
+            raise Exception('Non-optimal solution: {}'.format(result.status))
 
         for reaction_id in model.reactions:
-            yield reaction_id, prob.get_value(('v', reaction_id))
+            yield reaction_id, result.get_value(('v', reaction_id))
 
     def fastcc(self, model, epsilon):
         '''Check consistency of model reactions

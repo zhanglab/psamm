@@ -44,10 +44,8 @@ class MassConsistencyCheck(object):
             if reaction not in exchange:
                 prob.add_linear_constraints(lhs == 0)
 
-        prob.solve(lpsolver.CplexProblem.Minimize)
-        status = prob.cplex.solution.get_status()
-
-        return status == 1
+        result = prob.solve(lpsolver.CplexProblem.Minimize)
+        return result.success
 
     def check_reaction_consistency(self, database, exchange=set(), zeromass=set(), weights={}):
         '''Check inconsistent reactions by minimizing mass residuals for each reaction
@@ -90,19 +88,18 @@ class MassConsistencyCheck(object):
                 prob.add_linear_constraints(lhs + r == 0)
 
         # Solve
-        prob.solve(lpsolver.CplexProblem.Minimize)
-        status = prob.cplex.solution.get_status()
-        if status != 1:
-            raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
+        result = prob.solve(lpsolver.CplexProblem.Minimize)
+        if not result:
+            raise Exception('Non-optimal solution: {}'.format(result.status))
 
         def iterate_reactions():
             for reaction_id in database.reactions:
-                residual = prob.get_value(('r', reaction_id))
+                residual = result.get_value(('r', reaction_id))
                 yield reaction_id, residual
 
         def iterate_compounds():
             for compound in compounds:
-                yield compound, prob.get_value(('m', compound))
+                yield compound, result.get_value(('m', compound))
 
         return iterate_reactions(), iterate_compounds()
 
@@ -144,10 +141,9 @@ class MassConsistencyCheck(object):
                 prob.add_linear_constraints(lhs == 0)
 
         # Solve
-        prob.solve(lpsolver.CplexProblem.Maximize)
-        status = prob.cplex.solution.get_status()
-        if status != 1:
-            raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
+        result = prob.solve(lpsolver.CplexProblem.Maximize)
+        if not result:
+            raise Exception('Non-optimal solution: {}'.format(result.status))
 
         for compound in compound_set:
-            yield compound, prob.get_value(('m', compound))
+            yield compound, result.get_value(('m', compound))

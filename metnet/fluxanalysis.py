@@ -40,14 +40,13 @@ class FluxBalanceProblem(object):
 
         # Set objective and solve
         self._prob.set_linear_objective(objective)
-        self._prob.solve(lpsolver.CplexProblem.Maximize)
-        status = self._prob.cplex.solution.get_status()
-        if status not in (1, 101):
-            raise Exception('Non-optimal solution: {}'.format(self._prob.cplex.solution.get_status_string()))
+        result = self._prob.solve(lpsolver.CplexProblem.Maximize)
+        if not result:
+            raise Exception('Non-optimal solution: {}'.format(result.status))
 
     def get_flux(self, reaction):
         '''Get resulting flux value for reaction'''
-        return self._prob.get_value(('v', reaction))
+        return self._prob.result.get_value(('v', reaction))
 
 class FluxBalanceTDProblem(FluxBalanceProblem):
     '''Maximize the flux of a specific reaction with thermodynamic constraints
@@ -180,12 +179,11 @@ def flux_minimization(model, fixed, weights={}, solver=lpsolver.CplexSolver()):
         prob.add_linear_constraints(lhs == 0)
 
     # Solve
-    prob.solve(lpsolver.CplexProblem.Minimize)
-    status = prob.cplex.solution.get_status()
-    if status != 1:
-        raise Exception('Non-optimal solution: {}'.format(prob.cplex.solution.get_status_string()))
+    result = prob.solve(lpsolver.CplexProblem.Minimize)
+    if not result:
+        raise Exception('Non-optimal solution: {}'.format(result.status))
 
-    return ((reaction_id, prob.get_value(('v', reaction_id))) for reaction_id in model.reactions)
+    return ((reaction_id, result.get_value(('v', reaction_id))) for reaction_id in model.reactions)
 
 def naive_consistency_check(model, subset, epsilon, solver=lpsolver.CplexSolver()):
     '''Check that reaction subset of model is consistent using FBA
