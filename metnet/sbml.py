@@ -4,7 +4,7 @@
 import xml.etree.ElementTree as ET
 from decimal import Decimal
 
-from .metabolicmodel import MetabolicDatabase, DictDatabase
+from .database import MetabolicDatabase, DictDatabase
 from .reaction import Reaction, Compound
 
 SBML_NS = 'http://www.sbml.org/sbml/level2'
