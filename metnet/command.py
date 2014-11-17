@@ -283,6 +283,44 @@ class FluxBalanceCommand(Command):
         for reaction_id, flux in fluxes.iteritems():
             yield reaction_id, fba_fluxes[reaction_id], flux
 
+class FluxConsistencyCommand(Command):
+    '''Check that reactions are flux consistent in a model
+
+    A reaction is flux consistent if there exists any steady-state
+    flux solution where the flux of the given reaction is non-zero.'''
+
+    name = 'fluxconsistency'
+    title = 'Check that the model is flux consistent'
+
+    def init_parser(self, parser):
+        parser.add_argument('--no-fastcore', help='Disable use of Fastcore algorithm',
+                            action='store_true')
+
+    def __call__(self, model, compounds, **kwargs):
+        '''Run flux consistency check command'''
+
+        # Load compound information
+        compound_name = {}
+        for compound in compounds:
+            compound_name[compound.id] = compound.name if compound.name is not None else compound.id
+
+        solver = lpsolver.CplexSolver(None)
+        epsilon = 1e-5
+
+        if kwargs['no_fastcore']:
+            inconsistent = set(fluxanalysis.naive_consistency_check(model, model.reactions, epsilon, solver=solver))
+        else:
+            # Create fastcore object
+            fastcore = Fastcore(solver)
+            inconsistent = set(fastcore.fastcc(model, epsilon))
+
+        # Print result
+        for reaction in sorted(inconsistent):
+            rx = model.get_reaction(reaction).translated_compounds(lambda x: compound_name.get(x, x))
+            print '{}\t{}'.format(reaction, rx)
+
+        sys.stderr.write('Model has {} inconsistent reactions.\n'.format(len(inconsistent)))
+
 class FluxVariabilityCommand(Command):
     '''Run flux variablity analysis on a metabolic model'''
 
