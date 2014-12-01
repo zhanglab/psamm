@@ -9,10 +9,10 @@ will have to be excluded from this check, as they are not able to
 preserve mass (by definition). In addition some databases may contain
 pseudo-compounds (e.g. "photon") that also has to be excluded.'''
 
-from .lpsolver import lp, cplex
+from .lpsolver import lp
 
 class MassConsistencyCheck(object):
-    def __init__(self, solver=cplex.Solver()):
+    def __init__(self, solver):
         self._solver = solver
 
     def _non_localized_compounds(self, database):

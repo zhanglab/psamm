@@ -8,9 +8,8 @@ network models." PLoS computational biology 10.1 (2014):
 e1003424.'''
 
 import sys
-import cplex
 
-from .lpsolver import lp, cplex
+from .lpsolver import lp
 from .fluxanalysis import flux_balance
 from .metabolicmodel import FlipableModelView
 
@@ -43,7 +42,7 @@ def support_positive(fluxiter, threshold=None):
 class Fastcore(object):
     '''Fastcore computation object containing reference to the solver'''
 
-    def __init__(self, solver=cplex.Solver()):
+    def __init__(self, solver):
         self._solver = solver
 
     def lp7(self, model, reaction_subset, epsilon):

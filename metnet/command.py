@@ -200,7 +200,7 @@ class FastGapFillCommand(Command):
         model_induced = model.copy()
         for rxnid in induced:
             model_induced.add_reaction(rxnid)
-        for rxnid, flux in sorted(fluxanalysis.flux_balance(model_induced, maximized_reaction)):
+        for rxnid, flux in sorted(fluxanalysis.flux_balance(model_induced, maximized_reaction, solver=solver)):
             reaction_class = 'Dbase'
             weight = weights.get(rxnid, 1)
             if model.has_reaction(rxnid):
@@ -262,13 +262,16 @@ class FluxBalanceCommand(Command):
     def run_fba_minimized(self, model, reaction):
         '''Run normal FBA and flux minimization on model, then print output'''
 
-        fba_fluxes = dict(fluxanalysis.flux_balance(model, reaction))
+        from .lpsolver import cplex
+        solver = cplex.Solver()
+
+        fba_fluxes = dict(fluxanalysis.flux_balance(model, reaction, solver=solver))
         optimum = fba_fluxes[reaction]
 
         epsilon = 1e-5
 
         # Run flux minimization
-        fmin_fluxes = dict(fluxanalysis.flux_minimization(model, { reaction: optimum }))
+        fmin_fluxes = dict(fluxanalysis.flux_minimization(model, { reaction: optimum }, solver=solver))
         count = 0
         for reaction_id, flux in fmin_fluxes.iteritems():
             if fba_fluxes[reaction_id] - epsilon > flux:
@@ -279,8 +282,11 @@ class FluxBalanceCommand(Command):
     def run_tfba(self, model, reaction):
         '''Run FBA and tFBA on model'''
 
-        fba_fluxes = dict(fluxanalysis.flux_balance(model, reaction))
-        fluxes = dict(fluxanalysis.flux_balance_td(model, reaction))
+        from .lpsolver import cplex
+        solver = cplex.Solver()
+
+        fba_fluxes = dict(fluxanalysis.flux_balance(model, reaction, solver=solver))
+        fluxes = dict(fluxanalysis.flux_balance_td(model, reaction, solver=solver))
         for reaction_id, flux in fluxes.iteritems():
             yield reaction_id, fba_fluxes[reaction_id], flux
 
@@ -345,10 +351,14 @@ class FluxVariabilityCommand(Command):
             sys.stderr.write('Specified reaction is not in model: {}\n'.format(reaction))
             sys.exit(-1)
 
-        fba_fluxes = dict(fluxanalysis.flux_balance(model, reaction))
+        from .lpsolver import cplex
+        solver = cplex.Solver()
+
+        fba_fluxes = dict(fluxanalysis.flux_balance(model, reaction, solver=solver))
         optimum = fba_fluxes[reaction]
 
-        flux_bounds = sorted(fluxanalysis.flux_variability(model, model.reactions, { reaction: optimum}))
+        flux_bounds = sorted(fluxanalysis.flux_variability(model, model.reactions, { reaction: optimum},
+                                                            solver=solver))
         for reaction_id, bounds in flux_bounds:
             rx = model.get_reaction(reaction_id).translated_compounds(lambda x: compound_name.get(x, x))
             print '{}\t{}\t{}\t{}'.format(reaction_id, bounds[0], bounds[1], rx)
@@ -424,9 +434,12 @@ class GapFillCommand(Command):
 
         model_compartments = { None, 'e' }
 
+        from .lpsolver import cplex
+        solver = cplex.Solver()
+
         # Run GapFind on model
         print 'Searching for blocked compounds...'
-        blocked = set(compound for compound in gapfind(model) if compound.compartment is not 'e')
+        blocked = set(compound for compound in gapfind(model, solver=solver) if compound.compartment is not 'e')
         if len(blocked) > 0:
             print 'Blocked:'
             for compound in blocked:
@@ -441,7 +454,7 @@ class GapFillCommand(Command):
             model_complete.add_all_transport_reactions()
 
             print 'Searching for reactions to fill gaps...'
-            added_reactions, reversed_reactions = gapfill(model_complete, model.reactions, blocked)
+            added_reactions, reversed_reactions = gapfill(model_complete, model.reactions, blocked, solver=solver)
 
             for rxnid in added_reactions:
                 rx = model_complete.get_reaction(rxnid).translated_compounds(lambda x: compound_name.get(x, x))
@@ -483,7 +496,10 @@ class MassConsistencyCommand(Command):
         zeromass.add('cpd11632') # Photon
         zeromass.add('cpd12713') # Electron
 
-        mass_consistency = MassConsistencyCheck()
+        from .lpsolver import cplex
+        solver = cplex.Solver()
+
+        mass_consistency = MassConsistencyCheck(solver=solver)
         known_inconsistent = exclude | exchange
 
         print 'Mass consistency on database...'
@@ -536,14 +552,17 @@ class RobustnessCommand(Command):
     def __call__(self, model, compounds, **kwargs):
         '''Run flux analysis command'''
 
+        from .lpsolver import cplex
+        solver = cplex.Solver()
+
         def run_fba_fmin(model, reaction):
-            fba = fluxanalysis.FluxBalanceProblem(model)
+            fba = fluxanalysis.FluxBalanceProblem(model, solver=solver)
             fba.solve(reaction)
             optimum = fba.get_flux(reaction)
-            return fluxanalysis.flux_minimization(model, { reaction: optimum })
+            return fluxanalysis.flux_minimization(model, { reaction: optimum }, solver=solver)
 
         def run_tfba(model, reaction):
-            return fluxanalysis.flux_balance_td(model, reaction)
+            return fluxanalysis.flux_balance_td(model, reaction, solver=solver)
 
         if kwargs['no_tfba']:
             run_fba = run_fba_fmin
