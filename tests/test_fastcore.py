@@ -5,7 +5,7 @@ import unittest
 from metnet.metabolicmodel import MetabolicModel
 from metnet.database import DictDatabase
 from metnet import fastcore
-from metnet import lpsolver
+from metnet.lpsolver import cplex
 from metnet.reaction import ModelSEED
 
 class TestFastcoreSimpleVlassisModel(unittest.TestCase):
@@ -21,7 +21,7 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
         self.database.set_reaction('rxn_5', ModelSEED.parse('|C| => |D|'))
         self.database.set_reaction('rxn_6', ModelSEED.parse('|D| =>'))
         self.model = MetabolicModel.load_model(self.database, self.database.reactions)
-        self.fastcore = fastcore.Fastcore(lpsolver.CplexSolver(None))
+        self.fastcore = fastcore.Fastcore(cplex.Solver(None))
 
     def test_lp10(self):
         result = self.fastcore.lp10(self.model, { 'rxn_6' }, { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5' },
@@ -121,7 +121,7 @@ class TestFastcoreTinyBiomassModel(unittest.TestCase):
         self.database.set_reaction('rxn_1', ModelSEED.parse('=> |A|'))
         self.database.set_reaction('rxn_2', ModelSEED.parse('(0.000001) |A| =>'))
         self.model = MetabolicModel.load_model(self.database, self.database.reactions)
-        self.fastcore = fastcore.Fastcore(lpsolver.CplexSolver(None))
+        self.fastcore = fastcore.Fastcore(cplex.Solver(None))
 
     def test_fastcc_is_consistent(self):
         self.assertTrue(self.fastcore.fastcc_is_consistent(self.model, 0.001))
@@ -145,7 +145,7 @@ class TestFlippingModel(unittest.TestCase):
         self.database.set_reaction('rxn_3', ModelSEED.parse('|C| <=> |B|'))
         self.database.set_reaction('rxn_4', ModelSEED.parse('|C| <=>'))
         self.model = MetabolicModel.load_model(self.database, self.database.reactions)
-        self.fastcore = fastcore.Fastcore(lpsolver.CplexSolver(None))
+        self.fastcore = fastcore.Fastcore(cplex.Solver(None))
 
     def test_fastcore_induced_model(self):
         core = { 'rxn_2', 'rxn_3' }

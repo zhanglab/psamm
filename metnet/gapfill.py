@@ -5,9 +5,9 @@ This implements a variant of the algorithms described by Kumar,
 Vinay Satish, Madhukar S. Dasika, and Costas D. Maranas.
 "Optimization based automated curation of metabolic reconstructions."'''
 
-from . import lpsolver
+from .lpsolver import lp, cplex
 
-def gapfind(model, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
+def gapfind(model, epsilon=1e-5, v_max=1000, solver=cplex.Solver()):
     '''Identify compounds in the model that cannot be produced
 
     Yields all compounds that cannot be produced. This method
@@ -34,7 +34,7 @@ def gapfind(model, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
     for spec, value in model.matrix.iteritems():
         compound, reaction_id = spec
         if value != 0 and (reaction_id in model.reversible or value > 0):
-            prob.define(('w', reaction_id, compound), types=lpsolver.CplexProblem.Binary)
+            prob.define(('w', reaction_id, compound), types=lp.VariableType.Binary)
 
             w = prob.var(('w', reaction_id, compound))
             sv = float(value) * prob.var(('v', reaction_id))
@@ -47,7 +47,7 @@ def gapfind(model, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
 
             binary_cons_lhs[compound] += w
 
-    prob.define(*(('xp', compound) for compound in model.compounds), types=lpsolver.CplexProblem.Binary)
+    prob.define(*(('xp', compound) for compound in model.compounds), types=lp.VariableType.Binary)
 
     objective = sum(prob.var(('xp', compound)) for compound in model.compounds)
     prob.set_linear_objective(objective)
@@ -66,7 +66,7 @@ def gapfind(model, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
         prob.add_linear_constraints(lhs >= 0)
 
     # Solve
-    result = prob.solve(lpsolver.CplexProblem.Maximize)
+    result = prob.solve(lp.ObjectiveSense.Maximize)
     if not result:
         raise Exception('Non-optimal solution: {}'.format(result.status))
 
@@ -74,7 +74,7 @@ def gapfind(model, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
         if result.get_value(('xp', compound)) == 0:
             yield compound
 
-def gapfill(model, core, blocked, epsilon=1e-5, v_max=1000, solver=lpsolver.CplexSolver()):
+def gapfill(model, core, blocked, epsilon=1e-5, v_max=1000, solver=cplex.Solver()):
     '''Find a set of reactions to add such that no compounds are blocked
 
     Returns two iterators: first an iterator of reactions not in
@@ -102,8 +102,8 @@ def gapfill(model, core, blocked, epsilon=1e-5, v_max=1000, solver=lpsolver.Cple
 
     # Add binary indicator variables
     database_reactions = set(model.reactions).difference(core)
-    prob.define(*(('ym', reaction_id) for reaction_id in core), types=lpsolver.CplexProblem.Binary)
-    prob.define(*(('yd', reaction_id) for reaction_id in database_reactions), types=lpsolver.CplexProblem.Binary)
+    prob.define(*(('ym', reaction_id) for reaction_id in core), types=lp.VariableType.Binary)
+    prob.define(*(('yd', reaction_id) for reaction_id in database_reactions), types=lp.VariableType.Binary)
 
     objective = (sum(prob.var(('ym', reaction_id)) for reaction_id in core) +
                     sum(prob.var(('yd', reaction_id)) for reaction_id in database_reactions))
@@ -130,7 +130,7 @@ def gapfill(model, core, blocked, epsilon=1e-5, v_max=1000, solver=lpsolver.Cple
     for spec, value in model.matrix.iteritems():
         compound, reaction_id = spec
         if compound in blocked and value != 0:
-            prob.define(('w', reaction_id, compound), types=lpsolver.CplexProblem.Binary)
+            prob.define(('w', reaction_id, compound), types=lp.VariableType.Binary)
 
             w = prob.var(('w', reaction_id, compound))
             sv = float(value) * prob.var(('v', reaction_id))
@@ -156,7 +156,7 @@ def gapfill(model, core, blocked, epsilon=1e-5, v_max=1000, solver=lpsolver.Cple
         prob.add_linear_constraints(lhs >= 0)
 
     # Solve
-    result = prob.solve(lpsolver.CplexProblem.Minimize)
+    result = prob.solve(lp.ObjectiveSense.Minimize)
     if not result:
         raise Exception('Non-optimal solution: {}'.format(result.status))
 

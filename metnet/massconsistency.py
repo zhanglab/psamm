@@ -9,12 +9,10 @@ will have to be excluded from this check, as they are not able to
 preserve mass (by definition). In addition some databases may contain
 pseudo-compounds (e.g. "photon") that also has to be excluded.'''
 
-import cplex
-
-from . import lpsolver
+from .lpsolver import lp, cplex
 
 class MassConsistencyCheck(object):
-    def __init__(self, solver=lpsolver.CplexSolver()):
+    def __init__(self, solver=cplex.Solver()):
         self._solver = solver
 
     def _non_localized_compounds(self, database):
@@ -44,7 +42,7 @@ class MassConsistencyCheck(object):
             if reaction not in exchange:
                 prob.add_linear_constraints(lhs == 0)
 
-        result = prob.solve(lpsolver.CplexProblem.Minimize)
+        result = prob.solve(lp.ObjectiveSense.Minimize)
         return result.success
 
     def check_reaction_consistency(self, database, exchange=set(), zeromass=set(), weights={}):
@@ -88,7 +86,7 @@ class MassConsistencyCheck(object):
                 prob.add_linear_constraints(lhs + r == 0)
 
         # Solve
-        result = prob.solve(lpsolver.CplexProblem.Minimize)
+        result = prob.solve(lp.ObjectiveSense.Minimize)
         if not result:
             raise Exception('Non-optimal solution: {}'.format(result.status))
 
@@ -141,7 +139,7 @@ class MassConsistencyCheck(object):
                 prob.add_linear_constraints(lhs == 0)
 
         # Solve
-        result = prob.solve(lpsolver.CplexProblem.Maximize)
+        result = prob.solve(lp.ObjectiveSense.Maximize)
         if not result:
             raise Exception('Non-optimal solution: {}'.format(result.status))
 

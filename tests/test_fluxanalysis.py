@@ -5,7 +5,7 @@ import unittest
 from metnet.metabolicmodel import MetabolicModel
 from metnet.database import DictDatabase
 from metnet import fluxanalysis
-from metnet import lpsolver
+from metnet.lpsolver import cplex
 from metnet.reaction import ModelSEED
 
 class TestFluxBalance(unittest.TestCase):
@@ -18,7 +18,7 @@ class TestFluxBalance(unittest.TestCase):
         self.database.set_reaction('rxn_5', ModelSEED.parse('|C| => |D|'))
         self.database.set_reaction('rxn_6', ModelSEED.parse('|D| =>'))
         self.model = MetabolicModel.load_model(self.database, self.database.reactions)
-        self.solver = lpsolver.CplexSolver(None)
+        self.solver = cplex.Solver(None)
 
     def test_flux_balance_rxn_1(self):
         fluxes = dict(fluxanalysis.flux_balance(self.model, 'rxn_1', solver=self.solver))
@@ -58,7 +58,7 @@ class TestFluxBalanceThermodynamic(unittest.TestCase):
         self.model.limits['ex_A'].lower = -10 # Low uptake
         self.model.limits['ex_D'].lower = 0 # No uptake
 
-        self.solver = lpsolver.CplexSolver(None)
+        self.solver = cplex.Solver(None)
 
     def test_flux_balance_td_exchange_d(self):
         fluxes = dict(fluxanalysis.flux_balance(self.model, 'ex_D', solver=self.solver))
@@ -78,7 +78,7 @@ class TestNaiveConsistency(unittest.TestCase):
         self.database.set_reaction('rxn_5', ModelSEED.parse('|C| => |D|'))
         self.database.set_reaction('rxn_6', ModelSEED.parse('|D| =>'))
         self.model = MetabolicModel.load_model(self.database, self.database.reactions)
-        self.solver = lpsolver.CplexSolver(None)
+        self.solver = cplex.Solver(None)
 
     def test_check_on_consistent(self):
         self.model.remove_reaction('rxn_2')

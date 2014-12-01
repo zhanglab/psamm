@@ -13,7 +13,7 @@ from .massconsistency import MassConsistencyCheck
 from .database import load_tsv_database, ChainedDatabase
 from .metabolicmodel import MetabolicModel
 from .reaction import Reaction, Compound
-from . import lpsolver, modelseed, fluxanalysis
+from . import modelseed, fluxanalysis
 
 class Command(object):
     '''Represents a command in the interface, operating on a model or database
@@ -152,7 +152,8 @@ class FastGapFillCommand(Command):
             sys.exit(-1)
 
         # Create fastcore object
-        solver = lpsolver.CplexSolver(None)
+        from metnet.lpsolver import cplex
+        solver = cplex.Solver(None)
         fastcore = Fastcore(solver)
 
         # Load compound information
@@ -304,7 +305,8 @@ class FluxConsistencyCommand(Command):
         for compound in compounds:
             compound_name[compound.id] = compound.name if compound.name is not None else compound.id
 
-        solver = lpsolver.CplexSolver(None)
+        from metnet.lpsolver import cplex
+        solver = cplex.Solver(None)
         epsilon = 1e-5
 
         if kwargs['no_fastcore']:

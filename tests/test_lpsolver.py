@@ -2,17 +2,17 @@
 
 import unittest
 
-from metnet import lpsolver
+from metnet.lpsolver import lp, cplex
 
 class TestCplexProblem(unittest.TestCase):
     def setUp(self):
-        self.solver = lpsolver.CplexSolver(None)
+        self.solver = cplex.Solver(None)
 
     def test_objective_reset_on_set_linear_objective(self):
         prob = self.solver.create_problem()
         prob.define('x', 'y', lower=0, upper=10)
         prob.add_linear_constraints(prob.var('x') + prob.var('y') <= 12)
-        prob.set_objective_sense(lpsolver.CplexProblem.Maximize)
+        prob.set_objective_sense(lp.ObjectiveSense.Maximize)
 
         # Solve first time, maximize x
         prob.set_linear_objective(2*prob.var('x'))

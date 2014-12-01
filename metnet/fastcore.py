@@ -10,7 +10,7 @@ e1003424.'''
 import sys
 import cplex
 
-from . import lpsolver
+from .lpsolver import lp, cplex
 from .fluxanalysis import flux_balance
 from .metabolicmodel import FlipableModelView
 
@@ -43,7 +43,7 @@ def support_positive(fluxiter, threshold=None):
 class Fastcore(object):
     '''Fastcore computation object containing reference to the solver'''
 
-    def __init__(self, solver=lpsolver.CplexSolver()):
+    def __init__(self, solver=cplex.Solver()):
         self._solver = solver
 
     def lp7(self, model, reaction_subset, epsilon):
@@ -74,7 +74,7 @@ class Fastcore(object):
         prob.add_linear_constraints(*(lhs == 0 for compound, lhs in massbalance_lhs.iteritems()))
 
         # Solve
-        result = prob.solve(lpsolver.CplexProblem.Maximize)
+        result = prob.solve(lp.ObjectiveSense.Maximize)
         if not result:
             raise Exception('Non-optimal solution: {}'.format(result.status))
 
@@ -114,7 +114,7 @@ class Fastcore(object):
         prob.add_linear_constraints(*(lhs == 0 for compound, lhs in massbalance_lhs.iteritems()))
 
         # Solve
-        result = prob.solve(lpsolver.CplexProblem.Minimize)
+        result = prob.solve(lp.ObjectiveSense.Minimize)
         if not result:
             raise Exception('Non-optimal solution: {}'.format(result.status))
 

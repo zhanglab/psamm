@@ -5,7 +5,7 @@ import unittest
 from metnet.metabolicmodel import MetabolicModel
 from metnet.database import DictDatabase
 from metnet import massconsistency
-from metnet import lpsolver
+from metnet.lpsolver import cplex
 from metnet.reaction import ModelSEED
 
 class TestMassConsistency(unittest.TestCase):
@@ -22,7 +22,7 @@ class TestMassConsistency(unittest.TestCase):
         self.database.set_reaction('rxn_6', ModelSEED.parse('|D| =>'))
         self.model = MetabolicModel.load_model(self.database, self.database.reactions)
 
-        self.masscons = massconsistency.MassConsistencyCheck(lpsolver.CplexSolver(None))
+        self.masscons = massconsistency.MassConsistencyCheck(cplex.Solver(None))
 
     def test_mass_consistent_is_consistent(self):
         exchange = { 'rxn_1', 'rxn_6' }

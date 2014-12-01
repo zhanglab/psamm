@@ -1,0 +1,2 @@
+
+'''Linear programming solver module'''

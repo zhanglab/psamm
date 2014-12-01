@@ -1,7 +1,7 @@
 
 '''Implementation of Flux Balance Analysis'''
 
-from . import lpsolver
+from .lpsolver import lp, cplex
 
 class FluxBalanceProblem(object):
     '''Maximize the flux of a specific reaction
@@ -11,7 +11,7 @@ class FluxBalanceProblem(object):
 
     def __init__(self, model, solver=None):
         if solver is None:
-            solver = lpsolver.CplexSolver()
+            solver = cplex.Solver()
         self._prob = solver.create_problem()
 
         # Define flux variables
@@ -40,7 +40,7 @@ class FluxBalanceProblem(object):
 
         # Set objective and solve
         self._prob.set_linear_objective(objective)
-        result = self._prob.solve(lpsolver.CplexProblem.Maximize)
+        result = self._prob.solve(lp.ObjectiveSense.Maximize)
         if not result:
             raise Exception('Non-optimal solution: {}'.format(result.status))
 
@@ -69,7 +69,7 @@ class FluxBalanceTDProblem(FluxBalanceProblem):
             # Constrain internal reactions to a direction determined
             # by alpha.
             if not model.is_exchange(reaction_id):
-                p.define(('alpha', reaction_id), types=lpsolver.CplexProblem.Binary)
+                p.define(('alpha', reaction_id), types=lp.VariableType.Binary)
                 p.define(('dmu', reaction_id)) # Delta mu
 
                 flux = p.var(('v', reaction_id))
@@ -124,7 +124,7 @@ def flux_balance_td(model, reaction, solver=None):
     for reaction in model.reactions:
         yield reaction, tfba.get_flux(reaction)
 
-def flux_variability(model, reactions, fixed, solver=lpsolver.CplexSolver()):
+def flux_variability(model, reactions, fixed, solver=cplex.Solver()):
     '''Find the variability of each reaction while fixing certain fluxes
 
     Yields the reaction id, and a tuple of minimum and maximum value for each
@@ -146,7 +146,7 @@ def flux_variability(model, reactions, fixed, solver=lpsolver.CplexSolver()):
     for reaction_id in reactions:
         yield reaction_id, tuple(min_max_solve(reaction_id))
 
-def flux_minimization(model, fixed, weights={}, solver=lpsolver.CplexSolver()):
+def flux_minimization(model, fixed, weights={}, solver=cplex.Solver()):
     '''Minimize flux of all reactions while keeping certain fluxes fixed
 
     The fixed reactions are given in a dictionary as reaction id
@@ -179,13 +179,13 @@ def flux_minimization(model, fixed, weights={}, solver=lpsolver.CplexSolver()):
         prob.add_linear_constraints(lhs == 0)
 
     # Solve
-    result = prob.solve(lpsolver.CplexProblem.Minimize)
+    result = prob.solve(lp.ObjectiveSense.Minimize)
     if not result:
         raise Exception('Non-optimal solution: {}'.format(result.status))
 
     return ((reaction_id, result.get_value(('v', reaction_id))) for reaction_id in model.reactions)
 
-def naive_consistency_check(model, subset, epsilon, solver=lpsolver.CplexSolver()):
+def naive_consistency_check(model, subset, epsilon, solver=cplex.Solver()):
     '''Check that reaction subset of model is consistent using FBA
 
     A reaction is consistent if there is at least one flux solution
