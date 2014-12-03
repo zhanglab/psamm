@@ -26,8 +26,8 @@ if __name__ == '__main__':
 
     # Write compound table
     if args.compounds:
-        args.compounds.write('id\tname\n')
+        args.compounds.write('id\tname\tformula\n')
         for compound in database.compounds:
             name = database.get_compound_name(compound)
             name = name if name is not None else compound.name
-            args.compounds.write('{}\t{}\n'.format(compound.name, name))
+            args.compounds.write('{}\t{}\t\n'.format(compound.name, name))
