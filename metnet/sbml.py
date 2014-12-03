@@ -43,6 +43,13 @@ class SBMLDatabase(MetabolicDatabase):
             species_comp = species.get('compartment')
             self._model_compounds[species_id] = species_name, species_comp
 
+            # Add implicit exchange reaction if compound is boundary condition
+            species_boundary = species.get('boundaryCondition', False)
+            if species_boundary:
+                reaction_name = species_id + '_impl_EX'
+                reaction = Reaction(Reaction.Bidir, [(Compound(species_id, compartment=species_comp), 1)], [])
+                self._database.set_reaction(reaction_name, reaction)
+
         # Reactions
         self._reactions = self._model.find(sbml_name('listOfReactions'))
         for reaction in self._reactions.iterfind(sbml_name('reaction')):
