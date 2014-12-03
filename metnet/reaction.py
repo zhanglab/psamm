@@ -341,7 +341,7 @@ class ModelSEED(object):
             raise ParseError('Unexpected number of tokens in compound: {}'.format(cmpd))
 
         compartment = None
-        m = re.match(r'^(.+?)\[(.)\]$', name)
+        m = re.match(r'^(.+?)\[(.+)\]$', name)
         if m is not None:
             name = m.group(1)
             compartment = m.group(2)

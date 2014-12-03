@@ -196,6 +196,17 @@ class TestModelSEED(unittest.TestCase):
         self.assertEquals(r, Reaction(Reaction.Right, [(Compound('H2'), 1), (Compound('O2'), Decimal('0.5'))],
                                       [(Compound('H2O'), 1)]))
 
+    def test_modelseed_parse_with_compartment(self):
+        r = ModelSEED.parse('(2) |H2| + |O2| => (2) |H2O[e]|')
+        self.assertEquals(r, Reaction(Reaction.Right, [(Compound('H2'), 2), (Compound('O2'), 1)],
+                                      [(Compound('H2O', compartment='e'), 2)]))
+
+    def test_modelseed_parse_with_multichar_compartment(self):
+        r = ModelSEED.parse('(2) |H2[C_c]| + |O2[C_c]| => (2) |H2O[C_e]|')
+        self.assertEquals(r, Reaction(Reaction.Right, [(Compound('H2', compartment='C_c'), 2),
+                                                        (Compound('O2', compartment='C_c'), 1)],
+                                      [(Compound('H2O', compartment='C_e'), 2)]))
+
     def test_modelseed_format(self):
         r = Reaction(Reaction.Left, [(Compound('H2O'), 2)], [(Compound('H2'), 2), (Compound('O2'), 1)])
         self.assertEquals(r.format(), '(2) |H2O| <= (2) |H2| + |O2|')
