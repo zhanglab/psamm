@@ -3,7 +3,7 @@
 import unittest
 
 from metnet.database import DictDatabase, ChainedDatabase
-from metnet.reaction import ModelSEED, Compound
+from metnet.reaction import ModelSEED, Compound, Reaction
 
 class TestMetabolicDatabase(unittest.TestCase):
     def setUp(self):
@@ -49,6 +49,11 @@ class TestMetabolicDatabase(unittest.TestCase):
     def test_get_reaction(self):
         reaction = ModelSEED.parse('|A| => |D|')
         self.assertEqual(self.database.get_reaction('rxn_3'), reaction)
+
+    def test_reaction_with_zero_coefficient(self):
+        reaction = Reaction(Reaction.Bidir, [(Compound('A'), 1), (Compound('B'), 0)],
+                                            [(Compound('C'), 1)])
+        self.database.set_reaction('rxn_new', reaction)
 
     def test_matrix_get_item(self):
         self.assertEqual(self.database.matrix[Compound('A'), 'rxn_1'], 2)

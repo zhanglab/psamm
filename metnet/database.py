@@ -186,9 +186,11 @@ class DictDatabase(MetabolicDatabase):
                 self._reactions[reaction_id][compound] = 0
                 self._compound_reactions[compound].add(reaction_id)
         for compound, value in reaction.left:
-            self._reactions[reaction_id][compound] -= value
+            if value != 0:
+                self._reactions[reaction_id][compound] -= value
         for compound, value in reaction.right:
-            self._reactions[reaction_id][compound] += value
+            if value != 0:
+                self._reactions[reaction_id][compound] += value
 
         if reaction.direction != '=>':
             self._reversible.add(reaction_id)
