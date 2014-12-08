@@ -83,12 +83,12 @@ class TestNaiveConsistency(unittest.TestCase):
     def test_check_on_consistent(self):
         self.model.remove_reaction('rxn_2')
         core = self.model.reactions
-        inconsistent = set(fluxanalysis.naive_consistency_check(self.model, core, 0.001, solver=self.solver))
+        inconsistent = set(fluxanalysis.consistency_check(self.model, core, 0.001, solver=self.solver))
         self.assertEqual(inconsistent, set())
 
     def test_check_on_inconsistent(self):
         core = set(self.model.reactions)
-        inconsistent = set(fluxanalysis.naive_consistency_check(self.model, core, 0.001, solver=self.solver))
+        inconsistent = set(fluxanalysis.consistency_check(self.model, core, 0.001, solver=self.solver))
         self.assertEqual(inconsistent, { 'rxn_2' })
 
 if __name__ == '__main__':

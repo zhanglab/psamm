@@ -183,15 +183,14 @@ def flux_minimization(model, fixed, solver, weights={}):
 
     return ((reaction_id, result.get_value(('v', reaction_id))) for reaction_id in model.reactions)
 
-def naive_consistency_check(model, subset, epsilon, solver):
+def consistency_check(model, subset, epsilon, solver):
     '''Check that reaction subset of model is consistent using FBA
 
     A reaction is consistent if there is at least one flux solution
-    to the model that both respects the compound balance of the
-    stoichiometric matrix and also allows the reaction to have non-zero
-    flux.
+    to the model that both respects the model constraints and also
+    allows the reaction in question to have non-zero flux.
 
-    The naive way to check this is to run FBA on each reaction in turn
+    This can be determined by running FBA on each reaction in turn
     and checking whether the flux in the solution is non-zero. Since FBA
     only tries to maximize the flux (and the flux can be negative for
     reversible reactions), we have to try to both maximize and minimize

@@ -316,7 +316,7 @@ class FluxConsistencyCommand(Command):
         epsilon = 1e-5
 
         if kwargs['no_fastcore']:
-            inconsistent = set(fluxanalysis.naive_consistency_check(model, model.reactions, epsilon, solver=solver))
+            inconsistent = set(fluxanalysis.consistency_check(model, model.reactions, epsilon, solver=solver))
         else:
             # Create fastcore object
             fastcore = Fastcore(solver)
