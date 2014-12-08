@@ -182,15 +182,24 @@ class DictDatabase(MetabolicDatabase):
         # Compounds that occur on both sides will get a stoichiometric
         # value based on the sum of the signed values on each side.
         for compound, value in reaction.compounds:
-            if compound not in self._reactions[reaction_id] and value != 0:
+            if compound not in self._reactions[reaction_id]:
                 self._reactions[reaction_id][compound] = 0
                 self._compound_reactions[compound].add(reaction_id)
         for compound, value in reaction.left:
-            if value != 0:
-                self._reactions[reaction_id][compound] -= value
+            self._reactions[reaction_id][compound] -= value
         for compound, value in reaction.right:
-            if value != 0:
-                self._reactions[reaction_id][compound] += value
+            self._reactions[reaction_id][compound] += value
+
+        # Remove reaction from compound reactions if the resulting
+        # stoichiometric value turned out to be zero.
+        zero_compounds = set()
+        for compound, value in self._reactions[reaction_id].iteritems():
+            if value == 0:
+                zero_compounds.add(compound)
+
+        for compound in zero_compounds:
+            del self._reactions[reaction_id][compound]
+            self._compound_reactions[compound].remove(reaction_id)
 
         if reaction.direction != '=>':
             self._reversible.add(reaction_id)
