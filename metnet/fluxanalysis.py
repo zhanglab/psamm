@@ -1,6 +1,7 @@
 
 '''Implementation of Flux Balance Analysis'''
 
+import sys
 from .lpsolver import lp
 
 class FluxBalanceProblem(object):
@@ -203,7 +204,7 @@ def consistency_check(model, subset, epsilon, solver):
     subset = set(subset)
     while len(subset) > 0:
         reaction = next(iter(subset))
-        print '{} left, checking {}...'.format(len(subset), reaction)
+        sys.stderr.write('{} left, checking {}...\n'.format(len(subset), reaction))
         fba.solve(reaction)
         support = set(rxnid for rxnid in model.reactions if abs(fba.get_flux(rxnid)) >= epsilon)
         subset -= support
@@ -215,6 +216,6 @@ def consistency_check(model, subset, epsilon, solver):
             subset -= support
             if reaction in support:
                 continue
-        print '{} not consistent!'.format(reaction)
+        sys.stderr.write('{} not consistent!\n'.format(reaction))
         yield reaction
         subset.remove(reaction)
