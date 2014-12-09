@@ -167,3 +167,15 @@ class SBMLDatabase(MetabolicDatabase):
         for compound in self._species.iterfind(self._sbml_tag('species')):
             compound_id = self._element_get_id(compound)
             yield compound_id, compound.find(self._sbml_tag('notes'))
+
+    def get_kinetic_law_reaction_parameters(self):
+        '''Yield tuples of reaction ids and the value of a kinteic law reaction parameters'''
+        for reaction in self._reactions.iterfind(self._sbml_tag('reaction')):
+            reaction_id = self._element_get_id(reaction)
+            for parameter in reaction.iterfind('./{}/{}/{}'.format(self._sbml_tag('kineticLaw'),
+                                                                    self._sbml_tag('listOfParameters'),
+                                                                    self._sbml_tag('parameter'))):
+                param_id = parameter.get('id')
+                param_value = float(parameter.get('value'))
+                param_units = parameter.get('units')
+                yield reaction_id, (param_id, param_value, param_units)
