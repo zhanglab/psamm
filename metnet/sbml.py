@@ -74,7 +74,7 @@ class SBMLDatabase(MetabolicDatabase):
         self._species = self._model.find(self._sbml_tag('listOfSpecies'))
         for species in self._species.iterfind(self._sbml_tag('species')):
             species_name = species.get('name')
-            species_id = species.get('id') if self._level > 1 else species_name
+            species_id = self._element_get_id(species)
             species_comp = species.get('compartment')
             self._model_compounds[species_id] = species_name, species_comp
 
@@ -89,7 +89,7 @@ class SBMLDatabase(MetabolicDatabase):
         self._reactions = self._model.find(self._sbml_tag('listOfReactions'))
         for reaction in self._reactions.iterfind(self._sbml_tag('reaction')):
             reaction_name = reaction.get('name')
-            reaction_id = reaction.get('id') if self._level > 1 else reaction_name
+            reaction_id = self._element_get_id(reaction)
             reaction_rev = reaction.get('reversible', 'true') == 'true'
 
             left = []
@@ -109,6 +109,13 @@ class SBMLDatabase(MetabolicDatabase):
             # Add reaction to database
             direction = Reaction.Bidir if reaction_rev else Reaction.Right
             self._database.set_reaction(reaction_id, Reaction(direction, left, right))
+
+    def _element_get_id(self, element):
+        '''Get id of reaction or species element
+
+        In old levels the name is used as the id. This method returns the correct
+        attribute depending on the level.'''
+        return element.get('id') if self._level > 1 else element.get('name')
 
     def _parse_species_references(self, root, name):
         '''Yield species id and parsed value for a speciesReference list'''
@@ -152,11 +159,11 @@ class SBMLDatabase(MetabolicDatabase):
     def get_reaction_notes_elements(self):
         '''Yield tuples of reaction ids, and notes as ElementTree elements'''
         for reaction in self._reactions.iterfind(self._sbml_tag('reaction')):
-            reaction_id = reaction.get('id')
+            reaction_id = self._element_get_id(reaction)
             yield reaction_id, reaction.find(self._sbml_tag('notes'))
 
     def get_compound_notes_elements(self):
         '''Yield tuples of compound ids, and notes as ElementTree elements'''
         for compound in self._species.iterfind(self._sbml_tag('species')):
-            compound_id = compound.get('id')
+            compound_id = self._element_get_id(compound)
             yield compound_id, compound.find(self._sbml_tag('notes'))
