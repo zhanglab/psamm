@@ -283,7 +283,7 @@ class Result(object):
         '''Whether solution was optimal'''
         pass
 
-    def __bool__(self):
+    def __nonzero__(self):
         '''Whether solution was optimal'''
         return self.success
 
