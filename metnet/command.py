@@ -609,7 +609,7 @@ class RobustnessCommand(Command):
             try:
                 for other_reaction, flux in run_fba(test_model, reaction):
                     print '{}\t{}\t{}'.format(other_reaction, fixed_flux, flux)
-            except Exception:
+            except fluxanalysis.FluxBalanceError:
                 pass
 
 class SearchCommand(Command):

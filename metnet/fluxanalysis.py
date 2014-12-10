@@ -4,6 +4,9 @@
 import sys
 from .lpsolver import lp
 
+class FluxBalanceError(Exception):
+    '''Error indicating that a flux balance cannot be solved'''
+
 class FluxBalanceProblem(object):
     '''Maximize the flux of a specific reaction
 
@@ -41,7 +44,7 @@ class FluxBalanceProblem(object):
         self._prob.set_linear_objective(objective)
         result = self._prob.solve(lp.ObjectiveSense.Maximize)
         if not result:
-            raise Exception('Non-optimal solution: {}'.format(result.status))
+            raise FluxBalanceError('Non-optimal solution: {}'.format(result.status))
 
     def get_flux(self, reaction):
         '''Get resulting flux value for reaction'''
@@ -180,7 +183,7 @@ def flux_minimization(model, fixed, solver, weights={}):
     # Solve
     result = prob.solve(lp.ObjectiveSense.Minimize)
     if not result:
-        raise Exception('Non-optimal solution: {}'.format(result.status))
+        raise FluxBalanceError('Non-optimal solution: {}'.format(result.status))
 
     return ((reaction_id, result.get_value(('v', reaction_id))) for reaction_id in model.reactions)
 
