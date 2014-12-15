@@ -7,12 +7,14 @@ Vlassis, Nikos, Maria Pires Pacheco, and Thomas Sauter.
 network models." PLoS computational biology 10.1 (2014):
 e1003424.'''
 
-import sys
+import logging
 
 from .lpsolver import lp
 from .fluxanalysis import flux_balance
 from .metabolicmodel import FlipableModelView
 
+# Module-level logging
+logger = logging.getLogger(__name__)
 
 def support(fluxiter, threshold=None):
     '''Yield reactions in the support set of the fluxes
@@ -135,12 +137,12 @@ class Fastcore(object):
 
         reaction_set = set(model.reactions)
         subset = reaction_set.difference(model.reversible)
-        #print '|J| = {}'.format(len(subset))
-        #print 'J = {}'.format(subset)
+
+        logger.debug('|J| = {}, J = {}'.format(len(subset), subset))
 
         consistent_subset = set(support(self.lp7(model, subset, epsilon), epsilon))
-        #print '|A| = {}'.format(len(consistent_subset))
-        #print 'A = {}'.format(consistent_subset)
+
+        logger.debug('|A| = {}, A = {}'.format(len(consistent_subset), consistent_subset))
 
         for reaction in subset - consistent_subset:
             # Inconsistent reaction
@@ -148,8 +150,8 @@ class Fastcore(object):
 
         # Check remaining reactions
         subset = (reaction_set - subset) - consistent_subset
-        #print '|J| = {}'.format(len(subset))
-        #print 'J = {}'.format(subset)
+
+        logger.debug('|J| = {}, J = {}'.format(len(subset), subset))
 
         # Wrap model in flipable proxy so reactions can be flipped
         model = FlipableModelView(model)
@@ -160,20 +162,21 @@ class Fastcore(object):
             if singleton:
                 reaction = next(iter(subset))
                 subset_i = { reaction }
-                #print 'LP3 on {}'.format(subset_i)
+
+                logger.debug('LP3 on {}'.format(subset_i))
                 supp = support(flux_balance(model, reaction, self._solver), epsilon)
             else:
                 subset_i = subset
-                #print 'LP7 on {}'.format(subset_i)
+
+                logger.debug('LP7 on {}'.format(subset_i))
                 supp = support(self.lp7(model, subset_i, epsilon), epsilon)
             consistent_subset.update(supp)
-            #print '|A| = {}'.format(len(consistent_subset))
-            #print 'A = {}'.format(consistent_subset)
+
+            logger.debug('|A| = {}, A = {}'.format(len(consistent_subset), consistent_subset))
 
             if not subset.isdisjoint(consistent_subset):
                 subset -= consistent_subset
-                #print '|J| = {}'.format(len(subset))
-                #print 'J = {}'.format(subset)
+                logger.debug('|J| = {}, J = {}'.format(len(subset), subset))
                 flipped = False
             else:
                 # TODO: irreversible reactions are taken care of before the
@@ -190,7 +193,7 @@ class Fastcore(object):
                 else:
                     model.flip(subset_rev_i)
                     flipped = True
-                    #print 'Flip'
+                    logger.debug('Flip')
 
     def fastcc_is_consistent(self, model, epsilon):
         '''Quickly check whether model is consistent
@@ -239,24 +242,20 @@ class Fastcore(object):
         reaction_set = set(model.reactions)
 
         subset = core - model.reversible
-        #print '|J| = {}, J = {}'.format(len(subset), subset)
-        #print '|J| = {}'.format(len(subset))
+        logger.debug('|J| = {}, J = {}'.format(len(subset), subset))
 
         penalty_set = reaction_set - core
-        #print '|P| = {}, P = {}'.format(len(penalty_set), penalty_set)
-        #print '|P| = {}'.format(len(penalty_set))
+        logger.debug('|P| = {}, P = {}'.format(len(penalty_set), penalty_set))
 
         mode = set(self.find_sparse_mode(model, subset, penalty_set, epsilon, scaling=scaling, weights=weights))
         if not subset.issubset(mode):
             raise FastcoreError('Inconsistent irreversible core reactions: {}'.format(subset - mode))
 
         consistent_subset |= mode
-        #print '|A| = {}, A = {}'.format(len(consistent_subset), consistent_subset)
-        #print '|A| = {}'.format(len(consistent_subset))
+        logger.debug('|A| = {}, A = {}'.format(len(consistent_subset), consistent_subset))
 
         subset = core - mode
-        #print '|J| = {}, J = {}'.format(len(subset), subset)
-        #print '|J| = {}'.format(len(subset))
+        logger.debug('|J| = {}, J = {}'.format(len(subset), subset))
 
         # Wrap model in flipable proxy so reactions can be flipped
         model = FlipableModelView(model)
@@ -272,27 +271,26 @@ class Fastcore(object):
 
             mode = self.find_sparse_mode(model, subset_i, penalty_set, epsilon, scaling=scaling, weights=weights)
             consistent_subset.update(mode)
-            #print '|A| = {}, A = {}'.format(len(consistent_subset), consistent_subset)
-            #print '|A| = {}'.format(len(consistent_subset))
+            logger.debug('|A| = {}, A = {}'.format(len(consistent_subset), consistent_subset))
 
             if not subset.isdisjoint(consistent_subset):
-                #print 'Subset improved {} -> {}'.format(len(subset), len(subset - consistent_subset))
+                logger.debug('Subset improved {} -> {}'.format(len(subset), len(subset - consistent_subset)))
                 subset -= consistent_subset
-                #print '|J| = {}, J = {}'.format(len(subset), subset)
+                logger.debug('|J| = {}, J = {}'.format(len(subset), subset))
                 flipped = False
             else:
-                #print 'Nothing found, changing state...'
+                logger.debug('Nothing found, changing state...')
                 subset_rev_i = subset_i & model.reversible
                 if flipped or len(subset_rev_i) == 0:
                     if singleton:
                         raise FastcoreError('Global network inconsistent: {}'.format(subset_rev_i))
 
-                    #print 'Going to non-flipped, singleton state...'
+                    logger.debug('Going to non-flipped, singleton state...')
                     singleton = True
                     flipped = False
                 else:
                     model.flip(subset_rev_i)
                     flipped = True
-                    #print 'Going to flipped state... {}'.format(subset_rev_i)
+                    logger.debug('Going to flipped state... {}'.format(subset_rev_i))
 
         return consistent_subset
