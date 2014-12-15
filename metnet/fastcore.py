@@ -39,6 +39,9 @@ def support_positive(fluxiter, threshold=None):
     return (rxnid for rxnid, v in fluxiter if v >= threshold)
 
 
+class FastcoreError(Exception):
+    '''Indicates an error while running Fastcore'''
+
 class Fastcore(object):
     '''Fastcore computation object containing reference to the solver'''
 
@@ -77,7 +80,7 @@ class Fastcore(object):
         # Solve
         result = prob.solve(lp.ObjectiveSense.Maximize)
         if not result:
-            raise Exception('Non-optimal solution: {}'.format(result.status))
+            raise FastcoreError('Non-optimal solution: {}'.format(result.status))
 
         for rxnid in sorted(model.reactions):
             yield rxnid, result.get_value(('v', rxnid))
@@ -119,7 +122,7 @@ class Fastcore(object):
         # Solve
         result = prob.solve(lp.ObjectiveSense.Minimize)
         if not result:
-            raise Exception('Non-optimal solution: {}'.format(result.status))
+            raise FastcoreError('Non-optimal solution: {}'.format(result.status))
 
         for reaction_id in model.reactions:
             yield reaction_id, result.get_value(('v', reaction_id))
@@ -245,7 +248,7 @@ class Fastcore(object):
 
         mode = set(self.find_sparse_mode(model, subset, penalty_set, epsilon, scaling=scaling, weights=weights))
         if not subset.issubset(mode):
-            raise Exception('Inconsistent irreversible core reactions: {}'.format(subset - mode))
+            raise FastcoreError('Inconsistent irreversible core reactions: {}'.format(subset - mode))
 
         consistent_subset |= mode
         #print '|A| = {}, A = {}'.format(len(consistent_subset), consistent_subset)
@@ -282,7 +285,7 @@ class Fastcore(object):
                 subset_rev_i = subset_i & model.reversible
                 if flipped or len(subset_rev_i) == 0:
                     if singleton:
-                        raise Exception('Global network inconsistent: {}'.format(subset_rev_i))
+                        raise FastcoreError('Global network inconsistent: {}'.format(subset_rev_i))
 
                     #print 'Going to non-flipped, singleton state...'
                     singleton = True

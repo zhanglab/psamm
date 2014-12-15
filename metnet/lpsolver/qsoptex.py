@@ -12,7 +12,7 @@ from .lp import Solver as BaseSolver
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
 from .lp import (VariableSet, Expression, Relation,
-                    ObjectiveSense, VariableType)
+                    ObjectiveSense, VariableType, InvalidResultError)
 
 class Solver(BaseSolver):
     '''Represents an LP solver using QSopt_ex'''
@@ -155,7 +155,7 @@ class Result(BaseResult):
 
     def _check_valid(self):
         if self._problem.result != self:
-            raise Exception('Previous result is no longer valid as problem has been solved again')
+            raise InvalidResultError()
 
     @property
     def success(self):

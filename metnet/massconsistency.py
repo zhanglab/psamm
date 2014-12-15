@@ -11,6 +11,9 @@ pseudo-compounds (e.g. "photon") that also has to be excluded.'''
 
 from .lpsolver import lp
 
+class MassConsistencyError(Exception):
+    '''Indicates an error while checking for mass consistency'''
+
 class MassConsistencyCheck(object):
     def __init__(self, solver):
         self._solver = solver
@@ -88,7 +91,7 @@ class MassConsistencyCheck(object):
         # Solve
         result = prob.solve(lp.ObjectiveSense.Minimize)
         if not result:
-            raise Exception('Non-optimal solution: {}'.format(result.status))
+            raise MassConsistencyError('Non-optimal solution: {}'.format(result.status))
 
         def iterate_reactions():
             for reaction_id in database.reactions:
@@ -141,7 +144,7 @@ class MassConsistencyCheck(object):
         # Solve
         result = prob.solve(lp.ObjectiveSense.Maximize)
         if not result:
-            raise Exception('Non-optimal solution: {}'.format(result.status))
+            raise MassConsistencyError('Non-optimal solution: {}'.format(result.status))
 
         for compound in compound_set:
             yield compound, result.get_value(('m', compound))

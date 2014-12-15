@@ -7,6 +7,9 @@ Vinay Satish, Madhukar S. Dasika, and Costas D. Maranas.
 
 from .lpsolver import lp
 
+class GapFillError(Exception):
+    '''Indicates an error while running GapFind/GapFill'''
+
 def gapfind(model, solver, epsilon=1e-5, v_max=1000):
     '''Identify compounds in the model that cannot be produced
 
@@ -68,7 +71,7 @@ def gapfind(model, solver, epsilon=1e-5, v_max=1000):
     # Solve
     result = prob.solve(lp.ObjectiveSense.Maximize)
     if not result:
-        raise Exception('Non-optimal solution: {}'.format(result.status))
+        raise GapFillError('Non-optimal solution: {}'.format(result.status))
 
     for compound in model.compounds:
         if result.get_value(('xp', compound)) == 0:
@@ -158,7 +161,7 @@ def gapfill(model, core, blocked, solver, epsilon=1e-5, v_max=1000):
     # Solve
     result = prob.solve(lp.ObjectiveSense.Minimize)
     if not result:
-        raise Exception('Non-optimal solution: {}'.format(result.status))
+        raise GapFillError('Non-optimal solution: {}'.format(result.status))
 
     def added_iter():
         for reaction_id in database_reactions:
