@@ -35,10 +35,15 @@ class Problem(BaseProblem):
 
     def __init__(self, stream=sys.stderr):
         self._cp = cp.Cplex()
+
+        # Set up output to go to stream
         self._cp.set_results_stream(stream)
         self._cp.set_warning_stream(stream)
         self._cp.set_error_stream(stream)
         self._cp.set_log_stream(stream)
+
+        # Increase feasibility tolerance from default
+        self._cp.parameters.simplex.tolerances.feasibility.set(1e-9)
 
         self._variables = {}
         self._var_names = ('x'+str(i) for i in count(1))
