@@ -4,13 +4,6 @@
 import abc
 from collections import defaultdict, Mapping
 
-# Do not require numpy, but expose numpy protocol if
-# the module is available.
-try:
-    import numpy
-except:
-    numpy = None
-
 from .reaction import ModelSEED, Reaction
 
 class StoichiometricMatrixView(Mapping):
@@ -49,8 +42,7 @@ class StoichiometricMatrixView(Mapping):
     def __array__(self):
         '''Return Numpy ndarray instance of matrix with sorted compound, reaction-keys'''
 
-        if numpy is None:
-            raise Exception('Numpy module is not available')
+        import numpy # NumPy is only required for this method
 
         compound_list = sorted(self._database.compounds)
         reaction_list = sorted(self._database.reactions)
