@@ -275,8 +275,20 @@ class Problem(object):
         '''Result of solved problem'''
         pass
 
+class InvalidResultError(Exception):
+    '''Raised when a result that has been invalidated is accessed'''
+
+    def __init__(self, msg=None):
+        if msg is None:
+            msg = 'Previous result is no longer valid as problem has been solved again'
+        super(InvalidResultError, self).__init__(msg)
+
 class Result(object):
-    '''Result of solving an LP problem'''
+    '''Result of solving an LP problem
+
+    The result is tied to the solver instance and is valid at least until the problem
+    is solved again. If the problem has been solved again an InvalidResultError may be
+    raised.'''
 
     @abc.abstractproperty
     def success(self):
