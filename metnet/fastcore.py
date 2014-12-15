@@ -46,10 +46,12 @@ class Fastcore(object):
         self._solver = solver
 
     def lp7(self, model, reaction_subset, epsilon):
-        # This is similar to FBA but approximately maximizing the number
-        # of reactions in subset with flux > epsilon, instead of just
-        # maximizing the flux of one particular reaction. LP7 prefers
-        # "flux splitting" over "flux concentrating".
+        '''Approximately maximize the number of reaction with flux above epsilon
+
+        This is similar to FBA but approximately maximizing the number
+        of reactions in subset with flux > epsilon, instead of just
+        maximizing the flux of one particular reaction. LP7 prefers
+        "flux splitting" over "flux concentrating".'''
 
         # Create LP-7 problem of Fastcore
         prob = self._solver.create_problem()
@@ -81,9 +83,11 @@ class Fastcore(object):
             yield rxnid, result.get_value(('v', rxnid))
 
     def lp10(self, model, subset_k, subset_p, epsilon, scaling, weights={}):
-        # This program forces reactions in subset K to attain flux > epsilon
-        # while minimizing the sum of absolute flux values for reactions
-        # in subset P (L1-regularization).
+        '''Force reactions in subset K above epsilon while minimizing support of subset P
+
+        This program forces reactions in subset K to attain flux > epsilon
+        while minimizing the sum of absolute flux values for reactions
+        in subset P (L1-regularization).'''
 
         if len(subset_k) == 0:
             return
