@@ -5,6 +5,7 @@ import sys
 import argparse
 import operator
 import re
+import logging
 
 from .fastcore import Fastcore
 from .formula import Formula, Radical
@@ -14,6 +15,9 @@ from .database import load_tsv_database, ChainedDatabase
 from .metabolicmodel import MetabolicModel
 from .reaction import Reaction, Compound
 from . import modelseed, fluxanalysis
+
+# Module-level logging
+logger = logging.getLogger(__name__)
 
 class Command(object):
     '''Represents a command in the interface, operating on a model or database
@@ -86,7 +90,7 @@ class ChargeBalanceCommand(Command):
                     rx = model.get_reaction(reaction).translated_compounds(lambda x: compound_name.get(x, x))
                     print '{}\t{}\t{}'.format(reaction, charge, rx)
 
-        sys.stderr.write('Unbalanced reactions: {}\n'.format(count))
+        logger.info('Unbalanced reactions: {}'.format(count))
 
 class ConsoleCommand(Command):
     '''Start an interactive Python console with the given model loaded'''
@@ -147,13 +151,9 @@ class FastGapFillCommand(Command):
     def __call__(self, model, compounds, **kwargs):
         '''Run FastGapFill command'''
 
-        if model is None:
-            sys.stderr.write('Please specify a model. Use --help for more information.\n')
-            sys.exit(-1)
-
         # Create fastcore object
         from metnet.lpsolver import cplex
-        solver = cplex.Solver(None)
+        solver = cplex.Solver()
         fastcore = Fastcore(solver)
 
         # Load compound information
@@ -166,7 +166,7 @@ class FastGapFillCommand(Command):
 
         # Add exchange and transport reactions to database
         model_complete = model.copy()
-        print 'Adding database, exchange and transport reactions...'
+        logger.info('Adding database, exchange and transport reactions')
         db_added = model_complete.add_all_database_reactions(model_compartments)
         ex_added = model_complete.add_all_exchange_reactions()
         tp_added = model_complete.add_all_transport_reactions()
@@ -187,16 +187,16 @@ class FastGapFillCommand(Command):
                 weights[rxnid] = float(weight)
 
         # Run Fastcore and print the induced reaction set
-        print 'Calculating Fastcore induced set on model...'
+        logger.info('Calculating Fastcore induced set on model')
         core = set(model.reactions)
 
         induced = fastcore.fastcore(model_complete, core, epsilon, weights=weights)
-        print 'Result: |A| = {}, A = {}'.format(len(induced), induced)
+        logger.info('Result: |A| = {}, A = {}'.format(len(induced), induced))
         added_reactions = induced - core
-        print 'Extended: |E| = {}, E = {}'.format(len(added_reactions), added_reactions)
+        logger.info('Extended: |E| = {}, E = {}'.format(len(added_reactions), added_reactions))
 
         maximized_reaction = kwargs['reaction']
-        print 'Flux balance on induced model maximizing {}...'.format(maximized_reaction)
+        logger.info('Flux balance on induced model maximizing {}'.format(maximized_reaction))
         model_induced = model.copy()
         for rxnid in induced:
             model_induced.add_reaction(rxnid)
@@ -209,11 +209,11 @@ class FastGapFillCommand(Command):
             reaction = model_complete.get_reaction(rxnid).translated_compounds(lambda x: compound_name.get(x, x))
             print '{}\t{}\t{}\t{}\t{}'.format(rxnid, reaction_class, weight, flux, reaction)
 
-        print 'Calculating Fastcc consistent subset of induced model...'
+        logger.info('Calculating Fastcc consistent subset of induced model')
         consistent_core = fastcore.fastcc_consistent_subset(model_induced, epsilon)
-        print 'Result: |A| = {}, A = {}'.format(len(consistent_core), consistent_core)
+        logger.info('Result: |A| = {}, A = {}'.format(len(consistent_core), consistent_core))
         removed_reactions = set(model_induced.reactions) - consistent_core
-        print 'Removed: |R| = {}, R = {}'.format(len(removed_reactions), removed_reactions)
+        logger.info('Removed: |R| = {}, R = {}'.format(len(removed_reactions), removed_reactions))
 
 class FluxBalanceCommand(Command):
     '''Run flux balance analysis on a metabolic model'''
@@ -229,10 +229,6 @@ class FluxBalanceCommand(Command):
     def __call__(self, model, compounds, **kwargs):
         '''Run flux analysis command'''
 
-        if model is None:
-            sys.stderr.write('Please specify a model. Use --help for more information.\n')
-            sys.exit(-1)
-
         # Load compound information
         compound_name = {}
         for compound in compounds:
@@ -240,8 +236,7 @@ class FluxBalanceCommand(Command):
 
         reaction = kwargs['reaction']
         if not model.has_reaction(reaction):
-            sys.stderr.write('Specified reaction is not in model: {}\n'.format(reaction))
-            sys.exit(-1)
+            raise ValueError('Specified reaction is not in model: {}'.format(reaction))
 
         if kwargs['no_tfba']:
             result = self.run_fba_minimized(model, reaction)
@@ -257,7 +252,7 @@ class FluxBalanceCommand(Command):
             if reaction_id == reaction:
                 optimum = flux
 
-        sys.stderr.write('Maximum flux: {}\n'.format(optimum))
+        logger.info('Maximum flux: {}'.format(optimum))
 
     def run_fba_minimized(self, model, reaction):
         '''Run normal FBA and flux minimization on model, then print output'''
@@ -277,7 +272,7 @@ class FluxBalanceCommand(Command):
             if fba_fluxes[reaction_id] - epsilon > flux:
                 count += 1
             yield reaction_id, fba_fluxes[reaction_id], flux
-        sys.stderr.write('Minimized reactions: {}\n'.format(count))
+        logger.info('Minimized reactions: {}'.format(count))
 
     def run_tfba(self, model, reaction):
         '''Run FBA and tFBA on model'''
@@ -312,7 +307,7 @@ class FluxConsistencyCommand(Command):
             compound_name[compound.id] = compound.name if compound.name is not None else compound.id
 
         from metnet.lpsolver import cplex
-        solver = cplex.Solver(None)
+        solver = cplex.Solver()
         epsilon = 1e-5
 
         if kwargs['no_fastcore']:
@@ -327,7 +322,7 @@ class FluxConsistencyCommand(Command):
             rx = model.get_reaction(reaction).translated_compounds(lambda x: compound_name.get(x, x))
             print '{}\t{}'.format(reaction, rx)
 
-        sys.stderr.write('Model has {} inconsistent reactions.\n'.format(len(inconsistent)))
+        logger.info('Model has {} inconsistent reactions.'.format(len(inconsistent)))
 
 class FluxVariabilityCommand(Command):
     '''Run flux variablity analysis on a metabolic model'''
@@ -348,8 +343,7 @@ class FluxVariabilityCommand(Command):
 
         reaction = kwargs['reaction']
         if not model.has_reaction(reaction):
-            sys.stderr.write('Specified reaction is not in model: {}\n'.format(reaction))
-            sys.exit(-1)
+            raise ValueError('Specified reaction is not in model: {}'.format(reaction))
 
         from .lpsolver import cplex
         solver = cplex.Solver()
@@ -391,7 +385,7 @@ class FormulaBalanceCommand(Command):
                 try:
                     f = Formula.parse(compound.formula).flattened()
                 except ValueError as e:
-                    print 'Error parsing {}: {}'.format(compound.formula, e)
+                    logger.warning('Error parsing {}: {}'.format(compound.formula, e))
             compound_formula[compound.id] = f
 
         # Create a set of known mass-inconsistent reactions
@@ -423,10 +417,6 @@ class GapFillCommand(Command):
     def __call__(self, model, compounds):
         '''Run GapFill command'''
 
-        if model is None:
-            sys.stderr.write('Please specify a model. Use --help for more information.\n')
-            sys.exit(-1)
-
         # Load compound information
         compound_name = {}
         for compound in compounds:
@@ -438,22 +428,22 @@ class GapFillCommand(Command):
         solver = cplex.Solver()
 
         # Run GapFind on model
-        print 'Searching for blocked compounds...'
+        logger.info('Searching for blocked compounds')
         blocked = set(compound for compound in gapfind(model, solver=solver) if compound.compartment is not 'e')
         if len(blocked) > 0:
-            print 'Blocked:'
+            logger.info('Blocked compounds')
             for compound in blocked:
                 print compound.translate(lambda x: compound_name.get(x, x))
 
         if len(blocked) > 0:
             # Add exchange and transport reactions to database
             model_complete = model.copy()
-            print 'Adding database, exchange and transport reactions...'
+            logger.info('Adding database, exchange and transport reactions')
             model_complete.add_all_database_reactions(model_compartments)
             model_complete.add_all_exchange_reactions()
             model_complete.add_all_transport_reactions()
 
-            print 'Searching for reactions to fill gaps...'
+            logger.info('Searching for reactions to fill gaps')
             added_reactions, reversed_reactions = gapfill(model_complete, model.reactions, blocked, solver=solver)
 
             for rxnid in added_reactions:
@@ -464,7 +454,7 @@ class GapFillCommand(Command):
                 rx = model_complete.get_reaction(rxnid).translated_compounds(lambda x: compound_name.get(x, x))
                 print '{}\t{}\t{}'.format(rxnid, 'Reverse', rx)
         else:
-            print 'No blocked compounds found'
+            logger.info('No blocked compounds found')
 
 class MassConsistencyCommand(Command):
     '''Command that checks whether a database is mass consistent'''
@@ -502,11 +492,11 @@ class MassConsistencyCommand(Command):
         mass_consistency = MassConsistencyCheck(solver=solver)
         known_inconsistent = exclude | exchange
 
-        print 'Mass consistency on database...'
+        logger.info('Mass consistency on database')
         epsilon = 1e-5
         compound_iter = mass_consistency.check_compound_consistency(model, known_inconsistent, zeromass)
 
-        print 'Compound consistency...'
+        logger.info('Compound consistency')
         good = 0
         total = 0
         for compound, mass in sorted(compound_iter, key=lambda x: (x[1], x[0]), reverse=True):
@@ -514,11 +504,11 @@ class MassConsistencyCommand(Command):
                 good += 1
             total += 1
             print '{}: {}'.format(compound.translate(lambda x: compound_name.get(x, x)), mass)
-        print 'Consistent compounds: {}/{}'.format(good, total)
+        logger.info('Consistent compounds: {}/{}'.format(good, total))
 
-        print 'Is consistent? {}'.format(mass_consistency.is_consistent(model, known_inconsistent, zeromass))
+        logger.info('Is consistent? {}'.format(mass_consistency.is_consistent(model, known_inconsistent, zeromass)))
 
-        print 'Reaction consistency...'
+        logger.info('Reaction consistency')
         reaction_iter, compound_iter = mass_consistency.check_reaction_consistency(model, known_inconsistent, zeromass)
         for reaction_id, residual in sorted(reaction_iter, key=lambda x: abs(x[1]), reverse=True):
             if abs(residual) >= epsilon:
@@ -569,10 +559,6 @@ class RobustnessCommand(Command):
         else:
             run_fba = run_tfba
 
-        if model is None:
-            sys.stderr.write('Please specify a model. Use --help for more information.\n')
-            sys.exit(-1)
-
         # Load compound information
         compound_name = {}
         for compound in compounds:
@@ -580,26 +566,22 @@ class RobustnessCommand(Command):
 
         reaction = kwargs['reaction']
         if not model.has_reaction(reaction):
-            sys.stderr.write('Specified reaction is not in model: {}\n'.format(reaction))
-            sys.exit(-1)
+            raise ValueError('Specified reaction is not in model: {}'.format(reaction))
 
         varying_reaction = kwargs['varying']
         if not model.has_reaction(varying_reaction):
-            sys.stderr.write('Specified reaction is not in model: {}\n'.format(varying_reaction))
-            sys.exit(-1)
+            raise ValueError('Specified reaction is not in model: {}'.format(varying_reaction))
 
         steps = kwargs['steps']
         if steps <= 0:
-            sys.stderr.write('Invalid number of steps: {}\n'.format(steps))
-            sys.exit(-1)
+            raise ValueError('Invalid number of steps: {}\n'.format(steps))
 
         # Run FBA on model at different fixed flux values
         flux_min = kwargs['minimum'] if kwargs['minimum'] is not None else model.limits[varying_reaction].lower
         flux_max = kwargs['maximum'] if kwargs['maximum'] is not None else model.limits[varying_reaction].upper
 
         if flux_min > flux_max:
-            sys.stderr.write('Invalid flux range: {}, {}\n'.format(flux_min, flux_max))
-            sys.exit(-1)
+            raise ValueError('Invalid flux range: {}, {}\n'.format(flux_min, flux_max))
 
         for i in xrange(steps):
             fixed_flux = flux_min + i*(flux_max - flux_min)/float(steps-1)
@@ -765,8 +747,7 @@ def main(command=None):
 
     # Load reaction database from file
     if len(args.database) == 0:
-        sys.stderr.write('No database provided. Use --help for more information.\n')
-        sys.exit(-1)
+        raise ValueError('No database provided')
 
     databases = []
     for database_file in args.database:
@@ -793,4 +774,5 @@ def main(command=None):
     # Call command
     arg_filter = ('database', 'compounds', 'model', 'limits', 'command')
     kwargs = { key: value for key, value in vars(args).iteritems() if key not in arg_filter }
+
     command(model=model, compounds=compound_iter(), **kwargs)

@@ -3,7 +3,7 @@
 
 from __future__ import absolute_import
 
-import sys
+import logging
 from itertools import repeat, count, izip
 import numbers
 
@@ -15,15 +15,17 @@ from .lp import Result as BaseResult
 from .lp import (VariableSet, Expression, Relation,
                     ObjectiveSense, VariableType,
                     InvalidResultError)
+from ..util import LoggerFile
+
+# Module-level logging
+logger = logging.getLogger(__name__)
 
 class Solver(BaseSolver):
     '''Represents an LP-solver using Cplex'''
-    def __init__(self, stream=sys.stderr):
-        self._stream = stream
 
     def create_problem(self):
         '''Create a new LP-problem using the solver'''
-        return Problem(stream=self._stream)
+        return Problem()
 
 class Problem(BaseProblem):
     '''Represents an LP-problem of a cplex.Solver'''
@@ -34,14 +36,18 @@ class Problem(BaseProblem):
         VariableType.Integer: 'I'
     }
 
-    def __init__(self, stream=sys.stderr):
+    def __init__(self):
         self._cp = cp.Cplex()
 
-        # Set up output to go to stream
-        self._cp.set_results_stream(stream)
-        self._cp.set_warning_stream(stream)
-        self._cp.set_error_stream(stream)
-        self._cp.set_log_stream(stream)
+        # Set up output to go to logging streams
+        log_stream = LoggerFile(logger, logging.DEBUG)
+        warning_stream = LoggerFile(logger, logging.WARNING)
+        error_stream = LoggerFile(logger, logging.ERROR)
+
+        self._cp.set_log_stream(log_stream)
+        self._cp.set_results_stream(log_stream)
+        self._cp.set_warning_stream(warning_stream)
+        self._cp.set_error_stream(error_stream)
 
         # Increase feasibility tolerance from default
         self._cp.parameters.simplex.tolerances.feasibility.set(1e-9)

@@ -1,8 +1,12 @@
 
 '''Implementation of Flux Balance Analysis'''
 
-import sys
+import logging
+
 from .lpsolver import lp
+
+# Module-level logging
+logger = logging.getLogger(__name__)
 
 class FluxBalanceError(Exception):
     '''Error indicating that a flux balance cannot be solved'''
@@ -207,7 +211,9 @@ def consistency_check(model, subset, epsilon, solver):
     subset = set(subset)
     while len(subset) > 0:
         reaction = next(iter(subset))
-        sys.stderr.write('{} left, checking {}...\n'.format(len(subset), reaction))
+
+        logger.debug('{} left, checking {}...'.format(len(subset), reaction))
+
         fba.solve(reaction)
         support = set(rxnid for rxnid in model.reactions if abs(fba.get_flux(rxnid)) >= epsilon)
         subset -= support
@@ -219,6 +225,8 @@ def consistency_check(model, subset, epsilon, solver):
             subset -= support
             if reaction in support:
                 continue
-        sys.stderr.write('{} not consistent!\n'.format(reaction))
+
+        logger.debug('{} not consistent!'.format(reaction))
+
         yield reaction
         subset.remove(reaction)

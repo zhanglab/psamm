@@ -1,6 +1,30 @@
 
 '''Various utilities'''
 
+import re
+
+class LoggerFile(object):
+    '''File-like object that forwards to a logger
+
+    The Cplex API takes a file-like object for writing log output.
+    This class allows us to forward the Cplex messages to the
+    Python logging system.'''
+
+    def __init__(self, logger, level):
+        self._logger = logger
+        self._level = level
+
+    def write(self, s):
+        '''Write message to logger'''
+        for line in re.split(r'\n+', s):
+            if line != '':
+                self._logger.log(self._level, line)
+
+    def flush(self):
+        '''Flush stream
+
+        This is a noop.'''
+
 def convex_cardinality_relaxed(f, epsilon=1e-5):
     '''Transform L1-norm optimization function into approximate cardinality optimization
 
