@@ -153,7 +153,7 @@ class FastGapFillCommand(Command):
 
         # Create fastcore object
         from metnet.lpsolver import cplex
-        solver = cplex.Solver(None)
+        solver = cplex.Solver()
         fastcore = Fastcore(solver)
 
         # Load compound information
@@ -307,7 +307,7 @@ class FluxConsistencyCommand(Command):
             compound_name[compound.id] = compound.name if compound.name is not None else compound.id
 
         from metnet.lpsolver import cplex
-        solver = cplex.Solver(None)
+        solver = cplex.Solver()
         epsilon = 1e-5
 
         if kwargs['no_fastcore']:

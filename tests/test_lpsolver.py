@@ -6,7 +6,7 @@ from metnet.lpsolver import lp, cplex
 
 class TestCplexProblem(unittest.TestCase):
     def setUp(self):
-        self.solver = cplex.Solver(None)
+        self.solver = cplex.Solver()
 
     def test_objective_reset_on_set_linear_objective(self):
         prob = self.solver.create_problem()

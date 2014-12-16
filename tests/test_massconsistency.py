@@ -22,7 +22,7 @@ class TestMassConsistency(unittest.TestCase):
         self.database.set_reaction('rxn_6', ModelSEED.parse('|D| =>'))
         self.model = MetabolicModel.load_model(self.database, self.database.reactions)
 
-        self.masscons = massconsistency.MassConsistencyCheck(cplex.Solver(None))
+        self.masscons = massconsistency.MassConsistencyCheck(cplex.Solver())
 
     def test_mass_consistent_is_consistent(self):
         exchange = { 'rxn_1', 'rxn_6' }
