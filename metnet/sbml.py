@@ -3,6 +3,7 @@
 
 import xml.etree.ElementTree as ET
 from decimal import Decimal
+from fractions import Fraction
 from functools import partial
 
 from .database import MetabolicDatabase, DictDatabase
@@ -121,13 +122,35 @@ class SBMLDatabase(MetabolicDatabase):
         '''Yield species id and parsed value for a speciesReference list'''
         for species in root.iterfind('./{}/{}'.format(self._sbml_tag(name), self._sbml_tag('speciesReference'))):
             species_id = species.get('species')
-            species_value = species.get('stoichiometry', 1)
 
-            value = Decimal(species_value)
-            if value % 1 == 0:
-                value = int(value)
+            if self._level == 1:
+                # In SBML level 1 only positive integers are allowed for stoichiometry but
+                # a positive integer denominator can be specified.
+                value = int(species.get('stoichiometry', 1))
+                denom = int(species.get('denominator', 1))
+                species_value = Fraction(value, denom)
+            elif self._level == 2:
+                # Stoichiometric value is a double but can alternatively be specified
+                # using math (not implemented).
+                value_str = species.get('stoichiometry', None)
+                if value_str is None:
+                    if 'stoichiometryMath' in species:
+                        raise ParseError('stoichiometryMath in speciesReference is not implemented')
+                    species_value = 1
+                else:
+                    species_value = Decimal(value_str)
+            elif self._level == 3:
+                # Stoichiometric value is a double but can alternatively be specified
+                # using initial assignment (not implemented).
+                value_str = species.get('stoichiometry', None)
+                if value_str is None:
+                    raise ParseError('Missing stoichiometry in speciesReference is not implemented')
+                species_value = Decimal(value_str)
 
-            yield species_id, value
+            if species_value % 1 == 0:
+                species_value = int(species_value)
+
+            yield species_id, species_value
 
     @property
     def reactions(self):
