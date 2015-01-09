@@ -1,7 +1,33 @@
-Metabolic modeling tools
+Metabolic modelling tools
 =========================
 
-Tools related to metabolic modeling, reconstruction, data parsing and formatting.
+Tools related to metabolic modelling, reconstruction, data parsing and formatting.
+
+Install
+-------
+
+The Python module can be installed using `pip`. It is also possible to install a
+specific tag or branch by appending the name to the Git URL (e.g. append `@v0.1` to
+get the tag `v0.1`). This will typically require `root` permission.
+
+**Note that currently only the Python module and the `model.py` script will be installed
+using this method.**
+
+``` shell
+$ pip install git+ssh://git@github.com/zhanglab/model_script.git
+```
+
+Another option is to use `virtualenv`. First set up a new environment in the project directory,
+and activate it.
+
+``` shell
+$ virtualenv env
+$ . env/bin/activate
+```
+
+Now the Python module can be installed in the virtual environment using the `pip` command without
+requiring `root` permissions. When returning to the project, simply reactivate the environment by
+running the second command.
 
 Parsing annotations
 -------------------
@@ -40,7 +66,7 @@ The tools that can be applied to metabolic models are run through the `model.py`
 To see the full help text of the program use
 
 ``` shell
-$ ~/model_script/model.py --help
+$ model.py --help
 ```
 
 This program allows you to specify a metabolic model and a command to apply to the
@@ -50,7 +76,7 @@ are also described in more details below.
 To run the program with a model, use
 
 ``` shell
-$ ~/model_script/model.py --database database.tsv --compounds compounds.tsv \
+$ model.py --database database.tsv --compounds compounds.tsv \
 	--model model.tsv --limits limits.tsv command [...]
 ```
 
@@ -63,7 +89,7 @@ direction.
 To see the help text of a command use
 
 ``` shell
-$ ~/model_script/model.py command --help
+$ model.py command --help
 ```
 
 ### Flux balance analysis (`fba`)
@@ -73,7 +99,7 @@ the "biomass" or "growth" reaction). Next, it will fix the flux of this reaction
 minimizing the flux of all reactions in the model. Both results are presented in a table.
 
 ``` shell
-$ ~/model_script/model.py [...] fba Biomass
+$ model.py [...] fba Biomass
 ```
 
 ### Robustness (`robustness`)
@@ -84,7 +110,7 @@ iteration. The reaction will be fixed at a given number of steps between the
 minimum and maximum flux value specified in the model.
 
 ``` shell
-$ ~/model_script/model.py [...] robustness \
+$ model.py [...] robustness \
 	--steps 200 --minimum -20 --maximum 160 Biomass EX_Oxygen
 ```
 
@@ -107,7 +133,7 @@ Some variants of this idea is implemented in the `metnet.massconsistency` module
 The mass consistency check can be run using
 
 ``` shell
-$ ~/model_script/model.py [...] masscheck
+$ model.py [...] masscheck
 ```
 
 This will first try to assign a positive mass to as many compounds as possible. This
@@ -123,7 +149,7 @@ Similarly, a model or reaction database can be checked for formula inconsistenci
 when the chemical formulae of the compounds in the model are known.
 
 ``` shell
-$ ~/model_script/model.py [...] formulacheck
+$ model.py [...] formulacheck
 ```
 
 For each inconsistent reaction, the reaction identifier will be printed followed by
@@ -144,7 +170,7 @@ These algorithms are defined in terms of MILP problems and are therefore (partic
 GapFill) computationally expensive to run for larger models.
 
 ``` shell
-$ ~/model_script/model.py [...] gapfill
+$ model.py [...] gapfill
 ```
 
 ### FastGapFill (`fastgapfill`)
@@ -158,7 +184,7 @@ The database reactions can be assigned a weight (or "cost") using the `--penalty
 These weights are taken into account when determining the minimal solution.
 
 ``` shell
-$ ~/model_script/model.py [...] fastgapfill \
+$ model.py [...] fastgapfill \
 	--penalty penalty.tsv Growth
 ```
 
@@ -168,7 +194,7 @@ This command can be used to search in a database for compounds or reactions. To 
 for a compound use
 
 ``` shell
-$ ~/model_script/model.py [...] search compound [...]
+$ model.py [...] search compound [...]
 ```
 
 Use the `--name` option to search for a compound with a specific name or use the
@@ -177,7 +203,7 @@ Use the `--name` option to search for a compound with a specific name or use the
 To search for a reaction use
 
 ``` shell
-$ ~/model_script/model.py [...] search reaction [...]
+$ model.py [...] search reaction [...]
 ```
 
 Use the `--id` option to search for a reaction with a specific identifier. The `--compound`
@@ -191,7 +217,7 @@ This command will start a Python session where the database, model and compounds
 been loaded into the corresponding Python object representation.
 
 ``` shell
-$ ~/model_script/model.py [...] console
+$ model.py [...] console
 ```
 
 GAMS models
@@ -297,7 +323,7 @@ run without failure _before_ committing changes to any of the modules. The test
 suite is run by changing to the project directory and running
 
 ``` shell
-$ ./test.py
+$ ./setup.py test
 ```
 
 Adding or improving tests for python modules is highly encouraged. A test suite for
