@@ -29,9 +29,14 @@ class FluxBalanceProblem(object):
         massbalance_lhs = { compound: 0 for compound in model.compounds }
         for spec, value in model.matrix.iteritems():
             compound, reaction_id = spec
-            massbalance_lhs[compound] += self._prob.var(('v', reaction_id)) * value
+            massbalance_lhs[compound] += self.get_flux_var(reaction_id) * value
         for compound, lhs in massbalance_lhs.iteritems():
             self._prob.add_linear_constraints(lhs == 0)
+
+    @property
+    def prob(self):
+        """Return the underlying LP problem"""
+        return self._prob
 
     def solve(self, reaction):
         '''Solve problem maximizing the given reaction
@@ -40,15 +45,19 @@ class FluxBalanceProblem(object):
         the objective for that reaction (non-existent reaction will have zero weight).'''
 
         if isinstance(reaction, dict):
-            objective = sum(v * self._prob.var(('v', r)) for r, v in reaction.iteritems())
+            objective = sum(v * self.get_flux_var(r) for r, v in reaction.iteritems())
         else:
-            objective = self._prob.var(('v', reaction))
+            objective = self.get_flux_var(reaction)
 
         # Set objective and solve
         self._prob.set_linear_objective(objective)
         result = self._prob.solve(lp.ObjectiveSense.Maximize)
         if not result:
             raise FluxBalanceError('Non-optimal solution: {}'.format(result.status))
+
+    def get_flux_var(self, reaction):
+        """Get LP variable representing the reaction flux"""
+        return self._prob.var(('v', reaction))
 
     def get_flux(self, reaction):
         '''Get resulting flux value for reaction'''
@@ -64,9 +73,9 @@ class FluxBalanceTDProblem(FluxBalanceProblem):
     Described by Muller, Arne C., and Alexander Bockmayr. "Fast thermodynamically
     constrained flux variability analysis." Bioinformatics (2013): btt059.'''
 
-    def __init__(self, model, solver=None):
+    def __init__(self, model, solver):
         super(FluxBalanceTDProblem, self).__init__(model, solver)
-        p = self._prob
+        p = self.prob
 
         em = 1e5
         epsilon = 1e-5
@@ -78,7 +87,7 @@ class FluxBalanceTDProblem(FluxBalanceProblem):
                 p.define(('alpha', reaction_id), types=lp.VariableType.Binary)
                 p.define(('dmu', reaction_id)) # Delta mu
 
-                flux = p.var(('v', reaction_id))
+                flux = self.get_flux_var(reaction_id)
                 alpha = p.var(('alpha', reaction_id))
                 dmu = p.var(('dmu', reaction_id))
 
