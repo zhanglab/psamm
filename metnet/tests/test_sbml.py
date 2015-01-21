@@ -3,7 +3,7 @@
 import unittest
 
 from metnet.datasource import sbml
-from metnet.reaction import Reaction, Compound
+from metnet.reaction import Compound
 
 from decimal import Decimal
 from fractions import Fraction

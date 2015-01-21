@@ -13,7 +13,7 @@ from .gapfill import gapfind, gapfill
 from .massconsistency import MassConsistencyCheck
 from .database import DictDatabase, ChainedDatabase
 from .metabolicmodel import MetabolicModel
-from .reaction import Reaction, Compound
+from .reaction import Compound
 from .datasource import internal, modelseed
 from . import fluxanalysis
 
