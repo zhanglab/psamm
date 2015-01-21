@@ -3,6 +3,10 @@
 
 import re
 
+from metnet.reaction import Reaction, Compound
+from metnet.expression.affine import Expression
+
+
 class ParseError(Exception):
     '''Exception used to signal errors while parsing'''
     pass
@@ -115,3 +119,47 @@ def parse_compound_file(f):
                 compound[section_id].append(line.strip())
             else:
                 raise ParseError('Missing section identifier')
+
+
+def parse_reaction(s):
+    """Parse a KEGG reaction string"""
+
+    def parse_count(s):
+        m = re.match(r'^\((.+)\)$', s)
+        if m is not None:
+            s = m.group(1)
+
+        m = re.match(r'^\d+$', s)
+        if m is not None:
+            return int(m.group(0))
+
+        return Expression(s)
+
+    def parse_compound(s):
+        m = re.match(r'(.+)\((.+)\)', s)
+        if m is not None:
+            return Compound(m.group(1), arguments=[Expression(m.group(2))])
+        return Compound(s)
+
+    def parse_compound_list(s):
+        for cpd in s.split(' + '):
+            if cpd == '':
+                continue
+
+            fields = cpd.strip().split(' ')
+            if len(fields) > 2:
+                raise ParseError('Malformed compound specification: {}'.format(cpd))
+            if len(fields) == 1:
+                count = 1
+                compound = parse_compound(fields[0])
+            else:
+                count = parse_count(fields[0])
+                compound = parse_compound(fields[1])
+
+            yield compound, count
+
+    cpd_left, cpd_right = s.split('<=>')
+    left = parse_compound_list(cpd_left.strip())
+    right = parse_compound_list(cpd_right.strip())
+
+    return Reaction('<=>', left, right)

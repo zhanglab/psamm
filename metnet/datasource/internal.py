@@ -5,7 +5,7 @@ These formats are all space-separated text files. Empty lines are
 ignored, just as comments starting with pound (#).
 """
 
-from ..reaction import Reaction, Compound, ModelSEED
+from . import modelseed
 
 def parse_reaction_file(f):
     """Parse a space-separated file containing reaction IDs and definitions
@@ -19,7 +19,7 @@ def parse_reaction_file(f):
         if line == '':
             continue
         reaction_id, equation = line.split(None, 1)
-        reaction = ModelSEED.parse(equation).normalized()
+        reaction = modelseed.parse_reaction(equation).normalized()
         yield reaction_id, reaction
 
 def parse_limits_file(f):

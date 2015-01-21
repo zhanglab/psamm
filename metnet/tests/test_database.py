@@ -3,17 +3,18 @@
 import unittest
 
 from metnet.database import DictDatabase, ChainedDatabase
-from metnet.reaction import ModelSEED, Compound, Reaction
+from metnet.reaction import Compound, Reaction
+from metnet.datasource.modelseed import parse_reaction
 
 class TestMetabolicDatabase(unittest.TestCase):
     def setUp(self):
         self.database = DictDatabase()
-        self.database.set_reaction('rxn_1', ModelSEED.parse('=> (2) |A|'))
-        self.database.set_reaction('rxn_2', ModelSEED.parse('|A| <=> |B|'))
-        self.database.set_reaction('rxn_3', ModelSEED.parse('|A| => |D|'))
-        self.database.set_reaction('rxn_4', ModelSEED.parse('|A| => |C|'))
-        self.database.set_reaction('rxn_5', ModelSEED.parse('|C| => |D|'))
-        self.database.set_reaction('rxn_6', ModelSEED.parse('|D| =>'))
+        self.database.set_reaction('rxn_1', parse_reaction('=> (2) |A|'))
+        self.database.set_reaction('rxn_2', parse_reaction('|A| <=> |B|'))
+        self.database.set_reaction('rxn_3', parse_reaction('|A| => |D|'))
+        self.database.set_reaction('rxn_4', parse_reaction('|A| => |C|'))
+        self.database.set_reaction('rxn_5', parse_reaction('|C| => |D|'))
+        self.database.set_reaction('rxn_6', parse_reaction('|D| =>'))
 
     def test_reactions(self):
         self.assertEqual(set(self.database.reactions),
@@ -47,7 +48,7 @@ class TestMetabolicDatabase(unittest.TestCase):
         self.assertEquals(set(self.database.reversible), { 'rxn_2' })
 
     def test_get_reaction(self):
-        reaction = ModelSEED.parse('|A| => |D|')
+        reaction = parse_reaction('|A| => |D|')
         self.assertEqual(self.database.get_reaction('rxn_3'), reaction)
 
     def test_set_reaction_with_zero_coefficient(self):
@@ -94,16 +95,16 @@ class TestMetabolicDatabase(unittest.TestCase):
 class TestChainedDatabase(unittest.TestCase):
     def setUp(self):
         database1 = DictDatabase()
-        database1.set_reaction('rxn_1', ModelSEED.parse('|A| => |B|'))
-        database1.set_reaction('rxn_2', ModelSEED.parse('|B| => |C| + |D|'))
-        database1.set_reaction('rxn_3', ModelSEED.parse('|D| <=> |E|'))
-        database1.set_reaction('rxn_4', ModelSEED.parse('|F| => |G|'))
+        database1.set_reaction('rxn_1', parse_reaction('|A| => |B|'))
+        database1.set_reaction('rxn_2', parse_reaction('|B| => |C| + |D|'))
+        database1.set_reaction('rxn_3', parse_reaction('|D| <=> |E|'))
+        database1.set_reaction('rxn_4', parse_reaction('|F| => |G|'))
 
         database2 = DictDatabase()
-        database2.set_reaction('rxn_2', ModelSEED.parse('|B| => |C|'))
-        database2.set_reaction('rxn_3', ModelSEED.parse('|C| => |D|'))
-        database2.set_reaction('rxn_4', ModelSEED.parse('|F| <=> |G|'))
-        database2.set_reaction('rxn_5', ModelSEED.parse('|G| + |I| <=> |H|'))
+        database2.set_reaction('rxn_2', parse_reaction('|B| => |C|'))
+        database2.set_reaction('rxn_3', parse_reaction('|C| => |D|'))
+        database2.set_reaction('rxn_4', parse_reaction('|F| <=> |G|'))
+        database2.set_reaction('rxn_5', parse_reaction('|G| + |I| <=> |H|'))
 
         self.database = ChainedDatabase(database2, database1)
 

@@ -6,7 +6,7 @@ from metnet.metabolicmodel import MetabolicModel
 from metnet.database import DictDatabase
 from metnet import fastcore
 from metnet.lpsolver import cplex
-from metnet.reaction import ModelSEED
+from metnet.datasource.modelseed import parse_reaction
 
 class TestFastcoreSimpleVlassisModel(unittest.TestCase):
     '''Test fastcore using the simple model in Vlassis et al. 2014.'''
@@ -14,12 +14,12 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
     def setUp(self):
         # TODO use mock model instead of actual model
         self.database = DictDatabase()
-        self.database.set_reaction('rxn_1', ModelSEED.parse('=> (2) |A|'))
-        self.database.set_reaction('rxn_2', ModelSEED.parse('|A| <=> |B|'))
-        self.database.set_reaction('rxn_3', ModelSEED.parse('|A| => |D|'))
-        self.database.set_reaction('rxn_4', ModelSEED.parse('|A| => |C|'))
-        self.database.set_reaction('rxn_5', ModelSEED.parse('|C| => |D|'))
-        self.database.set_reaction('rxn_6', ModelSEED.parse('|D| =>'))
+        self.database.set_reaction('rxn_1', parse_reaction('=> (2) |A|'))
+        self.database.set_reaction('rxn_2', parse_reaction('|A| <=> |B|'))
+        self.database.set_reaction('rxn_3', parse_reaction('|A| => |D|'))
+        self.database.set_reaction('rxn_4', parse_reaction('|A| => |C|'))
+        self.database.set_reaction('rxn_5', parse_reaction('|C| => |D|'))
+        self.database.set_reaction('rxn_6', parse_reaction('|D| =>'))
         self.model = MetabolicModel.load_model(self.database, self.database.reactions)
         self.fastcore = fastcore.Fastcore(cplex.Solver())
 
@@ -108,7 +108,7 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
         self.assertEqual(self.fastcore.fastcc_consistent_subset(self.model, 0.001), set(['rxn_1', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6']))
 
     def test_fastcore_global_inconsistent(self):
-        self.database.set_reaction('rxn_7', ModelSEED.parse('|E| <=>'))
+        self.database.set_reaction('rxn_7', parse_reaction('|E| <=>'))
         with self.assertRaises(Exception):
             self.fastcore.fastcore(self.model, { 'rxn_7' }, 0.001)
 
@@ -118,8 +118,8 @@ class TestFastcoreTinyBiomassModel(unittest.TestCase):
     def setUp(self):
         # TODO use mock model instead of actual model
         self.database = DictDatabase()
-        self.database.set_reaction('rxn_1', ModelSEED.parse('=> |A|'))
-        self.database.set_reaction('rxn_2', ModelSEED.parse('(0.000001) |A| =>'))
+        self.database.set_reaction('rxn_1', parse_reaction('=> |A|'))
+        self.database.set_reaction('rxn_2', parse_reaction('(0.000001) |A| =>'))
         self.model = MetabolicModel.load_model(self.database, self.database.reactions)
         self.fastcore = fastcore.Fastcore(cplex.Solver())
 
@@ -140,10 +140,10 @@ class TestFlippingModel(unittest.TestCase):
     def setUp(self):
         # TODO use mock model instead of actual model
         self.database = DictDatabase()
-        self.database.set_reaction('rxn_1', ModelSEED.parse('|A| <=>'))
-        self.database.set_reaction('rxn_2', ModelSEED.parse('|A| <=> |B|'))
-        self.database.set_reaction('rxn_3', ModelSEED.parse('|C| <=> |B|'))
-        self.database.set_reaction('rxn_4', ModelSEED.parse('|C| <=>'))
+        self.database.set_reaction('rxn_1', parse_reaction('|A| <=>'))
+        self.database.set_reaction('rxn_2', parse_reaction('|A| <=> |B|'))
+        self.database.set_reaction('rxn_3', parse_reaction('|C| <=> |B|'))
+        self.database.set_reaction('rxn_4', parse_reaction('|C| <=>'))
         self.model = MetabolicModel.load_model(self.database, self.database.reactions)
         self.fastcore = fastcore.Fastcore(cplex.Solver())
 
