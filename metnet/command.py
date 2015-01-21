@@ -11,10 +11,11 @@ from .fastcore import Fastcore
 from .formula import Formula, Radical
 from .gapfill import gapfind, gapfill
 from .massconsistency import MassConsistencyCheck
-from .database import load_tsv_database, ChainedDatabase
+from .database import DictDatabase, ChainedDatabase
 from .metabolicmodel import MetabolicModel
 from .reaction import Reaction, Compound
-from . import modelseed, fluxanalysis
+from .datasource import internal, modelseed
+from . import fluxanalysis
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -751,7 +752,10 @@ def main(command=None):
 
     databases = []
     for database_file in args.database:
-        databases.append(load_tsv_database(database_file))
+        db = DictDatabase()
+        for reaction_id, reaction in internal.parse_reaction_file(database_file):
+            db.set_reaction(reaction_id, reaction)
+        databases.append(db)
     database = ChainedDatabase(*databases)
 
     if args.model is not None:

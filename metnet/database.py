@@ -4,7 +4,7 @@
 import abc
 from collections import defaultdict, Mapping
 
-from .reaction import ModelSEED, Reaction
+from .reaction import Reaction
 
 class StoichiometricMatrixView(Mapping):
     '''Provides a sparse matrix view on the stoichiometry of a database
@@ -262,17 +262,3 @@ class ChainedDatabase(MetabolicDatabase):
             self._databases[0].set_reaction(reaction_id, reaction)
         else:
             raise ValueError('First database is immutable')
-
-def load_tsv_database(file):
-    '''Load database from given reactions definition lists'''
-
-    database = DictDatabase()
-    for line in file:
-        line, _, comment = line.partition('#')
-        line = line.strip()
-        if line == '':
-            continue
-        reaction_id, equation = line.split(None, 1)
-        reaction = ModelSEED.parse(equation).normalized()
-        database.set_reaction(reaction_id, reaction)
-    return database
