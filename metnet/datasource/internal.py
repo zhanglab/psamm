@@ -1,5 +1,9 @@
 
-"""Module for reading and writing internal table-based formats"""
+"""Module for reading and writing internal table-based formats
+
+These formats are all space-separated text files. Empty lines are
+ignored, just as comments starting with pound (#).
+"""
 
 from ..reaction import Reaction, Compound, ModelSEED
 
@@ -46,3 +50,13 @@ def parse_limits_file(f):
             yield reaction_id, float(lower), float(upper)
         else:
             raise ValueError('Malformed reaction limit: {}'.format(fields))
+
+def parse_model_file(f):
+    """Parse a file containing a list of reactions"""
+
+    for line in f:
+        line, _, comment = line.partition('#')
+        line = line.strip()
+        if line == '':
+            continue
+        yield line

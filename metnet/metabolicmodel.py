@@ -297,22 +297,6 @@ class MetabolicModel(MetabolicDatabase):
         return model
 
     @classmethod
-    def load_model_from_file(cls, database, file):
-        '''Load model defined by given reaction list file
-
-        Comments, indicated by pound sign (#), are skipped.'''
-
-        def reaction_file_iter(f):
-            for line in f:
-                line, _, comment = line.partition('#')
-                line = line.strip()
-                if line == '':
-                    continue
-                yield line
-
-        return cls.load_model(database, reaction_file_iter(file))
-
-    @classmethod
     def load_model(cls, database, reaction_iter):
         '''Get model from reaction name iterator
 

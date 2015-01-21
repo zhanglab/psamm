@@ -760,7 +760,7 @@ def main(command=None):
 
     if args.model is not None:
         # Set database and model to the database subset
-        model = MetabolicModel.load_model_from_file(database, args.model[0])
+        model = MetabolicModel.load_model(database, internal.parse_model_file(args.model[0]))
     else:
         # Build model from all database reactions
         model = MetabolicModel.load_model(database, database.reactions)
