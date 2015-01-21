@@ -767,7 +767,12 @@ def main(command=None):
 
     # Load bounds on exchange reactions
     for limits_table in args.limits:
-        model.load_reaction_limits(limits_table)
+        for reaction_id, lower, upper in internal.parse_limits_file(limits_table):
+            if model.has_reaction(reaction_id):
+                if lower is not None:
+                    model.limits[reaction_id].lower = lower
+                if upper is not None:
+                    model.limits[reaction_id].upper = upper
 
     # Parse compound tables
     def compound_iter():

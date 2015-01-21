@@ -286,32 +286,6 @@ class MetabolicModel(MetabolicDatabase):
 
         return added
 
-    def load_reaction_limits(self, limits_file):
-        '''Load reaction limits from external file'''
-
-        for line in limits_file:
-            line, _, comment = line.partition('#')
-            line = line.strip()
-            # TODO Comments can start with an asterisk to remain
-            # compatible with GAMS files. Can be removed when
-            # compatibility is no longer needed.
-            if line == '' or line[0] == '*':
-                continue
-
-            # A line can specify lower limit only (useful for
-            # exchange reactions), or both lower and upper limit.
-            fields = line.split(None)
-            if len(fields) == 2:
-                reaction_id, lower = fields
-                if reaction_id in self._reaction_set:
-                    self.limits[reaction_id].lower = float(lower)
-            elif len(fields) == 3:
-                reaction_id, lower, upper = fields
-                if reaction_id in self._reaction_set:
-                    self.limits[reaction_id].bounds = float(lower), float(upper)
-            else:
-                raise ValueError('Malformed reaction limit: {}'.format(fields))
-
     def copy(self):
         '''Return copy of model'''
 
