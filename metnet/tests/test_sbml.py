@@ -2,8 +2,8 @@
 
 import unittest
 
-from metnet import sbml
-from metnet.reaction import Reaction, Compound
+from metnet.datasource import sbml
+from metnet.reaction import Compound
 
 from decimal import Decimal
 from fractions import Fraction

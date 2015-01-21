@@ -3,14 +3,6 @@
 import unittest
 
 from metnet.reaction import Reaction, Compound
-from metnet.reaction import ModelSEED
-from metnet.reaction import KEGG
-from metnet.reaction import SudenSimple
-from metnet.reaction import MetNet
-
-from metnet.expression.affine import Expression
-
-from decimal import Decimal
 
 class TestCompound(unittest.TestCase):
     def test_compound_init_no_arguments(self):
@@ -165,13 +157,13 @@ class TestReaction(unittest.TestCase):
 
     def test_reaction_format_simple(self):
         r = Reaction(Reaction.Right, [(Compound('Pb'), 1)], [(Compound('Au'), 1)])
-        self.assertEquals(r.format(), '|Pb| => |Au|')
+        self.assertEquals(str(r), '|Pb| => |Au|')
 
     def test_reaction_format_with_arguments(self):
         pp1 = Compound('Polyphosphate', arguments=[4])
         pp2 = Compound('Polyphosphate', arguments=[5])
         r = Reaction(Reaction.Right, [(Compound('ATP'), 1), (pp1, 1)], [(Compound('ADP'), 1), (pp2, 1)])
-        self.assertEquals(r.format(), '|ATP| + |Polyphosphate(4)| => |ADP| + |Polyphosphate(5)|')
+        self.assertEquals(str(r), '|ATP| + |Polyphosphate(4)| => |ADP| + |Polyphosphate(5)|')
 
     def test_reaction_equals_other(self):
         r = Reaction(Reaction.Right, [(Compound('Pb'), 1)], [(Compound('Au'), 1)])
@@ -185,86 +177,6 @@ class TestReaction(unittest.TestCase):
         r = Reaction(Reaction.Right, [(Compound('Au'), 1)], [(Compound('Pb'), 1)])
         self.assertNotEquals(r, Reaction(Reaction.Left, [(Compound('Pb'), 1)], [(Compound('Au'), 1)]))
 
-class TestModelSEED(unittest.TestCase):
-    def test_modelseed_parse(self):
-        r = ModelSEED.parse('|H2O| + |PPi| => (2) |Phosphate| + (2) |H+|')
-        self.assertEquals(r, Reaction(Reaction.Right, [(Compound('H2O'), 1), (Compound('PPi'), 1)],
-                                      [(Compound('Phosphate'), 2), (Compound('H+'), 2)]))
-
-    def test_modelseed_parse_with_decimal(self):
-        r = ModelSEED.parse('|H2| + (0.5) |O2| => |H2O|')
-        self.assertEquals(r, Reaction(Reaction.Right, [(Compound('H2'), 1), (Compound('O2'), Decimal('0.5'))],
-                                      [(Compound('H2O'), 1)]))
-
-    def test_modelseed_parse_with_compartment(self):
-        r = ModelSEED.parse('(2) |H2| + |O2| => (2) |H2O[e]|')
-        self.assertEquals(r, Reaction(Reaction.Right, [(Compound('H2'), 2), (Compound('O2'), 1)],
-                                      [(Compound('H2O', compartment='e'), 2)]))
-
-    def test_modelseed_parse_with_multichar_compartment(self):
-        r = ModelSEED.parse('(2) |H2[C_c]| + |O2[C_c]| => (2) |H2O[C_e]|')
-        self.assertEquals(r, Reaction(Reaction.Right, [(Compound('H2', compartment='C_c'), 2),
-                                                        (Compound('O2', compartment='C_c'), 1)],
-                                      [(Compound('H2O', compartment='C_e'), 2)]))
-
-    def test_modelseed_format(self):
-        r = Reaction(Reaction.Left, [(Compound('H2O'), 2)], [(Compound('H2'), 2), (Compound('O2'), 1)])
-        self.assertEquals(r.format(), '(2) |H2O| <= (2) |H2| + |O2|')
-
-class TestSudenSimple(unittest.TestCase):
-    def test_sudensimple_parse(self):
-        r = SudenSimple.parse('1 H2O + 1 PPi <=> 2 Phosphate + 2 proton')
-        self.assertEquals(r, Reaction(Reaction.Bidir, [(Compound('H2O'), 1), (Compound('PPi'), 1)],
-                                      [(Compound('Phosphate'), 2), (Compound('proton'), 2)]))
-
-    def test_sudensimple_parse_with_decimal(self):
-        r = SudenSimple.parse('1 H2 + 0.5 O2 <=> 1 H2O')
-        self.assertEquals(r, Reaction(Reaction.Bidir, [(Compound('H2'), 1), (Compound('O2'), Decimal('0.5'))],
-                                      [(Compound('H2O'), 1)]))
-
-class TestMetNet(unittest.TestCase):
-    def test_metnet_parse_with_global_compartment(self):
-        r = MetNet.parse('[c] : akg + ala-L <==> glu-L + pyr')
-        self.assertEquals(r, Reaction(Reaction.Bidir, [(Compound('cpd_akg', 'c'), 1), (Compound('cpd_ala-L', 'c'), 1)],
-                                      [(Compound('cpd_glu-L', 'c'), 1), (Compound('cpd_pyr', 'c'), 1)]))
-
-    def test_metnet_parse_with_local_compartment(self):
-        r =  MetNet.parse('(2) ficytcc553[c] + so3[c] + h2o[c] --> (2) focytcc553[c] + so4[c] + (2) h[e]')
-        self.assertEquals(r, Reaction(Reaction.Right, [(Compound('cpd_ficytcc553', 'c'), 2), (Compound('cpd_so3', 'c'), 1),
-                                                       (Compound('cpd_h2o', 'c'), 1)],
-                                      [(Compound('cpd_focytcc553', 'c'), 2), (Compound('cpd_so4', 'c'), 1),
-                                       (Compound('cpd_h', 'e'), 2)]))
-
-    def test_metnet_parse_global_with_colon_in_name(self):
-        r = MetNet.parse('[c] : fdxr-4:2 + h + nadp <==> fdxo-4:2 + nadph')
-        self.assertEquals(r, Reaction(Reaction.Bidir,
-                                        [(Compound('cpd_fdxr-4:2', 'c'), 1), (Compound('cpd_h', 'c'), 1),
-                                         (Compound('cpd_nadp', 'c'), 1)],
-                                        [(Compound('cpd_fdxo-4:2', 'c'), 1), (Compound('cpd_nadph', 'c'), 1)]))
-
-    def test_metnet_parse_local_with_colon_in_name(self):
-        r = MetNet.parse('fdxr-4:2[c] + h[c] + nadp[c] <==> fdxo-4:2[c] + nadph[c]')
-        self.assertEquals(r, Reaction(Reaction.Bidir,
-                                        [(Compound('cpd_fdxr-4:2', 'c'), 1), (Compound('cpd_h', 'c'), 1),
-                                         (Compound('cpd_nadp', 'c'), 1)],
-                                        [(Compound('cpd_fdxo-4:2', 'c'), 1), (Compound('cpd_nadph', 'c'), 1)]))
-
-class TestKEGG(unittest.TestCase):
-    def test_kegg_parse(self):
-        r = KEGG.parse('C00013 + C00001 <=> 2 C00009')
-        self.assertEquals(r, Reaction(Reaction.Bidir, [(Compound('C00013'), 1), (Compound('C00001'), 1)],
-                                      [(Compound('C00009'), 2)]))
-
-    def test_kegg_parse_with_count_expression(self):
-        r = KEGG.parse('2n C00404 + n C00001 <=> (n+1) C02174')
-        self.assertEquals(r, Reaction(Reaction.Bidir, [(Compound('C00404'), Expression('2n')),
-                                                       (Compound('C00001'), Expression('n'))],
-                                      [(Compound('C02174'), Expression('n+1'))]))
-
-    def test_kegg_parse_with_compound_argument(self):
-        r = KEGG.parse('C00039(n) <=> C00013 + C00039(n+1)')
-        self.assertEquals(r, Reaction(Reaction.Bidir, [(Compound('C00039', arguments=[Expression('n')]), 1)],
-                                      [(Compound('C00013'), 1), (Compound('C00039', arguments=[Expression('n+1')]), 1)]))
 
 if __name__ == '__main__':
     unittest.main()

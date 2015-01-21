@@ -1,13 +1,12 @@
 
 '''Parser for chemical formulas'''
 
-import numbers
 import re
 from collections import Counter
 import functools
 import operator
 
-from .expression.affine import Variable, Expression
+from .expression.affine import Expression
 
 class FormulaElement(object):
     def __add__(self, other):

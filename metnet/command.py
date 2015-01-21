@@ -11,10 +11,11 @@ from .fastcore import Fastcore
 from .formula import Formula, Radical
 from .gapfill import gapfind, gapfill
 from .massconsistency import MassConsistencyCheck
-from .database import load_tsv_database, ChainedDatabase
+from .database import DictDatabase, ChainedDatabase
 from .metabolicmodel import MetabolicModel
-from .reaction import Reaction, Compound
-from . import modelseed, fluxanalysis
+from .reaction import Compound
+from .datasource import internal, modelseed
+from . import fluxanalysis
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -751,19 +752,27 @@ def main(command=None):
 
     databases = []
     for database_file in args.database:
-        databases.append(load_tsv_database(database_file))
+        db = DictDatabase()
+        for reaction_id, reaction in internal.parse_reaction_file(database_file):
+            db.set_reaction(reaction_id, reaction)
+        databases.append(db)
     database = ChainedDatabase(*databases)
 
     if args.model is not None:
         # Set database and model to the database subset
-        model = MetabolicModel.load_model_from_file(database, args.model[0])
+        model = MetabolicModel.load_model(database, internal.parse_model_file(args.model[0]))
     else:
         # Build model from all database reactions
         model = MetabolicModel.load_model(database, database.reactions)
 
     # Load bounds on exchange reactions
     for limits_table in args.limits:
-        model.load_reaction_limits(limits_table)
+        for reaction_id, lower, upper in internal.parse_limits_file(limits_table):
+            if model.has_reaction(reaction_id):
+                if lower is not None:
+                    model.limits[reaction_id].lower = lower
+                if upper is not None:
+                    model.limits[reaction_id].upper = upper
 
     # Parse compound tables
     def compound_iter():
