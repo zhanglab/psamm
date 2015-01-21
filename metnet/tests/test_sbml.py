@@ -2,7 +2,7 @@
 
 import unittest
 
-from metnet import sbml
+from metnet.datasource import sbml
 from metnet.reaction import Reaction, Compound
 
 from decimal import Decimal

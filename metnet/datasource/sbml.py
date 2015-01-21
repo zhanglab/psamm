@@ -6,8 +6,8 @@ from decimal import Decimal
 from fractions import Fraction
 from functools import partial
 
-from .database import MetabolicDatabase, DictDatabase
-from .reaction import Reaction, Compound
+from ..database import MetabolicDatabase, DictDatabase
+from ..reaction import Reaction, Compound
 
 # Level 1 namespaces
 SBML_NS_L1 = 'http://www.sbml.org/sbml/level1'
