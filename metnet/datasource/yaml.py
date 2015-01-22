@@ -8,6 +8,9 @@ import yaml
 from ..reaction import Reaction, Compound
 from . import modelseed
 
+class ParseError(Exception):
+    """Exception used to signal errors while parsing"""
+
 def parse_reaction_list(reactions):
     """Parse a list of reactions obtained from a YAML file
 
