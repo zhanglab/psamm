@@ -5,6 +5,9 @@ These formats are all space-separated text files. Empty lines are
 ignored, just as comments starting with pound (#).
 """
 
+import yaml
+
+from ..reaction import Reaction, Compound
 from . import modelseed
 
 class ParseError(Exception):

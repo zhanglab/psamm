@@ -14,7 +14,7 @@ from .massconsistency import MassConsistencyCheck
 from .database import DictDatabase, ChainedDatabase
 from .metabolicmodel import MetabolicModel
 from .reaction import Compound
-from .datasource import internal, modelseed
+from .datasource import internal, yaml, modelseed
 from . import fluxanalysis
 
 # Module-level logging
@@ -753,8 +753,12 @@ def main(command=None):
     databases = []
     for database_file in args.database:
         db = DictDatabase()
-        for reaction_id, reaction in internal.parse_reaction_file(database_file):
-            db.set_reaction(reaction_id, reaction)
+        if re.match(r'.+\.(yaml|yml)$', database_file.name):
+            for reaction_id, reaction in yaml.parse_reaction_file(database_file):
+                db.set_reaction(reaction_id, reaction)
+        else:
+            for reaction_id, reaction in internal.parse_reaction_file(database_file):
+                db.set_reaction(reaction_id, reaction)
         databases.append(db)
     database = ChainedDatabase(*databases)
 
