@@ -29,6 +29,21 @@ Now the Python module can be installed in the virtual environment using the `pip
 requiring `root` permissions. When returning to the project, simply reactivate the environment by
 running the second command.
 
+Dependencies
+------------
+
+- Linear programming solver (_Cplex_, _QSopt_ex_)
+- PyYAML (optional; required for command line interface)
+- Numpy (optional; model matrix can be exported to Numpy matrix if available)
+
+There are no strictly required dependencies but most analyses rely on a linear
+programming (LP) solver. The LP solver _Cplex_ is the preferred solver. The rational
+solver _QSopt_ex_ is also supported (through _python-qsoptex_).
+
+Reading model definitions in YAML format requires the PyYAML package. The command line
+interface will import this package so the package must be installed for the command
+line interface to work.
+
 Parsing annotations
 -------------------
 
