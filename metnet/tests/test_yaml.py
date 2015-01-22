@@ -26,6 +26,17 @@ class TestYAMLDataSource(unittest.TestCase):
                             [(Compound('C'), 1)])
         self.assertEquals(reactions[0], ('rxn1', reaction))
 
+    def test_parse_reaction_list_missing_value(self):
+        with self.assertRaises(yaml.ParseError):
+            reactions = list(yaml.parse_reaction_list([
+                {
+                    'id': 'rxn1',
+                    'left': [
+                        { 'id': 'A' }
+                    ]
+                }
+            ]))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -30,7 +30,7 @@ def parse_reaction_list(reactions):
 
                 value = compound_def.get('value')
                 if value is None:
-                    value = 1
+                    raise ParseError('Missing value for compound {}'.format(compound_id))
 
                 compound_compartment = compound_def.get('compartment')
                 if compound_compartment is None:
