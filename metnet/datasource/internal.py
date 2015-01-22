@@ -7,6 +7,10 @@ ignored, just as comments starting with pound (#).
 
 from . import modelseed
 
+class ParseError(Exception):
+    """Exception used to signal errors while parsing"""
+
+
 def parse_reaction_file(f):
     """Parse a space-separated file containing reaction IDs and definitions
 
@@ -49,7 +53,7 @@ def parse_limits_file(f):
             reaction_id, lower, upper = fields
             yield reaction_id, float(lower), float(upper)
         else:
-            raise ValueError('Malformed reaction limit: {}'.format(fields))
+            raise ParseError('Malformed reaction limit: {}'.format(fields))
 
 def parse_model_file(f):
     """Parse a file containing a list of reactions"""
