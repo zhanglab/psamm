@@ -14,7 +14,7 @@ from .massconsistency import MassConsistencyCheck
 from .database import DictDatabase, ChainedDatabase
 from .metabolicmodel import MetabolicModel
 from .reaction import Compound
-from .datasource import internal, modelseed
+from .datasource import internal, yaml, modelseed
 from . import fluxanalysis
 
 # Module-level logging

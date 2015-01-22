@@ -10,4 +10,5 @@ setup(name='model_script',
       url='https://github.com/zhanglab/model_script',
       packages=find_packages(),
       scripts=['model.py'],
-      test_suite='metnet.tests')
+      test_suite='metnet.tests',
+      install_requires=['PyYAML>=3.11,<4.0'])
