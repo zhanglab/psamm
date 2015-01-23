@@ -6,6 +6,7 @@ import argparse
 import operator
 import re
 import logging
+import random
 
 from .fastcore import Fastcore
 from .formula import Formula, Radical
@@ -515,6 +516,81 @@ class MassConsistencyCommand(Command):
             if abs(residual) >= epsilon:
                 reaction = model.get_reaction(reaction_id).translated_compounds(lambda x: compound_name.get(x, x))
                 print '{}\t{}\t{}'.format(reaction_id, residual, reaction)
+
+class RandomSparseNetworkCommand(Command):
+    """Find random minimal network of model
+
+    Given a reaction to optimize and a threshold, delete reactions randomly
+    until the flux of the reaction to optimize falls under the threshold.
+    Keep deleting reactions until no more reactions can be deleted."""
+
+    name = 'randomsparse'
+    title = 'Generate a random sparse network of model reactions'
+
+    def init_parser(self, parser):
+        parser.add_argument('--no-tfba', help='Disable thermodynamic constraints on FBA',
+                            action='store_true')
+        parser.add_argument('reaction', help='Reaction to maximize')
+        parser.add_argument('threshold', help='Relative threshold of max reaction flux',
+                            type=float)
+
+    def __call__(self, model, compounds, **kwargs):
+        from .lpsolver import cplex
+        solver = cplex.Solver()
+
+        reaction = kwargs['reaction']
+        if not model.has_reaction(reaction):
+            raise ValueError('Specified reaction is not in model: {}'.format(reaction))
+
+        threshold = kwargs['threshold']
+        if threshold < 0.0 or threshold > 1.0:
+            raise ValueError('Invalid threshold, must be in [0;1]: {}'.format(threshold))
+
+        fb_problem = fluxanalysis.FluxBalanceTDProblem
+        if kwargs['no_tfba']:
+            fb_problem = fluxanalysis.FluxBalanceProblem
+
+        p = fb_problem(model, solver)
+        p.solve(reaction)
+        flux_threshold = p.get_flux(reaction) * threshold
+
+        logger.info('Flux threshold for {} is {}'.format(reaction, flux_threshold))
+
+        model_test = model.copy()
+        essential = { reaction }
+        deleted = set()
+        test_set = set(model.reactions) - essential
+
+        while len(test_set) > 0:
+            testing_reaction = random.sample(test_set, 1)[0]
+            test_set.remove(testing_reaction)
+            saved_bounds = model_test.limits[testing_reaction].bounds
+            model_test.limits[testing_reaction].bounds = 0, 0
+
+            logger.info('Trying FBA without reaction {}...'.format(testing_reaction))
+
+            p = fb_problem(model_test, solver)
+            try:
+                p.solve(reaction)
+            except fluxanalysis.FluxBalanceError:
+                logger.info('FBA is infeasible, marking {} as essential'.format(testing_reaction))
+                model_test.limits[testing_reaction].bound = saved_bounds
+                essential.add(testing_reaction)
+                continue
+
+            logger.debug('Reaction {} has flux {}'.format(reaction, p.get_flux(reaction)))
+
+            if p.get_flux(reaction) < flux_threshold:
+                model_test.limits[testing_reaction].bounds = saved_bounds
+                essential.add(testing_reaction)
+                logger.info('Reaction {} was essential'.format(testing_reaction))
+            else:
+                deleted.add(testing_reaction)
+                logger.info('Reaction {} was deleted'.format(testing_reaction))
+
+        for reaction_id in sorted(model.reactions):
+            value = 0 if reaction_id in deleted else 1
+            print '{}\t{}'.format(reaction_id, value)
 
 class RobustnessCommand(Command):
     '''Run robustness analysis on metabolic model
