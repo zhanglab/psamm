@@ -143,6 +143,21 @@ set using `--steps`. In each iteration, all reactions and the corresponding flux
 be shown in a table, as well as the value of the fixed flux. If the fixed flux results
 in an infeasible model, no output will be shown for that iteration.
 
+### Random sparse network (`randomsparse`)
+
+Given a reaction to optimize and a threshold, delete reactions randomly until the flux
+of the reaction to optimize falls under the threshold. Keep deleting reactions until no
+more reactions can be deleted.
+
+``` shell
+$ model.py [...] randomsparse Biomass 0.95
+```
+
+When the given reaction is the biomass reaction, this results in a smaller model which
+is still producing biomass within the tolerance given by the threshold. Aggregating the
+results from multiple random sparse networks allows classifying reactions as essential,
+semi-essential or non-essential.
+
 ### Mass consistency check (`masscheck`)
 
 A model or reaction database can be checked for mass inconsistencies. The basic
