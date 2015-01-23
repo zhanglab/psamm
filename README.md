@@ -29,6 +29,13 @@ Now the Python module can be installed in the virtual environment using the `pip
 requiring `root` permissions. When returning to the project, simply reactivate the environment by
 running the second command.
 
+The Cplex Python bindings will have to be installed manually in the virtual environment as well.
+This should be done after activating the virtual environment.
+
+1. Go to the Cplex install directory: `cd /path/to/Cplex`
+2. Go to the appropriate subdirectory based on your platform: `cd cplex/python/<platform>`
+3. Run `./setup.py install`
+
 Dependencies
 ------------
 
