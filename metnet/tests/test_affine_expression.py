@@ -28,13 +28,13 @@ class TestVariable(unittest.TestCase):
         self.assertEquals(Variable('y').simplify(), Variable('y'))
 
     def test_variable_substitute(self):
-        self.assertEquals(Variable('x').substitute(x=567), 567)
+        self.assertEquals(Variable('x').substitute(lambda v: {'x': 567}.get(v.symbol, v)), 567)
 
     def test_variable_substitute_unknown(self):
-        self.assertEquals(Variable('x').substitute(y=42), Variable('x'))
+        self.assertEquals(Variable('x').substitute(lambda v: v), Variable('x'))
 
     def test_variable_substitute_multiple(self):
-        self.assertEquals(Variable('x').substitute(y=123, x=56), 56)
+        self.assertEquals(Variable('x').substitute(lambda v: {'y': 123, 'x': 56}.get(v.symbol, v)), 56)
 
     def test_variable_add_number(self):
         self.assertEquals(Variable('x') + 1, Expression('x + 1'))
@@ -125,28 +125,29 @@ class TestExpression(unittest.TestCase):
 
     def test_expression_substitute_existing(self):
         e = Expression({ Variable('x'): 2 }, 1)
-        self.assertEquals(e.substitute(x=2), 5)
+        self.assertEquals(e.substitute(lambda v: {'x': 2}.get(v.symbol, v)), 5)
 
     def test_expression_substitute_unknown_to_variable(self):
         e = Expression({ Variable('x'): 1 })
-        self.assertEquals(e.substitute(y=2), Variable('x'))
+        self.assertEquals(e.substitute(lambda v: v), Variable('x'))
 
     def test_expression_substitute_unknown_to_expression(self):
         e = Expression({ Variable('x'): 2 }, 1)
-        self.assertEquals(e.substitute(y=2), Expression('2x + 1'))
+        self.assertEquals(e.substitute(lambda v: v), Expression('2x + 1'))
 
     def test_expression_substitute_with_variable(self):
         e = Expression({ Variable('x'): 1, Variable('y'): 2 })
-        self.assertEquals(e.substitute(y=Variable('x')), Expression('3x'))
+        self.assertEquals(e.substitute(lambda v: {'y': Variable('x')}.get(v.symbol, v)), Expression('3x'))
 
     def test_expression_substitute_with_expression(self):
         e = Expression({ Variable('x'): 3, Variable('y'): -2 })
-        es = e.substitute(x=Expression('y + 2z'))
+        es = e.substitute(lambda v: {'x': Expression('y + 2z')}.get(v.symbol, v))
         self.assertEquals(es, Expression('y + 6z'))
 
     def test_expression_substitute_with_expression_is_atomic(self):
         e = Expression({ Variable('x'): 1, Variable('y'): 1 })
-        es = e.substitute(x=Expression('x + y'), y=Expression('x + y'))
+        es = e.substitute(lambda v: {'x': Expression('x + y'),
+                                     'y': Expression('x + y') }.get(v.symbol, v))
         self.assertEquals(es, Expression('2x + 2y'))
 
     def test_expression_variables(self):

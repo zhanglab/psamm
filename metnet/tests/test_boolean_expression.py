@@ -21,13 +21,15 @@ class TestVariable(unittest.TestCase):
         self.assertEquals(Variable('x').symbol, 'x')
 
     def test_variable_substitute(self):
-        self.assertEquals(Variable('x').substitute(x=True), True)
+        subst = {'x': True}
+        self.assertEquals(Variable('x').substitute(lambda v: subst.get(v.symbol, v)), True)
 
-    def test_variable_substitute_unknown(self):
-        self.assertEquals(Variable('x').substitute(y=True), Variable('x'))
+    def test_variable_substitute_self(self):
+        self.assertEquals(Variable('x').substitute(lambda v: v), Variable('x'))
 
     def test_variable_substitute_multiple(self):
-        self.assertEquals(Variable('x').substitute(y=True, x=False), False)
+        subst = {'y': True, 'x': False}
+        self.assertEquals(Variable('x').substitute(lambda v: subst.get(v.symbol, v)), False)
 
     def test_variables_equals_true(self):
         self.assertEquals(Variable('x'), Variable('x'))
@@ -44,19 +46,19 @@ class TestVariable(unittest.TestCase):
 class TestExpression(unittest.TestCase):
     def test_expression_substitute_existing(self):
         e = Expression('b1')
-        self.assertTrue(e.substitute(b1=True))
+        self.assertTrue(e.substitute(lambda v: {'b1': True}.get(v.symbol, v)))
 
     def test_expression_substitute_existing_false(self):
         e = Expression('b1')
-        self.assertFalse(e.substitute(b1=False))
+        self.assertFalse(e.substitute(lambda v: {'b1': False}.get(v.symbol, v)))
 
     def test_expression_substitute_unknown_to_variable(self):
         e = Expression('b1')
-        self.assertEquals(e.substitute(b2=False), Variable('b1'))
+        self.assertEquals(e.substitute(lambda v: v), Variable('b1'))
 
     def test_expression_substitute_unknown_to_expression(self):
         e = Expression('b1 and b2')
-        self.assertEquals(e.substitute(b3=True), Expression('b1 and b2'))
+        self.assertEquals(e.substitute(lambda v: v), Expression('b1 and b2'))
 
     def test_expression_parse_and(self):
         e = Expression('b1 and b2')

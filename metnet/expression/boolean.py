@@ -17,9 +17,9 @@ class Variable(object):
     def symbol(self):
         return self._symbol
 
-    def substitute(self, **kwargs):
-        '''Substitute variables named as keywords with value'''
-        return kwargs.get(self._symbol, self)
+    def substitute(self, mapping):
+        """Substitute variables using mapping function"""
+        return mapping(self)
 
     def __repr__(self):
         return 'Variable({})'.format(repr(self._symbol))
@@ -53,11 +53,11 @@ class And(object):
         '''Iterate over terms'''
         return iter(self._terms)
 
-    def substitute(self, **kwargs):
-        '''Substitute variables named as keywords with value'''
+    def substitute(self, mapping):
+        """Substitute variables using mapping function"""
         result = []
         for t in self._terms:
-            value = t.substitute(**kwargs)
+            value = t.substitute(mapping)
             if isinstance(value, bool):
                 if not value:
                     return False
@@ -107,11 +107,11 @@ class Or(object):
         '''Iterate over terms'''
         return iter(self._terms)
 
-    def substitute(self, **kwargs):
-        '''Substitute variables named as keywords with value'''
+    def substitute(self, mapping):
+        """Substitute variables using mapping function"""
         result = []
         for t in self._terms:
-            value = t.substitute(**kwargs)
+            value = t.substitute(mapping)
             if isinstance(value, bool):
                 if value:
                     return True

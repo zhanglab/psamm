@@ -48,20 +48,18 @@ class Variable(object):
         Variable('x')'''
         return self
 
-    def substitute(self, **kwargs):
-        '''Return expression with variables substituted
+    def substitute(self, mapping):
+        """Return expression with variables substituted
 
-        >>> Variable('x').substitute(x=567)
+        >>> Variable('x').substitute(lambda v: {'x': 567}.get(v.symbol, v))
         567
-        >>> Variable('x').substitute(y=42)
+        >>> Variable('x').substitute(lambda v: {'y': 42}.get(v.symbol, v))
         Variable('x')
-        >>> Variable('x').substitute(x=123, y=56)
+        >>> Variable('x').substitute(lambda v: {'x': 123, 'y': 56}.get(v.symbol, v))
         123
-        '''
+        """
 
-        if self._symbol in kwargs:
-            return kwargs[self._symbol]
-        return self
+        return mapping(self)
 
     def __add__(self, other):
         return Expression({ self: 1 }) + other
@@ -206,17 +204,17 @@ class Expression(object):
                 return var
         return result
 
-    def substitute(self, **kwargs):
-        '''Return expression with variables substituted
+    def substitute(self, mapping):
+        """Return expression with variables substituted
 
-        >>> Expression('x + 2y').substitute(y=-3)
+        >>> Expression('x + 2y').substitute(lambda v: {'y': -3}.get(v.symbol, v))
         Expression('x - 6')
-        >>> Expression('x + 2y').substitute(y=Variable('z'))
+        >>> Expression('x + 2y').substitute(lambda v: {'y': Variable('z')}.get(v.symbol, v))
         Expression('x + 2z')
-        '''
+        """
         expr = self.__class__()
         for var, value in self._variables.iteritems():
-            expr += value * var.substitute(**kwargs)
+            expr += value * var.substitute(mapping)
         return (expr + self._offset).simplify()
 
     def variables(self):
