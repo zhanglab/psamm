@@ -297,11 +297,10 @@ class MetabolicModel(MetabolicDatabase):
         return model
 
     @classmethod
-    def load_model(cls, database, reaction_iter, limits=None):
+    def load_model(cls, database, reaction_iter, medium=None, limits=None):
         """Get model from reaction name iterator
 
-        The model will contain all reactions of the iterator.
-        """
+        The model will contain all reactions of the iterator."""
 
         model = cls(database)
         for reaction_id in reaction_iter:
@@ -310,6 +309,23 @@ class MetabolicModel(MetabolicDatabase):
         # Apply reaction limits
         if limits is not None:
             for reaction_id, lower, upper in limits:
+                if lower is not None:
+                    model.limits[reaction_id].lower = lower
+                if upper is not None:
+                    model.limits[reaction_id].upper = upper
+
+        # TODO: Currently we just create a new exchange reaction in the
+        # database and add it to the model. Ideally, we should not modify
+        # the database. The exchange reaction could be created on the
+        # fly when required.
+        if medium is not None:
+            for compound, lower, upper in medium:
+                # Create exchange reaction
+                reaction_id = 'EX_{}_{}'.format(
+                    compound.name, compound.compartment)
+                model.database.set_reaction(
+                    reaction_id, Reaction(Reaction.Bidir, [(compound, 1)], []))
+                model.add_reaction(reaction_id)
                 if lower is not None:
                     model.limits[reaction_id].lower = lower
                 if upper is not None:

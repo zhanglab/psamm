@@ -134,6 +134,14 @@ class NativeModel(object):
             for reaction_id, lower, upper in parse_limits_file(limits_context):
                 yield reaction_id, lower, upper
 
+    def parse_medium(self):
+        """Yield tuples of compound, lower, and upper bound flux limits"""
+
+        if 'medium' in self._model:
+            medium_context = self._context.resolve(self._model['medium'])
+            for compound, lower, upper in parse_medium_file(medium_context):
+                yield compound, lower, upper
+
     def parse_compounds(self):
         """Yield CompoundEntries for defined compounds"""
 
@@ -266,6 +274,51 @@ def parse_reaction_file(path):
     else:
         raise ParseError('Unable to detect format of reaction file {}'.format(
             context.filepath))
+
+
+def parse_medium_table_file(f):
+    """Parse a space-separated file containing medium compound flux limits
+
+    The first two columns contain compound IDs and compartment while the
+    third column contains the lower flux limits. The fourth column is
+    optional and contains the upper flux limit.
+    """
+
+    for line in f:
+        line, _, comment = line.partition('#')
+        line = line.strip()
+        if line == '':
+            continue
+
+        # A line can specify lower limit only (useful for
+        # exchange reactions), or both lower and upper limit.
+        fields = line.split(None)
+        if len(fields) < 2 or len(fields) > 4:
+            raise ParseError('Malformed compound limit: {}'.format(fields))
+
+        # Extend to four values and unpack
+        fields.extend(['-']*(4-len(fields)))
+        compound_id, compartment, lower, upper = fields
+
+        compound = Compound(compound_id, compartment)
+        lower = float(lower) if lower != '-' else None
+        upper = float(upper) if upper != '-' else None
+
+        yield compound, lower, upper
+
+
+def parse_medium_file(path):
+    """Parse a file as a list of medium compounds with flux limits
+
+    The file format is detected and the file is parsed accordingly. Path can
+    be given as a string or a context.
+    """
+
+    context = FilePathContext(path)
+    logger.debug('Parsing medium file {}'.format(context.filepath))
+    with open(context.filepath, 'r') as f:
+        for compound, lower, upper in parse_medium_table_file(f):
+            yield compound, lower, upper
 
 
 def parse_limits_table_file(f):

@@ -818,7 +818,7 @@ def main(command=None):
         database.set_reaction(reaction_id, reaction)
 
     mm = MetabolicModel.load_model(database, model.parse_model(),
-                                   model.parse_limits())
+                                   model.parse_medium(), model.parse_limits())
 
     # Call command
     arg_filter = ('model', 'command')
