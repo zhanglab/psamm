@@ -6,61 +6,77 @@ from decimal import Decimal
 
 from metnet.reaction import Reaction, Compound
 
-def parse_sudensimple_reaction(s):
+def parse_sudensimple_reaction(s, arrow_rev='<=>', arrow_irrev='->'):
     """Parse a reaction string (SudenSimple)"""
 
+    # Compile pattern for matching reaction arrows
+    arrow_pattern = re.compile('(' + ('|'.join(re.escape(x) for x in (arrow_irrev, arrow_rev))) + ')')
+
     def parse_compound_list(s):
-        for cpd in s.split('+'):
-            if cpd == '':
-                continue
-            count, spec = cpd.strip().split(' ')
-            spec_split = spec.split('[')
-            if len(spec_split) == 2:
+        if s.strip() == '':
+            return
+
+        for cpd in s.strip().split('+'):
+            cpd_split = cpd.strip().split(' ')
+            if len(cpd_split) == 1:
+                count = 1
+                spec = cpd_split[0].strip()
+            else:
+                count = Decimal(cpd_split[0])
+                if count % 1 == 0:
+                    count = int(count)
+                spec = cpd_split[1].strip()
+
+            m = re.match(r'^(.+)\[(.+)\]$', spec)
+            if m:
                 # compartment
-                cpdid = spec_split[0]
-                comp = spec_split[1].rstrip(']')
+                cpdid = m.group(1)
+                comp = m.group(2)
             else:
                 cpdid = spec
                 comp = None
-            d = Decimal(count)
-            if d % 1 == 0:
-                d = int(d)
-            yield Compound(cpdid, compartment=comp), d
 
-    cpd_left, cpd_right = s.split('<=>')
-    left = parse_compound_list(cpd_left)
-    right = parse_compound_list(cpd_right)
+            yield Compound(cpdid, compartment=comp), count
 
-    return Reaction('<=>', left, right)
+    # Split by equation arrow
+    direction = Reaction.Right
+    left, arrow, right = arrow_pattern.split(s, maxsplit=1)
+    direction = Reaction.Right if arrow == arrow_irrev else Reaction.Bidir
 
-def parse_metnet_reaction(s):
+    return Reaction(direction, parse_compound_list(left), parse_compound_list(right))
+
+def parse_metnet_reaction(s, arrow_rev='<==>', arrow_irrev='-->'):
     """Parser for the reaction format in MetNet model"""
+
+    # Compile pattern for matching reaction arrows
+    arrow_pattern = re.compile('(' + ('|'.join(re.escape(x) for x in (arrow_irrev, arrow_rev))) + ')')
 
     def parse_compound_list(s, global_comp):
         if s.strip() == '':
             return
 
         for cpd in s.strip().split('+'):
-            cpdsplit = cpd.strip().split(') ')
-            if len(cpdsplit) == 2:
-                count = Decimal(cpdsplit[0].lstrip('('))
+            cpd_split = cpd.strip().split(') ')
+            if len(cpd_split) == 1:
+                count = 1
+                spec = cpd_split[0].strip()
+            else:
+                count = Decimal(cpd_split[0].lstrip('('))
                 if count % 1 == 0:
                     count = int(count)
-                cpdspec = cpdsplit[1]
-            else:
-                count = 1
-                cpdspec = cpd.strip()
+                spec = cpd_split[1].strip()
 
             if global_comp is None:
-                cpd_spec_split = cpdspec.split('[')
-                if len(cpd_spec_split) == 2:
-                    comp = cpd_spec_split[1].rstrip(']')
-                    cpdid = cpd_spec_split[0]
+                m = re.match(r'^(.+)\[(.+)\]$', spec)
+                if m:
+                    # compartment
+                    cpdid = m.group(1)
+                    comp = m.group(2)
                 else:
-                    cpdid = cpd_spec_split
+                    cpdid = spec
                     comp = None
             else:
-                cpdid = cpdspec
+                cpdid = spec
                 comp = global_comp
 
             yield Compound(cpdid, compartment=comp), count
@@ -75,19 +91,8 @@ def parse_metnet_reaction(s):
 
     # Split by equation arrow
     direction = Reaction.Right
-    left_right = s.split('-->')
-    if len(left_right) == 1:
-        direction = Reaction.Bidir
-        cpd_left, cpd_right = s.split('<==>')
-    else:
-        cpd_left, cpd_right = left_right
+    left, arrow, right = arrow_pattern.split(s, maxsplit=1)
+    direction = Reaction.Right if arrow == arrow_irrev else Reaction.Bidir
 
-    # Remove incompatible characters from compound id
-    def translate(cpdid):
-        return 'cpd_' + cpdid.replace(',', '__')
-
-    # Split by +
-    left = ((compound.translate(translate), count) for compound, count in parse_compound_list(cpd_left, global_comp))
-    right = ((compound.translate(translate), count) for compound, count in parse_compound_list(cpd_right, global_comp))
-
-    return Reaction(direction, left, right)
+    return Reaction(direction, parse_compound_list(left, global_comp),
+                    parse_compound_list(right, global_comp))
