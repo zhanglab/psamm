@@ -144,6 +144,10 @@ class Formula(FormulaElement):
     def variables(self):
         return iter(self._variables)
 
+    def items(self):
+        """Iterate over FormulaElement, value pairs"""
+        return self._values.iteritems()
+
     def is_variable(self):
         return len(self._variables) > 0
 
