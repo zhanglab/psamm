@@ -139,7 +139,7 @@ def parse_reaction(s):
     def parse_compound_name(name):
         """Parse compound name"""
 
-        m = re.match(r'^\|(.+)\||(cdp\d+)|(cpd\d+)$', name)
+        m = re.match(r'^\|(.+)\||(cdp\d+.*)|(cpd\d+.*)$', name)
         if not m:
             raise ParseError('Unable to parse compound name: {}'.format(name))
 
