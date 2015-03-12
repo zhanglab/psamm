@@ -90,11 +90,11 @@ def parse_reaction(s):
         <compound>     ::= <comp-count> ' ' <comp-spec> | <comp-spec>
         <comp-count>   ::= '(' <comp-number> ')' | <comp-number>
         <comp-number>  ::= <decimal>
-        <comp-spec>    ::= '|' <comp-id> '|' | 'cdp' <cdp-id>
+        <comp-spec>    ::= '|' <comp-id> '|' | 'cpd' <cpd-id> | 'cdp' <cpd-id>
         <comp-id>      ::= <comp-name> '[' <comp-compart> ']' | <comp-name>
         <comp-compart> ::= <alpha>
         <comp-name>    ::= <any characters other than "|">
-        <cdp-id>       ::= <five digits>   ; [sic]
+        <cpd-id>       ::= <five digits>
     """
 
     def tokenize(s):
@@ -139,11 +139,16 @@ def parse_reaction(s):
     def parse_compound_name(name):
         """Parse compound name"""
 
-        m = re.match(r'^\|(.+)\||(cdp\d+)$', name)
+        m = re.match(r'^\|(.+)\||(cdp\d+)|(cpd\d+)$', name)
         if not m:
             raise ParseError('Unable to parse compound name: {}'.format(name))
 
-        return m.group(1) if m.group(1) is not None else m.group(2)
+        # Return first matching group
+        for g in m.groups():
+            if g is not None:
+                return g
+
+        return None
 
     def parse_compound(cmpd):
         """Parse compound"""

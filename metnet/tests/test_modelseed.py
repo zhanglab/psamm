@@ -28,6 +28,18 @@ class TestModelSEED(unittest.TestCase):
                                                         (Compound('O2', compartment='C_c'), 1)],
                                       [(Compound('H2O', compartment='C_e'), 2)]))
 
+    def test_modelseed_parse_raw_compound_id(self):
+        r = modelseed.parse_reaction('(2) cpd00001 => cpd00002')
+        self.assertEquals(r, Reaction(Reaction.Right,
+                                      [(Compound('cpd00001'), 2)],
+                                      [(Compound('cpd00002'), 1)]))
+
+    def test_modelseed_parse_raw_compound_id_with_typo(self):
+        r = modelseed.parse_reaction('(2) cpd00001 => cdp00002')
+        self.assertEquals(r, Reaction(Reaction.Right,
+                                      [(Compound('cpd00001'), 2)],
+                                      [(Compound('cdp00002'), 1)]))
+
     def test_modelseed_str(self):
         r = Reaction(Reaction.Left, [(Compound('H2O'), 2)], [(Compound('H2'), 2), (Compound('O2'), 1)])
         self.assertEquals(str(r), '(2) |H2O| <= (2) |H2| + |O2|')
