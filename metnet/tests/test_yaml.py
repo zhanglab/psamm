@@ -2,12 +2,12 @@
 
 import unittest
 
-from metnet.datasource import yaml
+from metnet.datasource import native
 from metnet.reaction import Reaction, Compound
 
 class TestYAMLDataSource(unittest.TestCase):
     def test_parse_reaction_list(self):
-        reactions = list(yaml.parse_reaction_list([
+        reactions = list(native.parse_reaction_list('./test.yaml', [
             {
                 'id': 'rxn1',
                 'reversible': True,
@@ -27,8 +27,8 @@ class TestYAMLDataSource(unittest.TestCase):
         self.assertEquals(reactions[0], ('rxn1', reaction))
 
     def test_parse_reaction_list_missing_value(self):
-        with self.assertRaises(yaml.ParseError):
-            reactions = list(yaml.parse_reaction_list([
+        with self.assertRaises(native.ParseError):
+            reactions = list(native.parse_reaction_list('./test.yaml', [
                 {
                     'id': 'rxn1',
                     'left': [

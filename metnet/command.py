@@ -1,7 +1,6 @@
 
 '''Utilities for the command line interface'''
 
-import sys
 import argparse
 import operator
 import re
@@ -12,10 +11,10 @@ from .fastcore import Fastcore
 from .formula import Formula, Radical
 from .gapfill import gapfind, gapfill
 from .massconsistency import MassConsistencyCheck
-from .database import DictDatabase, ChainedDatabase
+from .database import DictDatabase
 from .metabolicmodel import MetabolicModel
 from .reaction import Compound
-from .datasource import internal, yaml, modelseed
+from .datasource.native import NativeModel
 from . import fluxanalysis
 
 # Module-level logging
@@ -783,18 +782,8 @@ def main(command=None):
         title = command.title
 
     parser = argparse.ArgumentParser(description=title)
-    parser.add_argument('--database', metavar='file', action='append',
-                        type=argparse.FileType('r'), default=[],
-                        help='Files to use as reaction database')
-    parser.add_argument('--compounds', metavar='file', action='append',
-                        type=argparse.FileType('r'), default=[],
-                        help='Files to use as compound database')
-    parser.add_argument('--model', metavar='model', nargs=1,
-                        type=argparse.FileType('r'),
-                        help='File to use as model definition (database subset)')
-    parser.add_argument('--limits', metavar='file', action='append',
-                        type=argparse.FileType('r'), default=[],
-                        help='Optional limits on flux of reactions')
+    parser.add_argument('--model', metavar='file', default='.',
+                        help='Model definition')
 
     if command is not None:
         # Command explicitly given, only allow that command
@@ -822,46 +811,27 @@ def main(command=None):
     args = parser.parse_args()
     command = args.command
 
-    # Load reaction database from file
-    if len(args.database) == 0:
-        raise ValueError('No database provided')
+    # Load model definition
+    model = NativeModel(args.model)
+    database = DictDatabase()
+    for reaction_id, reaction in model.parse_reactions():
+        database.set_reaction(reaction_id, reaction)
 
-    databases = []
-    for database_file in args.database:
-        db = DictDatabase()
-        if re.match(r'.+\.(yaml|yml)$', database_file.name):
-            for reaction_id, reaction in yaml.parse_reaction_file(database_file):
-                db.set_reaction(reaction_id, reaction)
-        else:
-            for reaction_id, reaction in internal.parse_reaction_file(database_file):
-                db.set_reaction(reaction_id, reaction)
-        databases.append(db)
-    database = ChainedDatabase(*databases)
-
-    if args.model is not None:
-        # Set database and model to the database subset
-        model = MetabolicModel.load_model(database, internal.parse_model_file(args.model[0]))
+    if model.has_model():
+        mm = MetabolicModel.load_model(database, model.parse_model())
     else:
-        # Build model from all database reactions
-        model = MetabolicModel.load_model(database, database.reactions)
+        mm = MetabolicModel.load_model(database, database.reactions)
 
     # Load bounds on exchange reactions
-    for limits_table in args.limits:
-        for reaction_id, lower, upper in internal.parse_limits_file(limits_table):
-            if model.has_reaction(reaction_id):
-                if lower is not None:
-                    model.limits[reaction_id].lower = lower
-                if upper is not None:
-                    model.limits[reaction_id].upper = upper
-
-    # Parse compound tables
-    def compound_iter():
-        for compound_table in args.compounds:
-            for compound in modelseed.parse_compound_file(compound_table):
-                yield compound
+    for reaction_id, lower, upper in model.parse_limits():
+        if mm.has_reaction(reaction_id):
+            if lower is not None:
+                mm.limits[reaction_id].lower = lower
+            if upper is not None:
+                mm.limits[reaction_id].upper = upper
 
     # Call command
-    arg_filter = ('database', 'compounds', 'model', 'limits', 'command')
+    arg_filter = ('model', 'command')
     kwargs = { key: value for key, value in vars(args).iteritems() if key not in arg_filter }
 
-    command(model=model, compounds=compound_iter(), **kwargs)
+    command(model=mm, compounds=model.parse_compounds(), **kwargs)

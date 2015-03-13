@@ -40,16 +40,12 @@ Dependencies
 ------------
 
 - Linear programming solver (_Cplex_, _QSopt_ex_)
-- PyYAML (optional; required for command line interface)
+- PyYAML (for reading the native model format)
 - Numpy (optional; model matrix can be exported to Numpy matrix if available)
 
 There are no strictly required dependencies but most analyses rely on a linear
 programming (LP) solver. The LP solver _Cplex_ is the preferred solver. The rational
 solver _QSopt_ex_ is also supported (through _python-qsoptex_).
-
-Reading model definitions in YAML format requires the PyYAML package. The command line
-interface will import this package so the package must be installed for the command
-line interface to work.
 
 Parsing annotations
 -------------------
@@ -66,47 +62,116 @@ $ ~/model_script/make_rxn_table.pl Cjr_network \
 	ModelSEED_rxns_edited.tsv ModelSEED_cpds_edited.tsv
 ```
 
-Model conversion
-----------------
+Model format
+------------
 
-To use the model tools we need to convert our existing models into the format
-expected by the tool. The **model definition** is simply a list of reaction identifiers,
-identifying which reactions from a parent database that constitute the model.
-The **reaction database** is given as a table of reaction identifiers and equations.
-The reaction database can be generated from multiple sources using the appropriate
-`XX_format_conversion.py` script, for example:
+The primary model definition file is the `model.yaml` file. When creating a new
+model this file should be placed in a new directory. The following can be used
+as a template:
 
-``` shell
-$ ~/model_script/ModelSEED_format_conversion.py ModelSEED_rxns.tsv \
-	ModelSEED_cpds.tsv > ModelSEED_database.tsv
+``` yaml
+---
+name: Escherichia coli test model
+compounds:
+	- ../path/to/ModelSEED_cpds.tsv
+limits:
+	- aerobic_glucose.tsv
+```
+
+The optional **`compounds`** key lists any files that contain compound
+information. These files can currently only be parsed as ModelSEED table
+formatted data. For some of the model checks the compound information is
+required.
+
+The optional **`limits`** property lists the files that are to be combined and
+applied as the reaction flux limits. This can be used to limit certain
+reactions in the model. Typically these files are used to define the media
+by limiting the exchange reactions (e.g. by limiting all carbon-sources
+except glucose, and allowing oxygen). These files are currently parsed as
+tables containing the reaction ID, the lower limit and (optionally) the upper
+limit. The following fragment is an example of a limits file:
+
+```
+EX_formate  0
+EX_glucose  -1000
+EX_oxygen   -10    0
+```
+
+In the same directory as the `model.yaml`, create a directory called
+`reactions`. Any `.tsv` file in this subdirectory will be parsed as a reaction
+definition table. This is a table where each row contains the reaction ID and
+the reaction equation in ModelSEED format. See the scripts
+`XX_format_conversion.py` for some help creating the reaction table from
+existing sources. The following fragment is an example of a reaction table:
+
+```
+ADE2t       |ade[e]| + |h[e]| <=> |ade[c]| + |ade[c]|
+ADK1        |amp| + |atp| <=> (2) |adp|
+```
+
+Any `.yaml` or `.yml` file in the `reactions` subdirectory will be parsed as a
+reaction definition file but in YAML format. This format is particularly useful
+for very long reactions containing many different compounds (e.g. the biomass
+reaction). It also allows adding more annotations because of the structured
+nature of the YAML format. The following snippet is an example of a YAML
+reaction file:
+
+``` yaml
+# Biomass composition
+- id: Biomass
+  reversible: no
+  left:
+  - id: cpd00032 # Oxaloacetate
+    value: 1
+  - id: cpd00022 # Acetyl-CoA
+    value: 1
+  - id: cpd00035 # L-Alanine
+    value: 0.02
+  right:
+  - id: Biomass
+    value: 1
+```
+
+Reactions in YAML files can also be defined using ModelSEED formatted reaction
+equations. The `|` is a special character in YAML so the reaction equations
+have to be quoted with `'` or, alternatively, using the `>` for a multiline
+quote:
+
+``` yaml
+- id: ADE2t
+  equation: >
+    |ade[e]| + |h[e]| <=>
+    |ade[c]| + |h[c]|
+- id: ADK1
+  equation: '|amp| + |atp| <=> (2) |adp|'
 ```
 
 Model tools
 -----------
 
-The tools that can be applied to metabolic models are run through the `model.py` program.
-To see the full help text of the program use
+The tools that can be applied to metabolic models are run through the
+`model.py` program. To see the full help text of the program use
 
 ``` shell
 $ model.py --help
 ```
 
-This program allows you to specify a metabolic model and a command to apply to the
-given model. The available commands can be seen using the help command given above, and
-are also described in more details below.
+This program allows you to specify a metabolic model and a command to apply to
+the given model. The available commands can be seen using the help command
+given above, and are also described in more details below.
 
 To run the program with a model, use
 
 ``` shell
-$ model.py --database database.tsv --compounds compounds.tsv \
-	--model model.tsv --limits limits.tsv command [...]
+$ model.py --model model.yaml command [...]
 ```
 
-More than one reaction database and compound database file can be supplied by adding
-multiple `--database file.tsv` or `--compounds file.tsv` options. A file specifying the flux
-limits of certain reactions can be given using `--limits`. This can be used for example to
-limit the flux on exchange reactions or entirely restrict a reaction to only run in one
-direction.
+In most cases you will probably be running the command from the same directory
+as where the `model.yaml` file is located, and in that case you can simply run
+
+``` shell
+$ model.py command [...]
+```
 
 To see the help text of a command use
 
@@ -121,7 +186,7 @@ the "biomass" or "growth" reaction). Next, it will fix the flux of this reaction
 minimizing the flux of all reactions in the model. Both results are presented in a table.
 
 ``` shell
-$ model.py [...] fba Biomass
+$ model.py fba Biomass
 ```
 
 ### Robustness (`robustness`)
@@ -132,7 +197,7 @@ iteration. The reaction will be fixed at a given number of steps between the
 minimum and maximum flux value specified in the model.
 
 ``` shell
-$ model.py [...] robustness \
+$ model.py robustness \
 	--steps 200 --minimum -20 --maximum 160 Biomass EX_Oxygen
 ```
 
@@ -150,7 +215,7 @@ of the reaction to optimize falls under the threshold. Keep deleting reactions u
 more reactions can be deleted.
 
 ``` shell
-$ model.py [...] randomsparse Biomass 0.95
+$ model.py randomsparse Biomass 0.95
 ```
 
 When the given reaction is the biomass reaction, this results in a smaller model which
@@ -170,7 +235,7 @@ Some variants of this idea is implemented in the `metnet.massconsistency` module
 The mass consistency check can be run using
 
 ``` shell
-$ model.py [...] masscheck
+$ model.py masscheck
 ```
 
 This will first try to assign a positive mass to as many compounds as possible. This
@@ -186,7 +251,7 @@ Similarly, a model or reaction database can be checked for formula inconsistenci
 when the chemical formulae of the compounds in the model are known.
 
 ``` shell
-$ model.py [...] formulacheck
+$ model.py formulacheck
 ```
 
 For each inconsistent reaction, the reaction identifier will be printed followed by
@@ -207,7 +272,7 @@ These algorithms are defined in terms of MILP problems and are therefore (partic
 GapFill) computationally expensive to run for larger models.
 
 ``` shell
-$ model.py [...] gapfill
+$ model.py gapfill
 ```
 
 ### FastGapFill (`fastgapfill`)
@@ -221,8 +286,7 @@ The database reactions can be assigned a weight (or "cost") using the `--penalty
 These weights are taken into account when determining the minimal solution.
 
 ``` shell
-$ model.py [...] fastgapfill \
-	--penalty penalty.tsv Growth
+$ model.py fastgapfill --penalty penalty.tsv Growth
 ```
 
 ### Search (`search`)
@@ -231,7 +295,7 @@ This command can be used to search in a database for compounds or reactions. To 
 for a compound use
 
 ``` shell
-$ model.py [...] search compound [...]
+$ model.py search compound [...]
 ```
 
 Use the `--name` option to search for a compound with a specific name or use the
@@ -240,7 +304,7 @@ Use the `--name` option to search for a compound with a specific name or use the
 To search for a reaction use
 
 ``` shell
-$ model.py [...] search reaction [...]
+$ model.py search reaction [...]
 ```
 
 Use the `--id` option to search for a reaction with a specific identifier. The `--compound`
@@ -254,7 +318,7 @@ This command will start a Python session where the database, model and compounds
 been loaded into the corresponding Python object representation.
 
 ``` shell
-$ model.py [...] console
+$ model.py console
 ```
 
 GAMS models
