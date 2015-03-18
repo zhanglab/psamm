@@ -134,21 +134,20 @@ class NativeModel(object):
             for reaction_id, lower, upper in parse_limits_file(limits_context):
                 yield reaction_id, lower, upper
 
-    def parse_medium(self):
-        """Yield tuples of compound, lower, and upper bound flux limits"""
+    def parse_media(self):
+        """Yield each medium defined in the model
 
-        if 'medium' in self._model:
-            if not isinstance(self._model['medium'], list):
-                raise ParseError('Expected medium to be a list')
+        A medium is a generator of tuples of compound, lower, and upper bound
+        flux limits
+        """
 
-            media = list(parse_medium_list(
-                self._context, self._model['medium']))
+        if 'media' in self._model:
+            if not isinstance(self._model['media'], list):
+                raise ParseError('Expected media to be a list')
 
-            if len(media) > 1:
-                logger.warning('Only the first medium will be returned')
-
-            for compound, lower, upper in media[0]:
-                yield compound, lower, upper
+            for medium in parse_medium_list(
+                    self._context, self._model['media']):
+                yield medium
 
     def parse_compounds(self):
         """Yield CompoundEntries for defined compounds"""

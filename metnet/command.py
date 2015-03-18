@@ -817,8 +817,13 @@ def main(command=None):
     for reaction_id, reaction in model.parse_reactions():
         database.set_reaction(reaction_id, reaction)
 
+    media = list(model.parse_media())
+    if len(media) > 1:
+        logger.warning('Only the first medium will be used')
+    medium = media[0] if len(media) > 0 else None
+
     mm = MetabolicModel.load_model(database, model.parse_model(),
-                                   model.parse_medium(), model.parse_limits())
+                                   medium, model.parse_limits())
 
     # Call command
     arg_filter = ('model', 'command')
