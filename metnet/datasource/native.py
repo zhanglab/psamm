@@ -76,6 +76,7 @@ class NativeModel(object):
 
     def __init__(self, path):
         """Create a model from the specified model file or directory"""
+
         if os.path.isfile(path):
             self._context = FilePathContext(path)
             with open(self._context.filepath, 'r') as f:
@@ -90,13 +91,15 @@ class NativeModel(object):
                         self._model = yaml.load(f)
                         break
                 except Exception as e:
-                    logger.debug(e)
+                    logger.debug('Failed to load model file', exc_info=True)
             else:
                 # No model could be loaded
                 raise ParseError('No model file could be found ({})'.format(
                     ', '.join(DEFAULT_MODEL)))
 
     def parse_reactions(self):
+        """Yield tuples of reaction ID and reactions defined in the model"""
+
         # Parse reaction files in the reactions directory
         context = self._context.resolve(DEFAULT_REACTIONS_DIR)
         if os.path.isdir(context.filepath):
@@ -116,18 +119,24 @@ class NativeModel(object):
         return 'model' in self._model
 
     def parse_model(self):
+        """Yield reaction IDs of model reactions"""
+
         if self.has_model():
             for reaction_id in parse_model_group_list(
                     self._context, self._model['model']):
                 yield reaction_id
 
     def parse_limits(self):
+        """Yield tuples of reaction ID, lower, and upper bound flux limits"""
+
         for limits_table in self._model.get('limits', []):
             limits_context = self._context.resolve(limits_table)
             for reaction_id, lower, upper in parse_limits_file(limits_context):
                 yield reaction_id, lower, upper
 
     def parse_compounds(self):
+        """Yield CompoundEntries for defined compounds"""
+
         for compound_table in self._model.get('compounds', []):
             compound_context = self._context.resolve(compound_table)
             with open(compound_context.filepath, 'r') as f:
