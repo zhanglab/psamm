@@ -138,8 +138,16 @@ class NativeModel(object):
         """Yield tuples of compound, lower, and upper bound flux limits"""
 
         if 'medium' in self._model:
-            medium_context = self._context.resolve(self._model['medium'])
-            for compound, lower, upper in parse_medium_file(medium_context):
+            if not isinstance(self._model['medium'], list):
+                raise ParseError('Expected medium to be a list')
+
+            media = list(parse_medium_list(
+                self._context, self._model['medium']))
+
+            if len(media) > 1:
+                logger.warning('Only the first medium will be returned')
+
+            for compound, lower, upper in media[0]:
                 yield compound, lower, upper
 
     def parse_compounds(self):
@@ -276,6 +284,48 @@ def parse_reaction_file(path):
             context.filepath))
 
 
+def parse_medium(medium_def):
+    """Parse a structured medium definition as obtained from a YAML file
+
+    Returns in iterator of compound, lower and upper bounds.
+    """
+
+    default_compartment = medium_def.get('compartment')
+
+    for compound_def in medium_def.get('compounds', []):
+        compartment = compound_def.get('compartment', default_compartment)
+        compound = Compound(compound_def['id'], compartment=compartment)
+        lower = compound_def.get('lower')
+        upper = compound_def.get('upper')
+        yield compound, lower, upper
+
+
+def parse_medium_list(path, media):
+    """Parse a structured list of media as obtained from a YAML file
+
+    Yields tuples of compound, lower and upper flux bounds. Path can be given
+    as a string or a context.
+    """
+
+    context = FilePathContext(path)
+
+    for medium_def in media:
+        if 'include' in medium_def:
+            include_context = context.resolve(medium_def['include'])
+            yield parse_medium_file(include_context)
+        else:
+            yield parse_medium(medium_def)
+
+
+def parse_medium_yaml_file(path, f):
+    """Parse a file as a YAML-format medium definition
+
+    Path can be given as a string or a context.
+    """
+
+    return parse_medium(yaml.load(f))
+
+
 def parse_medium_table_file(f):
     """Parse a space-separated file containing medium compound flux limits
 
@@ -315,10 +365,22 @@ def parse_medium_file(path):
     """
 
     context = FilePathContext(path)
-    logger.debug('Parsing medium file {}'.format(context.filepath))
-    with open(context.filepath, 'r') as f:
-        for compound, lower, upper in parse_medium_table_file(f):
-            yield compound, lower, upper
+
+    if re.match(r'.+\.tsv$', context.filepath):
+        logger.debug('Parsing medium file {} as TSV'.format(
+            context.filepath))
+        with open(context.filepath, 'r') as f:
+            for compound, lower, upper in parse_medium_table_file(f):
+                yield compound, lower, upper
+    elif re.match(r'.+\.(yml|yaml)$', context.filepath):
+        logger.debug('Parsing medium file {} as YAML'.format(
+            context.filepath))
+        with open(context.filepath, 'r') as f:
+            for compound, lower, upper in parse_medium_yaml_file(context, f):
+                yield compound, lower, upper
+    else:
+        raise ParseError('Unable to detect format of medium file {}'.format(
+            context.filepath))
 
 
 def parse_limits_table_file(f):
