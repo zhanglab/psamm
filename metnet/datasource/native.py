@@ -115,15 +115,15 @@ class NativeModel(object):
                     self._context, self._model['reactions']):
                 yield reaction_id, reaction
 
-    def has_model(self):
-        return 'model' in self._model
-
     def parse_model(self):
         """Yield reaction IDs of model reactions"""
 
-        if self.has_model():
+        if 'model' in self._model:
             for reaction_id in parse_model_group_list(
                     self._context, self._model['model']):
+                yield reaction_id
+        else:
+            for reaction_id, _ in self.parse_reactions():
                 yield reaction_id
 
     def parse_limits(self):
