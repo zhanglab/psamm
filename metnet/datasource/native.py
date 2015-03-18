@@ -134,6 +134,21 @@ class NativeModel(object):
             for reaction_id, lower, upper in parse_limits_file(limits_context):
                 yield reaction_id, lower, upper
 
+    def parse_media(self):
+        """Yield each medium defined in the model
+
+        A medium is a generator of tuples of compound, lower, and upper bound
+        flux limits
+        """
+
+        if 'media' in self._model:
+            if not isinstance(self._model['media'], list):
+                raise ParseError('Expected media to be a list')
+
+            for medium in parse_medium_list(
+                    self._context, self._model['media']):
+                yield medium
+
     def parse_compounds(self):
         """Yield CompoundEntries for defined compounds"""
 
@@ -268,6 +283,105 @@ def parse_reaction_file(path):
             context.filepath))
 
 
+def parse_medium(medium_def):
+    """Parse a structured medium definition as obtained from a YAML file
+
+    Returns in iterator of compound, lower and upper bounds.
+    """
+
+    default_compartment = medium_def.get('compartment')
+
+    for compound_def in medium_def.get('compounds', []):
+        compartment = compound_def.get('compartment', default_compartment)
+        compound = Compound(compound_def['id'], compartment=compartment)
+        lower = compound_def.get('lower')
+        upper = compound_def.get('upper')
+        yield compound, lower, upper
+
+
+def parse_medium_list(path, media):
+    """Parse a structured list of media as obtained from a YAML file
+
+    Yields tuples of compound, lower and upper flux bounds. Path can be given
+    as a string or a context.
+    """
+
+    context = FilePathContext(path)
+
+    for medium_def in media:
+        if 'include' in medium_def:
+            include_context = context.resolve(medium_def['include'])
+            yield parse_medium_file(include_context)
+        else:
+            yield parse_medium(medium_def)
+
+
+def parse_medium_yaml_file(path, f):
+    """Parse a file as a YAML-format medium definition
+
+    Path can be given as a string or a context.
+    """
+
+    return parse_medium(yaml.load(f))
+
+
+def parse_medium_table_file(f):
+    """Parse a space-separated file containing medium compound flux limits
+
+    The first two columns contain compound IDs and compartment while the
+    third column contains the lower flux limits. The fourth column is
+    optional and contains the upper flux limit.
+    """
+
+    for line in f:
+        line, _, comment = line.partition('#')
+        line = line.strip()
+        if line == '':
+            continue
+
+        # A line can specify lower limit only (useful for
+        # exchange reactions), or both lower and upper limit.
+        fields = line.split(None)
+        if len(fields) < 2 or len(fields) > 4:
+            raise ParseError('Malformed compound limit: {}'.format(fields))
+
+        # Extend to four values and unpack
+        fields.extend(['-']*(4-len(fields)))
+        compound_id, compartment, lower, upper = fields
+
+        compound = Compound(compound_id, compartment)
+        lower = float(lower) if lower != '-' else None
+        upper = float(upper) if upper != '-' else None
+
+        yield compound, lower, upper
+
+
+def parse_medium_file(path):
+    """Parse a file as a list of medium compounds with flux limits
+
+    The file format is detected and the file is parsed accordingly. Path can
+    be given as a string or a context.
+    """
+
+    context = FilePathContext(path)
+
+    if re.match(r'.+\.tsv$', context.filepath):
+        logger.debug('Parsing medium file {} as TSV'.format(
+            context.filepath))
+        with open(context.filepath, 'r') as f:
+            for compound, lower, upper in parse_medium_table_file(f):
+                yield compound, lower, upper
+    elif re.match(r'.+\.(yml|yaml)$', context.filepath):
+        logger.debug('Parsing medium file {} as YAML'.format(
+            context.filepath))
+        with open(context.filepath, 'r') as f:
+            for compound, lower, upper in parse_medium_yaml_file(context, f):
+                yield compound, lower, upper
+    else:
+        raise ParseError('Unable to detect format of medium file {}'.format(
+            context.filepath))
+
+
 def parse_limits_table_file(f):
     """Parse a space-separated file containing reaction flux limits
 
@@ -296,7 +410,7 @@ def parse_limits_table_file(f):
 
 
 def parse_limits_file(path):
-    """Parse a file as a list of reaction limits
+    """Parse a file as a list of reaction flux limits
 
     The file format is detected and the file is parsed accordingly. Path can
     be given as a string or a context.
