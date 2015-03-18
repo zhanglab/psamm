@@ -817,15 +817,8 @@ def main(command=None):
     for reaction_id, reaction in model.parse_reactions():
         database.set_reaction(reaction_id, reaction)
 
-    mm = MetabolicModel.load_model(database, model.parse_model())
-
-    # Load bounds on exchange reactions
-    for reaction_id, lower, upper in model.parse_limits():
-        if mm.has_reaction(reaction_id):
-            if lower is not None:
-                mm.limits[reaction_id].lower = lower
-            if upper is not None:
-                mm.limits[reaction_id].upper = upper
+    mm = MetabolicModel.load_model(database, model.parse_model(),
+                                   model.parse_limits())
 
     # Call command
     arg_filter = ('model', 'command')

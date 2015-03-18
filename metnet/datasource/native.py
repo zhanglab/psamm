@@ -296,7 +296,7 @@ def parse_limits_table_file(f):
 
 
 def parse_limits_file(path):
-    """Parse a file as a list of reaction limits
+    """Parse a file as a list of reaction flux limits
 
     The file format is detected and the file is parsed accordingly. Path can
     be given as a string or a context.

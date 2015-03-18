@@ -297,14 +297,26 @@ class MetabolicModel(MetabolicDatabase):
         return model
 
     @classmethod
-    def load_model(cls, database, reaction_iter):
-        '''Get model from reaction name iterator
+    def load_model(cls, database, reaction_iter, limits=None):
+        """Get model from reaction name iterator
 
-        The model will contain all reactions of the iterator.'''
+        The model will contain all reactions of the iterator.
+        """
+
         model = cls(database)
         for reaction_id in reaction_iter:
             model.add_reaction(reaction_id)
+
+        # Apply reaction limits
+        if limits is not None:
+            for reaction_id, lower, upper in limits:
+                if lower is not None:
+                    model.limits[reaction_id].lower = lower
+                if upper is not None:
+                    model.limits[reaction_id].upper = upper
+
         return model
+
 
 class FlipableFluxBounds(FluxBounds):
     '''FluxBounds object for a FlipableModelView
