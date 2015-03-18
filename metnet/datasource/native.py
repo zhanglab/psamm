@@ -279,10 +279,7 @@ def parse_limits_table_file(f):
     for line in f:
         line, _, comment = line.partition('#')
         line = line.strip()
-        # TODO Comments can start with an asterisk to remain
-        # compatible with GAMS files. Can be removed when
-        # compatibility is no longer needed.
-        if line == '' or line[0] == '*':
+        if line == '':
             continue
 
         # A line can specify lower limit only (useful for
