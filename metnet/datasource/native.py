@@ -97,6 +97,10 @@ class NativeModel(object):
                 raise ParseError('No model file could be found ({})'.format(
                     ', '.join(DEFAULT_MODEL)))
 
+    def get_biomass_reaction(self):
+        """Return the biomass reaction specified by the model"""
+        return self._model.get('biomass', None)
+
     def parse_reactions(self):
         """Yield tuples of reaction ID and reactions defined in the model"""
 

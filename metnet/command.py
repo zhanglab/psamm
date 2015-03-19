@@ -186,7 +186,7 @@ class FastGapFillCommand(Command):
             '--penalty', metavar='file', type=argparse.FileType('r'),
             help='List of penalty scores for database reactions')
         parser.add_argument(
-            'reaction', help='Reaction to maximize')
+            'reaction', help='Reaction to maximize', nargs='?')
 
     def run(self):
         """Run FastGapFill command"""
@@ -236,7 +236,17 @@ class FastGapFillCommand(Command):
         added_reactions = induced - core
         logger.info('Extended: |E| = {}, E = {}'.format(len(added_reactions), added_reactions))
 
-        maximized_reaction = self._args.reaction
+        if self._args.reaction is not None:
+            maximized_reaction = self._args.reaction
+        else:
+            maximized_reaction = self._model.get_biomass_reaction()
+            if maximized_reaction is None:
+                raise ValueError('The maximized reaction was not specified')
+
+        if not not self._mm.has_reaction(maximized_reaction):
+            raise ValueError(('The biomass reaction is not a valid model' +
+                              ' reaction: {}').format(maximized_reaction))
+
         logger.info('Flux balance on induced model maximizing {}'.format(maximized_reaction))
         model_induced = self._mm.copy()
         for rxnid in induced:
@@ -268,7 +278,7 @@ class FluxBalanceCommand(Command):
         parser.add_argument(
             '--no-tfba', help='Disable thermodynamic constraints on FBA',
             action='store_true')
-        parser.add_argument('reaction', help='Reaction to maximize')
+        parser.add_argument('reaction', help='Reaction to maximize', nargs='?')
 
     def run(self):
         """Run flux analysis command"""
@@ -279,10 +289,16 @@ class FluxBalanceCommand(Command):
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
 
-        reaction = self._args.reaction
+        if self._args.reaction is not None:
+            reaction = self._args.reaction
+        else:
+            reaction = self._model.get_biomass_reaction()
+            if reaction is None:
+                raise ValueError('The biomass reaction was not specified')
+
         if not self._mm.has_reaction(reaction):
-            raise ValueError(
-                'Specified reaction is not in model: {}'.format(reaction))
+            raise ValueError('Specified reaction is not in model: {}'.format(
+                reaction))
 
         if self._args.no_tfba:
             result = self.run_fba_minimized(reaction)
@@ -394,7 +410,7 @@ class FluxVariabilityCommand(Command):
 
     @classmethod
     def init_parser(cls, parser):
-        parser.add_argument('reaction', help='Reaction to maximize')
+        parser.add_argument('reaction', help='Reaction to maximize', nargs='?')
 
     def run(self):
         """Run flux variability command"""
@@ -405,10 +421,16 @@ class FluxVariabilityCommand(Command):
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
 
-        reaction = self._args.reaction
+        if self._args.reaction is not None:
+            reaction = self._args.reaction
+        else:
+            reaction = self._model.get_biomass_reaction()
+            if reaction is None:
+                raise ValueError('The biomass reaction was not specified')
+
         if not self._mm.has_reaction(reaction):
-            raise ValueError(
-                'Specified reaction is not in model: {}'.format(reaction))
+            raise ValueError('Specified reaction is not in model: {}'.format(
+                reaction))
 
         from .lpsolver import cplex
         solver = cplex.Solver()
@@ -631,7 +653,8 @@ class RandomSparseNetworkCommand(Command):
         parser.add_argument(
             '--no-tfba', help='Disable thermodynamic constraints on FBA',
             action='store_true')
-        parser.add_argument('reaction', help='Reaction to maximize')
+        parser.add_argument(
+            '--reaction', help='Reaction to maximize', nargs='?')
         parser.add_argument(
             'threshold', help='Relative threshold of max reaction flux',
             type=float)
@@ -640,10 +663,16 @@ class RandomSparseNetworkCommand(Command):
         from .lpsolver import cplex
         solver = cplex.Solver()
 
-        reaction = self._args.reaction
+        if self._args.reaction is not None:
+            reaction = self._args.reaction
+        else:
+            reaction = self._model.get_biomass_reaction()
+            if reaction is None:
+                raise ValueError('The biomass reaction was not specified')
+
         if not self._mm.has_reaction(reaction):
-            raise ValueError(
-                'Specified reaction is not in model: {}'.format(reaction))
+            raise ValueError('Specified reaction is not in model: {}'.format(
+                reaction))
 
         threshold = self._args.threshold
         if threshold < 0.0 or threshold > 1.0:
@@ -724,7 +753,8 @@ class RobustnessCommand(Command):
         parser.add_argument(
             '--no-tfba', help='Disable thermodynamic constraints on FBA',
             action='store_true')
-        parser.add_argument('reaction', help='Reaction to maximize')
+        parser.add_argument(
+            '--reaction', help='Reaction to maximize', nargs='?')
         parser.add_argument('varying', help='Reaction to vary')
 
     def run(self):
@@ -755,10 +785,16 @@ class RobustnessCommand(Command):
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
 
-        reaction = self._args.reaction
+        if self._args.reaction is not None:
+            reaction = self._args.reaction
+        else:
+            reaction = self._model.get_biomass_reaction()
+            if reaction is None:
+                raise ValueError('The biomass reaction was not specified')
+
         if not self._mm.has_reaction(reaction):
-            raise ValueError(
-                'Specified reaction is not in model: {}'.format(reaction))
+            raise ValueError('Specified reaction is not in model: {}'.format(
+                reaction))
 
         varying_reaction = self._args.varying
         if not self._mm.has_reaction(varying_reaction):
