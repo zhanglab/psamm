@@ -72,29 +72,56 @@ as a template:
 ``` yaml
 ---
 name: Escherichia coli test model
+biomass: Biomass
 compounds:
 	- ../path/to/ModelSEED_cpds.tsv
-limits:
-	- aerobic_glucose.tsv
+media:
+	- include: medium.yaml
 ```
+
+The optional **`biomass`** key specifies the default reaction to use for
+various analyses (e.g. FBA, FVA, etc.)
 
 The optional **`compounds`** key lists any files that contain compound
 information. These files can currently only be parsed as ModelSEED table
 formatted data. For some of the model checks the compound information is
 required.
 
+The optional **`media`** key provides a way of defining the medium (boundary
+conditions) for the model. The medium is defined by a set of compounds that are
+able enter or leave the model system. The follow fragment is an example of the
+`medium.yaml` file:
+
+``` yaml
+- compartment: e
+  compounds:
+	- id: ac    # Acetate
+	- id: co2
+	- id: o2
+	- id: glcC  # D-Glucose with uptake limit of 10
+	  lower: -10
+- compartment: c
+  compounds:
+	- id: compound_x
+	  lower: 0  # Provide a sink for compound_x
+	# ...
+```
+
+When a medium file is specified, the corresponding exchange reactions are
+automatically added. For example, if the compounds `o2` in compartment `e` is
+in the medium, the exchange reaction `EX_o2_e` is added to the model.
+
 The optional **`limits`** property lists the files that are to be combined and
 applied as the reaction flux limits. This can be used to limit certain
-reactions in the model. Typically these files are used to define the media
-by limiting the exchange reactions (e.g. by limiting all carbon-sources
-except glucose, and allowing oxygen). These files are currently parsed as
-tables containing the reaction ID, the lower limit and (optionally) the upper
-limit. The following fragment is an example of a limits file:
+reactions in the model. These files are currently parsed as tables containing
+the reaction ID, the lower limit and (optionally) the upper limit. The
+following fragment is an example of a limits file:
 
 ```
-EX_formate  0
-EX_glucose  -1000
-EX_oxygen   -10    0
+# Make ADE2t irreversible by imposing a lower bound of 0
+ADE2t    0
+# Only allow limited flux on ADK1
+ADK1     -10    10
 ```
 
 In the same directory as the `model.yaml`, create a directory called
@@ -181,47 +208,66 @@ $ model.py command --help
 
 ### Flux balance analysis (`fba`)
 
-This command will first try to maximize the flux of the given reaction (i.e. typically
-the "biomass" or "growth" reaction). Next, it will fix the flux of this reaction while
-minimizing the flux of all reactions in the model. Both results are presented in a table.
+This command will first try to maximize the flux of the biomass reaction
+defined in the model. It is also possible to provide a different reaction on
+the command line to maximize.
+
+By default, this is followed by running the flux balance analysis with
+thermodynamic constraints (tFBA) in order to remove internal flux cycles. The
+results of these two analyses is presented in a two-column table along with the
+reaction IDs.
+
+If the parameter `--no-tfba` is given, the second column instead represents a
+flux minimization in which the FBA maximum is fixed while the sum of the fluxes
+is minimized. This will often eliminate loops as well.
+
+To run FBA use:
 
 ``` shell
-$ model.py fba Biomass
+$ model.py fba
+```
+
+or with a specific reaction:
+
+``` shell
+$ model.py fba ATPM
 ```
 
 ### Robustness (`robustness`)
 
-Given a reaction to maximize and a reaction to vary, the robustness analysis will run
-flux balance analysis and flux minimization while fixing the reaction to vary at each
-iteration. The reaction will be fixed at a given number of steps between the
-minimum and maximum flux value specified in the model.
+Given a reaction to maximize and a reaction to vary, the robustness analysis
+will run flux balance analysis and flux minimization while fixing the reaction
+to vary at each iteration. The reaction will be fixed at a given number of
+steps between the minimum and maximum flux value specified in the model.
 
 ``` shell
 $ model.py robustness \
-	--steps 200 --minimum -20 --maximum 160 Biomass EX_Oxygen
+	--steps 200 --minimum -20 --maximum 160 EX_Oxygen
 ```
 
-In the example above, the `Biomass` reaction will be maximized while the `EX_Oxygen`
-(oxygen exchange) reaction is fixed at a certain flux in each iteration. The fixed
-flux will vary between the minimum and maximum flux. The number of iterations can be
-set using `--steps`. In each iteration, all reactions and the corresponding fluxes will
-be shown in a table, as well as the value of the fixed flux. If the fixed flux results
-in an infeasible model, no output will be shown for that iteration.
+In the example above, the biomass reaction will be maximized while the
+`EX_Oxygen` (oxygen exchange) reaction is fixed at a certain flux in each
+iteration. The fixed flux will vary between the minimum and maximum flux. The
+number of iterations can be set using `--steps`. In each iteration, all
+reactions and the corresponding fluxes will be shown in a table, as well as
+the value of the fixed flux. If the fixed flux results in an infeasible model,
+no output will be shown for that iteration.
 
 ### Random sparse network (`randomsparse`)
 
-Given a reaction to optimize and a threshold, delete reactions randomly until the flux
-of the reaction to optimize falls under the threshold. Keep deleting reactions until no
-more reactions can be deleted.
+Delete reactions randomly until the flux of the biomass reaction falls below
+the threshold. Keep deleting reactions until no more reactions can be deleted.
+This can also be applied to other reactions than the biomass reaction by
+specifying the reaction explicitly.
 
 ``` shell
-$ model.py randomsparse Biomass 0.95
+$ model.py randomsparse 0.95
 ```
 
-When the given reaction is the biomass reaction, this results in a smaller model which
-is still producing biomass within the tolerance given by the threshold. Aggregating the
-results from multiple random sparse networks allows classifying reactions as essential,
-semi-essential or non-essential.
+When the given reaction is the biomass reaction, this results in a smaller
+model which is still producing biomass within the tolerance given by the
+threshold. Aggregating the results from multiple random sparse networks allows
+classifying reactions as essential, semi-essential or non-essential.
 
 ### Mass consistency check (`masscheck`)
 
@@ -231,33 +277,36 @@ model and have each reaction be balanced with respect to these mass assignments.
 If it can be shown that assigning the masses is impossible, we have discovered
 an inconsistency.
 
-Some variants of this idea is implemented in the `metnet.massconsistency` module.
-The mass consistency check can be run using
+Some variants of this idea is implemented in the `metnet.massconsistency`
+module. The mass consistency check can be run using
 
 ``` shell
 $ model.py masscheck
 ```
 
-This will first try to assign a positive mass to as many compounds as possible. This
-will indicate whether or not the model is consistent but in case it is _not_ consistent
-it is often hard to figure out how to fix the model from this list of masses.
+This will first try to assign a positive mass to as many compounds as possible.
+This will indicate whether or not the model is consistent but in case it is
+_not_ consistent it is often hard to figure out how to fix the model from this
+list of masses.
 
-Next, a different check is run where the residual mass is minimized for all reactions
-in the model. This will often give a better idea of which reactions need fixing.
+Next, a different check is run where the residual mass is minimized for all
+reactions in the model. This will often give a better idea of which reactions
+need fixing.
 
 ### Formula consistency check (`formulacheck`)
 
-Similarly, a model or reaction database can be checked for formula inconsistencies
-when the chemical formulae of the compounds in the model are known.
+Similarly, a model or reaction database can be checked for formula
+inconsistencies when the chemical formulae of the compounds in the model are
+known.
 
 ``` shell
 $ model.py formulacheck
 ```
 
-For each inconsistent reaction, the reaction identifier will be printed followed by
-the elements ("atoms") in, respectively, the left- and right-hand side of the reaction,
-followed by the elements needed to balance the left- and right-hand side,
-respectively.
+For each inconsistent reaction, the reaction identifier will be printed
+followed by the elements ("atoms") in, respectively, the left- and right-hand
+side of the reaction, followed by the elements needed to balance the left- and
+right-hand side, respectively.
 
 ### GapFind/GapFill (`gapfill`)
 
@@ -286,7 +335,7 @@ The database reactions can be assigned a weight (or "cost") using the `--penalty
 These weights are taken into account when determining the minimal solution.
 
 ``` shell
-$ model.py fastgapfill --penalty penalty.tsv Growth
+$ model.py fastgapfill --penalty penalty.tsv
 ```
 
 ### Search (`search`)
@@ -418,10 +467,10 @@ $ ~/model_script/parse_fluxbalance.py FluxBalance.lst rxn_list
 Test suite
 ----------
 
-The python modules have test suites that allows us to automatically test various
-aspects of the module implemention. It is important to make sure that all tests
-run without failure _before_ committing changes to any of the modules. The test
-suite is run by changing to the project directory and running
+The python modules have test suites that allows us to automatically test
+various aspects of the module implementation. It is important to make sure that
+all tests run without failure _before_ committing changes to any of the
+modules. The test suite is run by changing to the project directory and running
 
 ``` shell
 $ ./setup.py test
