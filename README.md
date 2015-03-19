@@ -89,8 +89,8 @@ required.
 
 The optional **`media`** key provides a way of defining the medium (boundary
 conditions) for the model. The medium is defined by a set of compounds that are
-able enter or leave the model system. The follow fragment is an example of the
-`medium.yaml` file:
+able enter or leave the model system. The following fragment is an example of
+the `medium.yaml` file:
 
 ``` yaml
 - compartment: e
