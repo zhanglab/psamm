@@ -79,13 +79,19 @@ media:
 	- include: medium.yaml
 ```
 
+### Biomass
+
 The optional **`biomass`** key specifies the default reaction to use for
 various analyses (e.g. FBA, FVA, etc.)
+
+### Compounds
 
 The optional **`compounds`** key lists any files that contain compound
 information. These files can currently only be parsed as ModelSEED table
 formatted data. For some of the model checks the compound information is
 required.
+
+### Media
 
 The optional **`media`** key provides a way of defining the medium (boundary
 conditions) for the model. The medium is defined by a set of compounds that are
@@ -111,6 +117,8 @@ When a medium file is specified, the corresponding exchange reactions are
 automatically added. For example, if the compounds `o2` in compartment `e` is
 in the medium, the exchange reaction `EX_o2_e` is added to the model.
 
+### Reaction flux limits
+
 The optional **`limits`** property lists the files that are to be combined and
 applied as the reaction flux limits. This can be used to limit certain
 reactions in the model. These files are currently parsed as tables containing
@@ -123,6 +131,8 @@ ADE2t    0
 # Only allow limited flux on ADK1
 ADK1     -10    10
 ```
+
+### Reactions
 
 In the same directory as the `model.yaml`, create a directory called
 `reactions`. Any `.tsv` file in this subdirectory will be parsed as a reaction
