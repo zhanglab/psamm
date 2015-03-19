@@ -65,6 +65,37 @@ class FilePathContext(object):
         return self.filepath
 
 
+class CompoundEntry(object):
+    """Representation of a compound entry in a native model"""
+
+    def __init__(self, id, properties):
+        self._id = id
+        self._properties = dict(properties)
+        self._name = self._properties.get('name')
+        self._formula = self._properties.get('formula')
+        self._charge = int(self._properties.get('charge'))
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def formula(self):
+        return self._formula
+
+    @property
+    def charge(self):
+        return self._charge
+
+    @property
+    def properties(self):
+        return self._properties
+
+
 class NativeModel(object):
     """Represents a model specified using the native data formats
 
@@ -156,11 +187,76 @@ class NativeModel(object):
     def parse_compounds(self):
         """Yield CompoundEntries for defined compounds"""
 
-        for compound_table in self._model.get('compounds', []):
-            compound_context = self._context.resolve(compound_table)
-            with open(compound_context.filepath, 'r') as f:
-                for compound in modelseed.parse_compound_file(f):
-                    yield compound
+        if 'compounds' in self._model:
+            for compound in parse_compound_list(
+                    self._context, self._model['compounds']):
+                yield compound
+
+
+def parse_compound(compound_def):
+    """Parse a structured compound definition as obtained from a YAML file
+
+    Returns a CompoundEntry."""
+
+    compound_id = compound_def.get('id')
+    if compound_id is None:
+        raise ParseError('Compound ID missing')
+
+    return CompoundEntry(compound_id, compound_def)
+
+
+def parse_compound_list(path, compounds):
+    """Parse a structured list of compounds as obtained from a YAML file
+
+    Yields CompoundEntries. Path can be given as a string or a context.
+    """
+
+    context = FilePathContext(path)
+
+    for compound_def in compounds:
+        if 'include' in compound_def:
+            file_format = compound_def.get('format')
+            include_context = context.resolve(compound_def['include'])
+            for compound in parse_compound_file(include_context, file_format):
+                yield compound
+        else:
+            yield parse_compound(compound_def)
+
+
+def parse_compound_yaml_file(path, f):
+    """Parse a file as a YAML-format list of compounds
+
+    Path can be given as a string or a context.
+    """
+
+    return parse_compound_list(path, yaml.load(f))
+
+
+def parse_compound_file(path, format):
+    """Open and parse reaction file based on file extension or given format
+
+    Path can be given as a string or a context.
+    """
+
+    context = FilePathContext(path)
+
+    # YAML files do not need to explicitly specify format
+    if (re.match(r'.+\.(yml|yaml)$', context.filepath) and
+            (format is None or format == 'yaml')):
+        logger.debug('Parsing compound file {} as YAML'.format(
+            context.filepath))
+        with open(context.filepath, 'r') as f:
+            for compound in parse_compound_yaml_file(context, f):
+                yield compound
+    elif format == 'modelseed':
+        logger.debug('Parsing compound file {} as ModelSEED TSV'.format(
+            context.filepath))
+        with open(context.filepath, 'r') as f:
+            for compound in modelseed.parse_compound_file(f):
+                yield compound
+    else:
+        raise ParseError('Unable to detect format of compound file {}'.format(
+            context.filepath))
 
 
 def parse_reaction(reaction_def):
