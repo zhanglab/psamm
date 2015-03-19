@@ -74,7 +74,8 @@ as a template:
 name: Escherichia coli test model
 biomass: Biomass
 compounds:
-	- ../path/to/ModelSEED_cpds.tsv
+	- include: ../path/to/ModelSEED_cpds.tsv
+	  format: modelseed
 media:
 	- include: medium.yaml
 ```
@@ -86,10 +87,23 @@ various analyses (e.g. FBA, FVA, etc.)
 
 ### Compounds
 
-The optional **`compounds`** key lists any files that contain compound
-information. These files can currently only be parsed as ModelSEED table
-formatted data. For some of the model checks the compound information is
-required.
+The optional **`compounds`** key is a list of compound information. For some
+of the model checks the compound information is required. This section can also
+include external files that contain compound information. If the file is a
+ModelSEED compound table, the `format` key must be set to `modelseed`. If the
+file is a YAML file, the file should have a `.yaml` extension. The following
+fragment is an example of a YAML formatted compound file:
+
+``` yaml
+- id: ac
+  name: Acetate
+  formula: C2H3O2
+  charge: -1
+
+- id: acac
+  name: Acetoacetate
+  # ...
+```
 
 ### Media
 
