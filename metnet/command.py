@@ -1,5 +1,5 @@
 
-'''Utilities for the command line interface'''
+"""Utilities for the command line interface"""
 
 import argparse
 import operator
@@ -20,6 +20,7 @@ from . import fluxanalysis
 # Module-level logging
 logger = logging.getLogger(__name__)
 
+
 class Command(object):
     '''Represents a command in the interface, operating on a model or database
 
@@ -32,8 +33,9 @@ class Command(object):
     resulting arguments will be given as keyword arguments to __call__.
     '''
 
+    @classmethod
     def init_parser(self, parser):
-        '''Initialize command line parser (argparse.ArgumentParser)'''
+        """Initialize command line parser (argparse.ArgumentParser)"""
         pass
 
     def __call__(self):
@@ -50,9 +52,11 @@ class ChargeBalanceCommand(Command):
     name = 'chargecheck'
     title = 'Check charge balance on a model or database'
 
-    def init_parser(self, parser):
-        parser.add_argument('charge', metavar='file', type=argparse.FileType('r'),
-                            help='List of charges for database compounds')
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            'charge', metavar='file', type=argparse.FileType('r'),
+            help='List of charges for database compounds')
 
     def __call__(self, model, compounds, **kwargs):
         '''Run charge balance command'''
@@ -99,9 +103,11 @@ class ConsoleCommand(Command):
     name = 'console'
     title = 'Start Python console with metabolic model loaded'
 
-    def init_parser(self, parser):
-        parser.add_argument('--type', choices=('python', 'ipython', 'ipython-kernel'),
-                            default='python', help='type of console to open')
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            '--type', choices=('python', 'ipython', 'ipython-kernel'),
+            default='python', help='type of console to open')
 
     def open_python(self, message, namespace):
         '''Open interactive python console'''
@@ -144,10 +150,13 @@ class FastGapFillCommand(Command):
     name = 'fastgapfill'
     title = 'Run FastGapFill on a metabolic model'
 
-    def init_parser(self, parser):
-        parser.add_argument('--penalty', metavar='file', type=argparse.FileType('r'),
-                            help='List of penalty scores for database reactions')
-        parser.add_argument('reaction', help='Reaction to maximize')
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            '--penalty', metavar='file', type=argparse.FileType('r'),
+            help='List of penalty scores for database reactions')
+        parser.add_argument(
+            'reaction', help='Reaction to maximize')
 
     def __call__(self, model, compounds, **kwargs):
         '''Run FastGapFill command'''
@@ -222,9 +231,11 @@ class FluxBalanceCommand(Command):
     name = 'fba'
     title = 'Run flux balance analysis on a metabolic model'
 
-    def init_parser(self, parser):
-        parser.add_argument('--no-tfba', help='Disable thermodynamic constraints on FBA',
-                            action='store_true')
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            '--no-tfba', help='Disable thermodynamic constraints on FBA',
+            action='store_true')
         parser.add_argument('reaction', help='Reaction to maximize')
 
     def __call__(self, model, compounds, **kwargs):
@@ -295,9 +306,11 @@ class FluxConsistencyCommand(Command):
     name = 'fluxconsistency'
     title = 'Check that the model is flux consistent'
 
-    def init_parser(self, parser):
-        parser.add_argument('--no-fastcore', help='Disable use of Fastcore algorithm',
-                            action='store_true')
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            '--no-fastcore', help='Disable use of Fastcore algorithm',
+            action='store_true')
 
     def __call__(self, model, compounds, **kwargs):
         '''Run flux consistency check command'''
@@ -331,7 +344,8 @@ class FluxVariabilityCommand(Command):
     name = 'fva'
     title = 'Run flux variability analysis on a metabolic model'
 
-    def init_parser(self, parser):
+    @classmethod
+    def init_parser(cls, parser):
         parser.add_argument('reaction', help='Reaction to maximize')
 
     def __call__(self, model, compounds, **kwargs):
@@ -463,9 +477,11 @@ class MassConsistencyCommand(Command):
     name = 'masscheck'
     title = 'Run mass consistency check on a database'
 
+    @classmethod
     def init_parser(self, parser):
-        parser.add_argument('--exclude', metavar='reaction', action='append',
-                            type=str, default=[], help='Exclude reaction from mass consistency')
+        parser.add_argument(
+            '--exclude', metavar='reaction', action='append', type=str,
+            default=[], help='Exclude reaction from mass consistency')
 
     def __call__(self, model, compounds, **kwargs):
         # Load compound information
@@ -526,12 +542,15 @@ class RandomSparseNetworkCommand(Command):
     name = 'randomsparse'
     title = 'Generate a random sparse network of model reactions'
 
-    def init_parser(self, parser):
-        parser.add_argument('--no-tfba', help='Disable thermodynamic constraints on FBA',
-                            action='store_true')
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            '--no-tfba', help='Disable thermodynamic constraints on FBA',
+            action='store_true')
         parser.add_argument('reaction', help='Reaction to maximize')
-        parser.add_argument('threshold', help='Relative threshold of max reaction flux',
-                            type=float)
+        parser.add_argument(
+            'threshold', help='Relative threshold of max reaction flux',
+            type=float)
 
     def __call__(self, model, compounds, **kwargs):
         from .lpsolver import cplex
@@ -603,15 +622,20 @@ class RobustnessCommand(Command):
     name = 'robustness'
     title = 'Run robustness analysis on a metabolic model'
 
-    def init_parser(self, parser):
-        parser.add_argument('--steps', metavar='N', help='Number of flux value steps for varying reaction',
-                            type=int, default=10)
-        parser.add_argument('--minimum', metavar='V', help='Minumum flux value of varying reacton',
-                            type=float)
-        parser.add_argument('--maximum', metavar='V', help='Maximum flux value of varying reacton',
-                            type=float)
-        parser.add_argument('--no-tfba', help='Disable thermodynamic constraints on FBA',
-                            action='store_true')
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            '--steps', metavar='N', type=int, default=10,
+            help='Number of flux value steps for varying reaction')
+        parser.add_argument(
+            '--minimum', metavar='V', type=float,
+            help='Minumum flux value of varying reacton')
+        parser.add_argument(
+            '--maximum', metavar='V', type=float,
+            help='Maximum flux value of varying reacton')
+        parser.add_argument(
+            '--no-tfba', help='Disable thermodynamic constraints on FBA',
+            action='store_true')
         parser.add_argument('reaction', help='Reaction to maximize')
         parser.add_argument('varying', help='Reaction to vary')
 
@@ -676,25 +700,33 @@ class SearchCommand(Command):
     name = 'search'
     title = 'Search the database of reactions or compounds'
 
-    def init_parser(self, parser):
-        '''Initialize argument parser'''
+    @classmethod
+    def init_parser(cls, parser):
+        """Initialize argument parser"""
         subparsers = parser.add_subparsers(title='Search domain')
 
         # Compound subcommand
-        parser_compound = subparsers.add_parser('compound', help='Search in compounds')
+        parser_compound = subparsers.add_parser(
+            'compound', help='Search in compounds')
         parser_compound.set_defaults(which='compound')
-        parser_compound.add_argument('--id', '-i', dest='id', metavar='id', type=str,
-                                        default=[], action='append', help='Compound ID')
-        parser_compound.add_argument('--name', '-n', dest='name', metavar='name', type=str,
-                                        default=[], action='append', help='Name of compound')
+        parser_compound.add_argument(
+            '--id', '-i', dest='id', metavar='id', type=str,
+            default=[], action='append', help='Compound ID')
+        parser_compound.add_argument(
+            '--name', '-n', dest='name', metavar='name', type=str,
+            default=[], action='append', help='Name of compound')
 
         # Reaction subcommand
-        parser_reaction = subparsers.add_parser('reaction', help='Search in reactions')
+        parser_reaction = subparsers.add_parser(
+            'reaction', help='Search in reactions')
         parser_reaction.set_defaults(which='reaction')
-        parser_reaction.add_argument('--id', '-i', dest='id', metavar='id', type=str,
-                                        default=[], action='append', help='Reaction ID')
-        parser_reaction.add_argument('--compound', '-c', dest='compound', metavar='compound', type=str,
-                                        default=[], action='append', help='Comma-separated list of compound IDs')
+        parser_reaction.add_argument(
+            '--id', '-i', dest='id', metavar='id', type=str,
+            default=[], action='append', help='Reaction ID')
+        parser_reaction.add_argument(
+            '--compound', '-c', dest='compound', metavar='compound', type=str,
+            default=[], action='append',
+            help='Comma-separated list of compound IDs')
 
     def __call__(self, model, compounds, **kwargs):
         '''Run search command'''
@@ -775,7 +807,7 @@ class SearchCommand(Command):
 
 
 def main(command=None):
-    '''Run the command line interface with the given Command'''
+    """Run the command line interface with the given Command"""
 
     title = 'Metabolic modeling tools'
     if command is not None:
@@ -794,22 +826,23 @@ def main(command=None):
         commands = {}
         for command_class in Command.__subclasses__():
             command_name = getattr(command_class, 'name', None)
-            if command_name is not None and command_name not in commands:
-                try:
-                    commands[command_name] = command_class.title, command_class()
-                except:
-                    pass
+            command_title = getattr(command_class, 'title', None)
+            if (command_name is not None and
+                    command_title is not None and
+                    command_name not in commands):
+                commands[command_name] = (command_class.title,
+                                          command_class)
 
         # Create parsers for subcommands
         subparsers = parser.add_subparsers(title='Command')
         for name, values in sorted(commands.iteritems()):
-            title, command = values
+            title, command_class = values
             subparser = subparsers.add_parser(name, help=title)
-            subparser.set_defaults(command=command)
-            command.init_parser(subparser)
+            subparser.set_defaults(command=command_class)
+            command_class.init_parser(subparser)
 
     args = parser.parse_args()
-    command = args.command
+    command = args.command()
 
     # Load model definition
     model = NativeModel(args.model)
