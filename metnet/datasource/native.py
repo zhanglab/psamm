@@ -12,6 +12,7 @@ from __future__ import absolute_import
 import os
 import logging
 import re
+import csv
 
 import yaml
 
@@ -228,6 +229,20 @@ def parse_compound_list(path, compounds):
             yield parse_compound(compound_def)
 
 
+def parse_compound_table_file(path, f):
+    """Parse a space-separated file containing compound IDs and definitions
+
+    The compound properties are parsed according to the list of properties.
+    """
+
+    for row in csv.DictReader(f, delimiter='\t'):
+        if 'id' not in row or row['id'].strip() == '':
+            raise ParseError('Expected `id` column in table')
+
+        props = {key: value for key, value in row.iteritems() if value != ''}
+        yield CompoundEntry(row['id'], props)
+
+
 def parse_compound_yaml_file(path, f):
     """Parse a file as a YAML-format list of compounds
 
@@ -258,6 +273,12 @@ def parse_compound_file(path, format):
             context.filepath))
         with open(context.filepath, 'r') as f:
             for compound in modelseed.parse_compound_file(f):
+                yield compound
+    elif format.startswith('tsv'):
+        logger.debug('Parsing compound file {} as TSV'.format(
+            context.filepath))
+        with open(context.filepath, 'r') as f:
+            for compound in parse_compound_table_file(context, f):
                 yield compound
     else:
         raise ParseError('Unable to detect format of compound file {}'.format(
