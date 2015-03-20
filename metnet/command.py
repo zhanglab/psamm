@@ -76,30 +76,17 @@ class ChargeBalanceCommand(Command):
     name = 'chargecheck'
     title = 'Check charge balance on a model or database'
 
-    @classmethod
-    def init_parser(cls, parser):
-        parser.add_argument(
-            'charge', metavar='file', type=argparse.FileType('r'),
-            help='List of charges for database compounds')
-
     def run(self):
         """Run charge balance command"""
 
         # Load compound information
         compound_name = {}
+        compound_charge = {}
         for compound in self._model.parse_compounds():
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
-
-        # Mapping from compound id to charge
-        compound_charge = {}
-        for line in self._args.charge:
-            line, _, comment = line.partition('#')
-            line = line.strip()
-            if line == '':
-                continue
-            compound_id, charge = line.split(None, 1)
-            compound_charge[compound_id] = int(charge)
+            if hasattr(compound, 'charge') and compound.charge is not None:
+                compound_charge[compound.id] = compound.charge
 
         # Create a set of known charge-inconsistent reactions
         exchange = set()
