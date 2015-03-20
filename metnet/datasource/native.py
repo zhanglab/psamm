@@ -65,6 +65,11 @@ class FilePathContext(object):
         return self.filepath
 
 
+def whendefined(func, value):
+    """Apply func to value if value is not None"""
+    return func(value) if value is not None else None
+
+
 class CompoundEntry(object):
     """Representation of a compound entry in a native model"""
 
@@ -73,7 +78,7 @@ class CompoundEntry(object):
         self._properties = dict(properties)
         self._name = self._properties.get('name')
         self._formula = self._properties.get('formula')
-        self._charge = int(self._properties.get('charge'))
+        self._charge = whendefined(int, self._properties.get('charge'))
 
     @property
     def id(self):
