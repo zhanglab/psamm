@@ -475,21 +475,17 @@ class FormulaBalanceCommand(Command):
         # Mapping from compound id to formula
         compound_formula = {}
         for compound in self._model.parse_compounds():
-            # Create pseudo-radical group for compounds with
-            # missing formula, so they don't match up. Only
-            # cpd11632 (Photon) is allowed to have an empty formula.
-            if compound.formula is None or '.' in compound.formula:
-                if compound.id != 'cpd11632':
-                    f = Formula({Radical('R'+compound.id): 1})
-                else:
-                    f = Formula()
+            # Only cpd11632 (Photon) is allowed to have an empty formula.
+            if compound.formula is None:
+                if compound.id == 'cpd11632':
+                    compound_formula[compound.id] = Formula()
             else:
                 try:
                     f = Formula.parse(compound.formula).flattened()
+                    compound_formula[compound.id] = f
                 except ValueError as e:
                     logger.warning(
                         'Error parsing {}: {}'.format(compound.formula, e))
-            compound_formula[compound.id] = f
 
         # Create a set of known mass-inconsistent reactions
         exchange = set()
@@ -501,21 +497,39 @@ class FormulaBalanceCommand(Command):
             for compound, count in compound_list:
                 yield count * compound_formula.get(compound.name, Formula())
 
+        count = 0
+        unbalanced = 0
+        unchecked = 0
         for reaction in self._mm.reactions:
-            if reaction not in exchange:
-                rx = self._mm.get_reaction(reaction)
+            if reaction in exchange:
+                continue
+
+            count += 1
+            rx = self._mm.get_reaction(reaction)
+
+            # Skip reaction if any compounds have undefined formula
+            for compound, _ in rx.compounds:
+                if compound.name not in compound_formula:
+                    unchecked += 1
+                    break
+            else:
                 left_form = reduce(
                     operator.or_, multiply_formula(rx.left), Formula())
                 right_form = reduce(
                     operator.or_, multiply_formula(rx.right), Formula())
 
                 if right_form != left_form:
+                    unbalanced += 1
                     right_missing, left_missing = Formula.balance(
                         right_form, left_form)
 
                     print '{}\t{}\t{}\t{}\t{}'.format(
                         reaction, left_form, right_form,
                         left_missing, right_missing)
+
+        logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))
+        logger.info('Unchecked reactions due to missing formula: {}/{}'.format(
+            unchecked, count))
 
 
 class GapFillCommand(Command):
