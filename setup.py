@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(name='model_script',
-      version='0.1',
+      version='0.2',
       description='Metabolic modelling tools',
       maintainer='Jon Lund Steffensen',
       maintainer_email='jon_steffensen@uri.edu',
