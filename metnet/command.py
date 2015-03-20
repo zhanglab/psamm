@@ -6,6 +6,7 @@ import operator
 import re
 import logging
 import random
+import math
 import abc
 
 from .fastcore import Fastcore
@@ -108,20 +109,28 @@ class ChargeBalanceCommand(Command):
 
         def reaction_charges(reaction_id):
             for compound, value in self._mm.get_reaction_values(reaction_id):
-                yield compound_charge.get(compound.name, 0) * value
+                charge = compound_charge.get(compound.name, float('nan'))
+                yield charge * float(value)
 
         count = 0
+        unbalanced = 0
+        unchecked = 0
         for reaction in sorted(self._mm.reactions):
             if reaction not in exchange:
+                count += 1
                 charge = sum(reaction_charges(reaction))
-                if charge != 0:
-                    count += 1
+                if math.isnan(charge):
+                    unchecked += 1
+                elif charge != 0:
+                    unbalanced += 1
                     rx = self._mm.get_reaction(reaction)
                     rxt = rx.translated_compounds(
                         lambda x: compound_name.get(x, x))
                     print '{}\t{}\t{}'.format(reaction, charge, rxt)
 
-        logger.info('Unbalanced reactions: {}'.format(count))
+        logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))
+        logger.info('Unchecked reactions due to missing charge: {}/{}'.format(
+            unchecked, count))
 
 
 class ConsoleCommand(Command):
