@@ -312,15 +312,11 @@ def parse_compound_file(path, format):
             context.filepath))
 
 
-def parse_reaction(reaction_def):
-    """Parse a structured reaction definition as obtained from a YAML file
+def parse_reaction_equation(equation_def):
+    """Parse a structured reaction equation as obtained from a YAML file
 
-    Returns reaction ID and reaction representation.
+    Returns a Reaction.
     """
-
-    reaction_id = reaction_def.get('id')
-    if reaction_id is None:
-        raise ParseError('Reaction ID missing')
 
     def parse_compound_list(l):
         """Parse a list of reactants or metabolites"""
@@ -341,27 +337,36 @@ def parse_reaction(reaction_def):
             compound = Compound(compound_id, compartment=compound_compartment)
             yield compound, value
 
+    if isinstance(equation_def, basestring):
+        return modelseed.parse_reaction(equation_def).normalized()
+
+    compartment = equation_def.get('compartment', None)
+    reversible = bool(equation_def.get('reversible', True))
+    left = equation_def.get('left', [])
+    right = equation_def.get('right', [])
+    if len(left) == 0 and len(right) == 0:
+        raise ParseError('Reaction values are missing')
+
+    return Reaction(Reaction.Bidir if reversible else Reaction.Right,
+                    parse_compound_list(left), parse_compound_list(right))
+
+
+def parse_reaction(reaction_def):
+    """Parse a structured reaction definition as obtained from a YAML file
+
+    Returns a ReactionEntry.
+    """
+
+    reaction_id = reaction_def.get('id')
+    if reaction_id is None:
+        raise ParseError('Reaction ID missing')
+
+    # Parse reaction equation
     if 'equation' in reaction_def:
-        if any(key in reaction_def for key in ('compartment', 'reversible',
-                                               'left', 'right')):
-            raise ParseError('Reaction {} contains ambiguous fields'.format(
-                reaction_id))
-        equation = reaction_def.get('equation')
-        reaction = modelseed.parse_reaction(equation).normalized()
-    else:
-        compartment = reaction_def.get('compartment', None)
-        reversible = bool(reaction_def.get('reversible', True))
-        left = reaction_def.get('left', [])
-        right = reaction_def.get('right', [])
-        if len(left) == 0 and len(right) == 0:
-            raise ParseError('Reaction values are missing')
+        reaction_def['equation'] = (
+            parse_reaction_equation(reaction_def['equation']))
 
-        reaction = Reaction(Reaction.Bidir if reversible else Reaction.Right,
-                            parse_compound_list(left),
-                            parse_compound_list(right))
-
-    return ReactionEntry(reaction_id, {'id': reaction_id,
-                                       'equation': reaction})
+    return ReactionEntry(reaction_id, reaction_def)
 
 
 def parse_reaction_list(path, reactions):

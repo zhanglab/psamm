@@ -10,13 +10,15 @@ class TestYAMLDataSource(unittest.TestCase):
         reactions = list(native.parse_reaction_list('./test.yaml', [
             {
                 'id': 'rxn1',
-                'reversible': True,
-                'left': [
-                    { 'id': 'A', 'value': 1 },
-                    { 'id': 'B', 'value': 2 } ],
-                'right': [
-                    { 'id': 'C', 'value': 1 }
-                ]
+                'equation': {
+                    'reversible': True,
+                    'left': [
+                        { 'id': 'A', 'value': 1 },
+                        { 'id': 'B', 'value': 2 } ],
+                    'right': [
+                        { 'id': 'C', 'value': 1 }
+                    ]
+                }
             }
         ]))
 
@@ -32,9 +34,11 @@ class TestYAMLDataSource(unittest.TestCase):
             reactions = list(native.parse_reaction_list('./test.yaml', [
                 {
                     'id': 'rxn1',
-                    'left': [
-                        { 'id': 'A' }
-                    ]
+                    'equation': {
+                        'left': [
+                            { 'id': 'A' }
+                        ]
+                    }
                 }
             ]))
 
