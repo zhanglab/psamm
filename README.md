@@ -108,6 +108,17 @@ fragment is an example of a YAML formatted compound file:
   # ...
 ```
 
+The following compound properties are recognized:
+
+| Property | Type | Description |
+|----------|------|------|
+| id       | string | Compound ID (_required_) |
+| name     | string | Name of compound |
+| formula  | string | Compound formula (e.g. C6H12O6) |
+| charge   | integer | Formal charge |
+| kegg     | string | KEGG ID (reference to compound in KEGG database) |
+| cas      | string | CAS number |
+
 ### Reactions
 
 The key **`reactions`** specifies a list of files that will be used to define
@@ -165,6 +176,16 @@ quote:
 - id: ADK1
   equation: '|amp| + |atp| <=> (2) |adp|'
 ```
+
+The following reaction properties are recognized:
+
+| Property | Type | Description |
+|----------|------|------|
+| id       | string | Reaction ID (_required_) |
+| name     | string | Name of reaction |
+| equation | string or dict | Reaction equation formula |
+| ec       | string | EC number |
+| genes    | list of strings | List of genes associated with the reaction |
 
 ### Media
 
