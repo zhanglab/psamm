@@ -100,6 +100,42 @@ class CompoundEntry(object):
         return self._properties
 
 
+class ReactionEntry(object):
+    """Representation of a reaction entry in a native model"""
+
+    def __init__(self, id, properties):
+        self._id = id
+        self._properties = dict(properties)
+        self._name = self._properties.get('name')
+        self._equation = self._properties.get('equation')
+        self._ec = self._properties.get('ec')
+        self._genes = self._properties.get('genes')
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def equation(self):
+        return self._equation
+
+    @property
+    def ec(self):
+        return self._ec
+
+    @property
+    def genes(self):
+        return self._genes
+
+    @property
+    def properties(self):
+        return self._properties
+
+
 class NativeModel(object):
     """Represents a model specified using the native data formats
 
@@ -141,9 +177,9 @@ class NativeModel(object):
 
         # Parse reactions defined in the main model file
         if 'reactions' in self._model:
-            for reaction_id, reaction in parse_reaction_list(
+            for reaction in parse_reaction_list(
                     self._context, self._model['reactions']):
-                yield reaction_id, reaction
+                yield reaction
 
     def parse_model(self):
         """Yield reaction IDs of model reactions"""
@@ -153,8 +189,9 @@ class NativeModel(object):
                     self._context, self._model['model']):
                 yield reaction_id
         else:
-            for reaction_id, _ in self.parse_reactions():
-                yield reaction_id
+            reactions = set(reaction.id for reaction in self.parse_reactions())
+            for reaction in reactions:
+                yield reaction
 
     def parse_limits(self):
         """Yield tuples of reaction ID, lower, and upper bound flux limits"""
@@ -323,7 +360,8 @@ def parse_reaction(reaction_def):
                             parse_compound_list(left),
                             parse_compound_list(right))
 
-    return reaction_id, reaction
+    return ReactionEntry(reaction_id, {'id': reaction_id,
+                                       'equation': reaction})
 
 
 def parse_reaction_list(path, reactions):
@@ -338,8 +376,8 @@ def parse_reaction_list(path, reactions):
     for reaction_def in reactions:
         if 'include' in reaction_def:
             include_context = context.resolve(reaction_def['include'])
-            for reaction_id, reaction in parse_reaction_file(include_context):
-                yield reaction_id, reaction
+            for reaction in parse_reaction_file(include_context):
+                yield reaction
         else:
             yield parse_reaction(reaction_def)
 
@@ -371,7 +409,8 @@ def parse_reaction_table_file(f):
             raise ParseError('Error parsing line {}: {}'.format(lineno, line))
 
         reaction = modelseed.parse_reaction(equation).normalized()
-        yield reaction_id, reaction
+        yield ReactionEntry(reaction_id, {'id': reaction_id,
+                                          'equation': reaction})
 
 
 def parse_reaction_file(path):
@@ -386,14 +425,14 @@ def parse_reaction_file(path):
         logger.debug('Parsing reaction file {} as TSV'.format(
             context.filepath))
         with open(context.filepath, 'r') as f:
-            for reaction_id, reaction in parse_reaction_table_file(f):
-                yield reaction_id, reaction
+            for reaction in parse_reaction_table_file(f):
+                yield reaction
     elif re.match(r'.+\.(yml|yaml)$', context.filepath):
         logger.debug('Parsing reaction file {} as YAML'.format(
             context.filepath))
         with open(context.filepath, 'r') as f:
-            for reaction_id, reaction in parse_reaction_yaml_file(context, f):
-                yield reaction_id, reaction
+            for reaction in parse_reaction_yaml_file(context, f):
+                yield reaction
     else:
         raise ParseError('Unable to detect format of reaction file {}'.format(
             context.filepath))

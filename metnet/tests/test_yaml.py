@@ -22,9 +22,10 @@ class TestYAMLDataSource(unittest.TestCase):
 
         self.assertEquals(len(reactions), 1)
 
-        reaction = Reaction(Reaction.Bidir, [(Compound('A'), 1), (Compound('B'), 2)],
+        reaction = Reaction(Reaction.Bidir,
+                            [(Compound('A'), 1), (Compound('B'), 2)],
                             [(Compound('C'), 1)])
-        self.assertEquals(reactions[0], ('rxn1', reaction))
+        self.assertEquals(reactions[0].equation, reaction)
 
     def test_parse_reaction_list_missing_value(self):
         with self.assertRaises(native.ParseError):
