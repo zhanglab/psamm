@@ -103,17 +103,21 @@ class ChargeBalanceCommand(Command):
         unbalanced = 0
         unchecked = 0
         for reaction in sorted(self._mm.reactions):
-            if reaction not in exchange:
-                count += 1
-                charge = sum(reaction_charges(reaction))
-                if math.isnan(charge):
-                    unchecked += 1
-                elif charge != 0:
-                    unbalanced += 1
-                    rx = self._mm.get_reaction(reaction)
-                    rxt = rx.translated_compounds(
-                        lambda x: compound_name.get(x, x))
-                    print '{}\t{}\t{}'.format(reaction, charge, rxt)
+            if reaction in exchange:
+                continue
+
+            count += 1
+            charge = sum(reaction_charges(reaction))
+            if math.isnan(charge):
+                logger.debug('Not checking reaction {};'
+                             ' missing charge'.format(reaction))
+                unchecked += 1
+            elif charge != 0:
+                unbalanced += 1
+                rx = self._mm.get_reaction(reaction)
+                rxt = rx.translated_compounds(
+                    lambda x: compound_name.get(x, x))
+                print '{}\t{}\t{}'.format(reaction, charge, rxt)
 
         logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))
         logger.info('Unchecked reactions due to missing charge: {}/{}'.format(
