@@ -43,8 +43,9 @@ class Command(object):
 
         # Create metabolic model
         database = DictDatabase()
-        for reaction_id, reaction in model.parse_reactions():
-            database.set_reaction(reaction_id, reaction)
+        for reaction in model.parse_reactions():
+            if reaction.equation is not None:
+                database.set_reaction(reaction.id, reaction.equation)
 
         media = list(model.parse_media())
         if len(media) > 1:
