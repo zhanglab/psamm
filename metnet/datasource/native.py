@@ -25,8 +25,6 @@ logger = logging.getLogger(__name__)
 
 # Model files to try to open if a directory was specified
 DEFAULT_MODEL = ('model.yaml', 'model.yml')
-# Default directory to look for reaction files
-DEFAULT_REACTIONS_DIR = 'reactions'
 
 
 class ParseError(Exception):
@@ -140,15 +138,6 @@ class NativeModel(object):
 
     def parse_reactions(self):
         """Yield tuples of reaction ID and reactions defined in the model"""
-
-        # Parse reaction files in the reactions directory
-        context = self._context.resolve(DEFAULT_REACTIONS_DIR)
-        if os.path.isdir(context.filepath):
-            for filename in os.listdir(context.filepath):
-                filepath = os.path.join(context.filepath, filename)
-                file_context = context.resolve(filepath)
-                for reaction_id, reaction in parse_reaction_file(file_context):
-                    yield reaction_id, reaction
 
         # Parse reactions defined in the main model file
         if 'reactions' in self._model:
