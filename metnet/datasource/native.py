@@ -397,25 +397,22 @@ def parse_reaction_yaml_file(path, f):
 
 
 def parse_reaction_table_file(f):
-    """Parse a space-separated file containing reaction IDs and definitions
+    """Parse a tab-separated file containing reaction IDs and properties
 
-    The reaction definitions are parsed as ModelSEED format.
+    The reaction properties are parsed according to the header which specifies
+    which property is contained in each column.
     """
 
-    for lineno, line in enumerate(f):
-        line, _, comment = line.partition('#')
-        line = line.strip()
-        if line == '':
-            continue
+    for row in csv.DictReader(f, delimiter='\t'):
+        if 'id' not in row or row['id'].strip() == '':
+            raise ParseError('Expected `id` column in table')
 
-        try:
-            reaction_id, equation = line.split(None, 1)
-        except ValueError:
-            raise ParseError('Error parsing line {}: {}'.format(lineno, line))
+        props = {key: value for key, value in row.iteritems() if value != ''}
 
-        reaction = modelseed.parse_reaction(equation).normalized()
-        yield ReactionEntry(reaction_id, {'id': reaction_id,
-                                          'equation': reaction})
+        if 'equation' in props:
+            props['equation'] = modelseed.parse_reaction(props['equation'])
+
+        yield ReactionEntry(row['id'], props)
 
 
 def parse_reaction_file(path):
