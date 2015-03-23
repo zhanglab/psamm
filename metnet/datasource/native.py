@@ -219,9 +219,10 @@ def parse_compound_list(path, compounds):
 
 
 def parse_compound_table_file(path, f):
-    """Parse a space-separated file containing compound IDs and definitions
+    """Parse a tab-separated file containing compound IDs and properties
 
-    The compound properties are parsed according to the list of properties.
+    The compound properties are parsed according to the header which specifies
+    which property is contained in each column.
     """
 
     for row in csv.DictReader(f, delimiter='\t'):
