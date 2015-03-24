@@ -607,6 +607,11 @@ class MassConsistencyCommand(Command):
         # Other reactions to exclude from consistency check
         exclude = set(self._args.exclude)
 
+        # Add biomass reaction to be excluded
+        biomass_reaction = self._model.get_biomass_reaction()
+        if biomass_reaction is not None:
+            exclude.add(biomass_reaction)
+
         # Create set of compounds allowed to have mass zero
         zeromass = set()
         zeromass.add('cpd11632') # Photon
