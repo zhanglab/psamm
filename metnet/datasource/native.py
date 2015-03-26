@@ -78,6 +78,8 @@ class CompoundEntry(object):
         self._name = self._properties.get('name')
         self._formula = self._properties.get('formula')
         self._charge = whendefined(int, self._properties.get('charge'))
+        self._kegg = self._properties.get('kegg')
+        self._cas = self._properties.get('cas')
 
     @property
     def id(self):
@@ -94,6 +96,14 @@ class CompoundEntry(object):
     @property
     def charge(self):
         return self._charge
+
+    @property
+    def kegg(self):
+        return self._kegg
+
+    @property
+    def cas(self):
+        return self._cas
 
     @property
     def properties(self):
