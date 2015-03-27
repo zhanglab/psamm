@@ -76,6 +76,9 @@ biomass: Biomass
 compounds:
 	- include: ../path/to/ModelSEED_cpds.tsv
 	  format: modelseed
+reactions:
+	- include: reactions/reactions.tsv
+	- include: reactions/biomass.yaml
 media:
 	- include: medium.yaml
 ```
@@ -104,6 +107,85 @@ fragment is an example of a YAML formatted compound file:
   name: Acetoacetate
   # ...
 ```
+
+The following compound properties are recognized:
+
+| Property | Type | Description |
+|----------|------|------|
+| id       | string | Compound ID (_required_) |
+| name     | string | Name of compound |
+| formula  | string | Compound formula (e.g. C6H12O6) |
+| charge   | integer | Formal charge |
+| kegg     | string | KEGG ID (reference to compound in KEGG database) |
+| cas      | string | CAS number |
+
+### Reactions
+
+The key **`reactions`** specifies a list of files that will be used to define
+the reactions in the model. The reaction files can be formatted as either
+tab-separated (`.tsv`) or YAML files (`.yaml`). The TSV file may be adequate
+for most of the reaction definitions while certain particularly complex
+reactions (e.g. biomass reaction) may be specified using a YAML file.
+
+The TSV format is a tab-separated table where each row contains the reaction ID
+in addition to other data columns. The header must specify the type of each
+column. The column `equation` will be parsed as ModelSEED reaction equations.
+
+```
+id      equation
+ADE2t   |ade[e]| + |h[e]| <=> |ade[c]| + |ade[c]|
+ADK1    |amp| + |atp| <=> (2) |adp|
+```
+
+Any `.yaml` or `.yml` file in the `reactions` specification will be parsed as a
+reaction definition file but in YAML format. This format is particularly useful
+for very long reactions containing many different compounds (e.g. the biomass
+reaction). It also allows adding more annotations because of the structured
+nature of the YAML format. The following snippet is an example of a YAML
+reaction file:
+
+``` yaml
+# Biomass composition
+- id: Biomass
+  equation:
+    reversible: no
+    left:
+    - id: cpd00032 # Oxaloacetate
+      value: 1
+    - id: cpd00022 # Acetyl-CoA
+      value: 1
+    - id: cpd00035 # L-Alanine
+      value: 0.02
+	  # ...
+    right:
+    - id: Biomass
+      value: 1
+	  # ...
+```
+
+Reactions in YAML files can also be defined using ModelSEED formatted reaction
+equations. The `|` is a special character in YAML so the reaction equations
+have to be quoted with `'` or, alternatively, using the `>` for a multiline
+quote:
+
+``` yaml
+- id: ADE2t
+  equation: >
+    |ade[e]| + |h[e]| <=>
+    |ade[c]| + |h[c]|
+- id: ADK1
+  equation: '|amp| + |atp| <=> (2) |adp|'
+```
+
+The following reaction properties are recognized:
+
+| Property | Type | Description |
+|----------|------|------|
+| id       | string | Reaction ID (_required_) |
+| name     | string | Name of reaction |
+| equation | string or dict | Reaction equation formula |
+| ec       | string | EC number |
+| genes    | list of strings | List of genes associated with the reaction |
 
 ### Media
 
@@ -144,57 +226,6 @@ following fragment is an example of a limits file:
 ADE2t    0
 # Only allow limited flux on ADK1
 ADK1     -10    10
-```
-
-### Reactions
-
-In the same directory as the `model.yaml`, create a directory called
-`reactions`. Any `.tsv` file in this subdirectory will be parsed as a reaction
-definition table. This is a table where each row contains the reaction ID and
-the reaction equation in ModelSEED format. See the scripts
-`XX_format_conversion.py` for some help creating the reaction table from
-existing sources. The following fragment is an example of a reaction table:
-
-```
-ADE2t       |ade[e]| + |h[e]| <=> |ade[c]| + |ade[c]|
-ADK1        |amp| + |atp| <=> (2) |adp|
-```
-
-Any `.yaml` or `.yml` file in the `reactions` subdirectory will be parsed as a
-reaction definition file but in YAML format. This format is particularly useful
-for very long reactions containing many different compounds (e.g. the biomass
-reaction). It also allows adding more annotations because of the structured
-nature of the YAML format. The following snippet is an example of a YAML
-reaction file:
-
-``` yaml
-# Biomass composition
-- id: Biomass
-  reversible: no
-  left:
-  - id: cpd00032 # Oxaloacetate
-    value: 1
-  - id: cpd00022 # Acetyl-CoA
-    value: 1
-  - id: cpd00035 # L-Alanine
-    value: 0.02
-  right:
-  - id: Biomass
-    value: 1
-```
-
-Reactions in YAML files can also be defined using ModelSEED formatted reaction
-equations. The `|` is a special character in YAML so the reaction equations
-have to be quoted with `'` or, alternatively, using the `>` for a multiline
-quote:
-
-``` yaml
-- id: ADE2t
-  equation: >
-    |ade[e]| + |h[e]| <=>
-    |ade[c]| + |h[c]|
-- id: ADK1
-  equation: '|amp| + |atp| <=> (2) |adp|'
 ```
 
 Model tools

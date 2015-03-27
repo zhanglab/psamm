@@ -25,8 +25,6 @@ logger = logging.getLogger(__name__)
 
 # Model files to try to open if a directory was specified
 DEFAULT_MODEL = ('model.yaml', 'model.yml')
-# Default directory to look for reaction files
-DEFAULT_REACTIONS_DIR = 'reactions'
 
 
 class ParseError(Exception):
@@ -80,6 +78,8 @@ class CompoundEntry(object):
         self._name = self._properties.get('name')
         self._formula = self._properties.get('formula')
         self._charge = whendefined(int, self._properties.get('charge'))
+        self._kegg = self._properties.get('kegg')
+        self._cas = self._properties.get('cas')
 
     @property
     def id(self):
@@ -96,6 +96,50 @@ class CompoundEntry(object):
     @property
     def charge(self):
         return self._charge
+
+    @property
+    def kegg(self):
+        return self._kegg
+
+    @property
+    def cas(self):
+        return self._cas
+
+    @property
+    def properties(self):
+        return self._properties
+
+
+class ReactionEntry(object):
+    """Representation of a reaction entry in a native model"""
+
+    def __init__(self, id, properties):
+        self._id = id
+        self._properties = dict(properties)
+        self._name = self._properties.get('name')
+        self._equation = self._properties.get('equation')
+        self._ec = self._properties.get('ec')
+        self._genes = self._properties.get('genes')
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def equation(self):
+        return self._equation
+
+    @property
+    def ec(self):
+        return self._ec
+
+    @property
+    def genes(self):
+        return self._genes
 
     @property
     def properties(self):
@@ -134,6 +178,10 @@ class NativeModel(object):
                 raise ParseError('No model file could be found ({})'.format(
                     ', '.join(DEFAULT_MODEL)))
 
+    def get_name(self):
+        """Return the name specified by the model"""
+        return self._model.get('name', None)
+
     def get_biomass_reaction(self):
         """Return the biomass reaction specified by the model"""
         return self._model.get('biomass', None)
@@ -141,20 +189,11 @@ class NativeModel(object):
     def parse_reactions(self):
         """Yield tuples of reaction ID and reactions defined in the model"""
 
-        # Parse reaction files in the reactions directory
-        context = self._context.resolve(DEFAULT_REACTIONS_DIR)
-        if os.path.isdir(context.filepath):
-            for filename in os.listdir(context.filepath):
-                filepath = os.path.join(context.filepath, filename)
-                file_context = context.resolve(filepath)
-                for reaction_id, reaction in parse_reaction_file(file_context):
-                    yield reaction_id, reaction
-
         # Parse reactions defined in the main model file
         if 'reactions' in self._model:
-            for reaction_id, reaction in parse_reaction_list(
+            for reaction in parse_reaction_list(
                     self._context, self._model['reactions']):
-                yield reaction_id, reaction
+                yield reaction
 
     def parse_model(self):
         """Yield reaction IDs of model reactions"""
@@ -164,8 +203,9 @@ class NativeModel(object):
                     self._context, self._model['model']):
                 yield reaction_id
         else:
-            for reaction_id, _ in self.parse_reactions():
-                yield reaction_id
+            reactions = set(reaction.id for reaction in self.parse_reactions())
+            for reaction in reactions:
+                yield reaction
 
     def parse_limits(self):
         """Yield tuples of reaction ID, lower, and upper bound flux limits"""
@@ -230,9 +270,10 @@ def parse_compound_list(path, compounds):
 
 
 def parse_compound_table_file(path, f):
-    """Parse a space-separated file containing compound IDs and definitions
+    """Parse a tab-separated file containing compound IDs and properties
 
-    The compound properties are parsed according to the list of properties.
+    The compound properties are parsed according to the header which specifies
+    which property is contained in each column.
     """
 
     for row in csv.DictReader(f, delimiter='\t'):
@@ -285,15 +326,11 @@ def parse_compound_file(path, format):
             context.filepath))
 
 
-def parse_reaction(reaction_def):
-    """Parse a structured reaction definition as obtained from a YAML file
+def parse_reaction_equation(equation_def):
+    """Parse a structured reaction equation as obtained from a YAML file
 
-    Returns reaction ID and reaction representation.
+    Returns a Reaction.
     """
-
-    reaction_id = reaction_def.get('id')
-    if reaction_id is None:
-        raise ParseError('Reaction ID missing')
 
     def parse_compound_list(l):
         """Parse a list of reactants or metabolites"""
@@ -314,26 +351,36 @@ def parse_reaction(reaction_def):
             compound = Compound(compound_id, compartment=compound_compartment)
             yield compound, value
 
+    if isinstance(equation_def, basestring):
+        return modelseed.parse_reaction(equation_def).normalized()
+
+    compartment = equation_def.get('compartment', None)
+    reversible = bool(equation_def.get('reversible', True))
+    left = equation_def.get('left', [])
+    right = equation_def.get('right', [])
+    if len(left) == 0 and len(right) == 0:
+        raise ParseError('Reaction values are missing')
+
+    return Reaction(Reaction.Bidir if reversible else Reaction.Right,
+                    parse_compound_list(left), parse_compound_list(right))
+
+
+def parse_reaction(reaction_def):
+    """Parse a structured reaction definition as obtained from a YAML file
+
+    Returns a ReactionEntry.
+    """
+
+    reaction_id = reaction_def.get('id')
+    if reaction_id is None:
+        raise ParseError('Reaction ID missing')
+
+    # Parse reaction equation
     if 'equation' in reaction_def:
-        if any(key in reaction_def for key in ('compartment', 'reversible',
-                                               'left', 'right')):
-            raise ParseError('Reaction {} contains ambiguous fields'.format(
-                reaction_id))
-        equation = reaction_def.get('equation')
-        reaction = modelseed.parse_reaction(equation).normalized()
-    else:
-        compartment = reaction_def.get('compartment', None)
-        reversible = bool(reaction_def.get('reversible', True))
-        left = reaction_def.get('left', [])
-        right = reaction_def.get('right', [])
-        if len(left) == 0 and len(right) == 0:
-            raise ParseError('Reaction values are missing')
+        reaction_def['equation'] = (
+            parse_reaction_equation(reaction_def['equation']))
 
-        reaction = Reaction(Reaction.Bidir if reversible else Reaction.Right,
-                            parse_compound_list(left),
-                            parse_compound_list(right))
-
-    return reaction_id, reaction
+    return ReactionEntry(reaction_id, reaction_def)
 
 
 def parse_reaction_list(path, reactions):
@@ -348,8 +395,8 @@ def parse_reaction_list(path, reactions):
     for reaction_def in reactions:
         if 'include' in reaction_def:
             include_context = context.resolve(reaction_def['include'])
-            for reaction_id, reaction in parse_reaction_file(include_context):
-                yield reaction_id, reaction
+            for reaction in parse_reaction_file(include_context):
+                yield reaction
         else:
             yield parse_reaction(reaction_def)
 
@@ -364,24 +411,22 @@ def parse_reaction_yaml_file(path, f):
 
 
 def parse_reaction_table_file(f):
-    """Parse a space-separated file containing reaction IDs and definitions
+    """Parse a tab-separated file containing reaction IDs and properties
 
-    The reaction definitions are parsed as ModelSEED format.
+    The reaction properties are parsed according to the header which specifies
+    which property is contained in each column.
     """
 
-    for lineno, line in enumerate(f):
-        line, _, comment = line.partition('#')
-        line = line.strip()
-        if line == '':
-            continue
+    for row in csv.DictReader(f, delimiter='\t'):
+        if 'id' not in row or row['id'].strip() == '':
+            raise ParseError('Expected `id` column in table')
 
-        try:
-            reaction_id, equation = line.split(None, 1)
-        except ValueError:
-            raise ParseError('Error parsing line {}: {}'.format(lineno, line))
+        props = {key: value for key, value in row.iteritems() if value != ''}
 
-        reaction = modelseed.parse_reaction(equation).normalized()
-        yield reaction_id, reaction
+        if 'equation' in props:
+            props['equation'] = modelseed.parse_reaction(props['equation'])
+
+        yield ReactionEntry(row['id'], props)
 
 
 def parse_reaction_file(path):
@@ -396,14 +441,14 @@ def parse_reaction_file(path):
         logger.debug('Parsing reaction file {} as TSV'.format(
             context.filepath))
         with open(context.filepath, 'r') as f:
-            for reaction_id, reaction in parse_reaction_table_file(f):
-                yield reaction_id, reaction
+            for reaction in parse_reaction_table_file(f):
+                yield reaction
     elif re.match(r'.+\.(yml|yaml)$', context.filepath):
         logger.debug('Parsing reaction file {} as YAML'.format(
             context.filepath))
         with open(context.filepath, 'r') as f:
-            for reaction_id, reaction in parse_reaction_yaml_file(context, f):
-                yield reaction_id, reaction
+            for reaction in parse_reaction_yaml_file(context, f):
+                yield reaction
     else:
         raise ParseError('Unable to detect format of reaction file {}'.format(
             context.filepath))

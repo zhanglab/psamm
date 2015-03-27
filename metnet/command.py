@@ -43,8 +43,9 @@ class Command(object):
 
         # Create metabolic model
         database = DictDatabase()
-        for reaction_id, reaction in model.parse_reactions():
-            database.set_reaction(reaction_id, reaction)
+        for reaction in model.parse_reactions():
+            if reaction.equation is not None:
+                database.set_reaction(reaction.id, reaction.equation)
 
         media = list(model.parse_media())
         if len(media) > 1:
@@ -103,17 +104,21 @@ class ChargeBalanceCommand(Command):
         unbalanced = 0
         unchecked = 0
         for reaction in sorted(self._mm.reactions):
-            if reaction not in exchange:
-                count += 1
-                charge = sum(reaction_charges(reaction))
-                if math.isnan(charge):
-                    unchecked += 1
-                elif charge != 0:
-                    unbalanced += 1
-                    rx = self._mm.get_reaction(reaction)
-                    rxt = rx.translated_compounds(
-                        lambda x: compound_name.get(x, x))
-                    print '{}\t{}\t{}'.format(reaction, charge, rxt)
+            if reaction in exchange:
+                continue
+
+            count += 1
+            charge = sum(reaction_charges(reaction))
+            if math.isnan(charge):
+                logger.debug('Not checking reaction {};'
+                             ' missing charge'.format(reaction))
+                unchecked += 1
+            elif charge != 0:
+                unbalanced += 1
+                rx = self._mm.get_reaction(reaction)
+                rxt = rx.translated_compounds(
+                    lambda x: compound_name.get(x, x))
+                print '{}\t{}\t{}'.format(reaction, charge, rxt)
 
         logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))
         logger.info('Unchecked reactions due to missing charge: {}/{}'.format(
@@ -601,6 +606,11 @@ class MassConsistencyCommand(Command):
 
         # Other reactions to exclude from consistency check
         exclude = set(self._args.exclude)
+
+        # Add biomass reaction to be excluded
+        biomass_reaction = self._model.get_biomass_reaction()
+        if biomass_reaction is not None:
+            exclude.add(biomass_reaction)
 
         # Create set of compounds allowed to have mass zero
         zeromass = set()

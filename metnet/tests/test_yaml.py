@@ -10,30 +10,35 @@ class TestYAMLDataSource(unittest.TestCase):
         reactions = list(native.parse_reaction_list('./test.yaml', [
             {
                 'id': 'rxn1',
-                'reversible': True,
-                'left': [
-                    { 'id': 'A', 'value': 1 },
-                    { 'id': 'B', 'value': 2 } ],
-                'right': [
-                    { 'id': 'C', 'value': 1 }
-                ]
+                'equation': {
+                    'reversible': True,
+                    'left': [
+                        { 'id': 'A', 'value': 1 },
+                        { 'id': 'B', 'value': 2 } ],
+                    'right': [
+                        { 'id': 'C', 'value': 1 }
+                    ]
+                }
             }
         ]))
 
         self.assertEquals(len(reactions), 1)
 
-        reaction = Reaction(Reaction.Bidir, [(Compound('A'), 1), (Compound('B'), 2)],
+        reaction = Reaction(Reaction.Bidir,
+                            [(Compound('A'), 1), (Compound('B'), 2)],
                             [(Compound('C'), 1)])
-        self.assertEquals(reactions[0], ('rxn1', reaction))
+        self.assertEquals(reactions[0].equation, reaction)
 
     def test_parse_reaction_list_missing_value(self):
         with self.assertRaises(native.ParseError):
             reactions = list(native.parse_reaction_list('./test.yaml', [
                 {
                     'id': 'rxn1',
-                    'left': [
-                        { 'id': 'A' }
-                    ]
+                    'equation': {
+                        'left': [
+                            { 'id': 'A' }
+                        ]
+                    }
                 }
             ]))
 
