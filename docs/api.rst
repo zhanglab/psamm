@@ -1,0 +1,26 @@
+
+model_script API
+================
+
+.. toctree::
+   :maxdepth: 2
+
+   command
+   database
+   datasource_kegg
+   datasource_misc
+   datasource_modelseed
+   datasource_native
+   datasource_sbml
+   expression_affine
+   expression_boolean
+   fastcore
+   fluxanalysis
+   formula
+   gapfill
+   lpsolver_lp
+   lpsolver_cplex
+   lpsolver_qsoptex
+   massconsistency
+   metabolicmodel
+   reaction
