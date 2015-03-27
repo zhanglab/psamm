@@ -1,4 +1,14 @@
 
+v0.3
+----
+
+- Require reaction files to be explicitly listed in `model.yaml`.
+- Add support for TSV reaction file format.
+- Change format of YAML reactions (see [README](README.md) for details).
+- Add tables of recognized compounds and reaction properties to
+  [README](README.md).
+- `masscheck` command: Automatically exclude biomass reaction from check.
+
 v0.2
 ----
 
