@@ -12,6 +12,7 @@ Contents:
    commands
    development
    api
+   references
 
 
 Indices and tables
