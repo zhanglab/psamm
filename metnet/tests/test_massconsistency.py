@@ -22,17 +22,19 @@ class TestMassConsistency(unittest.TestCase):
         self.database.set_reaction('rxn_6', parse_reaction('|D| =>'))
         self.model = MetabolicModel.load_model(self.database, self.database.reactions)
 
-        self.masscons = massconsistency.MassConsistencyCheck(cplex.Solver())
+        self.solver = cplex.Solver()
 
     def test_mass_consistent_is_consistent(self):
         exchange = { 'rxn_1', 'rxn_6' }
-        self.assertTrue(self.masscons.is_consistent(self.model, exchange, set()))
+        self.assertTrue(massconsistency.is_consistent(
+            self.model, self.solver, exchange, set()))
 
     def test_mass_inconsistent_is_consistent(self):
         exchange = { 'rxn_1', 'rxn_6' }
         self.database.set_reaction('rxn_7', parse_reaction('|D| => (2) |C|'))
         self.model.add_reaction('rxn_7')
-        self.assertFalse(self.masscons.is_consistent(self.model, exchange, set()))
+        self.assertFalse(massconsistency.is_consistent(
+            self.model, self.solver, exchange, set()))
 
 if __name__ == '__main__':
     unittest.main()

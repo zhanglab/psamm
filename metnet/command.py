@@ -13,12 +13,11 @@ import abc
 from .fastcore import Fastcore
 from .formula import Formula, Radical
 from .gapfill import gapfind, gapfill
-from .massconsistency import MassConsistencyCheck
 from .database import DictDatabase
 from .metabolicmodel import MetabolicModel
 from .reaction import Compound
 from .datasource.native import NativeModel
-from . import fluxanalysis
+from . import fluxanalysis, massconsistency
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -621,13 +620,12 @@ class MassConsistencyCommand(Command):
         from .lpsolver import cplex
         solver = cplex.Solver()
 
-        mass_consistency = MassConsistencyCheck(solver=solver)
         known_inconsistent = exclude | exchange
 
         logger.info('Mass consistency on database')
         epsilon = 1e-5
-        compound_iter = mass_consistency.check_compound_consistency(
-            self._mm, known_inconsistent, zeromass)
+        compound_iter = massconsistency.check_compound_consistency(
+            self._mm, solver, known_inconsistent, zeromass)
 
         logger.info('Compound consistency')
         good = 0
@@ -642,13 +640,13 @@ class MassConsistencyCommand(Command):
         logger.info('Consistent compounds: {}/{}'.format(good, total))
 
         logger.info('Is consistent? {}'.format(
-            mass_consistency.is_consistent(
-                self._mm, known_inconsistent, zeromass)))
+            massconsistency.is_consistent(
+                self._mm, solver, known_inconsistent, zeromass)))
 
         logger.info('Reaction consistency')
         reaction_iter, compound_iter = (
-            mass_consistency.check_reaction_consistency(
-                self._mm, known_inconsistent, zeromass))
+            massconsistency.check_reaction_consistency(
+                self._mm, solver, known_inconsistent, zeromass))
         for reaction_id, residual in sorted(
                 reaction_iter, key=lambda x: abs(x[1]), reverse=True):
             if abs(residual) >= epsilon:
