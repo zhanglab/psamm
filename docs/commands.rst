@@ -3,11 +3,11 @@ Command line interface
 ======================
 
 The tools that can be applied to metabolic models are run through the
-``model.py`` program. To see the full help text of the program use
+``model`` program. To see the full help text of the program use
 
 .. code-block:: shell
 
-    $ model.py --help
+    $ model --help
 
 This program allows you to specify a metabolic model and a command to apply to
 the given model. The available commands can be seen using the help command
@@ -17,7 +17,7 @@ To run the program with a model, use
 
 .. code-block:: shell
 
-    $ model.py --model model.yaml command [...]
+    $ model --model model.yaml command [...]
 
 In most cases you will probably be running the command from the same directory
 as where the ``model.yaml`` file is located, and in that case you can simply
@@ -25,13 +25,13 @@ run
 
 .. code-block:: shell
 
-    $ model.py command [...]
+    $ model command [...]
 
 To see the help text of a command use
 
 .. code-block:: shell
 
-    $ model.py command --help
+    $ model command --help
 
 Flux balance analysis (``fba``)
 -------------------------------
@@ -53,13 +53,13 @@ To run FBA use:
 
 .. code-block:: shell
 
-    $ model.py fba
+    $ model fba
 
 or with a specific reaction:
 
 .. code-block:: shell
 
-    $ model.py fba ATPM
+    $ model fba ATPM
 
 Robustness (``robustness``)
 ---------------------------
@@ -71,7 +71,7 @@ steps between the minimum and maximum flux value specified in the model.
 
 .. code-block:: shell
 
-    $ model.py robustness \
+    $ model robustness \
 	   --steps 200 --minimum -20 --maximum 160 EX_Oxygen
 
 In the example above, the biomass reaction will be maximized while the
@@ -92,7 +92,7 @@ specifying the reaction explicitly.
 
 .. code-block:: shell
 
-    $ model.py randomsparse 0.95
+    $ model randomsparse 0.95
 
 When the given reaction is the biomass reaction, this results in a smaller
 model which is still producing biomass within the tolerance given by the
@@ -113,7 +113,7 @@ module. The mass consistency check can be run using
 
 .. code-block:: shell
 
-    $ model.py masscheck
+    $ model masscheck
 
 This will first try to assign a positive mass to as many compounds as possible.
 This will indicate whether or not the model is consistent but in case it is
@@ -133,7 +133,7 @@ known.
 
 .. code-block:: shell
 
-    $ model.py formulacheck
+    $ model formulacheck
 
 For each inconsistent reaction, the reaction identifier will be printed
 followed by the elements ("atoms") in, respectively, the left- and right-hand
@@ -156,7 +156,7 @@ These algorithms are defined in terms of MILP problems and are therefore
 
 .. code-block:: shell
 
-    $ model.py gapfill
+    $ model gapfill
 
 FastGapFill (``fastgapfill``)
 -----------------------------
@@ -173,7 +173,7 @@ minimal solution.
 
 .. code-block:: shell
 
-    $ model.py fastgapfill --penalty penalty.tsv
+    $ model fastgapfill --penalty penalty.tsv
 
 Search (``search``)
 -------------------
@@ -183,7 +183,7 @@ search for a compound use
 
 .. code-block:: shell
 
-    $ model.py search compound [...]
+    $ model search compound [...]
 
 Use the ``--name`` option to search for a compound with a specific name or use
 the ``--id`` option to search for a compound with a specific identifier.
@@ -192,7 +192,7 @@ To search for a reaction use
 
 .. code-block:: shell
 
-    $ model.py search reaction [...]
+    $ model search reaction [...]
 
 Use the ``--id`` option to search for a reaction with a specific identifier.
 The ``--compound`` option can be used to search for reactions that include a
@@ -208,4 +208,4 @@ the corresponding Python object representation.
 
 .. code-block:: shell
 
-    $ model.py console
+    $ model console
