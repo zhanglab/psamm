@@ -11,4 +11,7 @@ setup(name='model_script',
       packages=find_packages(),
       scripts=['model.py'],
       test_suite='metnet.tests',
-      install_requires=['PyYAML>=3.11,<4.0'])
+      install_requires=['PyYAML>=3.11,<4.0'],
+      extras_require={
+          'docs': ['sphinx', 'mock']
+      })

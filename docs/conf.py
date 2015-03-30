@@ -15,11 +15,18 @@
 import sys
 import os
 import shlex
+import mock
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('..'))
+
+# Mock optional modules to allow autodoc to run even in the absense of these
+# modules.
+MOCK_MODULES = ['cplex', 'qsoptex']
+for module in MOCK_MODULES:
+    sys.modules[module] = mock.Mock()
 
 # -- General configuration ------------------------------------------------
 
