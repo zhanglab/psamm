@@ -7,9 +7,6 @@ install a specific tag or branch by appending the name to the Git URL (e.g.
 append ``@v0.1`` to get the tag ``v0.1``). This will typically require ``root``
 permission.
 
-**Note that currently only the Python module and the model.py script will be
-installed using this method.**
-
 .. code-block:: shell
 
     $ pip install git+ssh://git@github.com/zhanglab/model_script.git
