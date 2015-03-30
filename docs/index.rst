@@ -7,6 +7,10 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   install
+   file_format
+   commands
+   development
    api
 
 
