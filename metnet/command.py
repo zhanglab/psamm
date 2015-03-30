@@ -1,6 +1,7 @@
 
 """Utilities for the command line interface"""
 
+import os
 import argparse
 import operator
 import re
@@ -969,6 +970,14 @@ class SearchCommand(Command):
 
 def main(command=None):
     """Run the command line interface with the given Command"""
+
+    # Set up logging for the command line interface
+    if 'DEBUG' in os.environ:
+        level = getattr(logging, os.environ['DEBUG'].upper(), None)
+        if level is not None:
+            logging.basicConfig(level=level)
+    else:
+        logging.basicConfig(level=logging.INFO)
 
     title = 'Metabolic modeling tools'
     if command is not None:
