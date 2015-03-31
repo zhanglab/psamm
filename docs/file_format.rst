@@ -141,18 +141,17 @@ the ``medium.yaml`` file:
 
 .. code-block:: yaml
 
-    - compartment: e
-      compounds:
-        - id: ac    # Acetate
-        - id: co2
-        - id: o2
-        - id: glcC  # D-Glucose with uptake limit of 10
-          lower: -10
-        # ...
-    - compartment: c
-      compounds:
-        - id: compound_x
-          lower: 0  # Provide a sink for compound_x
+    compartment: e  # default compartment
+    compounds:
+      - id: ac      # Acetate
+      - id: co2
+      - id: o2
+      - id: glcC    # D-Glucose with uptake limit of 10
+        lower: -10
+      - id: compound_x
+        compartment: c
+        lower: 0    # Provide a sink for compound_x
+      # ...
 
 When a medium file is specified, the corresponding exchange reactions are
 automatically added. For example, if the compounds ``o2`` in compartment ``e``
