@@ -5,11 +5,16 @@ import unittest
 from metnet.metabolicmodel import MetabolicModel
 from metnet.database import DictDatabase
 from metnet import massconsistency
-from metnet.lpsolver import cplex
 from metnet.datasource.modelseed import parse_reaction
 
+try:
+    from metnet.lpsolver import cplex
+except ImportError:
+    cplex = None
+
+
 class TestMassConsistency(unittest.TestCase):
-    '''Test fastcore using a simple model'''
+    """Test mass consistency using a simple model"""
 
     def setUp(self):
         # TODO use mock model instead of actual model
@@ -22,17 +27,22 @@ class TestMassConsistency(unittest.TestCase):
         self.database.set_reaction('rxn_6', parse_reaction('|D| =>'))
         self.model = MetabolicModel.load_model(self.database, self.database.reactions)
 
-        self.masscons = massconsistency.MassConsistencyCheck(cplex.Solver())
+        self.solver = cplex.Solver()
 
+    @unittest.skipIf(cplex is None, 'solver not available')
     def test_mass_consistent_is_consistent(self):
         exchange = { 'rxn_1', 'rxn_6' }
-        self.assertTrue(self.masscons.is_consistent(self.model, exchange, set()))
+        self.assertTrue(massconsistency.is_consistent(
+            self.model, self.solver, exchange, set()))
 
+    @unittest.skipIf(cplex is None, 'solver not available')
     def test_mass_inconsistent_is_consistent(self):
         exchange = { 'rxn_1', 'rxn_6' }
         self.database.set_reaction('rxn_7', parse_reaction('|D| => (2) |C|'))
         self.model.add_reaction('rxn_7')
-        self.assertFalse(self.masscons.is_consistent(self.model, exchange, set()))
+        self.assertFalse(massconsistency.is_consistent(
+            self.model, self.solver, exchange, set()))
+
 
 if __name__ == '__main__':
     unittest.main()

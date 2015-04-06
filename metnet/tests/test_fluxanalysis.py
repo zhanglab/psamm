@@ -5,8 +5,13 @@ import unittest
 from metnet.metabolicmodel import MetabolicModel
 from metnet.database import DictDatabase
 from metnet import fluxanalysis
-from metnet.lpsolver import cplex
 from metnet.datasource.modelseed import parse_reaction
+
+try:
+    from metnet.lpsolver import cplex
+except ImportError:
+    cplex = None
+
 
 class TestFluxBalance(unittest.TestCase):
     def setUp(self):
@@ -20,16 +25,19 @@ class TestFluxBalance(unittest.TestCase):
         self.model = MetabolicModel.load_model(self.database, self.database.reactions)
         self.solver = cplex.Solver()
 
+    @unittest.skipIf(cplex is None, 'solver not available')
     def test_flux_balance_rxn_1(self):
         fluxes = dict(fluxanalysis.flux_balance(self.model, 'rxn_1', solver=self.solver))
         self.assertEqual(fluxes['rxn_1'], 500)
         self.assertEqual(fluxes['rxn_2'], 0)
         self.assertEqual(fluxes['rxn_6'], 1000)
 
+    @unittest.skipIf(cplex is None, 'solver not available')
     def test_flux_balance_rxn_2(self):
         fluxes = dict(fluxanalysis.flux_balance(self.model, 'rxn_2', solver=self.solver))
         self.assertEqual(fluxes['rxn_2'], 0)
 
+    @unittest.skipIf(cplex is None, 'solver not available')
     def test_flux_balance_rxn_3(self):
         fluxes = dict(fluxanalysis.flux_balance(self.model, 'rxn_3', solver=self.solver))
         self.assertEqual(fluxes['rxn_1'], 500)
@@ -37,6 +45,7 @@ class TestFluxBalance(unittest.TestCase):
         self.assertEqual(fluxes['rxn_3'], 1000)
         self.assertEqual(fluxes['rxn_6'], 1000)
 
+    @unittest.skipIf(cplex is None, 'solver not available')
     def test_flux_balance_rxn_6(self):
         fluxes = dict(fluxanalysis.flux_balance(self.model, 'rxn_6', solver=self.solver))
         self.assertEqual(fluxes['rxn_1'], 500)
@@ -60,6 +69,7 @@ class TestFluxBalanceThermodynamic(unittest.TestCase):
 
         self.solver = cplex.Solver()
 
+    @unittest.skipIf(cplex is None, 'solver not available')
     def test_flux_balance_td_exchange_d(self):
         fluxes = dict(fluxanalysis.flux_balance(self.model, 'ex_D', solver=self.solver))
         self.assertEquals(fluxes['ex_A'], -10)
@@ -67,6 +77,7 @@ class TestFluxBalanceThermodynamic(unittest.TestCase):
         self.assertEquals(fluxes['rxn_2'], 10)
         self.assertEquals(fluxes['rxn_4'], 0)
         self.assertEquals(fluxes['rxn_5'], 0)
+
 
 class TestNaiveConsistency(unittest.TestCase):
     def setUp(self):
@@ -80,16 +91,19 @@ class TestNaiveConsistency(unittest.TestCase):
         self.model = MetabolicModel.load_model(self.database, self.database.reactions)
         self.solver = cplex.Solver()
 
+    @unittest.skipIf(cplex is None, 'solver not available')
     def test_check_on_consistent(self):
         self.model.remove_reaction('rxn_2')
         core = self.model.reactions
         inconsistent = set(fluxanalysis.consistency_check(self.model, core, 0.001, solver=self.solver))
         self.assertEqual(inconsistent, set())
 
+    @unittest.skipIf(cplex is None, 'solver not available')
     def test_check_on_inconsistent(self):
         core = set(self.model.reactions)
         inconsistent = set(fluxanalysis.consistency_check(self.model, core, 0.001, solver=self.solver))
         self.assertEqual(inconsistent, { 'rxn_2' })
+
 
 if __name__ == '__main__':
     unittest.main()
