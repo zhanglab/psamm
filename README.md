@@ -4,6 +4,8 @@ Metabolic modelling tools
 Tools related to metabolic modelling, reconstruction, data parsing and
 formatting.
 
+See [NEWS](NEWS.md) for information on recent changes.
+
 Use `pip` to install (it is recommended to use a
 [Virtualenv](https://virtualenv.pypa.io/)):
 
