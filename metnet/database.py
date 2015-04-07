@@ -1,20 +1,28 @@
 
-'''Representation of metabolic network databases'''
+"""Representation of metabolic network databases"""
 
 import abc
 from collections import defaultdict, Mapping
 
 from .reaction import Reaction
 
+
 class StoichiometricMatrixView(Mapping):
-    '''Provides a sparse matrix view on the stoichiometry of a database
+    """Provides a sparse matrix view on the stoichiometry of a database
 
-    This object is used internally in the database to expose
-    a sparse matrix view of the model stoichiometry.
+    This object is used internally in the database to expose a sparse matrix
+    view of the model stoichiometry. This class should not be instantied,
+    instead use the :attr:`MetabolicDatabase.matrix` property. Any compound,
+    reaction-pair can be looked up to obtain the corresponding stoichiometric
+    value. If the value is not defined (implicitly zero) a
+    :exc:`KeyError <exceptions.KeyError>` will be raised.
 
-    Any compound, reaction-pair can be looked up to obtain the
-    corresponding stoichiometric value. If the value is not
-    defined (implicitly zero) a KeyError will be raised.'''
+    In addition, instances also support the NumPy `__array__` protocol which
+    means that a :class:`numpy.array` can by created directly from the matrix.
+
+    >>> model = MetabolicModel()
+    >>> matrix = numpy.array(model.matrix)
+    """
 
     def __init__(self, database):
         super(StoichiometricMatrixView, self).__init__()
@@ -37,97 +45,107 @@ class StoichiometricMatrixView(Mapping):
                 yield compound, reaction
 
     def __len__(self):
-        return sum(sum(1 for _ in self._database.get_reaction_values(reaction)) for reaction in self._database.reactions)
+        return sum(sum(1 for _ in self._database.get_reaction_values(reaction))
+                   for reaction in self._database.reactions)
 
     def __array__(self):
-        '''Return Numpy ndarray instance of matrix with sorted compound, reaction-keys'''
+        """Return Numpy ndarray instance of matrix
 
-        import numpy # NumPy is only required for this method
+        The matrix is indexed by sorted compound, reaction-keys
+        """
+
+        import numpy  # NumPy is only required for this method
 
         compound_list = sorted(self._database.compounds)
         reaction_list = sorted(self._database.reactions)
         matrix = numpy.zeros((len(compound_list), len(reaction_list)))
 
-        compound_map = dict((compound, i) for i, compound in enumerate(compound_list))
-        reaction_map = dict((reaction_id, i) for i, reaction_id in enumerate(reaction_list))
+        compound_map = dict(
+            (compound, i) for i, compound in enumerate(compound_list))
+        reaction_map = dict(
+            (reaction_id, i) for i, reaction_id in enumerate(reaction_list))
 
         for reaction_id in self._database.reactions:
-            for compound, value in self._database.get_reaction_values(reaction_id):
+            for compound, value in self._database.get_reaction_values(
+                    reaction_id):
                 c_index = compound_map[compound]
                 r_index = reaction_map[reaction_id]
                 matrix[c_index, r_index] = value
 
         return matrix
 
-class MetabolicReaction(object):
-    def __init__(self, reversible, metabolites):
-        self.reversible = bool(reversible)
-        self.metabolites = dict(metabolites)
-
-    @classmethod
-    def from_reaction(cls, reaction):
-        if reaction.direction not in (Reaction.Right, Reaction.Bidir):
-            raise ValueError('Invalid direction in reaction: {}'.format(reaction.direction))
-        reversible = reaction.direction == Reaction.Bidir
-
-        metabolites = {}
-        for compound, value in reaction.left:
-            metabolites[compound] -= value
-        for compound, value in reaction.right:
-            metabolites[compound] += value
-
-        return cls(reversible, metabolites)
-
-    def __repr__(self):
-        return 'MetabolicReaction({}, {})'.format(repr(self.reversible), repr(self.metabolites))
 
 class MetabolicDatabase(object):
-    '''Database of metabolic reactions'''
+    """Database of metabolic reactions"""
 
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractproperty
     def reactions(self):
-        pass
+        """Iterator of reactions IDs in the database"""
 
     @abc.abstractproperty
     def compounds(self):
-        pass
+        """Itertor of :class:`Compounds <metnet.reaction.Compound>` in the
+        database"""
 
     @abc.abstractmethod
     def has_reaction(self, reaction_id):
-        pass
+        """Whether the given reaction exists in the database"""
 
     @abc.abstractmethod
     def is_reversible(self, reaction_id):
-        pass
+        """Whether the given reaction is reversible"""
 
     @abc.abstractmethod
     def get_reaction_values(self, reaction_id):
-        pass
+        """Return an iterator of reaction compounds and stoichiometric values
+
+        The returned iterator contains
+        (:class:`Compound <metnet.reaction.Compound>`, value)-tuples. The value
+        is negative for left-hand side compounds and positive for right-hand
+        side.
+        """
 
     @abc.abstractmethod
     def get_compound_reactions(self, compound_id):
-        pass
+        """Return an iterator of reactions containing the compound
+
+        Reactions are returned as IDs.
+        """
 
     @property
     def reversible(self):
-        '''The set of reversible reactions'''
-        return set(reaction_id for reaction_id in self.reactions if self.is_reversible(reaction_id))
+        """The set of reversible reactions"""
+        return set(reaction_id for reaction_id in self.reactions
+                   if self.is_reversible(reaction_id))
 
     @property
     def matrix(self):
-        '''Mapping from compound, reaction to stoichiometric value'''
+        """Mapping from compound, reaction to stoichiometric value
+
+        This is an instance of :class:`StoichiometricMatrixView`."""
         return StoichiometricMatrixView(self)
 
     def get_reaction(self, reaction_id):
-        direction = Reaction.Bidir if self.is_reversible(reaction_id) else Reaction.Right
-        left = ((compound, -value) for compound, value in self.get_reaction_values(reaction_id) if value < 0)
-        right = ((compound, value) for compound, value in self.get_reaction_values(reaction_id) if value > 0)
+        """Return reaction as a :class:`Reaction <metnet.reaction.Reaction>`"""
+
+        direction = Reaction.Right
+        if self.is_reversible(reaction_id):
+            direction = Reaction.Bidir
+
+        left = ((compound, -value) for compound, value in
+            self.get_reaction_values(reaction_id) if value < 0)
+        right = ((compound, value) for compound, value in
+            self.get_reaction_values(reaction_id) if value > 0)
+
         return Reaction(direction, left, right)
 
+
 class DictDatabase(MetabolicDatabase):
-    '''Metabolic database backed by in-memory dictionaries'''
+    """Metabolic database backed by in-memory dictionaries
+
+    This is a subclass of :class:`MetabolicDatabase`."""
 
     def __init__(self):
         super(DictDatabase, self).__init__()
@@ -147,20 +165,24 @@ class DictDatabase(MetabolicDatabase):
         return reaction_id in self._reactions
 
     def is_reversible(self, reaction_id):
-        '''Whether reaction is reversible'''
         return reaction_id in self._reversible
 
     def get_reaction_values(self, reaction_id):
-        '''Yield compound and stoichiometric values of reaction as tuples'''
         if reaction_id not in self._reactions:
             raise ValueError('Unknown reaction: {}'.format(repr(reaction_id)))
         return self._reactions[reaction_id].iteritems()
 
     def get_compound_reactions(self, compound_id):
-        '''Iterator of reactions that include the given compound'''
         return iter(self._compound_reactions[compound_id])
 
     def set_reaction(self, reaction_id, reaction):
+        """Set the reaction ID to a reaction given by a
+        :class:`Reaction <metnet.reaction.Reaction>`
+
+        If an existing reaction exists with the given reaction ID it will be
+        overwritten.
+        """
+
         # Overwrite previous reaction if the same id is used
         if reaction_id in self._reactions:
             # Clean up compound to reaction mapping
@@ -196,8 +218,11 @@ class DictDatabase(MetabolicDatabase):
         if reaction.direction != '=>':
             self._reversible.add(reaction_id)
 
+
 class ChainedDatabase(MetabolicDatabase):
-    '''Links a number of databases so they can be treated a single database'''
+    """Links a number of databases so they can be treated a single database
+
+    This is a subclass of :class:`MetabolicDatabase`."""
 
     def __init__(self, *databases):
         self._databases = list(databases)
@@ -205,7 +230,7 @@ class ChainedDatabase(MetabolicDatabase):
             self._databases.append(DictDatabase())
 
     def _is_shadowed(self, reaction_id, database):
-        '''Whether reaction in database is shadowed by another database'''
+        """Whether reaction in database is shadowed by another database"""
         for other_database in self._databases:
             if other_database == database:
                 break
@@ -234,7 +259,8 @@ class ChainedDatabase(MetabolicDatabase):
                     yield compound
 
     def has_reaction(self, reaction_id):
-        return any(database.has_reaction(reaction_id) for database in self._databases)
+        return any(database.has_reaction(reaction_id)
+                   for database in self._databases)
 
     def is_reversible(self, reaction_id):
         for database in self._databases:
@@ -253,7 +279,8 @@ class ChainedDatabase(MetabolicDatabase):
         reaction_set = set()
         for database in self._databases:
             for reaction in database.get_compound_reactions(compound):
-                if reaction not in reaction_set and not self._is_shadowed(reaction, database):
+                if (reaction not in reaction_set and
+                        not self._is_shadowed(reaction, database)):
                     reaction_set.add(reaction)
                     yield reaction
 
