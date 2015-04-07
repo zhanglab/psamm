@@ -1,11 +1,8 @@
 
-'''Fastcore module implementing the fastcore algorithm
+"""Fastcore module implementing the fastcore algorithm
 
-This is an implementation of the algorithms described in
-Vlassis, Nikos, Maria Pires Pacheco, and Thomas Sauter.
-"Fast reconstruction of compact context-specific metabolic
-network models." PLoS computational biology 10.1 (2014):
-e1003424.'''
+This is an implementation of the algorithms described in [Vlassis14]_.
+"""
 
 import logging
 
