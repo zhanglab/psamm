@@ -10,14 +10,13 @@ import random
 import math
 import abc
 
-from .fastcore import Fastcore
 from .formula import Formula, Radical
 from .gapfill import gapfind, gapfill
 from .database import DictDatabase
 from .metabolicmodel import MetabolicModel
 from .reaction import Compound
 from .datasource.native import NativeModel
-from . import fluxanalysis, massconsistency
+from . import fluxanalysis, massconsistency, fastcore
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -192,10 +191,9 @@ class FastGapFillCommand(Command):
     def run(self):
         """Run FastGapFill command"""
 
-        # Create fastcore object
+        # Create solver
         from metnet.lpsolver import cplex
         solver = cplex.Solver()
-        fastcore = Fastcore(solver)
 
         # Load compound information
         compound_name = {}
@@ -232,10 +230,12 @@ class FastGapFillCommand(Command):
         logger.info('Calculating Fastcore induced set on model')
         core = set(self._mm.reactions)
 
-        induced = fastcore.fastcore(model_complete, core, epsilon, weights=weights)
+        induced = fastcore.fastcore(model_complete, core, epsilon,
+                                    weights=weights, solver=solver)
         logger.info('Result: |A| = {}, A = {}'.format(len(induced), induced))
         added_reactions = induced - core
-        logger.info('Extended: |E| = {}, E = {}'.format(len(added_reactions), added_reactions))
+        logger.info('Extended: |E| = {}, E = {}'.format(
+            len(added_reactions), added_reactions))
 
         if self._args.reaction is not None:
             maximized_reaction = self._args.reaction
@@ -248,24 +248,30 @@ class FastGapFillCommand(Command):
             raise ValueError(('The biomass reaction is not a valid model' +
                               ' reaction: {}').format(maximized_reaction))
 
-        logger.info('Flux balance on induced model maximizing {}'.format(maximized_reaction))
+        logger.info('Flux balance on induced model maximizing {}'.format(
+            maximized_reaction))
         model_induced = self._mm.copy()
         for rxnid in induced:
             model_induced.add_reaction(rxnid)
-        for rxnid, flux in sorted(fluxanalysis.flux_balance(model_induced, maximized_reaction, solver=solver)):
+        for rxnid, flux in sorted(fluxanalysis.flux_balance(
+                model_induced, maximized_reaction, solver=solver)):
             reaction_class = 'Dbase'
             weight = weights.get(rxnid, 1)
             if self._mm.has_reaction(rxnid):
                 reaction_class = 'Model'
                 weight = 0
             reaction = model_complete.get_reaction(rxnid).translated_compounds(lambda x: compound_name.get(x, x))
-            print '{}\t{}\t{}\t{}\t{}'.format(rxnid, reaction_class, weight, flux, reaction)
+            print '{}\t{}\t{}\t{}\t{}'.format(
+                rxnid, reaction_class, weight, flux, reaction)
 
         logger.info('Calculating Fastcc consistent subset of induced model')
-        consistent_core = fastcore.fastcc_consistent_subset(model_induced, epsilon)
-        logger.info('Result: |A| = {}, A = {}'.format(len(consistent_core), consistent_core))
+        consistent_core = fastcore.fastcc_consistent_subset(
+            model_induced, epsilon, solver=solver)
+        logger.info('Result: |A| = {}, A = {}'.format(
+            len(consistent_core), consistent_core))
         removed_reactions = set(model_induced.reactions) - consistent_core
-        logger.info('Removed: |R| = {}, R = {}'.format(len(removed_reactions), removed_reactions))
+        logger.info('Removed: |R| = {}, R = {}'.format(
+            len(removed_reactions), removed_reactions))
 
 
 class FluxBalanceCommand(Command):
@@ -389,9 +395,8 @@ class FluxConsistencyCommand(Command):
                 fluxanalysis.consistency_check(self._mm, self._mm.reactions,
                                                epsilon, solver=solver))
         else:
-            # Create fastcore object
-            fastcore = Fastcore(solver)
-            inconsistent = set(fastcore.fastcc(self._mm, epsilon))
+            inconsistent = set(fastcore.fastcc(
+                self._mm, epsilon, solver=solver))
 
         # Print result
         for reaction in sorted(inconsistent):
