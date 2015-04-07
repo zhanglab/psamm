@@ -1,6 +1,6 @@
 
-Welcome to model_script's documentation!
-========================================
+model_script documentation
+==========================
 
 Contents:
 
