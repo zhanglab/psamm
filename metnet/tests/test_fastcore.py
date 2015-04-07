@@ -145,7 +145,8 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
     @unittest.skipIf(cplex is None, 'solver not available')
     def test_fastcore_global_inconsistent(self):
         self.database.set_reaction('rxn_7', parse_reaction('|E| <=>'))
-        with self.assertRaises(Exception):
+        self.model.add_reaction('rxn_7')
+        with self.assertRaises(fastcore.FastcoreError):
             fastcore.fastcore(self.model, { 'rxn_7' }, 0.001,
                               solver=self.solver)
 
