@@ -186,6 +186,9 @@ class FastGapFillCommand(Command):
             '--penalty', metavar='file', type=argparse.FileType('r'),
             help='List of penalty scores for database reactions')
         parser.add_argument(
+            '--epsilon', type=float, help='Threshold for Fastcore',
+            default=1e-5)
+        parser.add_argument(
             'reaction', help='Reaction to maximize', nargs='?')
 
     def run(self):
@@ -201,7 +204,7 @@ class FastGapFillCommand(Command):
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
 
-        epsilon = 1e-5
+        epsilon = self._args.epsilon
         model_compartments = { None, 'e' }
 
         # Add exchange and transport reactions to database
@@ -285,6 +288,9 @@ class FluxBalanceCommand(Command):
         parser.add_argument(
             '--no-tfba', help='Disable thermodynamic constraints on FBA',
             action='store_true')
+        parser.add_argument(
+            '--epsilon', type=float, help='Threshold for flux minimization',
+            default=1e-5)
         parser.add_argument('reaction', help='Reaction to maximize', nargs='?')
 
     def run(self):
@@ -333,8 +339,7 @@ class FluxBalanceCommand(Command):
         fba_fluxes = dict(fluxanalysis.flux_balance(self._mm, reaction,
                                                     solver=solver))
         optimum = fba_fluxes[reaction]
-
-        epsilon = 1e-5
+        epsilon = self._args.epsilon
 
         # Run flux minimization
         fmin_fluxes = dict(fluxanalysis.flux_minimization(
@@ -376,6 +381,9 @@ class FluxConsistencyCommand(Command):
         parser.add_argument(
             '--no-fastcore', help='Disable use of Fastcore algorithm',
             action='store_true')
+        parser.add_argument(
+            '--epsilon', type=float, help='Flux threshold',
+            default=1e-5)
 
     def run(self):
         """Run flux consistency check command"""
@@ -388,7 +396,7 @@ class FluxConsistencyCommand(Command):
 
         from metnet.lpsolver import cplex
         solver = cplex.Solver()
-        epsilon = 1e-5
+        epsilon = self._args.epsilon
 
         if self._args.no_fastcore:
             inconsistent = set(
@@ -596,6 +604,9 @@ class MassConsistencyCommand(Command):
         parser.add_argument(
             '--exclude', metavar='reaction', action='append', type=str,
             default=[], help='Exclude reaction from mass consistency')
+        parser.add_argument(
+            '--epsilon', type=float, help='Mass threshold',
+            default=1e-5)
 
     def run(self):
         # Load compound information
@@ -629,7 +640,7 @@ class MassConsistencyCommand(Command):
         known_inconsistent = exclude | exchange
 
         logger.info('Mass consistency on database')
-        epsilon = 1e-5
+        epsilon = self._args.epsilon
         compound_iter = massconsistency.check_compound_consistency(
             self._mm, solver, known_inconsistent, zeromass)
 
