@@ -1,9 +1,8 @@
 
-'''Identify blocked metabolites and possible reconstructions
+"""Identify blocked metabolites and possible reconstructions
 
-This implements a variant of the algorithms described by Kumar,
-Vinay Satish, Madhukar S. Dasika, and Costas D. Maranas.
-"Optimization based automated curation of metabolic reconstructions."'''
+This implements a variant of the algorithms described in [Kumar07]_.
+"""
 
 from .lpsolver import lp
 
