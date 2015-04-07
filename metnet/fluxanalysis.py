@@ -65,14 +65,14 @@ class FluxBalanceProblem(object):
         return self._prob.result.get_value(('v', reaction))
 
 class FluxBalanceTDProblem(FluxBalanceProblem):
-    '''Maximize the flux of a specific reaction with thermodynamic constraints
+    """Maximize the flux of a specific reaction with thermodynamic constraints
 
     Like FBA, but with the additional constraint that the flux must be
     thermodynamically feasible. This is solved as a MILP problem and the
     problem has been shown to be NP-hard in general.
 
-    Described by Muller, Arne C., and Alexander Bockmayr. "Fast thermodynamically
-    constrained flux variability analysis." Bioinformatics (2013): btt059.'''
+    Described in [Muller13]_.
+    """
 
     def __init__(self, model, solver):
         super(FluxBalanceTDProblem, self).__init__(model, solver)
