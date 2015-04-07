@@ -578,7 +578,8 @@ class GapFillCommand(Command):
 
             for rxnid in reversed_reactions:
                 rx = model_complete.get_reaction(rxnid)
-                rxt = translated_compounds(lambda x: compound_name.get(x, x))
+                rxt = rx.translated_compounds(
+                    lambda x: compound_name.get(x, x))
                 print '{}\t{}\t{}'.format(rxnid, 'Reverse', rxt)
         else:
             logger.info('No blocked compounds found')
