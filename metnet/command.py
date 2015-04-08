@@ -1034,3 +1034,7 @@ def main(command=None):
     # Instantiate command with model and run
     command = args.command(model, args)
     command.run()
+
+
+if __name__ == '__main__':
+    main()
