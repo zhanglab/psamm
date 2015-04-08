@@ -1,5 +1,12 @@
 
-"""Utilities for the command line interface"""
+"""Command line interface
+
+Each command in the command line interface is implemented as a subclass of
+:class:`Command`. Commands are automatically discovered based on this
+inheritance so new commands are added by subclassing :class:`Command`.
+
+The :func:`.main` function is the entry point of command line interface.
+"""
 
 import os
 import argparse
@@ -27,11 +34,12 @@ class Command(object):
 
     Subclasses must define name and title as class attributes. The constructor
     will be given the NativeModel and the command line namespace. The subclass
-    must implement run() to handle command execution.
+    must implement :meth:`run` to handle command execution.
 
-    In addition, init_parser() can be implemented as a classmethod which will
-    allow the command to initialize an instance of ArgumentParser as desired.
-    The resulting argument namespace will be passed to the constructor.
+    In addition, :meth:`init_parser` can be implemented as a classmethod which
+    will allow the command to initialize an instance of
+    :class:`argparse.ArgumentParser` as desired. The resulting argument
+    namespace will be passed to the constructor.
     """
 
     __metaclass__ = abc.ABCMeta
@@ -55,14 +63,12 @@ class Command(object):
                                              medium, model.parse_limits())
 
     @classmethod
-    def init_parser(self, parser):
-        """Initialize command line parser (argparse.ArgumentParser)"""
-        pass
+    def init_parser(cls, parser):
+        """Initialize command line parser (:class:`argparse.ArgumentParser`)"""
 
     @abc.abstractmethod
     def run(self):
         """Execute command"""
-        pass
 
 
 class ChargeBalanceCommand(Command):
@@ -600,7 +606,7 @@ class MassConsistencyCommand(Command):
     title = 'Run mass consistency check on a database'
 
     @classmethod
-    def init_parser(self, parser):
+    def init_parser(cls, parser):
         parser.add_argument(
             '--exclude', metavar='reaction', action='append', type=str,
             default=[], help='Exclude reaction from mass consistency')
@@ -984,7 +990,11 @@ class SearchCommand(Command):
 
 
 def main(command=None):
-    """Run the command line interface with the given Command"""
+    """Run the command line interface with the given :class:`Command`
+
+    If no command is specified the user will be able to select a specific
+    command through the first command line argument.
+    """
 
     # Set up logging for the command line interface
     if 'DEBUG' in os.environ:
