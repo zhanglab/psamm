@@ -175,6 +175,15 @@ minimal solution.
 
     $ model fastgapfill --penalty penalty.tsv
 
+SBML Export (``sbmlexport``)
+----------------------------
+
+Exports the model to the SBML file format.
+
+.. code-block:: shell
+
+    $ model sbmlexport > model.xml
+
 Search (``search``)
 -------------------
 
