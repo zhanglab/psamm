@@ -8,6 +8,7 @@ inheritance so new commands are added by subclassing :class:`Command`.
 The :func:`.main` function is the entry point of command line interface.
 """
 
+import sys
 import os
 import argparse
 import operator
@@ -23,6 +24,7 @@ from .database import DictDatabase
 from .metabolicmodel import MetabolicModel
 from .reaction import Compound
 from .datasource.native import NativeModel
+from .datasource import sbml
 from . import fluxanalysis, massconsistency, fastcore
 from .lpsolver import generic
 
@@ -903,6 +905,18 @@ class RobustnessCommand(SolverCommandMixin, Command):
                     print '{}\t{}\t{}'.format(other_reaction, fixed_flux, flux)
             except fluxanalysis.FluxBalanceError:
                 pass
+
+
+class SBMLExport(Command):
+    """Export model as SBML file"""
+
+    name = 'sbmlexport'
+    title = 'Export model as SBML file'
+
+    def run(self):
+        writer = sbml.SBMLWriter()
+        writer.write_model(
+            sys.stdout, self._mm, self._model.parse_compounds())
 
 
 class SearchCommand(Command):
