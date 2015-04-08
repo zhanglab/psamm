@@ -24,6 +24,7 @@ from .metabolicmodel import MetabolicModel
 from .reaction import Compound
 from .datasource.native import NativeModel
 from . import fluxanalysis, massconsistency, fastcore
+from .lpsolver import generic
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -201,8 +202,7 @@ class FastGapFillCommand(Command):
         """Run FastGapFill command"""
 
         # Create solver
-        from metnet.lpsolver import cplex
-        solver = cplex.Solver()
+        solver = generic.Solver()
 
         # Load compound information
         compound_name = {}
@@ -339,8 +339,7 @@ class FluxBalanceCommand(Command):
     def run_fba_minimized(self, reaction):
         """Run normal FBA and flux minimization on model, then print output"""
 
-        from .lpsolver import cplex
-        solver = cplex.Solver()
+        solver = generic.Solver()
 
         fba_fluxes = dict(fluxanalysis.flux_balance(self._mm, reaction,
                                                     solver=solver))
@@ -360,8 +359,7 @@ class FluxBalanceCommand(Command):
     def run_tfba(self, reaction):
         """Run FBA and tFBA on model"""
 
-        from .lpsolver import cplex
-        solver = cplex.Solver()
+        solver = generic.Solver(integer=True)
 
         fba_fluxes = dict(fluxanalysis.flux_balance(
             self._mm, reaction, solver=solver))
@@ -400,8 +398,7 @@ class FluxConsistencyCommand(Command):
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
 
-        from metnet.lpsolver import cplex
-        solver = cplex.Solver()
+        solver = generic.Solver()
         epsilon = self._args.epsilon
 
         if self._args.no_fastcore:
@@ -452,8 +449,7 @@ class FluxVariabilityCommand(Command):
             raise ValueError('Specified reaction is not in model: {}'.format(
                 reaction))
 
-        from .lpsolver import cplex
-        solver = cplex.Solver()
+        solver = generic.Solver()
 
         fba_fluxes = dict(fluxanalysis.flux_balance(
             self._mm, reaction, solver=solver))
@@ -560,8 +556,7 @@ class GapFillCommand(Command):
 
         model_compartments = { None, 'e' }
 
-        from .lpsolver import cplex
-        solver = cplex.Solver()
+        solver = generic.Solver(integer=True)
 
         # Run GapFind on model
         logger.info('Searching for blocked compounds')
@@ -640,8 +635,7 @@ class MassConsistencyCommand(Command):
         zeromass.add('cpd11632') # Photon
         zeromass.add('cpd12713') # Electron
 
-        from .lpsolver import cplex
-        solver = cplex.Solver()
+        solver = generic.Solver()
 
         known_inconsistent = exclude | exchange
 
@@ -702,9 +696,6 @@ class RandomSparseNetworkCommand(Command):
             type=float)
 
     def run(self):
-        from .lpsolver import cplex
-        solver = cplex.Solver()
-
         if self._args.reaction is not None:
             reaction = self._args.reaction
         else:
@@ -721,9 +712,12 @@ class RandomSparseNetworkCommand(Command):
             raise ValueError(
                 'Invalid threshold, must be in [0;1]: {}'.format(threshold))
 
-        fb_problem = fluxanalysis.FluxBalanceTDProblem
         if self._args.no_tfba:
             fb_problem = fluxanalysis.FluxBalanceProblem
+            solver = generic.Solver()
+        else:
+            fb_problem = fluxanalysis.FluxBalanceTDProblem
+            solver = generic.Solver(integer=True)
 
         p = fb_problem(self._mm, solver)
         p.solve(reaction)
@@ -802,9 +796,6 @@ class RobustnessCommand(Command):
     def run(self):
         """Run flux analysis command"""
 
-        from .lpsolver import cplex
-        solver = cplex.Solver()
-
         def run_fba_fmin(model, reaction):
             fba = fluxanalysis.FluxBalanceProblem(model, solver=solver)
             fba.solve(reaction)
@@ -818,8 +809,10 @@ class RobustnessCommand(Command):
 
         if self._args.no_tfba:
             run_fba = run_fba_fmin
+            solver = generic.Solver()
         else:
             run_fba = run_tfba
+            solver = generic.Solver(integer=True)
 
         # Load compound information
         compound_name = {}
