@@ -24,6 +24,7 @@ from .metabolicmodel import MetabolicModel
 from .reaction import Compound
 from .datasource.native import NativeModel
 from . import fluxanalysis, massconsistency, fastcore
+from .lpsolver import generic
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -69,6 +70,41 @@ class Command(object):
     @abc.abstractmethod
     def run(self):
         """Execute command"""
+
+
+class SolverCommandMixin(object):
+    """Mixin for commands that use an LP solver
+
+    This adds a ``--solver`` parameter to the command that the user can use to
+    select a specific solver. It also adds the method :meth:`_get_solver` which
+    will return a solver with the specified default requirements. The user
+    requirements will override the default requirements.
+    """
+
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            '--solver', action='append', type=str,
+            help='Specify solver requirements (e.g. "rational=yes")')
+
+    def __init__(self, *args, **kwargs):
+        super(SolverCommandMixin, self).__init__(*args, **kwargs)
+        self._solver_args = {}
+        if self._args.solver is not None:
+            for s in self._args.solver:
+                try:
+                    key, value = s.split('=', 1)
+                except ValueError:
+                    key, value = s, 'yes'
+                if key in ('rational', 'integer'):
+                    value = value.lower() in ('1', 'yes', 'true', 'on')
+                self._solver_args[key] = value
+
+    def _get_solver(self, **kwargs):
+        """Return a new :class:`metnet.lpsolver.lp.Solver` instance"""
+        solver_args = dict(kwargs)
+        solver_args.update(self._solver_args)
+        return generic.Solver(**solver_args)
 
 
 class ChargeBalanceCommand(Command):
@@ -180,7 +216,7 @@ class ConsoleCommand(Command):
             self.open_ipython_kernel(message, namespace)
 
 
-class FastGapFillCommand(Command):
+class FastGapFillCommand(SolverCommandMixin, Command):
     """Run FastGapFill algorithm on a metabolic model"""
 
     name = 'fastgapfill'
@@ -196,13 +232,13 @@ class FastGapFillCommand(Command):
             default=1e-5)
         parser.add_argument(
             'reaction', help='Reaction to maximize', nargs='?')
+        super(FastGapFillCommand, cls).init_parser(parser)
 
     def run(self):
         """Run FastGapFill command"""
 
         # Create solver
-        from metnet.lpsolver import cplex
-        solver = cplex.Solver()
+        solver = self._get_solver()
 
         # Load compound information
         compound_name = {}
@@ -283,7 +319,7 @@ class FastGapFillCommand(Command):
             len(removed_reactions), removed_reactions))
 
 
-class FluxBalanceCommand(Command):
+class FluxBalanceCommand(SolverCommandMixin, Command):
     """Run flux balance analysis on a metabolic model"""
 
     name = 'fba'
@@ -298,6 +334,7 @@ class FluxBalanceCommand(Command):
             '--epsilon', type=float, help='Threshold for flux minimization',
             default=1e-5)
         parser.add_argument('reaction', help='Reaction to maximize', nargs='?')
+        super(FluxBalanceCommand, cls).init_parser(parser)
 
     def run(self):
         """Run flux analysis command"""
@@ -339,9 +376,7 @@ class FluxBalanceCommand(Command):
     def run_fba_minimized(self, reaction):
         """Run normal FBA and flux minimization on model, then print output"""
 
-        from .lpsolver import cplex
-        solver = cplex.Solver()
-
+        solver = self._get_solver()
         fba_fluxes = dict(fluxanalysis.flux_balance(self._mm, reaction,
                                                     solver=solver))
         optimum = fba_fluxes[reaction]
@@ -360,8 +395,7 @@ class FluxBalanceCommand(Command):
     def run_tfba(self, reaction):
         """Run FBA and tFBA on model"""
 
-        from .lpsolver import cplex
-        solver = cplex.Solver()
+        solver = self._get_solver(integer=True)
 
         fba_fluxes = dict(fluxanalysis.flux_balance(
             self._mm, reaction, solver=solver))
@@ -372,7 +406,7 @@ class FluxBalanceCommand(Command):
             yield reaction_id, fba_fluxes[reaction_id], flux
 
 
-class FluxConsistencyCommand(Command):
+class FluxConsistencyCommand(SolverCommandMixin, Command):
     """Check that reactions are flux consistent in a model
 
     A reaction is flux consistent if there exists any steady-state
@@ -390,6 +424,7 @@ class FluxConsistencyCommand(Command):
         parser.add_argument(
             '--epsilon', type=float, help='Flux threshold',
             default=1e-5)
+        super(FluxConsistencyCommand, cls).init_parser(parser)
 
     def run(self):
         """Run flux consistency check command"""
@@ -400,8 +435,7 @@ class FluxConsistencyCommand(Command):
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
 
-        from metnet.lpsolver import cplex
-        solver = cplex.Solver()
+        solver = self._get_solver()
         epsilon = self._args.epsilon
 
         if self._args.no_fastcore:
@@ -422,7 +456,7 @@ class FluxConsistencyCommand(Command):
             len(inconsistent)))
 
 
-class FluxVariabilityCommand(Command):
+class FluxVariabilityCommand(SolverCommandMixin, Command):
     """Run flux variablity analysis on a metabolic model"""
 
     name = 'fva'
@@ -431,6 +465,7 @@ class FluxVariabilityCommand(Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument('reaction', help='Reaction to maximize', nargs='?')
+        super(FluxVariabilityCommand, cls).init_parser(parser)
 
     def run(self):
         """Run flux variability command"""
@@ -452,8 +487,7 @@ class FluxVariabilityCommand(Command):
             raise ValueError('Specified reaction is not in model: {}'.format(
                 reaction))
 
-        from .lpsolver import cplex
-        solver = cplex.Solver()
+        solver = self._get_solver()
 
         fba_fluxes = dict(fluxanalysis.flux_balance(
             self._mm, reaction, solver=solver))
@@ -543,7 +577,7 @@ class FormulaBalanceCommand(Command):
             unchecked, count))
 
 
-class GapFillCommand(Command):
+class GapFillCommand(SolverCommandMixin, Command):
     """Command that runs GapFind and GapFill on a metabolic model"""
 
     name = 'gapfill'
@@ -560,8 +594,7 @@ class GapFillCommand(Command):
 
         model_compartments = { None, 'e' }
 
-        from .lpsolver import cplex
-        solver = cplex.Solver()
+        solver = self._get_solver(integer=True)
 
         # Run GapFind on model
         logger.info('Searching for blocked compounds')
@@ -599,7 +632,7 @@ class GapFillCommand(Command):
             logger.info('No blocked compounds found')
 
 
-class MassConsistencyCommand(Command):
+class MassConsistencyCommand(SolverCommandMixin, Command):
     """Command that checks whether a database is mass consistent"""
 
     name = 'masscheck'
@@ -613,6 +646,7 @@ class MassConsistencyCommand(Command):
         parser.add_argument(
             '--epsilon', type=float, help='Mass threshold',
             default=1e-5)
+        super(MassConsistencyCommand, cls).init_parser(parser)
 
     def run(self):
         # Load compound information
@@ -640,8 +674,7 @@ class MassConsistencyCommand(Command):
         zeromass.add('cpd11632') # Photon
         zeromass.add('cpd12713') # Electron
 
-        from .lpsolver import cplex
-        solver = cplex.Solver()
+        solver = self._get_solver()
 
         known_inconsistent = exclude | exchange
 
@@ -679,7 +712,7 @@ class MassConsistencyCommand(Command):
                 print '{}\t{}\t{}'.format(reaction_id, residual, rxt)
 
 
-class RandomSparseNetworkCommand(Command):
+class RandomSparseNetworkCommand(SolverCommandMixin, Command):
     """Find random minimal network of model
 
     Given a reaction to optimize and a threshold, delete reactions randomly
@@ -700,11 +733,9 @@ class RandomSparseNetworkCommand(Command):
         parser.add_argument(
             'threshold', help='Relative threshold of max reaction flux',
             type=float)
+        super(RandomSparseNetworkCommand, cls).init_parser(parser)
 
     def run(self):
-        from .lpsolver import cplex
-        solver = cplex.Solver()
-
         if self._args.reaction is not None:
             reaction = self._args.reaction
         else:
@@ -721,9 +752,12 @@ class RandomSparseNetworkCommand(Command):
             raise ValueError(
                 'Invalid threshold, must be in [0;1]: {}'.format(threshold))
 
-        fb_problem = fluxanalysis.FluxBalanceTDProblem
         if self._args.no_tfba:
             fb_problem = fluxanalysis.FluxBalanceProblem
+            solver = self._get_solver()
+        else:
+            fb_problem = fluxanalysis.FluxBalanceTDProblem
+            solver = self._get_solver(integer=True)
 
         p = fb_problem(self._mm, solver)
         p.solve(reaction)
@@ -768,7 +802,7 @@ class RandomSparseNetworkCommand(Command):
             print '{}\t{}'.format(reaction_id, value)
 
 
-class RobustnessCommand(Command):
+class RobustnessCommand(SolverCommandMixin, Command):
     """Run robustness analysis on metabolic model
 
     Given a reaction to maximize and a reaction to vary,
@@ -798,12 +832,10 @@ class RobustnessCommand(Command):
         parser.add_argument(
             '--reaction', help='Reaction to maximize', nargs='?')
         parser.add_argument('varying', help='Reaction to vary')
+        super(RobustnessCommand, cls).init_parser(parser)
 
     def run(self):
         """Run flux analysis command"""
-
-        from .lpsolver import cplex
-        solver = cplex.Solver()
 
         def run_fba_fmin(model, reaction):
             fba = fluxanalysis.FluxBalanceProblem(model, solver=solver)
@@ -818,8 +850,10 @@ class RobustnessCommand(Command):
 
         if self._args.no_tfba:
             run_fba = run_fba_fmin
+            solver = self._get_solver()
         else:
             run_fba = run_tfba
+            solver = self._get_solver(integer=True)
 
         # Load compound information
         compound_name = {}
