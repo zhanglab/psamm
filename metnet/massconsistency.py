@@ -109,7 +109,7 @@ def check_reaction_consistency(database, solver, exchange=set(),
             yield reaction_id, residual
 
     def iterate_compounds():
-        for compound in compounds:
+        for compound in compound_set:
             yield compound, result.get_value(('m', compound))
 
     return iterate_reactions(), iterate_compounds()

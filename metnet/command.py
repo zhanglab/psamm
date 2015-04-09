@@ -1,6 +1,14 @@
 
-"""Utilities for the command line interface"""
+"""Command line interface
 
+Each command in the command line interface is implemented as a subclass of
+:class:`Command`. Commands are automatically discovered based on this
+inheritance so new commands are added by subclassing :class:`Command`.
+
+The :func:`.main` function is the entry point of command line interface.
+"""
+
+import sys
 import os
 import argparse
 import operator
@@ -10,14 +18,15 @@ import random
 import math
 import abc
 
-from .fastcore import Fastcore
 from .formula import Formula, Radical
 from .gapfill import gapfind, gapfill
 from .database import DictDatabase
 from .metabolicmodel import MetabolicModel
 from .reaction import Compound
 from .datasource.native import NativeModel
-from . import fluxanalysis, massconsistency
+from .datasource import sbml
+from . import fluxanalysis, massconsistency, fastcore
+from .lpsolver import generic
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -28,11 +37,12 @@ class Command(object):
 
     Subclasses must define name and title as class attributes. The constructor
     will be given the NativeModel and the command line namespace. The subclass
-    must implement run() to handle command execution.
+    must implement :meth:`run` to handle command execution.
 
-    In addition, init_parser() can be implemented as a classmethod which will
-    allow the command to initialize an instance of ArgumentParser as desired.
-    The resulting argument namespace will be passed to the constructor.
+    In addition, :meth:`init_parser` can be implemented as a classmethod which
+    will allow the command to initialize an instance of
+    :class:`argparse.ArgumentParser` as desired. The resulting argument
+    namespace will be passed to the constructor.
     """
 
     __metaclass__ = abc.ABCMeta
@@ -56,14 +66,47 @@ class Command(object):
                                              medium, model.parse_limits())
 
     @classmethod
-    def init_parser(self, parser):
-        """Initialize command line parser (argparse.ArgumentParser)"""
-        pass
+    def init_parser(cls, parser):
+        """Initialize command line parser (:class:`argparse.ArgumentParser`)"""
 
     @abc.abstractmethod
     def run(self):
         """Execute command"""
-        pass
+
+
+class SolverCommandMixin(object):
+    """Mixin for commands that use an LP solver
+
+    This adds a ``--solver`` parameter to the command that the user can use to
+    select a specific solver. It also adds the method :meth:`_get_solver` which
+    will return a solver with the specified default requirements. The user
+    requirements will override the default requirements.
+    """
+
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            '--solver', action='append', type=str,
+            help='Specify solver requirements (e.g. "rational=yes")')
+
+    def __init__(self, *args, **kwargs):
+        super(SolverCommandMixin, self).__init__(*args, **kwargs)
+        self._solver_args = {}
+        if self._args.solver is not None:
+            for s in self._args.solver:
+                try:
+                    key, value = s.split('=', 1)
+                except ValueError:
+                    key, value = s, 'yes'
+                if key in ('rational', 'integer'):
+                    value = value.lower() in ('1', 'yes', 'true', 'on')
+                self._solver_args[key] = value
+
+    def _get_solver(self, **kwargs):
+        """Return a new :class:`metnet.lpsolver.lp.Solver` instance"""
+        solver_args = dict(kwargs)
+        solver_args.update(self._solver_args)
+        return generic.Solver(**solver_args)
 
 
 class ChargeBalanceCommand(Command):
@@ -175,7 +218,7 @@ class ConsoleCommand(Command):
             self.open_ipython_kernel(message, namespace)
 
 
-class FastGapFillCommand(Command):
+class FastGapFillCommand(SolverCommandMixin, Command):
     """Run FastGapFill algorithm on a metabolic model"""
 
     name = 'fastgapfill'
@@ -187,15 +230,17 @@ class FastGapFillCommand(Command):
             '--penalty', metavar='file', type=argparse.FileType('r'),
             help='List of penalty scores for database reactions')
         parser.add_argument(
+            '--epsilon', type=float, help='Threshold for Fastcore',
+            default=1e-5)
+        parser.add_argument(
             'reaction', help='Reaction to maximize', nargs='?')
+        super(FastGapFillCommand, cls).init_parser(parser)
 
     def run(self):
         """Run FastGapFill command"""
 
-        # Create fastcore object
-        from metnet.lpsolver import cplex
-        solver = cplex.Solver()
-        fastcore = Fastcore(solver)
+        # Create solver
+        solver = self._get_solver()
 
         # Load compound information
         compound_name = {}
@@ -203,7 +248,7 @@ class FastGapFillCommand(Command):
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
 
-        epsilon = 1e-5
+        epsilon = self._args.epsilon
         model_compartments = { None, 'e' }
 
         # Add exchange and transport reactions to database
@@ -232,10 +277,12 @@ class FastGapFillCommand(Command):
         logger.info('Calculating Fastcore induced set on model')
         core = set(self._mm.reactions)
 
-        induced = fastcore.fastcore(model_complete, core, epsilon, weights=weights)
+        induced = fastcore.fastcore(model_complete, core, epsilon,
+                                    weights=weights, solver=solver)
         logger.info('Result: |A| = {}, A = {}'.format(len(induced), induced))
         added_reactions = induced - core
-        logger.info('Extended: |E| = {}, E = {}'.format(len(added_reactions), added_reactions))
+        logger.info('Extended: |E| = {}, E = {}'.format(
+            len(added_reactions), added_reactions))
 
         if self._args.reaction is not None:
             maximized_reaction = self._args.reaction
@@ -248,27 +295,33 @@ class FastGapFillCommand(Command):
             raise ValueError(('The biomass reaction is not a valid model' +
                               ' reaction: {}').format(maximized_reaction))
 
-        logger.info('Flux balance on induced model maximizing {}'.format(maximized_reaction))
+        logger.info('Flux balance on induced model maximizing {}'.format(
+            maximized_reaction))
         model_induced = self._mm.copy()
         for rxnid in induced:
             model_induced.add_reaction(rxnid)
-        for rxnid, flux in sorted(fluxanalysis.flux_balance(model_induced, maximized_reaction, solver=solver)):
+        for rxnid, flux in sorted(fluxanalysis.flux_balance(
+                model_induced, maximized_reaction, solver=solver)):
             reaction_class = 'Dbase'
             weight = weights.get(rxnid, 1)
             if self._mm.has_reaction(rxnid):
                 reaction_class = 'Model'
                 weight = 0
             reaction = model_complete.get_reaction(rxnid).translated_compounds(lambda x: compound_name.get(x, x))
-            print '{}\t{}\t{}\t{}\t{}'.format(rxnid, reaction_class, weight, flux, reaction)
+            print '{}\t{}\t{}\t{}\t{}'.format(
+                rxnid, reaction_class, weight, flux, reaction)
 
         logger.info('Calculating Fastcc consistent subset of induced model')
-        consistent_core = fastcore.fastcc_consistent_subset(model_induced, epsilon)
-        logger.info('Result: |A| = {}, A = {}'.format(len(consistent_core), consistent_core))
+        consistent_core = fastcore.fastcc_consistent_subset(
+            model_induced, epsilon, solver=solver)
+        logger.info('Result: |A| = {}, A = {}'.format(
+            len(consistent_core), consistent_core))
         removed_reactions = set(model_induced.reactions) - consistent_core
-        logger.info('Removed: |R| = {}, R = {}'.format(len(removed_reactions), removed_reactions))
+        logger.info('Removed: |R| = {}, R = {}'.format(
+            len(removed_reactions), removed_reactions))
 
 
-class FluxBalanceCommand(Command):
+class FluxBalanceCommand(SolverCommandMixin, Command):
     """Run flux balance analysis on a metabolic model"""
 
     name = 'fba'
@@ -279,7 +332,11 @@ class FluxBalanceCommand(Command):
         parser.add_argument(
             '--no-tfba', help='Disable thermodynamic constraints on FBA',
             action='store_true')
+        parser.add_argument(
+            '--epsilon', type=float, help='Threshold for flux minimization',
+            default=1e-5)
         parser.add_argument('reaction', help='Reaction to maximize', nargs='?')
+        super(FluxBalanceCommand, cls).init_parser(parser)
 
     def run(self):
         """Run flux analysis command"""
@@ -321,14 +378,11 @@ class FluxBalanceCommand(Command):
     def run_fba_minimized(self, reaction):
         """Run normal FBA and flux minimization on model, then print output"""
 
-        from .lpsolver import cplex
-        solver = cplex.Solver()
-
+        solver = self._get_solver()
         fba_fluxes = dict(fluxanalysis.flux_balance(self._mm, reaction,
                                                     solver=solver))
         optimum = fba_fluxes[reaction]
-
-        epsilon = 1e-5
+        epsilon = self._args.epsilon
 
         # Run flux minimization
         fmin_fluxes = dict(fluxanalysis.flux_minimization(
@@ -343,8 +397,7 @@ class FluxBalanceCommand(Command):
     def run_tfba(self, reaction):
         """Run FBA and tFBA on model"""
 
-        from .lpsolver import cplex
-        solver = cplex.Solver()
+        solver = self._get_solver(integer=True)
 
         fba_fluxes = dict(fluxanalysis.flux_balance(
             self._mm, reaction, solver=solver))
@@ -355,7 +408,7 @@ class FluxBalanceCommand(Command):
             yield reaction_id, fba_fluxes[reaction_id], flux
 
 
-class FluxConsistencyCommand(Command):
+class FluxConsistencyCommand(SolverCommandMixin, Command):
     """Check that reactions are flux consistent in a model
 
     A reaction is flux consistent if there exists any steady-state
@@ -370,6 +423,10 @@ class FluxConsistencyCommand(Command):
         parser.add_argument(
             '--no-fastcore', help='Disable use of Fastcore algorithm',
             action='store_true')
+        parser.add_argument(
+            '--epsilon', type=float, help='Flux threshold',
+            default=1e-5)
+        super(FluxConsistencyCommand, cls).init_parser(parser)
 
     def run(self):
         """Run flux consistency check command"""
@@ -380,18 +437,16 @@ class FluxConsistencyCommand(Command):
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
 
-        from metnet.lpsolver import cplex
-        solver = cplex.Solver()
-        epsilon = 1e-5
+        solver = self._get_solver()
+        epsilon = self._args.epsilon
 
         if self._args.no_fastcore:
             inconsistent = set(
                 fluxanalysis.consistency_check(self._mm, self._mm.reactions,
                                                epsilon, solver=solver))
         else:
-            # Create fastcore object
-            fastcore = Fastcore(solver)
-            inconsistent = set(fastcore.fastcc(self._mm, epsilon))
+            inconsistent = set(fastcore.fastcc(
+                self._mm, epsilon, solver=solver))
 
         # Print result
         for reaction in sorted(inconsistent):
@@ -403,7 +458,7 @@ class FluxConsistencyCommand(Command):
             len(inconsistent)))
 
 
-class FluxVariabilityCommand(Command):
+class FluxVariabilityCommand(SolverCommandMixin, Command):
     """Run flux variablity analysis on a metabolic model"""
 
     name = 'fva'
@@ -412,6 +467,7 @@ class FluxVariabilityCommand(Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument('reaction', help='Reaction to maximize', nargs='?')
+        super(FluxVariabilityCommand, cls).init_parser(parser)
 
     def run(self):
         """Run flux variability command"""
@@ -433,8 +489,7 @@ class FluxVariabilityCommand(Command):
             raise ValueError('Specified reaction is not in model: {}'.format(
                 reaction))
 
-        from .lpsolver import cplex
-        solver = cplex.Solver()
+        solver = self._get_solver()
 
         fba_fluxes = dict(fluxanalysis.flux_balance(
             self._mm, reaction, solver=solver))
@@ -524,7 +579,7 @@ class FormulaBalanceCommand(Command):
             unchecked, count))
 
 
-class GapFillCommand(Command):
+class GapFillCommand(SolverCommandMixin, Command):
     """Command that runs GapFind and GapFill on a metabolic model"""
 
     name = 'gapfill'
@@ -541,8 +596,7 @@ class GapFillCommand(Command):
 
         model_compartments = { None, 'e' }
 
-        from .lpsolver import cplex
-        solver = cplex.Solver()
+        solver = self._get_solver(integer=True)
 
         # Run GapFind on model
         logger.info('Searching for blocked compounds')
@@ -573,23 +627,28 @@ class GapFillCommand(Command):
 
             for rxnid in reversed_reactions:
                 rx = model_complete.get_reaction(rxnid)
-                rxt = translated_compounds(lambda x: compound_name.get(x, x))
+                rxt = rx.translated_compounds(
+                    lambda x: compound_name.get(x, x))
                 print '{}\t{}\t{}'.format(rxnid, 'Reverse', rxt)
         else:
             logger.info('No blocked compounds found')
 
 
-class MassConsistencyCommand(Command):
+class MassConsistencyCommand(SolverCommandMixin, Command):
     """Command that checks whether a database is mass consistent"""
 
     name = 'masscheck'
     title = 'Run mass consistency check on a database'
 
     @classmethod
-    def init_parser(self, parser):
+    def init_parser(cls, parser):
         parser.add_argument(
             '--exclude', metavar='reaction', action='append', type=str,
             default=[], help='Exclude reaction from mass consistency')
+        parser.add_argument(
+            '--epsilon', type=float, help='Mass threshold',
+            default=1e-5)
+        super(MassConsistencyCommand, cls).init_parser(parser)
 
     def run(self):
         # Load compound information
@@ -617,13 +676,12 @@ class MassConsistencyCommand(Command):
         zeromass.add('cpd11632') # Photon
         zeromass.add('cpd12713') # Electron
 
-        from .lpsolver import cplex
-        solver = cplex.Solver()
+        solver = self._get_solver()
 
         known_inconsistent = exclude | exchange
 
         logger.info('Mass consistency on database')
-        epsilon = 1e-5
+        epsilon = self._args.epsilon
         compound_iter = massconsistency.check_compound_consistency(
             self._mm, solver, known_inconsistent, zeromass)
 
@@ -656,7 +714,7 @@ class MassConsistencyCommand(Command):
                 print '{}\t{}\t{}'.format(reaction_id, residual, rxt)
 
 
-class RandomSparseNetworkCommand(Command):
+class RandomSparseNetworkCommand(SolverCommandMixin, Command):
     """Find random minimal network of model
 
     Given a reaction to optimize and a threshold, delete reactions randomly
@@ -677,11 +735,9 @@ class RandomSparseNetworkCommand(Command):
         parser.add_argument(
             'threshold', help='Relative threshold of max reaction flux',
             type=float)
+        super(RandomSparseNetworkCommand, cls).init_parser(parser)
 
     def run(self):
-        from .lpsolver import cplex
-        solver = cplex.Solver()
-
         if self._args.reaction is not None:
             reaction = self._args.reaction
         else:
@@ -698,9 +754,12 @@ class RandomSparseNetworkCommand(Command):
             raise ValueError(
                 'Invalid threshold, must be in [0;1]: {}'.format(threshold))
 
-        fb_problem = fluxanalysis.FluxBalanceTDProblem
         if self._args.no_tfba:
             fb_problem = fluxanalysis.FluxBalanceProblem
+            solver = self._get_solver()
+        else:
+            fb_problem = fluxanalysis.FluxBalanceTDProblem
+            solver = self._get_solver(integer=True)
 
         p = fb_problem(self._mm, solver)
         p.solve(reaction)
@@ -745,7 +804,7 @@ class RandomSparseNetworkCommand(Command):
             print '{}\t{}'.format(reaction_id, value)
 
 
-class RobustnessCommand(Command):
+class RobustnessCommand(SolverCommandMixin, Command):
     """Run robustness analysis on metabolic model
 
     Given a reaction to maximize and a reaction to vary,
@@ -775,12 +834,10 @@ class RobustnessCommand(Command):
         parser.add_argument(
             '--reaction', help='Reaction to maximize', nargs='?')
         parser.add_argument('varying', help='Reaction to vary')
+        super(RobustnessCommand, cls).init_parser(parser)
 
     def run(self):
         """Run flux analysis command"""
-
-        from .lpsolver import cplex
-        solver = cplex.Solver()
 
         def run_fba_fmin(model, reaction):
             fba = fluxanalysis.FluxBalanceProblem(model, solver=solver)
@@ -795,8 +852,10 @@ class RobustnessCommand(Command):
 
         if self._args.no_tfba:
             run_fba = run_fba_fmin
+            solver = self._get_solver()
         else:
             run_fba = run_tfba
+            solver = self._get_solver(integer=True)
 
         # Load compound information
         compound_name = {}
@@ -846,6 +905,18 @@ class RobustnessCommand(Command):
                     print '{}\t{}\t{}'.format(other_reaction, fixed_flux, flux)
             except fluxanalysis.FluxBalanceError:
                 pass
+
+
+class SBMLExport(Command):
+    """Export model as SBML file"""
+
+    name = 'sbmlexport'
+    title = 'Export model as SBML file'
+
+    def run(self):
+        writer = sbml.SBMLWriter()
+        writer.write_model(
+            sys.stdout, self._mm, self._model.parse_compounds())
 
 
 class SearchCommand(Command):
@@ -967,7 +1038,11 @@ class SearchCommand(Command):
 
 
 def main(command=None):
-    """Run the command line interface with the given Command"""
+    """Run the command line interface with the given :class:`Command`
+
+    If no command is specified the user will be able to select a specific
+    command through the first command line argument.
+    """
 
     # Set up logging for the command line interface
     if 'DEBUG' in os.environ:
@@ -1017,3 +1092,7 @@ def main(command=None):
     # Instantiate command with model and run
     command = args.command(model, args)
     command.run()
+
+
+if __name__ == '__main__':
+    main()

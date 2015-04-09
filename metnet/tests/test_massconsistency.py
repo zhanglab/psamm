@@ -43,6 +43,23 @@ class TestMassConsistency(unittest.TestCase):
         self.assertFalse(massconsistency.is_consistent(
             self.model, self.solver, exchange, set()))
 
+    @unittest.skipIf(cplex is None, 'solver not available')
+    def test_mass_consistent_reactions_returns_compounds(self):
+        exchange = { 'rxn_1', 'rxn_6' }
+        _, compounds = massconsistency.check_reaction_consistency(
+            self.model, exchange=exchange, solver=self.solver)
+        for c, value in compounds:
+            self.assertIn(c, self.model.compounds)
+            self.assertGreaterEqual(value, 1.0)
+
+    @unittest.skipIf(cplex is None, 'solver not available')
+    def test_mass_consistent_reactions_returns_reactions(self):
+        exchange = { 'rxn_1', 'rxn_6' }
+        reactions, _ = massconsistency.check_reaction_consistency(
+            self.model, exchange=exchange, solver=self.solver)
+        for r, residual in reactions:
+            self.assertIn(r, self.model.reactions)
+
 
 if __name__ == '__main__':
     unittest.main()

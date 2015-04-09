@@ -1,20 +1,47 @@
 
-'''Base objects for representation of LP problems'''
+"""Base objects for representation of LP problems
+
+A linear programming problem is built from a number of constraints and an
+objective function. The objective function is a linear expression represented
+by :class:`.Expression`. The constraints are represented by :class:`.Relation`,
+created from a linear expression and a relation sense (equals, greater, less).
+
+Expressions are built from variables defined in the :class:`.Problem` instance.
+In addition, an expression can contain a :class:`.VariableSet` instead of a
+single variable. This allows many similar expressions to be represented by one
+:class:`.Expression` instance which means that the LP problem can be
+constructed faster.
+"""
 
 import numbers
 from collections import Counter
 import abc
 
+
 class VariableSet(tuple):
-    '''A tuple used to represent sets of variables'''
+    """A tuple used to represent sets of variables"""
+
 
 class Expression(object):
-    '''Represents a linear expression
+    """Represents a linear expression
 
-    The variables can be any hashable objects. If one or more variables
-    are instead VariableSets, this will be taken to represent a set
-    of expressions separately using a different element of the
-    VariableSet.'''
+    The variables can be any hashable objects. If one or more variables are
+    instead :class:`VariableSets <.VariableSet>`, this will be taken to
+    represent a set of expressions separately using a different element of the
+    :class:`.VariableSet`.
+
+    >>> e = Expression({'x': 2, 'y': 3})
+    >>> str(e)
+    '2*x + 3*y'
+
+    In order to provide a more natural syntax for creating
+    :class:`Relations <.Relation>` the binary relation operators have been
+    overloaded to return :class:`.Relation` instances.
+
+    >>> rel = Expression({'x': 2}) >= Expression({'y': 3})
+    >>> str(rel)
+    '2*x - 3*y >= 0'
+    """
 
     def __init__(self, variables={}, offset=0):
         self._variables = Counter(variables)
@@ -22,28 +49,31 @@ class Expression(object):
 
     @property
     def offset(self):
-        '''Value of the offset'''
+        """Value of the offset"""
         return self._offset
 
     def variables(self):
-        '''Iterator of variables in expression'''
+        """Iterator of variables in expression"""
         return self._variables.iterkeys()
 
     def values(self):
-        '''Iterator of variable, value-pairs in expression'''
+        """Iterator of (variable, value)-pairs in expression"""
         return self._variables.iteritems()
 
     def value(self, variable):
         return self._variables.get(variable, 0)
 
     def value_sets(self):
-        '''Iterator of expression sets
+        """Iterator of expression sets
 
-        This will yield an iterator of variable, value-pairs for
-        each expression in the expression set (each equivalent to
-        values()). If none of the variables is a set variable then
-        a single iterator will be yielded.'''
-        count = max(1 if not isinstance(var, VariableSet) else len(var) for var in self._variables)
+        This will yield an iterator of (variable, value)-pairs for each
+        expression in the expression set (each equivalent to values()). If none
+        of the variables is a set variable then a single iterator will be
+        yielded.
+        """
+
+        count = max(1 if not isinstance(var, VariableSet) else
+                    len(var) for var in self._variables)
         def value_set(n):
             for variable, value in self._variables.iteritems():
                 if isinstance(variable, VariableSet):
@@ -54,7 +84,8 @@ class Expression(object):
             yield value_set(i)
 
     def __add__(self, other):
-        '''Add expression with a number or another expression'''
+        """Add expression with a number or another expression"""
+
         if isinstance(other, numbers.Number):
             return self.__class__(self._variables, self._offset + other)
         elif isinstance(other, self.__class__):
@@ -73,7 +104,9 @@ class Expression(object):
         return -self + other
 
     def __mul__(self, other):
-        return self.__class__({ var: value*other for var, value in self._variables.iteritems()}, self._offset*other)
+        return self.__class__(
+            {var: value*other for var, value in self._variables.iteritems()},
+            self._offset*other)
 
     def __rmul__(self, other):
         return self * other
@@ -82,42 +115,52 @@ class Expression(object):
         return self * -1
 
     def __eq__(self, other):
-        '''Return equality relation (equation): self == other
+        """Return equality relation (equation): self == other
 
         This method is overloaded so that relations can be
-        formed using a natural syntax.'''
+        formed using a natural syntax.
+        """
+
         return Relation(Relation.Equals, self - other)
 
     def __ge__(self, other):
-        '''Return greater-than relation (inequality): self >= other
+        """Return greater-than relation (inequality): self >= other
 
         This method is overloaded so that relations can be
-        formed using a natural syntax.'''
+        formed using a natural syntax.
+        """
+
         return Relation(Relation.Greater, self - other)
 
     def __le__(self, other):
-        '''Return less-than relation (inequality): self <= other
+        """Return less-than relation (inequality): self <= other
 
         This method is overloaded so that relations can be
-        formed using a natural syntax.'''
+        formed using a natural syntax.
+        """
+
         return Relation(Relation.Less, self - other)
 
     def __gt__(self, other):
-        '''Return strictly greater-than relation (inequality): self > other
+        """Return strictly greater-than relation (inequality): self > other
 
         This method is overloaded so that relations can be
-        formed using a natural syntax.'''
+        formed using a natural syntax.
+        """
+
         return Relation(Relation.StrictlyGreater, self - other)
 
     def __lt__(self, other):
-        '''Return strictly less-than relation (inequality): self < other
+        """Return strictly less-than relation (inequality): self < other
 
         This method is overloaded so that relations can be
-        formed using a natural syntax.'''
+        formed using a natural syntax.
+        """
+
         return Relation(Relation.StrictlyLess, self - other)
 
     def __str__(self):
-        '''Return string representation of expression'''
+        """Return string representation of expression"""
 
         def all_terms():
             count_vars = 0
@@ -153,15 +196,17 @@ class Expression(object):
         return ' '.join(terms)
 
     def __repr__(self):
-        return '<Expression \'{}\'>'.format(str(self))
+        return '<{} {}>'.format(self.__class__.__name__, repr(str(self)))
+
 
 class Relation(object):
-    '''Represents a binary relation (equation or inequality)
+    """Represents a binary relation (equation or inequality)
 
     Relations can be equalities or inequalities. All relations
     of this type can be represented as a left-hand side expression
     and the type of relation. In this representation, the right-hand
-    side is always zero.'''
+    side is always zero.
+    """
 
     Equals = 'E'
     Greater = 'G'
@@ -183,132 +228,155 @@ class Relation(object):
 
     @property
     def sense(self):
-        '''Type of relation (equality or inequality)
+        """Type of relation (equality or inequality)
 
         Can be one of Equal, Greater or Less, or one of the
-        strict relations, StrictlyGreater or StrictlyLess.'''
+        strict relations, StrictlyGreater or StrictlyLess.
+        """
+
         return self._sense
 
     @property
     def expression(self):
-        '''Left-hand side expression'''
+        """Left-hand side expression"""
         return self._expression
 
     def __str__(self):
-        '''Convert relation to string representation'''
-        return '{} {} 0'.format(str(self._expression), Relation.SYMBOL[self._sense])
+        """Convert relation to string representation"""
+        return '{} {} 0'.format(
+            str(self._expression), Relation.SYMBOL[self._sense])
 
     def __repr__(self):
-        return '<Relation \'{}\'>'.format(str(self))
+        return '<{} {}>'.format(self.__class__.__name__, repr(str(self)))
 
 
 class ObjectiveSense(object):
-    '''Enumeration of objective sense values'''
+    """Enumeration of objective sense values"""
+
     Minimize = object()
+    """Minimize objective function"""
+
     Maximize = object()
+    """Maximize objective function"""
+
 
 class VariableType(object):
-    '''Enumeration of variable types'''
+    """Enumeration of variable types"""
+
     Continuous = object()
+    """Continuous variable type"""
+
     Integer = object()
+    """Integer variable type"""
+
     Binary = object()
+    """Binary variable type (0 or 1)"""
 
 
 class Solver(object):
-    '''Factory for LP Problem instances'''
+    """Factory for LP Problem instances"""
 
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def create_problem(self):
-        pass
+        """Create a new :class:`.Problem` instance"""
+
 
 class Problem(object):
-    '''Representation of LP Problem instance
+    """Representation of LP Problem instance
 
-    Names in the problem can be any hashable object. It is the responsibility
-    of the implementation to translate the object into a unique string, if
-    required by the underlying LP solver.'''
+    Variable names in the problem can be any hashable object. It is the
+    responsibility of the solver interface to translate the object into a
+    unique string if required by the underlying LP solver.
+    """
 
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def define(self, *names, **kwargs):
-        '''Define a variable in the problem'''
-        pass
+        """Define a variable in the problem"""
 
     @abc.abstractmethod
     def var(self, name):
-        '''Return variable as an expression'''
-        pass
+        """Return variable as an :class:`.Expression`"""
 
     @abc.abstractmethod
     def set(self, names):
-        '''Return variables as a set expression'''
-        pass
+        """Return variables as a set expression
+
+        This returns an :class:`.Expression` containing a
+        :class:`.VariableSet`.
+        """
 
     @abc.abstractmethod
     def add_linear_constraints(self, *relations):
-        '''Add constraints to the problem
+        """Add constraints to the problem
 
-        Each constraint is represented by a Relation, and the
-        expression in that relation can be a set expression.'''
-        pass
+        Each constraint is represented by a :class:`.Relation`, and the
+        expression in that relation can be a set expression.
+        """
 
     @abc.abstractmethod
     def set_linear_objective(self, expression):
-        '''Set linear objective of the problem'''
-        pass
+        """Set linear objective of the problem to the given
+        :class:`.Expression`.
+        """
 
     @abc.abstractmethod
     def set_objective_sense(self, sense):
-        '''Set type of problem (minimize or maximize)'''
-        pass
+        """Set type of problem (minimize or maximize)"""
 
     @abc.abstractmethod
     def solve(self, sense=None):
-        '''Solve problem and return result'''
-        pass
+        """Solve problem and return result"""
 
     @abc.abstractproperty
     def result(self):
-        '''Result of solved problem'''
-        pass
+        """Result of solved problem"""
+
 
 class InvalidResultError(Exception):
-    '''Raised when a result that has been invalidated is accessed'''
+    """Raised when a result that has been invalidated is accessed"""
 
     def __init__(self, msg=None):
         if msg is None:
-            msg = 'Previous result is no longer valid as problem has been solved again'
+            msg = ('Previous result is no longer valid as problem'
+                   ' has been solved again')
         super(InvalidResultError, self).__init__(msg)
 
-class Result(object):
-    '''Result of solving an LP problem
 
-    The result is tied to the solver instance and is valid at least until the problem
-    is solved again. If the problem has been solved again an InvalidResultError may be
-    raised.'''
+class Result(object):
+    """Result of solving an LP problem
+
+    The result is tied to the solver instance and is valid at least until the
+    problem is solved again. If the problem has been solved again an
+    :class:`InvalidResultError` may be raised.
+    """
 
     @abc.abstractproperty
     def success(self):
-        '''Whether solution was optimal'''
-        pass
+        """Whether solution was optimal"""
 
     def __nonzero__(self):
-        '''Whether solution was optimal'''
+        """Whether solution was optimal"""
         return self.success
 
     @abc.abstractproperty
     def status(self):
-        '''String indicating the status of the problem result'''
-        pass
+        """String indicating the status of the problem result"""
 
     @abc.abstractmethod
     def get_value(self, expression):
-        '''Get value of variable or expression in result
+        """Get value of variable or expression in result
 
-        Expression can be an object defined as a name in the problem, in which case
-        the corresponding value is simply returned. If expression is an actual
-        Expression object, it will be evaluated using the values from the result.'''
-        pass
+        Expression can be an object defined as a name in the problem, in which
+        case the corresponding value is simply returned. If expression is an
+        actual :class:`.Expression` object, it will be evaluated using the
+        values from the result.
+        """
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()

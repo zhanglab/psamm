@@ -19,6 +19,7 @@ model_script API
    formula
    gapfill
    lpsolver_lp
+   lpsolver_generic
    lpsolver_cplex
    lpsolver_qsoptex
    massconsistency

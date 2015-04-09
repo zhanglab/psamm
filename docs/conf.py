@@ -24,6 +24,9 @@ import metnet
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('..'))
 
+# Add local extensions to path.
+sys.path.insert(0, os.path.abspath('extensions'))
+
 # Mock optional modules to allow autodoc to run even in the absense of these
 # modules.
 MOCK_MODULES = ['cplex', 'qsoptex']
@@ -43,6 +46,7 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.coverage',
     'sphinx.ext.intersphinx',
+    'doilinks'
 ]
 
 # Add any paths that contain templates here, relative to this directory.

@@ -1,13 +1,15 @@
 
-'''Parser for SBML model files'''
+"""Parser for SBML model files"""
 
 import xml.etree.ElementTree as ET
 from decimal import Decimal
 from fractions import Fraction
 from functools import partial
+from itertools import count
 
 from ..database import MetabolicDatabase, DictDatabase
 from ..reaction import Reaction, Compound
+
 
 # Level 1 namespaces
 SBML_NS_L1 = 'http://www.sbml.org/sbml/level1'
@@ -22,14 +24,17 @@ SBML_NS_L2_V5 = 'http://www.sbml.org/sbml/level2/version5'
 # Level 3 namespaces
 SBML_NS_L3_V1_CORE = 'http://www.sbml.org/sbml/level3/version1/core'
 
-def tag(tag, namespace=None):
-    '''Prepend namespace to tag name'''
+
+def _tag(tag, namespace=None):
+    """Prepend namespace to tag name"""
     if namespace is None:
         return str(tag)
     return '{{{}}}{}'.format(namespace, tag)
 
+
 class ParseError(Exception):
-    '''Error parsing SBML file'''
+    """Error parsing SBML file"""
+
 
 class SBMLDatabase(MetabolicDatabase):
     '''Reaction database backed by an SBML file'''
@@ -45,23 +50,23 @@ class SBMLDatabase(MetabolicDatabase):
         self._version = int(root.get('version'))
 
         if self._level == 1:
-            self._sbml_tag = partial(tag, namespace=SBML_NS_L1)
+            self._sbml_tag = partial(_tag, namespace=SBML_NS_L1)
         elif self._level == 2:
             if self._version == 1:
-                self._sbml_tag = partial(tag, namespace=SBML_NS_L2)
+                self._sbml_tag = partial(_tag, namespace=SBML_NS_L2)
             elif self._version == 2:
-                self._sbml_tag = partial(tag, namespace=SBML_NS_L2_V2)
+                self._sbml_tag = partial(_tag, namespace=SBML_NS_L2_V2)
             elif self._version == 3:
-                self._sbml_tag = partial(tag, namespace=SBML_NS_L2_V3)
+                self._sbml_tag = partial(_tag, namespace=SBML_NS_L2_V3)
             elif self._version == 4:
-                self._sbml_tag = partial(tag, namespace=SBML_NS_L2_V4)
+                self._sbml_tag = partial(_tag, namespace=SBML_NS_L2_V4)
             elif self._version == 5:
-                self._sbml_tag = partial(tag, namespace=SBML_NS_L2_V5)
+                self._sbml_tag = partial(_tag, namespace=SBML_NS_L2_V5)
             else:
                 raise ParseError('SBML level 2, version {} not implemented'.format(self._version))
         elif self._level == 3:
             if self._version == 1:
-                self._sbml_tag = partial(tag, namespace=SBML_NS_L3_V1_CORE)
+                self._sbml_tag = partial(_tag, namespace=SBML_NS_L3_V1_CORE)
             else:
                 raise ParseError('SBML level 3, version {} not implemented'.format(self._version))
         else:
@@ -202,3 +207,75 @@ class SBMLDatabase(MetabolicDatabase):
                 param_value = float(parameter.get('value'))
                 param_units = parameter.get('units')
                 yield reaction_id, (param_id, param_value, param_units)
+
+
+class SBMLWriter(object):
+    """Writer of SBML files"""
+
+    def __init__(self):
+        self._namespace = SBML_NS_L3_V1_CORE
+        self._sbml_tag = partial(_tag, namespace=self._namespace)
+
+    def write_model(self, file, model, compounds):
+        """Write a given model to file"""
+
+        # Load compound information
+        compound_name = {}
+        for compound in compounds:
+            compound_name[compound.id] = compound.name if compound.name is not None else compound.id
+
+        root = ET.Element(self._sbml_tag('sbml'))
+        root.set(self._sbml_tag('level'), '3')
+        root.set(self._sbml_tag('version'), '1')
+
+        model_tag = ET.SubElement(root, self._sbml_tag('model'))
+
+        # Generators of unique IDs
+        compound_id = ('M_'+str(i) for i in count(1))
+        compartment_id = ('C_'+str(i) for i in count(1))
+        reaction_id = ('R_'+str(i) for i in count(1))
+
+        # Build mapping from Compound to species ID
+        model_compartments = {}
+        model_species = {}
+        for reaction in model.reactions:
+            for compound, value in model.get_reaction_values(reaction):
+                if compound.compartment not in model_compartments:
+                    model_compartments[compound.compartment] = next(compartment_id)
+                if compound not in model_species:
+                    model_species[compound] = next(compound_id)
+
+        # Create list of compartments
+        compartments = ET.SubElement(model_tag, self._sbml_tag('listOfCompartments'))
+        for compartment, compartment_id in model_compartments.iteritems():
+            compartment_tag = ET.SubElement(compartments, self._sbml_tag('compartment'))
+            compartment_tag.set(self._sbml_tag('id'), compartment_id)
+            compartment_tag.set(self._sbml_tag('name'), str(compartment))
+
+        # Create list of species
+        species_list = ET.SubElement(model_tag, self._sbml_tag('listOfSpecies'))
+        for species, species_id in model_species.iteritems():
+            species_tag = ET.SubElement(species_list, self._sbml_tag('species'))
+            species_tag.set(self._sbml_tag('id'), species_id)
+            species_tag.set(self._sbml_tag('name'), str(species.translate(lambda x: compound_name.get(x, x))))
+            species_tag.set(self._sbml_tag('compartment'), model_compartments[species.compartment])
+
+        # Create list of reactions
+        reactions = ET.SubElement(model_tag, self._sbml_tag('listOfReactions'))
+        for reaction in model.reactions:
+            reaction_tag = ET.SubElement(reactions, self._sbml_tag('reaction'))
+            reaction_tag.set(self._sbml_tag('id'), next(reaction_id))
+            reaction_tag.set(self._sbml_tag('name'), reaction)
+            reaction_tag.set(self._sbml_tag('reversible'), 'true' if model.is_reversible(reaction) else 'false')
+
+            reactants = ET.SubElement(reaction_tag, self._sbml_tag('listOfReactants'))
+            products = ET.SubElement(reaction_tag, self._sbml_tag('listOfProducts'))
+
+            for compound, value in model.get_reaction_values(reaction):
+                dest_list = reactants if value < 0 else products
+                spec_ref = ET.SubElement(dest_list, self._sbml_tag('speciesReference'))
+                spec_ref.set(self._sbml_tag('species'), model_species[compound])
+                spec_ref.set(self._sbml_tag('stoichiometry'), str(value))
+
+        tree = ET.ElementTree(root)
+        tree.write(file, default_namespace=self._namespace)

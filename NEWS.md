@@ -1,4 +1,18 @@
 
+v0.5
+----
+
+- Add `sbmlexport` command to export current model as an SBML file.
+- Add a generic interface to the linear programming solvers that delegates to
+  an actual solver that is installed and has the required features. This adds
+  a `--solver` option to a number of command which can be used to influence
+  which solver is selected.
+- Add `--epsilon` option to a number of commands that previously had the
+  epsilon value hardcoded.
+- Refactor functions in `fastcore` for easier use.
+- docs: Extend docstring documentation of various modules.
+- docs: Add DOI links for references.
+
 v0.4
 ----
 
