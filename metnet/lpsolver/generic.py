@@ -65,8 +65,9 @@ class Solver(BaseSolver):
             solvers = [s for s in solvers if req in s and s[req] == value]
 
         if len(solvers) == 0:
-            raise RequirementsError('Unable to find a solver matching the'
-                                    ' specified requirements')
+            raise RequirementsError(
+                'Unable to find a solver matching the specified requirements:'
+                ' {}'.format(requirements))
 
         solver = max(solvers, key=operator.itemgetter('priority'))
         logger.debug('Using solver {}'.format(solver['name']))
