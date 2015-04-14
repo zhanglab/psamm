@@ -9,6 +9,11 @@ setup(
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
     url='https://github.com/zhanglab/model_script',
+    license='GNU GPLv3+',
+
+    classifiers = [
+        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)'
+    ],
 
     packages=find_packages(),
     entry_points = {
