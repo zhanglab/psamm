@@ -37,12 +37,21 @@ class ParseError(Exception):
 
 
 class SBMLDatabase(MetabolicDatabase):
-    '''Reaction database backed by an SBML file'''
+    """Reader of SBML model files
 
-    def __init__(self, file):
+    The constructor takes a file-like object which will be parsed as XML and
+    then as SBML according to the specification. If the ``strict`` parameter is
+    set to False, the parser will revert to a more lenient parsing which is
+    required for many older models. This tries to mimic the inconsistencies
+    employed by COBRA when parsing models.
+    """
+
+    def __init__(self, file, strict=False):
         # Parse SBML file
         tree = ET.parse(file)
         root = tree.getroot()
+
+        self._strict = strict
 
         # Parse level and version
         self._sbml_tag = None
@@ -63,14 +72,29 @@ class SBMLDatabase(MetabolicDatabase):
             elif self._version == 5:
                 self._sbml_tag = partial(_tag, namespace=SBML_NS_L2_V5)
             else:
-                raise ParseError('SBML level 2, version {} not implemented'.format(self._version))
+                if self._strict:
+                    raise ParseError('SBML level 2, version {}'
+                                     ' not implemented'.format(self._version))
+                # Assume latest version
+                self._version = 5
+                self._sbml_tag = partial(_tag, namespace=SBML_NS_L2_V5)
         elif self._level == 3:
             if self._version == 1:
                 self._sbml_tag = partial(_tag, namespace=SBML_NS_L3_V1_CORE)
             else:
-                raise ParseError('SBML level 3, version {} not implemented'.format(self._version))
+                if self._strict:
+                    raise ParseError('SBML level 3, version {}'
+                                     ' not implemented'.format(self._version))
+                # Assume latest version
+                self._version = 1
+                self._sbml_tag = partial(_tag, namespace=SBML_NS_L3_V1_CORE)
         else:
-            raise ParseError('SBML level {} not implemented'.format(self._level))
+            if self._strict:
+                raise ParseError('SBML level {} not implemented'.format(
+                    self._level))
+            # Assume level 1
+            self._level = 1
+            self._sbml_tag = partial(_tag, namespace=SBML_NS_L1)
 
         self._model = root.find(self._sbml_tag('model'))
         self._database = DictDatabase()
@@ -84,11 +108,19 @@ class SBMLDatabase(MetabolicDatabase):
             species_comp = species.get('compartment')
             self._model_compounds[species_id] = species_name, species_comp
 
-            # Add implicit exchange reaction if compound is boundary condition
             species_boundary = species.get('boundaryCondition', False)
+
+            # In non-strict mode the species that ends with _b are considered
+            # boundary conditions.
+            if not self._strict and species_id.endswith('_b'):
+                species_boundary = True
+
+            # Add implicit exchange reaction if compound is boundary condition
             if species_boundary:
                 reaction_name = species_id + '_impl_EX'
-                reaction = Reaction(Reaction.Bidir, [(Compound(species_id, compartment=species_comp), 1)], [])
+                reaction = Reaction(
+                    Reaction.Bidir,
+                    [(Compound(species_id, compartment=species_comp), 1)], [])
                 self._database.set_reaction(reaction_name, reaction)
 
         # Reactions
@@ -99,57 +131,85 @@ class SBMLDatabase(MetabolicDatabase):
             reaction_rev = reaction.get('reversible', 'true') == 'true'
 
             left = []
-            for species_id, value in self._parse_species_references(reaction, 'listOfReactants'):
+            for species_id, value in self._parse_species_references(
+                    reaction, 'listOfReactants'):
                 if species_id not in self._model_compounds:
-                    raise ParseError('Reaction {} references non-existent species {}'.format(reaction_id, species_id))
+                    if not self._strict:
+                        # In non-strict mode simply skip these references
+                        continue
+                    raise ParseError(
+                        'Reaction {} references non-existent'
+                        ' species {}'.format(reaction_id, species_id))
+
                 species_name, species_comp = self._model_compounds[species_id]
-                left.append((Compound(species_id, compartment=species_comp), value))
+                compound = Compound(species_id, compartment=species_comp)
+                left.append((compound, value))
 
             right = []
-            for species_id, value in self._parse_species_references(reaction, 'listOfProducts'):
+            for species_id, value in self._parse_species_references(
+                    reaction, 'listOfProducts'):
                 if species_id not in self._model_compounds:
-                    raise ParseError('Reaction {} references non-existent species {}'.format(reaction_id, species_id))
+                    if not self._strict:
+                        # In non-strict mode simply skip these references
+                        continue
+                    raise ParseError(
+                        'Reaction {} references non-existent'
+                        ' species {}'.format(reaction_id, species_id))
+
                 species_name, species_comp = self._model_compounds[species_id]
-                right.append((Compound(species_id, compartment=species_comp), value))
+                compound = Compound(species_id, compartment=species_comp)
+                right.append((compound, value))
 
             # Add reaction to database
             direction = Reaction.Bidir if reaction_rev else Reaction.Right
             self._database.set_reaction(reaction_id, Reaction(direction, left, right))
 
     def _element_get_id(self, element):
-        '''Get id of reaction or species element
+        """Get id of reaction or species element
 
         In old levels the name is used as the id. This method returns the correct
-        attribute depending on the level.'''
+        attribute depending on the level.
+        """
+
         return element.get('id') if self._level > 1 else element.get('name')
 
     def _parse_species_references(self, root, name):
-        '''Yield species id and parsed value for a speciesReference list'''
-        for species in root.iterfind('./{}/{}'.format(self._sbml_tag(name), self._sbml_tag('speciesReference'))):
+        """Yield species id and parsed value for a speciesReference list"""
+        for species in root.iterfind('./{}/{}'.format(
+                self._sbml_tag(name), self._sbml_tag('speciesReference'))):
+
             species_id = species.get('species')
 
             if self._level == 1:
-                # In SBML level 1 only positive integers are allowed for stoichiometry but
-                # a positive integer denominator can be specified.
-                value = int(species.get('stoichiometry', 1))
-                denom = int(species.get('denominator', 1))
-                species_value = Fraction(value, denom)
+                # In SBML level 1 only positive integers are allowed for
+                # stoichiometry but a positive integer denominator can be
+                # specified.
+                try:
+                    value = int(species.get('stoichiometry', 1))
+                    denom = int(species.get('denominator', 1))
+                    species_value = Fraction(value, denom)
+                except ValueError:
+                    if self._strict:
+                        raise
+                    species_value = Decimal(species.get('stoichiometry', 1))
             elif self._level == 2:
-                # Stoichiometric value is a double but can alternatively be specified
-                # using math (not implemented).
+                # Stoichiometric value is a double but can alternatively be
+                # specified using math (not implemented).
                 value_str = species.get('stoichiometry', None)
                 if value_str is None:
                     if 'stoichiometryMath' in species:
-                        raise ParseError('stoichiometryMath in speciesReference is not implemented')
+                        raise ParseError('stoichiometryMath in '
+                                         'speciesReference is not implemented')
                     species_value = 1
                 else:
                     species_value = Decimal(value_str)
             elif self._level == 3:
-                # Stoichiometric value is a double but can alternatively be specified
-                # using initial assignment (not implemented).
+                # Stoichiometric value is a double but can alternatively be
+                # specified using initial assignment (not implemented).
                 value_str = species.get('stoichiometry', None)
                 if value_str is None:
-                    raise ParseError('Missing stoichiometry in speciesReference is not implemented')
+                    raise ParseError('Missing stoichiometry in'
+                                     ' speciesReference is not implemented')
                 species_value = Decimal(value_str)
 
             if species_value % 1 == 0:
@@ -178,34 +238,38 @@ class SBMLDatabase(MetabolicDatabase):
         return self._database.get_compound_reactions(compound)
 
     def get_compound_name(self, compound):
-        '''Name of compound'''
+        """Name of compound"""
         if compound.name not in self._model_compounds:
             raise ValueError('Unknown compound: {}'.format(compound))
         name, comp = self._model_compounds[compound.name]
         return name
 
     def get_reaction_notes_elements(self):
-        '''Yield tuples of reaction ids, and notes as ElementTree elements'''
+        """Yield tuples of reaction ids, and notes as ElementTree elements"""
         for reaction in self._reactions.iterfind(self._sbml_tag('reaction')):
             reaction_id = self._element_get_id(reaction)
             yield reaction_id, reaction.find(self._sbml_tag('notes'))
 
     def get_compound_notes_elements(self):
-        '''Yield tuples of compound ids, and notes as ElementTree elements'''
+        """Yield tuples of compound ids, and notes as ElementTree elements"""
         for compound in self._species.iterfind(self._sbml_tag('species')):
             compound_id = self._element_get_id(compound)
             yield compound_id, compound.find(self._sbml_tag('notes'))
 
     def get_kinetic_law_reaction_parameters(self):
-        '''Yield tuples of reaction ids and the value of a kinteic law reaction parameters'''
+        """Yield tuples of reaction ids and the value of a kinetic law reaction
+        parameters
+        """
         for reaction in self._reactions.iterfind(self._sbml_tag('reaction')):
             reaction_id = self._element_get_id(reaction)
-            for parameter in reaction.iterfind('./{}/{}/{}'.format(self._sbml_tag('kineticLaw'),
-                                                                    self._sbml_tag('listOfParameters'),
-                                                                    self._sbml_tag('parameter'))):
+            for parameter in reaction.iterfind(
+                    './{}/{}/{}'.format(self._sbml_tag('kineticLaw'),
+                                        self._sbml_tag('listOfParameters'),
+                                        self._sbml_tag('parameter'))):
                 param_id = parameter.get('id')
                 param_value = float(parameter.get('value'))
                 param_units = parameter.get('units')
+
                 yield reaction_id, (param_id, param_value, param_units)
 
 
