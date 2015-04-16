@@ -125,6 +125,8 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/2.7', None)
 }
 
+autodoc_member_order = 'bysource'
+
 
 # -- Options for HTML output ----------------------------------------------
 
