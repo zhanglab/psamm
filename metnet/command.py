@@ -8,6 +8,8 @@ inheritance so new commands are added by subclassing :class:`Command`.
 The :func:`.main` function is the entry point of command line interface.
 """
 
+from __future__ import print_function
+
 import sys
 import os
 import argparse
@@ -161,7 +163,7 @@ class ChargeBalanceCommand(Command):
                 rx = self._mm.get_reaction(reaction)
                 rxt = rx.translated_compounds(
                     lambda x: compound_name.get(x, x))
-                print '{}\t{}\t{}'.format(reaction, charge, rxt)
+                print('{}\t{}\t{}'.format(reaction, charge, rxt))
 
         logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))
         logger.info('Unchecked reactions due to missing charge: {}/{}'.format(
@@ -308,8 +310,8 @@ class FastGapFillCommand(SolverCommandMixin, Command):
                 reaction_class = 'Model'
                 weight = 0
             reaction = model_complete.get_reaction(rxnid).translated_compounds(lambda x: compound_name.get(x, x))
-            print '{}\t{}\t{}\t{}\t{}'.format(
-                rxnid, reaction_class, weight, flux, reaction)
+            print('{}\t{}\t{}\t{}\t{}'.format(
+                rxnid, reaction_class, weight, flux, reaction))
 
         logger.info('Calculating Fastcc consistent subset of induced model')
         consistent_core = fastcore.fastcc_consistent_subset(
@@ -366,9 +368,9 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
         optimum = None
         for reaction_id, fba_flux, flux in sorted(result):
             rx = self._mm.get_reaction(reaction_id)
-            print '{}\t{}\t{}\t{}'.format(
+            print('{}\t{}\t{}\t{}'.format(
                 reaction_id, fba_flux, flux,
-                rx.translated_compounds(lambda x: compound_name.get(x, x)))
+                rx.translated_compounds(lambda x: compound_name.get(x, x))))
             # Remember flux of requested reaction
             if reaction_id == reaction:
                 optimum = flux
@@ -452,7 +454,7 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
         for reaction in sorted(inconsistent):
             rx = self._mm.get_reaction(reaction)
             rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
-            print '{}\t{}'.format(reaction, rxt)
+            print('{}\t{}'.format(reaction, rxt))
 
         logger.info('Model has {} inconsistent reactions.'.format(
             len(inconsistent)))
@@ -501,8 +503,8 @@ class FluxVariabilityCommand(SolverCommandMixin, Command):
         for reaction_id, bounds in flux_bounds:
             rx = self._mm.get_reaction(reaction_id)
             rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
-            print '{}\t{}\t{}\t{}'.format(
-                reaction_id, bounds[0], bounds[1], rxt)
+            print('{}\t{}\t{}\t{}'.format(
+                reaction_id, bounds[0], bounds[1], rxt))
 
 
 class FormulaBalanceCommand(Command):
@@ -570,9 +572,9 @@ class FormulaBalanceCommand(Command):
                     right_missing, left_missing = Formula.balance(
                         right_form, left_form)
 
-                    print '{}\t{}\t{}\t{}\t{}'.format(
+                    print('{}\t{}\t{}\t{}\t{}'.format(
                         reaction, left_form, right_form,
-                        left_missing, right_missing)
+                        left_missing, right_missing))
 
         logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))
         logger.info('Unchecked reactions due to missing formula: {}/{}'.format(
@@ -605,7 +607,7 @@ class GapFillCommand(SolverCommandMixin, Command):
         if len(blocked) > 0:
             logger.info('Blocked compounds')
             for compound in blocked:
-                print compound.translate(lambda x: compound_name.get(x, x))
+                print(compound.translate(lambda x: compound_name.get(x, x)))
 
         if len(blocked) > 0:
             # Add exchange and transport reactions to database
@@ -623,13 +625,13 @@ class GapFillCommand(SolverCommandMixin, Command):
                 rx = model_complete.get_reaction(rxnid)
                 rxt = rx.translated_compounds(
                     lambda x: compound_name.get(x, x))
-                print '{}\t{}\t{}'.format(rxnid, 'Add', rxt)
+                print('{}\t{}\t{}'.format(rxnid, 'Add', rxt))
 
             for rxnid in reversed_reactions:
                 rx = model_complete.get_reaction(rxnid)
                 rxt = rx.translated_compounds(
                     lambda x: compound_name.get(x, x))
-                print '{}\t{}\t{}'.format(rxnid, 'Reverse', rxt)
+                print('{}\t{}\t{}'.format(rxnid, 'Reverse', rxt))
         else:
             logger.info('No blocked compounds found')
 
@@ -648,6 +650,9 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
         parser.add_argument(
             '--epsilon', type=float, help='Mass threshold',
             default=1e-5)
+        parser.add_argument(
+            '--checked', metavar='reaction', action='append', type=str,
+            default=[], help='Mark reaction as already checked (no residual)')
         super(MassConsistencyCommand, cls).init_parser(parser)
 
     def run(self):
@@ -671,6 +676,9 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
         if biomass_reaction is not None:
             exclude.add(biomass_reaction)
 
+        # Create set of checked reactions
+        checked = set(self._args.checked)
+
         # Create set of compounds allowed to have mass zero
         zeromass = set()
         zeromass.add('cpd11632') # Photon
@@ -693,8 +701,8 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
             if mass >= 1-epsilon or compound.name in zeromass:
                 good += 1
             total += 1
-            print '{}: {}'.format(compound.translate(
-                lambda x: compound_name.get(x, x)), mass)
+            print('{}: {}'.format(compound.translate(
+                lambda x: compound_name.get(x, x)), mass))
         logger.info('Consistent compounds: {}/{}'.format(good, total))
 
         logger.info('Is consistent? {}'.format(
@@ -704,14 +712,15 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
         logger.info('Reaction consistency')
         reaction_iter, compound_iter = (
             massconsistency.check_reaction_consistency(
-                self._mm, solver, known_inconsistent, zeromass))
+                self._mm, solver=solver, exchange=known_inconsistent,
+                checked=checked, zeromass=zeromass))
         for reaction_id, residual in sorted(
                 reaction_iter, key=lambda x: abs(x[1]), reverse=True):
             if abs(residual) >= epsilon:
                 reaction = self._mm.get_reaction(reaction_id)
                 rxt = reaction.translated_compounds(
                     lambda x: compound_name.get(x, x))
-                print '{}\t{}\t{}'.format(reaction_id, residual, rxt)
+                print('{}\t{}\t{}'.format(reaction_id, residual, rxt))
 
 
 class RandomSparseNetworkCommand(SolverCommandMixin, Command):
@@ -801,7 +810,7 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
 
         for reaction_id in sorted(self._mm.reactions):
             value = 0 if reaction_id in deleted else 1
-            print '{}\t{}'.format(reaction_id, value)
+            print('{}\t{}'.format(reaction_id, value))
 
 
 class RobustnessCommand(SolverCommandMixin, Command):
@@ -902,7 +911,8 @@ class RobustnessCommand(SolverCommandMixin, Command):
 
             try:
                 for other_reaction, flux in run_fba(test_model, reaction):
-                    print '{}\t{}\t{}'.format(other_reaction, fixed_flux, flux)
+                    print('{}\t{}\t{}'.format(
+                        other_reaction, fixed_flux, flux))
             except fluxanalysis.FluxBalanceError:
                 pass
 
@@ -996,15 +1006,15 @@ class SearchCommand(Command):
 
             # Show results
             for compound_id in compound_ids:
-                print 'ID: {}'.format(compound_id)
+                print('ID: {}'.format(compound_id))
                 if compound_id in compound_name:
-                    print 'Name: {}'.format(compound_name[compound_id])
+                    print('Name: {}'.format(compound_name[compound_id]))
                 if compound_id in compound_synonyms:
-                    print 'Synonyms: {}'.format(
-                        ', '.join(compound_synonyms[compound_id]))
+                    print('Synonyms: {}'.format(
+                        ', '.join(compound_synonyms[compound_id])))
                 if compound_id in compound_formula:
-                    print 'Formula: {}'.format(compound_formula[compound_id])
-                print
+                    print('Formula: {}'.format(compound_formula[compound_id]))
+                print()
         elif which_command == 'reaction':
             reaction_ids = []
             for reaction_id in self._args.id:
@@ -1025,16 +1035,16 @@ class SearchCommand(Command):
 
             # Show results
             for reaction_id in reaction_ids:
-                print 'ID: {}'.format(reaction_id)
+                print('ID: {}'.format(reaction_id))
 
                 reaction = self._mm.get_reaction(reaction_id)
-                print 'Reaction (IDs): {}'.format(
-                    self._mm.get_reaction(reaction_id))
+                print('Reaction (IDs): {}'.format(
+                    self._mm.get_reaction(reaction_id)))
                 translated_reaction = reaction.translated_compounds(
                     lambda x: compound_name.get(x, x))
                 if reaction != translated_reaction:
-                    print 'Reaction (names): {}'.format(translated_reaction)
-                print
+                    print('Reaction (names): {}'.format(translated_reaction))
+                print()
 
 
 def main(command=None):

@@ -20,6 +20,7 @@ from ..util import LoggerFile
 # Module-level logging
 logger = logging.getLogger(__name__)
 
+
 class Solver(BaseSolver):
     '''Represents an LP-solver using Cplex'''
 
@@ -172,6 +173,7 @@ class Problem(BaseProblem):
     def result(self):
         return self._result
 
+
 class Result(BaseResult):
     '''Represents the solution to a cplex.Problem
 
@@ -194,7 +196,10 @@ class Result(BaseResult):
     def success(self):
         '''Return boolean indicating whether a solution was found'''
         self._check_valid()
-        return self._problem._cp.solution.get_status() in (1, 101)
+        return self._problem._cp.solution.get_status() in (
+            self._problem._cp.solution.status.optimal,
+            self._problem._cp.solution.status.optimal_tolerance,
+            self._problem._cp.solution.status.MIP_optimal)
 
     @property
     def status(self):
