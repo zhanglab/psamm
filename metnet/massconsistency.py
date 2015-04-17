@@ -53,7 +53,7 @@ def is_consistent(database, solver, exchange=set(), zeromass=set()):
 
 
 def check_reaction_consistency(database, solver, exchange=set(),
-                               zeromass=set(), weights={}):
+                               checked=set(), zeromass=set(), weights={}):
     """Check inconsistent reactions by minimizing mass residuals
 
     Return a reaction iterable, and compound iterable. The reaction iterable
@@ -63,7 +63,8 @@ def check_reaction_consistency(database, solver, exchange=set(),
     Each compound is assigned a mass of at least one, and the masses are
     balanced using the stoichiometric matrix. In addition, each reaction has a
     residual mass that is included in the mass balance equations. The L1-norm
-    of the residuals is minimized.
+    of the residuals is minimized. Reactions in the checked set are assumed to
+    have been manually checked and therefore have the residual fixed at zero.
     """
 
     # Create Flux balance problem
@@ -94,8 +95,11 @@ def check_reaction_consistency(database, solver, exchange=set(),
         massbalance_lhs[reaction_id] += value * mass_var
     for reaction_id, lhs in massbalance_lhs.iteritems():
         if reaction_id not in exchange:
-            residual = prob.var(('r', reaction_id))
-            prob.add_linear_constraints(lhs + residual == 0)
+            if reaction_id not in checked:
+                residual = prob.var(('r', reaction_id))
+                prob.add_linear_constraints(lhs + residual == 0)
+            else:
+                prob.add_linear_constraints(lhs == 0)
 
     # Solve
     result = prob.solve(lp.ObjectiveSense.Minimize)
