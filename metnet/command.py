@@ -650,6 +650,9 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
         parser.add_argument(
             '--epsilon', type=float, help='Mass threshold',
             default=1e-5)
+        parser.add_argument(
+            '--checked', metavar='reaction', action='append', type=str,
+            default=[], help='Mark reaction as already checked (no residual)')
         super(MassConsistencyCommand, cls).init_parser(parser)
 
     def run(self):
@@ -672,6 +675,9 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
         biomass_reaction = self._model.get_biomass_reaction()
         if biomass_reaction is not None:
             exclude.add(biomass_reaction)
+
+        # Create set of checked reactions
+        checked = set(self._args.checked)
 
         # Create set of compounds allowed to have mass zero
         zeromass = set()
@@ -706,7 +712,8 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
         logger.info('Reaction consistency')
         reaction_iter, compound_iter = (
             massconsistency.check_reaction_consistency(
-                self._mm, solver, known_inconsistent, zeromass))
+                self._mm, solver=solver, exchange=known_inconsistent,
+                checked=checked, zeromass=zeromass))
         for reaction_id, residual in sorted(
                 reaction_iter, key=lambda x: abs(x[1]), reverse=True):
             if abs(residual) >= epsilon:
