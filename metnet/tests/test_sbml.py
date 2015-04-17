@@ -3,14 +3,15 @@
 import unittest
 
 from metnet.datasource import sbml
-from metnet.reaction import Compound
+from metnet.reaction import Reaction, Compound
 
 from decimal import Decimal
 from fractions import Fraction
 from StringIO import StringIO
 
+
 class TestSBMLDatabaseL1V2(unittest.TestCase):
-    '''Test parsing of a simple level 1 version 2 SBML file'''
+    """Test parsing of a simple level 1 version 2 SBML file"""
 
     def setUp(self):
         s = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
@@ -48,36 +49,50 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
   </listOfReactions>
  </model>
 </sbml>''')
-        self.database = sbml.SBMLDatabase(s)
+        self.reader = sbml.SBMLReader(s)
 
     def test_compounds_exist(self):
-        self.assertEquals(len(list(self.database.compounds)), 5)
-        self.assertIn(Compound('Glucose', 'cell'), self.database.compounds)
-        self.assertIn(Compound('Glucose_6_P', 'cell'), self.database.compounds)
-        self.assertIn(Compound('H2O', 'cell'), self.database.compounds)
-        self.assertIn(Compound('Phosphate', 'cell'), self.database.compounds)
-        self.assertIn(Compound('Biomass', 'cell'), self.database.compounds)
+        species = {entry.id: entry for entry in self.reader.species}
+        self.assertEquals(len(species), 5)
+
+        self.assertEqual(species['Glucose'].id, 'Glucose')
+        self.assertEqual(species['Glucose'].name, 'Glucose')
+        self.assertEqual(species['Glucose'].compartment, 'cell')
+
+        self.assertEqual(species['Glucose_6_P'].id, 'Glucose_6_P')
+        self.assertEqual(species['Glucose_6_P'].name, 'Glucose_6_P')
+        self.assertEqual(species['Glucose_6_P'].compartment, 'cell')
+
+        self.assertEqual(species['H2O'].id, 'H2O')
+        self.assertEqual(species['H2O'].name, 'H2O')
+        self.assertEqual(species['H2O'].compartment, 'cell')
 
     def test_g6pase_reaction_exists(self):
-        self.assertTrue(self.database.is_reversible('G6Pase'))
+        reaction = self.reader.get_reaction('G6Pase')
+        self.assertTrue(reaction.reversible)
 
-        # Read stoichiometric valus of reaction
-        values = dict(self.database.get_reaction_values('G6Pase'))
-        self.assertEquals(values, { Compound('Glucose', 'cell'): -2,
-                                    Compound('Phosphate', 'cell'): -2,
-                                    Compound('Glucose_6_P', 'cell'): 2,
-                                    Compound('H2O', 'cell'): 2 })
+        # Compare equation of reaction
+        actual_equation = Reaction(Reaction.Bidir,
+                                   [(Compound('Glucose', 'cell'), 2),
+                                    (Compound('Phosphate', 'cell'), 2)],
+                                   [(Compound('H2O', 'cell'), 2),
+                                    (Compound('Glucose_6_P', 'cell'), 2)])
+        self.assertEqual(reaction.equation, actual_equation)
 
     def test_biomass_reaction_exists(self):
-        self.assertFalse(self.database.is_reversible('Biomass'))
+        reaction = self.reader.get_reaction('Biomass')
+        self.assertFalse(reaction.reversible)
 
-        # Read stoichiometric values of reaction
-        values = dict(self.database.get_reaction_values('Biomass'))
-        self.assertEquals(values, { Compound('Glucose_6_P', 'cell'): -Fraction(56, 100),
-                                    Compound('Biomass', 'cell'): 1 })
+        # Compare equation of reaction
+        actual_equation = Reaction(Reaction.Right,
+                                   [(Compound('Glucose_6_P', 'cell'),
+                                     Fraction(56, 100))],
+                                   [(Compound('Biomass', 'cell'), 1)])
+        self.assertEqual(reaction.equation, actual_equation)
+
 
 class TestSBMLDatabaseL2V5(unittest.TestCase):
-    '''Test parsing of a simple level 2 version 5 SBML file'''
+    """Test parsing of a simple level 2 version 5 SBML file"""
 
     def setUp(self):
         s = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
@@ -115,36 +130,50 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
   </listOfReactions>
  </model>
 </sbml>''')
-        self.database = sbml.SBMLDatabase(s)
+        self.reader = sbml.SBMLReader(s)
 
     def test_compounds_exist(self):
-        self.assertEquals(len(list(self.database.compounds)), 5)
-        self.assertIn(Compound('M_Glucose', 'C_c'), self.database.compounds)
-        self.assertIn(Compound('M_Glucose_6_P', 'C_c'), self.database.compounds)
-        self.assertIn(Compound('M_H2O', 'C_c'), self.database.compounds)
-        self.assertIn(Compound('M_Phosphate', 'C_c'), self.database.compounds)
-        self.assertIn(Compound('M_Biomass', 'C_c'), self.database.compounds)
+        species = {entry.id: entry for entry in self.reader.species}
+        self.assertEquals(len(species), 5)
+
+        self.assertEqual(species['M_Glucose'].id, 'M_Glucose')
+        self.assertEqual(species['M_Glucose'].name, 'Glucose')
+        self.assertEqual(species['M_Glucose'].compartment, 'C_c')
+
+        self.assertEqual(species['M_Glucose_6_P'].id, 'M_Glucose_6_P')
+        self.assertEqual(species['M_Glucose_6_P'].name, 'Glucose-6-P')
+        self.assertEqual(species['M_Glucose_6_P'].compartment, 'C_c')
+
+        self.assertEqual(species['M_H2O'].id, 'M_H2O')
+        self.assertEqual(species['M_H2O'].name, 'H2O')
+        self.assertEqual(species['M_H2O'].compartment, 'C_c')
 
     def test_g6pase_reaction_exists(self):
-        self.assertTrue(self.database.is_reversible('R_G6Pase'))
+        reaction = self.reader.get_reaction('R_G6Pase')
+        self.assertTrue(reaction.reversible)
 
-        # Read stoichiometric valus of reaction
-        values = dict(self.database.get_reaction_values('R_G6Pase'))
-        self.assertEquals(values, { Compound('M_Glucose', 'C_c'): -2,
-                                    Compound('M_Phosphate', 'C_c'): -2,
-                                    Compound('M_Glucose_6_P', 'C_c'): 2,
-                                    Compound('M_H2O', 'C_c'): 2 })
+        # Compare equation of reaction
+        actual_equation = Reaction(Reaction.Bidir,
+                                   [(Compound('M_Glucose', 'C_c'), 2),
+                                    (Compound('M_Phosphate', 'C_c'), 2)],
+                                   [(Compound('M_H2O', 'C_c'), 2),
+                                    (Compound('M_Glucose_6_P', 'C_c'), 2)])
+        self.assertEqual(reaction.equation, actual_equation)
 
     def test_biomass_reaction_exists(self):
-        self.assertFalse(self.database.is_reversible('R_Biomass'))
+        reaction = self.reader.get_reaction('R_Biomass')
+        self.assertFalse(reaction.reversible)
 
-        # Read stoichiometric values of reaction
-        values = dict(self.database.get_reaction_values('R_Biomass'))
-        self.assertEquals(values, { Compound('M_Glucose_6_P', 'C_c'): -Decimal('0.56'),
-                                    Compound('M_Biomass', 'C_c'): 1 })
+        # Compare equation of reaction
+        actual_equation = Reaction(Reaction.Right,
+                                   [(Compound('M_Glucose_6_P', 'C_c'),
+                                     Decimal('0.56'))],
+                                   [(Compound('M_Biomass', 'C_c'), 1)])
+        self.assertEqual(reaction.equation, actual_equation)
+
 
 class TestSBMLDatabaseL3V1(unittest.TestCase):
-    '''Test parsing of a simple level 3 version 1 SBML file'''
+    """Test parsing of a simple level 3 version 1 SBML file"""
 
     def setUp(self):
         s = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
@@ -182,32 +211,47 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
   </listOfReactions>
  </model>
 </sbml>''')
-        self.database = sbml.SBMLDatabase(s)
+        self.reader = sbml.SBMLReader(s)
 
     def test_compounds_exist(self):
-        self.assertEquals(len(list(self.database.compounds)), 5)
-        self.assertIn(Compound('M_Glucose', 'C_c'), self.database.compounds)
-        self.assertIn(Compound('M_Glucose_6_P', 'C_c'), self.database.compounds)
-        self.assertIn(Compound('M_H2O', 'C_c'), self.database.compounds)
-        self.assertIn(Compound('M_Phosphate', 'C_c'), self.database.compounds)
-        self.assertIn(Compound('M_Biomass', 'C_c'), self.database.compounds)
+        species = {entry.id: entry for entry in self.reader.species}
+        self.assertEquals(len(species), 5)
+
+        self.assertEqual(species['M_Glucose'].id, 'M_Glucose')
+        self.assertEqual(species['M_Glucose'].name, 'Glucose')
+        self.assertEqual(species['M_Glucose'].compartment, 'C_c')
+
+        self.assertEqual(species['M_Glucose_6_P'].id, 'M_Glucose_6_P')
+        self.assertEqual(species['M_Glucose_6_P'].name, 'Glucose-6-P')
+        self.assertEqual(species['M_Glucose_6_P'].compartment, 'C_c')
+
+        self.assertEqual(species['M_H2O'].id, 'M_H2O')
+        self.assertEqual(species['M_H2O'].name, 'H2O')
+        self.assertEqual(species['M_H2O'].compartment, 'C_c')
 
     def test_g6pase_reaction_exists(self):
-        self.assertTrue(self.database.is_reversible('R_G6Pase'))
+        reaction = self.reader.get_reaction('R_G6Pase')
+        self.assertTrue(reaction.reversible)
 
-        # Read stoichiometric valus of reaction
-        values = dict(self.database.get_reaction_values('R_G6Pase'))
-        self.assertEquals(values, { Compound('M_Glucose', 'C_c'): -2,
-                                    Compound('M_Phosphate', 'C_c'): -2,
-                                    Compound('M_Glucose_6_P', 'C_c'): 2,
-                                    Compound('M_H2O', 'C_c'): 2 })
+        # Compare equation of reaction
+        actual_equation = Reaction(Reaction.Bidir,
+                                   [(Compound('M_Glucose', 'C_c'), 2),
+                                    (Compound('M_Phosphate', 'C_c'), 2)],
+                                   [(Compound('M_H2O', 'C_c'), 2),
+                                    (Compound('M_Glucose_6_P', 'C_c'), 2)])
+        self.assertEqual(reaction.equation, actual_equation)
 
     def test_biomass_reaction_exists(self):
-        self.assertFalse(self.database.is_reversible('R_Biomass'))
+        reaction = self.reader.get_reaction('R_Biomass')
+        self.assertFalse(reaction.reversible)
 
-        # Read stoichiometric values of reaction
-        values = dict(self.database.get_reaction_values('R_Biomass'))
-        self.assertEquals(values, { Compound('M_Glucose_6_P', 'C_c'): -Decimal('0.56'),
-                                    Compound('M_Biomass', 'C_c'): 1 })
+        # Compare equation of reaction
+        actual_equation = Reaction(Reaction.Right,
+                                   [(Compound('M_Glucose_6_P', 'C_c'),
+                                     Decimal('0.56'))],
+                                   [(Compound('M_Biomass', 'C_c'), 1)])
+        self.assertEqual(reaction.equation, actual_equation)
+
+
 if __name__ == '__main__':
     unittest.main()
