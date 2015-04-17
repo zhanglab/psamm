@@ -15,7 +15,9 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
 
     def setUp(self):
         s = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
-<sbml xmlns="http://www.sbml.org/sbml/level1" level="1" version="2">
+<sbml xmlns="http://www.sbml.org/sbml/level1"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      level="1" version="2">
  <model>
   <listOfCompartments>
    <compartment name="cell"/>
@@ -37,6 +39,9 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
      <speciesReference species="H2O" stoichiometry="2"/>
      <speciesReference species="Glucose_6_P" stoichiometry="2"/>
     </listOfProducts>
+    <notes>
+     <html:p>Glucose 6-phosphatase</html:p>
+    </notes>
    </reaction>
    <reaction name="Biomass" reversible="false">
     <listOfReactants>
@@ -90,13 +95,24 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
                                    [(Compound('Biomass', 'cell'), 1)])
         self.assertEqual(reaction.equation, actual_equation)
 
+    def test_reaction_xml_notes(self):
+        reaction = self.reader.get_reaction('G6Pase')
+        notes = reaction.xml_notes
+
+        notes_tags = list(notes)
+        self.assertEqual(len(notes_tags), 1)
+        self.assertEqual(notes_tags[0].tag, '{http://www.w3.org/1999/xhtml}p')
+        self.assertEqual(notes_tags[0].text, 'Glucose 6-phosphatase')
+
 
 class TestSBMLDatabaseL2V5(unittest.TestCase):
     """Test parsing of a simple level 2 version 5 SBML file"""
 
     def setUp(self):
         s = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
-<sbml xmlns="http://www.sbml.org/sbml/level2/version5" level="2" version="5">
+<sbml xmlns="http://www.sbml.org/sbml/level2/version5"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      level="2" version="5">
  <model>
   <listOfCompartments>
    <compartment id="C_c" name="cell"/>
@@ -118,6 +134,9 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
      <speciesReference species="M_H2O" stoichiometry="2"/>
      <speciesReference species="M_Glucose_6_P" stoichiometry="2"/>
     </listOfProducts>
+    <notes>
+     <html:p>Glucose 6-phosphatase</html:p>
+    </notes>
    </reaction>
    <reaction id="R_Biomass" reversible="false">
     <listOfReactants>
@@ -171,13 +190,24 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
                                    [(Compound('M_Biomass', 'C_c'), 1)])
         self.assertEqual(reaction.equation, actual_equation)
 
+    def test_reaction_xml_notes(self):
+        reaction = self.reader.get_reaction('R_G6Pase')
+        notes = reaction.xml_notes
+
+        notes_tags = list(notes)
+        self.assertEqual(len(notes_tags), 1)
+        self.assertEqual(notes_tags[0].tag, '{http://www.w3.org/1999/xhtml}p')
+        self.assertEqual(notes_tags[0].text, 'Glucose 6-phosphatase')
+
 
 class TestSBMLDatabaseL3V1(unittest.TestCase):
     """Test parsing of a simple level 3 version 1 SBML file"""
 
     def setUp(self):
         s = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
-<sbml xmlns="http://www.sbml.org/sbml/level3/version1/core" level="3" version="1">
+<sbml xmlns="http://www.sbml.org/sbml/level3/version1/core"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      level="3" version="1">
  <model>
   <listOfCompartments>
    <compartment id="C_c" name="cell" constant="true"/>
@@ -199,6 +229,9 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
      <speciesReference species="M_H2O" stoichiometry="2" constant="true"/>
      <speciesReference species="M_Glucose_6_P" stoichiometry="2" constant="true"/>
     </listOfProducts>
+    <notes>
+     <html:p>Glucose 6-phosphatase</html:p>
+    </notes>
    </reaction>
    <reaction id="R_Biomass" reversible="false" fast="false">
     <listOfReactants>
@@ -251,6 +284,15 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
                                      Decimal('0.56'))],
                                    [(Compound('M_Biomass', 'C_c'), 1)])
         self.assertEqual(reaction.equation, actual_equation)
+
+    def test_reaction_xml_notes(self):
+        reaction = self.reader.get_reaction('R_G6Pase')
+        notes = reaction.xml_notes
+
+        notes_tags = list(notes)
+        self.assertEqual(len(notes_tags), 1)
+        self.assertEqual(notes_tags[0].tag, '{http://www.w3.org/1999/xhtml}p')
+        self.assertEqual(notes_tags[0].text, 'Glucose 6-phosphatase')
 
 
 if __name__ == '__main__':
