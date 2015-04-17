@@ -1,4 +1,17 @@
 
+v0.6
+----
+
+- Apply changes to the SBML parser in order for it to interoperate with
+  `model-import`. This makes it easier to implement the SBML importer in
+  `model-import`.
+- Add non-strict mode to the SBML parser. This makes it possible to load
+  almost-compliant SBML documents that are accepted by COBRA.
+- `masscheck` command: Allow reactions to be marked as checked.
+- cplex: Consider status `optimal_tolerance` to be successful.
+- docs: Expand documentation on the `masscheck` command.
+- docs: Change order of API documentation to `bysource`.
+
 v0.5
 ----
 
