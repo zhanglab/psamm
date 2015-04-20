@@ -1,4 +1,9 @@
 
+v0.6.1
+------
+
+- sbml: Fix bug where boundary conditions were parsed incorrectly.
+
 v0.6
 ----
 
