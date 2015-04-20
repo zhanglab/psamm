@@ -207,9 +207,9 @@ class ReactionEntry(_SBMLEntry):
         """Iterator over the values of kinetic law reaction parameters"""
 
         for parameter in self._root.iterfind(
-                './{}/{}/{}'.format(self._sbml_tag('kineticLaw'),
-                                    self._sbml_tag('listOfParameters'),
-                                    self._sbml_tag('parameter'))):
+                './{}/{}/{}'.format(self._reader._sbml_tag('kineticLaw'),
+                                    self._reader._sbml_tag('listOfParameters'),
+                                    self._reader._sbml_tag('parameter'))):
             param_id = parameter.get('id')
             param_value = float(parameter.get('value'))
             param_units = parameter.get('units')
