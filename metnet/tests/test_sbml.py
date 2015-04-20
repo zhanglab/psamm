@@ -26,7 +26,7 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
    <species name="Glucose" compartment="cell" initialAmount="1"/>
    <species name="Glucose_6_P" compartment="cell" initialAmount="1"/>
    <species name="H2O" compartment="cell" initialAmount="1"/>
-   <species name="Phosphate" compartment="cell" initialAmount="1"/>
+   <species name="Phosphate" compartment="cell" initialAmount="1" boundaryCondition="false"/>
    <species name="Biomass" compartment="cell" initialAmount="1" boundaryCondition="true"/>
   </listOfSpecies>
   <listOfReactions>
@@ -63,14 +63,20 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
         self.assertEqual(species['Glucose'].id, 'Glucose')
         self.assertEqual(species['Glucose'].name, 'Glucose')
         self.assertEqual(species['Glucose'].compartment, 'cell')
+        self.assertFalse(species['Glucose'].boundary)
 
         self.assertEqual(species['Glucose_6_P'].id, 'Glucose_6_P')
         self.assertEqual(species['Glucose_6_P'].name, 'Glucose_6_P')
         self.assertEqual(species['Glucose_6_P'].compartment, 'cell')
+        self.assertFalse(species['Glucose_6_P'].boundary)
 
         self.assertEqual(species['H2O'].id, 'H2O')
         self.assertEqual(species['H2O'].name, 'H2O')
         self.assertEqual(species['H2O'].compartment, 'cell')
+        self.assertFalse(species['H2O'].boundary)
+
+        self.assertFalse(species['Phosphate'].boundary)
+        self.assertTrue(species['Biomass'].boundary)
 
     def test_g6pase_reaction_exists(self):
         reaction = self.reader.get_reaction('G6Pase')
@@ -121,7 +127,7 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
    <species id="M_Glucose" name="Glucose" compartment="C_c"/>
    <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c"/>
    <species id="M_H2O" name="H2O" compartment="C_c"/>
-   <species id="M_Phosphate" name="Phosphate" compartment="C_c"/>
+   <species id="M_Phosphate" name="Phosphate" compartment="C_c" boundaryCondition="false"/>
    <species id="M_Biomass" name="Biomass" compartment="C_c" boundaryCondition="true"/>
   </listOfSpecies>
   <listOfReactions>
@@ -158,14 +164,20 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         self.assertEqual(species['M_Glucose'].id, 'M_Glucose')
         self.assertEqual(species['M_Glucose'].name, 'Glucose')
         self.assertEqual(species['M_Glucose'].compartment, 'C_c')
+        self.assertFalse(species['M_Glucose'].boundary)
 
         self.assertEqual(species['M_Glucose_6_P'].id, 'M_Glucose_6_P')
         self.assertEqual(species['M_Glucose_6_P'].name, 'Glucose-6-P')
         self.assertEqual(species['M_Glucose_6_P'].compartment, 'C_c')
+        self.assertFalse(species['M_Glucose_6_P'].boundary)
 
         self.assertEqual(species['M_H2O'].id, 'M_H2O')
         self.assertEqual(species['M_H2O'].name, 'H2O')
         self.assertEqual(species['M_H2O'].compartment, 'C_c')
+        self.assertFalse(species['M_H2O'].boundary)
+
+        self.assertFalse(species['M_Phosphate'].boundary)
+        self.assertTrue(species['M_Biomass'].boundary)
 
     def test_g6pase_reaction_exists(self):
         reaction = self.reader.get_reaction('R_G6Pase')
@@ -253,14 +265,20 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         self.assertEqual(species['M_Glucose'].id, 'M_Glucose')
         self.assertEqual(species['M_Glucose'].name, 'Glucose')
         self.assertEqual(species['M_Glucose'].compartment, 'C_c')
+        self.assertFalse(species['M_Glucose'].boundary)
 
         self.assertEqual(species['M_Glucose_6_P'].id, 'M_Glucose_6_P')
         self.assertEqual(species['M_Glucose_6_P'].name, 'Glucose-6-P')
         self.assertEqual(species['M_Glucose_6_P'].compartment, 'C_c')
+        self.assertFalse(species['M_Glucose_6_P'].boundary)
 
         self.assertEqual(species['M_H2O'].id, 'M_H2O')
         self.assertEqual(species['M_H2O'].name, 'H2O')
         self.assertEqual(species['M_H2O'].compartment, 'C_c')
+        self.assertFalse(species['M_H2O'].boundary)
+
+        self.assertFalse(species['M_Phosphate'].boundary)
+        self.assertTrue(species['M_Biomass'].boundary)
 
     def test_g6pase_reaction_exists(self):
         reaction = self.reader.get_reaction('R_G6Pase')
