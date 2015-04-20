@@ -79,7 +79,7 @@ class SpeciesEntry(_SBMLEntry):
         self._name = root.get('name')
         self._comp = root.get('compartment')
 
-        self._boundary = root.get('boundaryCondition', False)
+        self._boundary = root.get('boundaryCondition', 'false') == 'true'
 
         # In non-strict mode the species that ends with _b are considered
         # boundary conditions.
@@ -120,7 +120,7 @@ class ReactionEntry(_SBMLEntry):
                 try:
                     species_entry = self._reader.get_species(species_id)
                 except KeyError:
-                    if not self._strict:
+                    if not self._reader._strict:
                         # In non-strict mode simply skip these references
                         continue
                     raise ParseError(
@@ -153,7 +153,7 @@ class ReactionEntry(_SBMLEntry):
                     denom = int(species.get('denominator', 1))
                     species_value = Fraction(value, denom)
                 except ValueError:
-                    if self._strict:
+                    if self._reader._strict:
                         raise
                     species_value = Decimal(species.get('stoichiometry', 1))
             elif self._reader._level == 2:
