@@ -744,6 +744,9 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
         parser.add_argument(
             'threshold', help='Relative threshold of max reaction flux',
             type=float)
+        parser.add_argument(
+            '--exchange', help='Only analyze the exchange reaction in model',
+            action='store_true')
         super(RandomSparseNetworkCommand, cls).init_parser(parser)
 
     def run(self):
@@ -776,10 +779,20 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
 
         logger.info('Flux threshold for {} is {}'.format(reaction, flux_threshold))
 
-        model_test = self._mm.copy()
-        essential = { reaction }
-        deleted = set()
-        test_set = set(self._mm.reactions) - essential
+        if self._args.exchange:
+            model_test = self._mm.copy()
+            essential = { reaction }
+            deleted = set()
+            exchange = set()
+            for reaction_id in self._mm.reactions:
+                if self._mm.is_exchange(reaction_id):
+                    exchange.add(reaction_id)
+            test_set = set(exchange) - essential
+        else:
+            model_test = self._mm.copy()
+            essential = { reaction }
+            deleted = set()
+            test_set = set(self._mm.reactions) - essential
 
         while len(test_set) > 0:
             testing_reaction = random.sample(test_set, 1)[0]
@@ -807,11 +820,14 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             else:
                 deleted.add(testing_reaction)
                 logger.info('Reaction {} was deleted'.format(testing_reaction))
-
-        for reaction_id in sorted(self._mm.reactions):
-            value = 0 if reaction_id in deleted else 1
-            print('{}\t{}'.format(reaction_id, value))
-
+        if self._args.exchange:
+            for reaction_id in sorted(exchange):
+                value = 0 if reaction_id in deleted else 1
+                print('{}\t{}'.format(reaction_id, value))
+        else:
+            for reaction_id in sorted(self._mm.reactions):
+                value = 0 if reaction_id in deleted else 1
+                print('{}\t{}'.format(reaction_id, value))
 
 class RobustnessCommand(SolverCommandMixin, Command):
     """Run robustness analysis on metabolic model
