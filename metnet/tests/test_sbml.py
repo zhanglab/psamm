@@ -18,7 +18,7 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
 <sbml xmlns="http://www.sbml.org/sbml/level1"
       xmlns:html="http://www.w3.org/1999/xhtml"
       level="1" version="2">
- <model>
+ <model name="Test model">
   <listOfCompartments>
    <compartment name="cell"/>
   </listOfCompartments>
@@ -55,6 +55,9 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
  </model>
 </sbml>''')
         self.reader = sbml.SBMLReader(s)
+
+    def test_model_name(self):
+        self.assertEqual(self.reader.name, 'Test model')
 
     def test_compounds_exist(self):
         species = {entry.id: entry for entry in self.reader.species}
@@ -119,7 +122,7 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
 <sbml xmlns="http://www.sbml.org/sbml/level2/version5"
       xmlns:html="http://www.w3.org/1999/xhtml"
       level="2" version="5">
- <model>
+ <model id="test_model" name="Test model">
   <listOfCompartments>
    <compartment id="C_c" name="cell"/>
   </listOfCompartments>
@@ -156,6 +159,10 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
  </model>
 </sbml>''')
         self.reader = sbml.SBMLReader(s)
+
+    def test_model_name(self):
+        self.assertEqual(self.reader.id, 'test_model')
+        self.assertEqual(self.reader.name, 'Test model')
 
     def test_compounds_exist(self):
         species = {entry.id: entry for entry in self.reader.species}
@@ -220,7 +227,7 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
 <sbml xmlns="http://www.sbml.org/sbml/level3/version1/core"
       xmlns:html="http://www.w3.org/1999/xhtml"
       level="3" version="1">
- <model>
+ <model id="test_model" name="Test model">
   <listOfCompartments>
    <compartment id="C_c" name="cell" constant="true"/>
   </listOfCompartments>
@@ -257,6 +264,10 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
  </model>
 </sbml>''')
         self.reader = sbml.SBMLReader(s)
+
+    def test_model_name(self):
+        self.assertEqual(self.reader.id, 'test_model')
+        self.assertEqual(self.reader.name, 'Test model')
 
     def test_compounds_exist(self):
         species = {entry.id: entry for entry in self.reader.species}

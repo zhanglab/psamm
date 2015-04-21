@@ -311,6 +311,16 @@ class SBMLReader(object):
         """Iterator over :class:`SpeciesEntries <.SpeciesEntry>`"""
         return self._model_species.itervalues()
 
+    @property
+    def id(self):
+        """Model ID"""
+        return self._model.get('id', None)
+
+    @property
+    def name(self):
+        """Model name"""
+        return self._model.get('name', None)
+
 
 class SBMLWriter(object):
     """Writer of SBML files"""
