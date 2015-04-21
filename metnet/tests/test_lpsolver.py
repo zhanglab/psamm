@@ -9,12 +9,14 @@ try:
 except ImportError:
     cplex = None
 
+requires_solver = unittest.skipIf(cplex is None, 'solver not available')
 
+
+@requires_solver
 class TestCplexProblem(unittest.TestCase):
     def setUp(self):
         self.solver = cplex.Solver()
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_objective_reset_on_set_linear_objective(self):
         prob = self.solver.create_problem()
         prob.define('x', 'y', lower=0, upper=10)
@@ -33,7 +35,6 @@ class TestCplexProblem(unittest.TestCase):
         result = prob.solve()
         self.assertAlmostEqual(result.get_value('y'), 10)
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_result_to_bool_conversion_on_optimal(self):
         '''Run a feasible LP problem and check that the result evaluates to True'''
         prob = self.solver.create_problem()
@@ -45,7 +46,6 @@ class TestCplexProblem(unittest.TestCase):
         result = prob.solve()
         self.assertTrue(result)
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_result_to_bool_conversion_on_infeasible(self):
         '''Run an infeasible LP problem and check that the result evaluates to False'''
         prob = self.solver.create_problem()

@@ -13,7 +13,10 @@ try:
 except ImportError:
     cplex = None
 
+requires_solver = unittest.skipIf(cplex is None, 'solver not available')
 
+
+@requires_solver
 class TestMassConsistency(unittest.TestCase):
     """Test mass consistency using a simple model"""
 
@@ -30,13 +33,11 @@ class TestMassConsistency(unittest.TestCase):
 
         self.solver = cplex.Solver()
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_mass_consistent_is_consistent(self):
         exchange = { 'rxn_1', 'rxn_6' }
         self.assertTrue(massconsistency.is_consistent(
             self.model, self.solver, exchange, set()))
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_mass_inconsistent_is_consistent(self):
         exchange = { 'rxn_1', 'rxn_6' }
         self.database.set_reaction('rxn_7', parse_reaction('|D| => (2) |C|'))
@@ -44,7 +45,6 @@ class TestMassConsistency(unittest.TestCase):
         self.assertFalse(massconsistency.is_consistent(
             self.model, self.solver, exchange, set()))
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_mass_consistent_reactions_returns_compounds(self):
         exchange = { 'rxn_1', 'rxn_6' }
         _, compounds = massconsistency.check_reaction_consistency(
@@ -53,7 +53,6 @@ class TestMassConsistency(unittest.TestCase):
             self.assertIn(c, self.model.compounds)
             self.assertGreaterEqual(value, 1.0)
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_mass_consistent_reactions_returns_reactions(self):
         exchange = { 'rxn_1', 'rxn_6' }
         reactions, _ = massconsistency.check_reaction_consistency(
@@ -62,6 +61,7 @@ class TestMassConsistency(unittest.TestCase):
             self.assertIn(r, self.model.reactions)
 
 
+@requires_solver
 class TestMassConsistencyZeroMass(unittest.TestCase):
     """Test mass consistency using a model with zero-mass compound"""
 
