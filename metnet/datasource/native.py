@@ -72,14 +72,9 @@ def whendefined(func, value):
 class CompoundEntry(object):
     """Representation of a compound entry in a native model"""
 
-    def __init__(self, id, properties):
-        self._id = id
+    def __init__(self, compound_id, properties):
+        self._id = compound_id
         self._properties = dict(properties)
-        self._name = self._properties.get('name')
-        self._formula = self._properties.get('formula')
-        self._charge = whendefined(int, self._properties.get('charge'))
-        self._kegg = self._properties.get('kegg')
-        self._cas = self._properties.get('cas')
 
     @property
     def id(self):
@@ -87,23 +82,27 @@ class CompoundEntry(object):
 
     @property
     def name(self):
-        return self._name
+        return self._properties.get('name')
 
     @property
     def formula(self):
-        return self._formula
+        return self._properties.get('formula')
 
     @property
     def charge(self):
-        return self._charge
+        return whendefined(int, self._properties.get('charge'))
 
     @property
     def kegg(self):
-        return self._kegg
+        return self._properties.get('kegg')
 
     @property
     def cas(self):
-        return self._cas
+        return self._properties.get('cas')
+
+    @property
+    def zeromass(self):
+        return self._properties.get('zeromass')
 
     @property
     def properties(self):
