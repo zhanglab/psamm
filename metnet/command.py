@@ -658,9 +658,12 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
     def run(self):
         # Load compound information
         compound_name = {}
+        zeromass = set()
         for compound in self._model.parse_compounds():
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
+            if compound.zeromass:
+                zeromass.add(compound.id)
 
         # Create a set of known mass-inconsistent reactions
         exchange = set()
@@ -678,11 +681,6 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
 
         # Create set of checked reactions
         checked = set(self._args.checked)
-
-        # Create set of compounds allowed to have mass zero
-        zeromass = set()
-        zeromass.add('cpd11632') # Photon
-        zeromass.add('cpd12713') # Electron
 
         solver = self._get_solver()
 
