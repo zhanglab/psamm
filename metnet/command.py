@@ -417,7 +417,7 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
     flux solution where the flux of the given reaction is non-zero.
     """
 
-    name = 'fluxconsistency'
+    name = 'fluxcheck'
     title = 'Check that the model is flux consistent'
 
     @classmethod
