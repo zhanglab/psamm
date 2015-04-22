@@ -691,7 +691,6 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
         compound_iter = massconsistency.check_compound_consistency(
             self._mm, solver, known_inconsistent, zeromass)
 
-        logger.info('Compound consistency')
         good = 0
         total = 0
         for compound, mass in sorted(compound_iter, key=lambda x: (x[1], x[0]),
@@ -707,18 +706,23 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
             massconsistency.is_consistent(
                 self._mm, solver, known_inconsistent, zeromass)))
 
-        logger.info('Reaction consistency')
+        good = 0
+        total = 0
         reaction_iter, compound_iter = (
             massconsistency.check_reaction_consistency(
                 self._mm, solver=solver, exchange=known_inconsistent,
                 checked=checked, zeromass=zeromass))
         for reaction_id, residual in sorted(
                 reaction_iter, key=lambda x: abs(x[1]), reverse=True):
+            total += 1
             if abs(residual) >= epsilon:
                 reaction = self._mm.get_reaction(reaction_id)
                 rxt = reaction.translated_compounds(
                     lambda x: compound_name.get(x, x))
                 print('{}\t{}\t{}'.format(reaction_id, residual, rxt))
+            else:
+                good += 1
+        logger.info('Consistent reactions: {}/{}'.format(good, total))
 
 
 class RandomSparseNetworkCommand(SolverCommandMixin, Command):
