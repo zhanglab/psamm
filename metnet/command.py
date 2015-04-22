@@ -417,13 +417,13 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
     flux solution where the flux of the given reaction is non-zero.
     """
 
-    name = 'fluxconsistency'
+    name = 'fluxcheck'
     title = 'Check that the model is flux consistent'
 
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--no-fastcore', help='Disable use of Fastcore algorithm',
+            '--fastcore', help='Enable use of Fastcore algorithm',
             action='store_true')
         parser.add_argument(
             '--epsilon', type=float, help='Flux threshold',
@@ -442,13 +442,13 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
         solver = self._get_solver()
         epsilon = self._args.epsilon
 
-        if self._args.no_fastcore:
+        if self._args.fastcore:
+            inconsistent = set(fastcore.fastcc(
+                self._mm, epsilon, solver=solver))
+        else:
             inconsistent = set(
                 fluxanalysis.consistency_check(self._mm, self._mm.reactions,
                                                epsilon, solver=solver))
-        else:
-            inconsistent = set(fastcore.fastcc(
-                self._mm, epsilon, solver=solver))
 
         # Print result
         for reaction in sorted(inconsistent):
