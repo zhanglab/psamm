@@ -1,5 +1,5 @@
 
-model_script API
+PSAMM API
 ================
 
 .. toctree::
