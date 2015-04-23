@@ -58,10 +58,10 @@ class FilePathContext(object):
         return self._basepath
 
     def resolve(self, relpath):
-        return FilePathContext(os.path.join(self.basepath, relpath))
+        return FilePathContext(os.path.join(self._basepath, relpath))
 
     def __str__(self):
-        return self.filepath
+        return self._filepath
 
 
 def whendefined(func, value):
