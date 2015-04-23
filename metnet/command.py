@@ -20,6 +20,7 @@ import random
 import math
 import abc
 
+from . import __version__ as package_version
 from .formula import Formula, Radical
 from .gapfill import gapfind, gapfill
 from .database import DictDatabase
@@ -1091,6 +1092,9 @@ def main(command=None):
     parser = argparse.ArgumentParser(description=title)
     parser.add_argument('--model', metavar='file', default='.',
                         help='Model definition')
+    parser.add_argument(
+        '-V', '--version', action='version',
+        version='%(prog)s ' + package_version)
 
     if command is not None:
         # Command explicitly given, only allow that command
