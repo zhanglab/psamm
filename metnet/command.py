@@ -417,13 +417,13 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
     flux solution where the flux of the given reaction is non-zero.
     """
 
-    name = 'fluxconsistency'
+    name = 'fluxcheck'
     title = 'Check that the model is flux consistent'
 
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--no-fastcore', help='Disable use of Fastcore algorithm',
+            '--fastcore', help='Enable use of Fastcore algorithm',
             action='store_true')
         parser.add_argument(
             '--epsilon', type=float, help='Flux threshold',
@@ -442,13 +442,13 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
         solver = self._get_solver()
         epsilon = self._args.epsilon
 
-        if self._args.no_fastcore:
+        if self._args.fastcore:
+            inconsistent = set(fastcore.fastcc(
+                self._mm, epsilon, solver=solver))
+        else:
             inconsistent = set(
                 fluxanalysis.consistency_check(self._mm, self._mm.reactions,
                                                epsilon, solver=solver))
-        else:
-            inconsistent = set(fastcore.fastcc(
-                self._mm, epsilon, solver=solver))
 
         # Print result
         for reaction in sorted(inconsistent):
@@ -658,9 +658,12 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
     def run(self):
         # Load compound information
         compound_name = {}
+        zeromass = set()
         for compound in self._model.parse_compounds():
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
+            if compound.zeromass:
+                zeromass.add(compound.id)
 
         # Create a set of known mass-inconsistent reactions
         exchange = set()
@@ -679,11 +682,6 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
         # Create set of checked reactions
         checked = set(self._args.checked)
 
-        # Create set of compounds allowed to have mass zero
-        zeromass = set()
-        zeromass.add('cpd11632') # Photon
-        zeromass.add('cpd12713') # Electron
-
         solver = self._get_solver()
 
         known_inconsistent = exclude | exchange
@@ -693,7 +691,6 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
         compound_iter = massconsistency.check_compound_consistency(
             self._mm, solver, known_inconsistent, zeromass)
 
-        logger.info('Compound consistency')
         good = 0
         total = 0
         for compound, mass in sorted(compound_iter, key=lambda x: (x[1], x[0]),
@@ -709,18 +706,23 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
             massconsistency.is_consistent(
                 self._mm, solver, known_inconsistent, zeromass)))
 
-        logger.info('Reaction consistency')
+        good = 0
+        total = 0
         reaction_iter, compound_iter = (
             massconsistency.check_reaction_consistency(
                 self._mm, solver=solver, exchange=known_inconsistent,
                 checked=checked, zeromass=zeromass))
         for reaction_id, residual in sorted(
                 reaction_iter, key=lambda x: abs(x[1]), reverse=True):
+            total += 1
             if abs(residual) >= epsilon:
                 reaction = self._mm.get_reaction(reaction_id)
                 rxt = reaction.translated_compounds(
                     lambda x: compound_name.get(x, x))
                 print('{}\t{}\t{}'.format(reaction_id, residual, rxt))
+            else:
+                good += 1
+        logger.info('Consistent reactions: {}/{}'.format(good, total))
 
 
 class RandomSparseNetworkCommand(SolverCommandMixin, Command):
@@ -744,6 +746,9 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
         parser.add_argument(
             'threshold', help='Relative threshold of max reaction flux',
             type=float)
+        parser.add_argument(
+            '--exchange', help='Only analyze the exchange reaction in model',
+            action='store_true')
         super(RandomSparseNetworkCommand, cls).init_parser(parser)
 
     def run(self):
@@ -776,10 +781,20 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
 
         logger.info('Flux threshold for {} is {}'.format(reaction, flux_threshold))
 
-        model_test = self._mm.copy()
-        essential = { reaction }
-        deleted = set()
-        test_set = set(self._mm.reactions) - essential
+        if self._args.exchange:
+            model_test = self._mm.copy()
+            essential = { reaction }
+            deleted = set()
+            exchange = set()
+            for reaction_id in self._mm.reactions:
+                if self._mm.is_exchange(reaction_id):
+                    exchange.add(reaction_id)
+            test_set = set(exchange) - essential
+        else:
+            model_test = self._mm.copy()
+            essential = { reaction }
+            deleted = set()
+            test_set = set(self._mm.reactions) - essential
 
         while len(test_set) > 0:
             testing_reaction = random.sample(test_set, 1)[0]
@@ -807,11 +822,14 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             else:
                 deleted.add(testing_reaction)
                 logger.info('Reaction {} was deleted'.format(testing_reaction))
-
-        for reaction_id in sorted(self._mm.reactions):
-            value = 0 if reaction_id in deleted else 1
-            print('{}\t{}'.format(reaction_id, value))
-
+        if self._args.exchange:
+            for reaction_id in sorted(exchange):
+                value = 0 if reaction_id in deleted else 1
+                print('{}\t{}'.format(reaction_id, value))
+        else:
+            for reaction_id in sorted(self._mm.reactions):
+                value = 0 if reaction_id in deleted else 1
+                print('{}\t{}'.format(reaction_id, value))
 
 class RobustnessCommand(SolverCommandMixin, Command):
     """Run robustness analysis on metabolic model
@@ -984,9 +1002,13 @@ class SearchCommand(Command):
         for compound in self._model.parse_compounds():
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
-            compound_synonyms[compound.id] = compound.names
+            compound_synonyms[compound.id] = (
+                compound.properties.get('names', []))
 
-            for n in compound.names:
+            names = ([compound_name[compound.id]] +
+                compound_synonyms[compound.id])
+
+            for n in names:
                 n = filter_search_term(n)
                 compound_for_name[n] = compound.id
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# model_script documentation build configuration file, created by
+# PSAMM documentation build configuration file, created by
 # sphinx-quickstart on Fri Mar 27 15:57:14 2015.
 #
 # This file is execfile()d with the current directory set to its
@@ -64,7 +64,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'model_script'
+project = u'PSAMM'
 copyright = u'2015, Jon Lund Steffensen'
 author = u'Jon Lund Steffensen'
 
@@ -224,7 +224,7 @@ html_static_path = ['_static']
 #html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'model_scriptdoc'
+htmlhelp_basename = 'psammdoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -246,7 +246,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'model_script.tex', u'model\\_script Documentation',
+  (master_doc, 'psamm.tex', u'PSAMM Documentation',
    u'Jon Lund Steffensen', 'manual'),
 ]
 
@@ -276,7 +276,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'model_script', u'model_script Documentation',
+    (master_doc, 'PSAMM', u'PSAMM Documentation',
      [author], 1)
 ]
 
@@ -290,8 +290,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  (master_doc, 'model_script', u'model_script Documentation',
-   author, 'model_script', 'One line description of project.',
+  (master_doc, 'PSAMM', u'PSAMM Documentation',
+   author, 'PSAMM', 'One line description of project.',
    'Miscellaneous'),
 ]
 

@@ -1,6 +1,6 @@
 
-model_script documentation
-==========================
+PSAMM documentation
+===================
 
 Contents:
 

@@ -30,17 +30,18 @@ environment.
 1. Go to the Cplex install directory: ``cd /path/to/Cplex``
 2. Go to the appropriate subdirectory based on your platform:
    ``cd cplex/python/<platform>``
-3. Run ``./setup.py install``
+3. Run ``pip install .``
 
 Dependencies
 ------------
 
 - Linear programming solver (*Cplex*, *QSopt_ex*)
 - PyYAML (for reading the native model format)
-- Numpy (optional; model matrix can be exported to Numpy matrix if available)
+- NumPy (optional; model matrix can be exported to NumPy matrix if available)
 
-There are no strictly required dependencies but most analyses rely on a linear
-programming (LP) solver. The LP solver *Cplex* is the preferred solver.
-The rational solver *QSopt_ex* is also supported (through `python-qsoptex`_).
+The linear programming solver is not strictly required but most analyses
+require one to work. The LP solver *Cplex* is the preferred solver. The
+rational solver *QSopt_ex* does not support MILP problems which means that some
+analyses require *Cplex*. *QSopt_ex* is supported through `python-qsoptex`_.
 
 .. _python-qsoptex: https://github.com/jonls/python-qsoptex

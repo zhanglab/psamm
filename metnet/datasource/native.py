@@ -58,10 +58,10 @@ class FilePathContext(object):
         return self._basepath
 
     def resolve(self, relpath):
-        return FilePathContext(os.path.join(self.basepath, relpath))
+        return FilePathContext(os.path.join(self._basepath, relpath))
 
     def __str__(self):
-        return self.filepath
+        return self._filepath
 
 
 def whendefined(func, value):
@@ -72,14 +72,9 @@ def whendefined(func, value):
 class CompoundEntry(object):
     """Representation of a compound entry in a native model"""
 
-    def __init__(self, id, properties):
-        self._id = id
+    def __init__(self, compound_id, properties):
+        self._id = compound_id
         self._properties = dict(properties)
-        self._name = self._properties.get('name')
-        self._formula = self._properties.get('formula')
-        self._charge = whendefined(int, self._properties.get('charge'))
-        self._kegg = self._properties.get('kegg')
-        self._cas = self._properties.get('cas')
 
     @property
     def id(self):
@@ -87,23 +82,27 @@ class CompoundEntry(object):
 
     @property
     def name(self):
-        return self._name
+        return self._properties.get('name')
 
     @property
     def formula(self):
-        return self._formula
+        return self._properties.get('formula')
 
     @property
     def charge(self):
-        return self._charge
+        return whendefined(int, self._properties.get('charge'))
 
     @property
     def kegg(self):
-        return self._kegg
+        return self._properties.get('kegg')
 
     @property
     def cas(self):
-        return self._cas
+        return self._properties.get('cas')
+
+    @property
+    def zeromass(self):
+        return self._properties.get('zeromass')
 
     @property
     def properties(self):
@@ -210,10 +209,13 @@ class NativeModel(object):
     def parse_limits(self):
         """Yield tuples of reaction ID, lower, and upper bound flux limits"""
 
-        for limits_table in self._model.get('limits', []):
-            limits_context = self._context.resolve(limits_table)
-            for reaction_id, lower, upper in parse_limits_file(limits_context):
-                yield reaction_id, lower, upper
+        if 'limits' in self._model:
+            if not isinstance(self._model['limits'], list):
+                raise ParseError('Expected limits to be a list')
+
+            for limit in parse_limits_list(
+                    self._context, self._model['limits']):
+                yield limit
 
     def parse_media(self):
         """Yield each medium defined in the model
@@ -553,6 +555,40 @@ def parse_medium_file(path):
             context.filepath))
 
 
+def parse_limit(limit_def):
+    """Parse a structured flux limit definition as obtained from a YAML file
+
+    Returns a tuple of reaction, lower and upper bound.
+    """
+
+    if not 'reaction' in limit_def:
+        raise ParseError('Expected reaction key in limit entry')
+
+    reaction = limit_def.get('reaction')
+    lower = limit_def.get('lower', None)
+    upper = limit_def.get('upper', None)
+
+    return reaction, lower, upper
+
+
+def parse_limits_list(path, limits):
+    """Parse a structured list of flux limits as obtained from a YAML file
+
+    Yields tuples of reaction ID, lower and upper flux bounds. Path can be
+    given as a string or a context.
+    """
+
+    context = FilePathContext(path)
+
+    for limit_def in limits:
+        if 'include' in limit_def:
+            include_context = context.resolve(limit_def['include'])
+            for limit in parse_limits_file(include_context):
+                yield limit
+        else:
+            yield parse_limit(limit_def)
+
+
 def parse_limits_table_file(f):
     """Parse a space-separated file containing reaction flux limits
 
@@ -580,6 +616,15 @@ def parse_limits_table_file(f):
             raise ParseError('Malformed reaction limit: {}'.format(fields))
 
 
+def parse_limits_yaml_file(path, f):
+    """Parse a file as a YAML-format flux limits definition
+
+    Path can be given as a string or a context.
+    """
+
+    return parse_limits_list(path, yaml.load(f))
+
+
 def parse_limits_file(path):
     """Parse a file as a list of reaction flux limits
 
@@ -588,10 +633,22 @@ def parse_limits_file(path):
     """
 
     context = FilePathContext(path)
-    logger.debug('Parsing limits file {}'.format(context.filepath))
-    with open(context.filepath, 'r') as f:
-        for reaction_id, lower, upper in parse_limits_table_file(f):
-            yield reaction_id, lower, upper
+
+    if re.match(r'.+\.tsv$', context.filepath):
+        logger.debug('Parsing limits file {} as TSV'.format(
+            context.filepath))
+        with open(context.filepath, 'r') as f:
+            for limit in parse_limits_table_file(f):
+                yield limit
+    elif re.match(r'.+\.(yml|yaml)$', context.filepath):
+        logger.debug('Parsing limits file {} as YAML'.format(
+            context.filepath))
+        with open(context.filepath, 'r') as f:
+            for limit in parse_limits_yaml_file(context, f):
+                yield limit
+    else:
+        raise ParseError('Unable to detect format of limits file {}'.format(
+            context.filepath))
 
 
 def parse_model_group(path, group):

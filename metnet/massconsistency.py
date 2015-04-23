@@ -36,8 +36,13 @@ def is_consistent(database, solver, exchange=set(), zeromass=set()):
 
     # Define mass variables
     for compound in compound_set:
-        prob.define(('m', compound), lower=(0 if compound in zeromass else 1))
-    prob.set_linear_objective(sum(prob.var(('m', compound)) for compound in compound_set))
+        if compound.name not in zeromass:
+            prob.define(('m', compound), lower=1)
+        else:
+            prob.define(('m', compound), lower=0, upper=0)
+
+    prob.set_linear_objective(
+        sum(prob.var(('m', compound)) for compound in compound_set))
 
     # Define constraints
     massbalance_lhs = { reaction: 0 for reaction in database.reactions }
@@ -73,7 +78,10 @@ def check_reaction_consistency(database, solver, exchange=set(),
 
     # Define mass variables
     for compound in compound_set:
-        prob.define(('m', compound), lower=(0 if compound in zeromass else 1))
+        if compound.name not in zeromass:
+            prob.define(('m', compound), lower=1)
+        else:
+            prob.define(('m', compound), lower=0, upper=0)
 
     # Define residual mass variables and objective constriants
     prob.define(*(('z', reaction_id) for reaction_id in database.reactions),
@@ -137,7 +145,11 @@ def check_compound_consistency(database, solver, exchange=set(),
     compound_set = _non_localized_compounds(database)
 
     # Define mass variables
-    prob.define(*(('m', compound) for compound in compound_set), lower=0)
+    for compound in compound_set:
+        if compound.name not in zeromass:
+            prob.define(('m', compound), lower=0)
+        else:
+            prob.define(('m', compound), lower=0, upper=0)
 
     # Define z variables
     prob.define(*(('z', compound) for compound in compound_set),

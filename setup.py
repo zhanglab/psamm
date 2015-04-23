@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='model_script',
-    version='0.6.1',
+    version='0.7',
     description='Metabolic modelling tools',
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
@@ -13,7 +13,7 @@ setup(
     packages=find_packages(),
     entry_points = {
         'console_scripts': [
-            'model = metnet.command:main'
+            'psamm-model = metnet.command:main'
         ]
     },
 

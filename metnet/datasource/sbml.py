@@ -119,6 +119,10 @@ class ReactionEntry(_SBMLEntry):
             for species_id, value in self._parse_species_references(tag_name):
                 try:
                     species_entry = self._reader.get_species(species_id)
+                    if (self._reader._ignore_boundary and
+                            species_entry.boundary):
+                        # Skip boundary species when ignoring these
+                        continue
                 except KeyError:
                     if not self._reader._strict:
                         # In non-strict mode simply skip these references
@@ -207,14 +211,15 @@ class ReactionEntry(_SBMLEntry):
         """Iterator over the values of kinetic law reaction parameters"""
 
         for parameter in self._root.iterfind(
-                './{}/{}/{}'.format(self._sbml_tag('kineticLaw'),
-                                    self._sbml_tag('listOfParameters'),
-                                    self._sbml_tag('parameter'))):
+                './{}/{}/{}'.format(self._reader._sbml_tag('kineticLaw'),
+                                    self._reader._sbml_tag('listOfParameters'),
+                                    self._reader._sbml_tag('parameter'))):
             param_id = parameter.get('id')
+            param_name = parameter.get('name')
             param_value = float(parameter.get('value'))
             param_units = parameter.get('units')
 
-            yield param_id, param_value, param_units
+            yield param_id, param_name, param_value, param_units
 
 
 class SBMLReader(object):
@@ -225,14 +230,19 @@ class SBMLReader(object):
     set to False, the parser will revert to a more lenient parsing which is
     required for many older models. This tries to mimic the inconsistencies
     employed by COBRA when parsing models.
+
+    If ``ignore_boundary`` is ``True``, the species that are marked as
+    boundary conditions will simply be dropped from the species list and from
+    the reaction equations.
     """
 
-    def __init__(self, file, strict=False):
+    def __init__(self, file, strict=False, ignore_boundary=False):
         # Parse SBML file
         tree = ET.parse(file)
         root = tree.getroot()
 
         self._strict = strict
+        self._ignore_boundary = ignore_boundary
 
         # Parse level and version
         self._sbml_tag = None
@@ -308,8 +318,22 @@ class SBMLReader(object):
 
     @property
     def species(self):
-        """Iterator over :class:`SpeciesEntries <.SpeciesEntry>`"""
-        return self._model_species.itervalues()
+        """Iterator over :class:`SpeciesEntries <.SpeciesEntry>`
+
+        This will not yield boundary condition species if those are ignored.
+        """
+        return (c for c in self._model_species.itervalues()
+                if not self._ignore_boundary or not c.boundary)
+
+    @property
+    def id(self):
+        """Model ID"""
+        return self._model.get('id', None)
+
+    @property
+    def name(self):
+        """Model name"""
+        return self._model.get('name', None)
 
 
 class SBMLWriter(object):

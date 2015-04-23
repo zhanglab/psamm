@@ -12,7 +12,10 @@ try:
 except ImportError:
     cplex = None
 
+requires_solver = unittest.skipIf(cplex is None, 'solver not available')
 
+
+@requires_solver
 class TestFastcoreSimpleVlassisModel(unittest.TestCase):
     """Test fastcore using the simple model in [Vlassis14]_."""
 
@@ -29,7 +32,6 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
             self.database, self.database.reactions)
         self.solver = cplex.Solver()
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_lp10(self):
         result = fastcore.lp10(self.model, { 'rxn_6' },
                                { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5' },
@@ -37,7 +39,6 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
         supp = set(fastcore.support(result, 0.999*0.001))
         self.assertEqual(supp, { 'rxn_1', 'rxn_3', 'rxn_6' })
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_lp10_weighted(self):
         weights = { 'rxn_3': 1 }
         result = fastcore.lp10(self.model, { 'rxn_6' },
@@ -55,7 +56,6 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
         supp = set(fastcore.support(result, 0.999*0.001))
         self.assertEqual(supp, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_lp7(self):
         result = fastcore.lp7(self.model, set(self.model.reactions), 0.001,
                               solver=self.solver)
@@ -66,7 +66,6 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
         supp = set(fastcore.support_positive(result, 0.001*0.999))
         self.assertEqual(supp, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_find_sparse_mode_singleton(self):
         core = { 'rxn_1' }
         mode = set(fastcore.find_sparse_mode(
@@ -104,7 +103,6 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
             solver=self.solver, epsilon=0.001, scaling=1e3))
         self.assertEqual(mode, { 'rxn_1', 'rxn_3', 'rxn_6' })
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_find_sparse_mode_weighted(self):
         core = { 'rxn_1' }
         weights = { 'rxn_3': 1 }
@@ -119,30 +117,25 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
             solver=self.solver, epsilon=0.001, scaling=1e3, weights=weights))
         self.assertEqual(mode, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_fastcc_inconsistent(self):
         self.assertEqual(
             set(fastcore.fastcc(self.model, 0.001, solver=self.solver)),
             { 'rxn_2' })
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_fastcc_is_consistent_on_inconsistent(self):
         self.assertFalse(fastcore.fastcc_is_consistent(
             self.model, 0.001, solver=self.solver))
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_fastcc_is_consistent_on_consistent(self):
         self.model.remove_reaction('rxn_2')
         self.assertTrue(fastcore.fastcc_is_consistent(
             self.model, 0.001, solver=self.solver))
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_fastcc_consistent_subset(self):
         self.assertEqual(fastcore.fastcc_consistent_subset(
             self.model, 0.001, solver=self.solver),
             set(['rxn_1', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6']))
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_fastcore_global_inconsistent(self):
         self.database.set_reaction('rxn_7', parse_reaction('|E| <=>'))
         self.model.add_reaction('rxn_7')
@@ -151,6 +144,7 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
                               solver=self.solver)
 
 
+@requires_solver
 class TestFastcoreTinyBiomassModel(unittest.TestCase):
     """Test fastcore using a model with tiny values in biomass reaction"""
 
@@ -164,25 +158,23 @@ class TestFastcoreTinyBiomassModel(unittest.TestCase):
             self.database, self.database.reactions)
         self.solver = cplex.Solver()
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_fastcc_is_consistent(self):
         self.assertTrue(fastcore.fastcc_is_consistent(
             self.model, 0.001, solver=self.solver))
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_fastcore_induced_model(self):
         core = { 'rxn_2' }
         self.assertEquals(set(fastcore.fastcore(
             self.model, core, 0.001, solver=self.solver)),
             { 'rxn_1', 'rxn_2' })
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_fastcore_induced_model_high_epsilon(self):
         core = { 'rxn_2' }
         self.assertEquals(set(fastcore.fastcore(
             self.model, core, 0.1, solver=self.solver)), { 'rxn_1', 'rxn_2' })
 
 
+@requires_solver
 class TestFlippingModel(unittest.TestCase):
     """Test fastcore on a model that has to flip"""
 
@@ -197,7 +189,6 @@ class TestFlippingModel(unittest.TestCase):
             self.database, self.database.reactions)
         self.solver = cplex.Solver()
 
-    @unittest.skipIf(cplex is None, 'solver not available')
     def test_fastcore_induced_model(self):
         core = { 'rxn_2', 'rxn_3' }
         self.assertEquals(set(

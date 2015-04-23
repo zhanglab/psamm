@@ -3,11 +3,11 @@ Command line interface
 ======================
 
 The tools that can be applied to metabolic models are run through the
-``model`` program. To see the full help text of the program use
+``psamm-model`` program. To see the full help text of the program use
 
 .. code-block:: shell
 
-    $ model --help
+    $ psamm-model --help
 
 This program allows you to specify a metabolic model and a command to apply to
 the given model. The available commands can be seen using the help command
@@ -17,7 +17,7 @@ To run the program with a model, use
 
 .. code-block:: shell
 
-    $ model --model model.yaml command [...]
+    $ psamm-model --model model.yaml command [...]
 
 In most cases you will probably be running the command from the same directory
 as where the ``model.yaml`` file is located, and in that case you can simply
@@ -25,13 +25,13 @@ run
 
 .. code-block:: shell
 
-    $ model command [...]
+    $ psamm-model command [...]
 
 To see the help text of a command use
 
 .. code-block:: shell
 
-    $ model command --help
+    $ psamm-model command --help
 
 Flux balance analysis (``fba``)
 -------------------------------
@@ -53,13 +53,13 @@ To run FBA use:
 
 .. code-block:: shell
 
-    $ model fba
+    $ psamm-model fba
 
 or with a specific reaction:
 
 .. code-block:: shell
 
-    $ model fba ATPM
+    $ psamm-model fba ATPM
 
 Robustness (``robustness``)
 ---------------------------
@@ -71,8 +71,8 @@ steps between the minimum and maximum flux value specified in the model.
 
 .. code-block:: shell
 
-    $ model robustness \
-	   --steps 200 --minimum -20 --maximum 160 EX_Oxygen
+    $ psamm-model robustness \
+	    --steps 200 --minimum -20 --maximum 160 EX_Oxygen
 
 In the example above, the biomass reaction will be maximized while the
 ``EX_Oxygen`` (oxygen exchange) reaction is fixed at a certain flux in each
@@ -92,7 +92,7 @@ specifying the reaction explicitly.
 
 .. code-block:: shell
 
-    $ model randomsparse 0.95
+    $ psamm-model randomsparse 0.95
 
 When the given reaction is the biomass reaction, this results in a smaller
 model which is still producing biomass within the tolerance given by the
@@ -113,7 +113,7 @@ module. The mass consistency check can be run using
 
 .. code-block:: shell
 
-    $ model masscheck
+    $ psamm-model masscheck
 
 This will first try to assign a positive mass to as many compounds as possible.
 This will indicate whether or not the model is consistent but in case it is
@@ -143,7 +143,8 @@ number of `H+` compounds for the reaction to balance.
 
 Now the mass check can be run again marking the reactions above as checked::
 
-    $ model masscheck --checked IR01815 --checked IR00307 --checked IR00146
+    $ psamm-model masscheck --checked IR01815 --checked IR00307 \
+        --checked IR00146
     [...]
     IR00149 0.5     |ATP[c]| + |D-Glucose[c]| => [...]
 
@@ -153,7 +154,7 @@ stoichiometric inconsistencies have been corrected. In this example the
 `IR00149` reaction also had a missing `H+` for the reaction to balance. After
 fixing this error the model is consistent::
 
-    $ model masscheck
+    $ psamm-model masscheck
     [...]
     INFO:metnet.command:Consistent compounds: 834/834
     INFO:metnet.command:Is consistent? True
@@ -167,7 +168,7 @@ known.
 
 .. code-block:: shell
 
-    $ model formulacheck
+    $ psamm-model formulacheck
 
 For each inconsistent reaction, the reaction identifier will be printed
 followed by the elements ("atoms") in, respectively, the left- and right-hand
@@ -190,7 +191,7 @@ These algorithms are defined in terms of MILP problems and are therefore
 
 .. code-block:: shell
 
-    $ model gapfill
+    $ psamm-model gapfill
 
 FastGapFill (``fastgapfill``)
 -----------------------------
@@ -207,7 +208,7 @@ minimal solution.
 
 .. code-block:: shell
 
-    $ model fastgapfill --penalty penalty.tsv
+    $ psamm-model fastgapfill --penalty penalty.tsv
 
 SBML Export (``sbmlexport``)
 ----------------------------
@@ -216,7 +217,7 @@ Exports the model to the SBML file format.
 
 .. code-block:: shell
 
-    $ model sbmlexport > model.xml
+    $ psamm-model sbmlexport > model.xml
 
 Search (``search``)
 -------------------
@@ -226,7 +227,7 @@ search for a compound use
 
 .. code-block:: shell
 
-    $ model search compound [...]
+    $ psamm-model search compound [...]
 
 Use the ``--name`` option to search for a compound with a specific name or use
 the ``--id`` option to search for a compound with a specific identifier.
@@ -235,7 +236,7 @@ To search for a reaction use
 
 .. code-block:: shell
 
-    $ model search reaction [...]
+    $ psamm-model search reaction [...]
 
 Use the ``--id`` option to search for a reaction with a specific identifier.
 The ``--compound`` option can be used to search for reactions that include a
@@ -251,4 +252,4 @@ the corresponding Python object representation.
 
 .. code-block:: shell
 
-    $ model console
+    $ psamm-model console
