@@ -1002,9 +1002,13 @@ class SearchCommand(Command):
         for compound in self._model.parse_compounds():
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
-            compound_synonyms[compound.id] = compound.names
+            compound_synonyms[compound.id] = (
+                compound.properties.get('names', []))
 
-            for n in compound.names:
+            names = ([compound_name[compound.id]] +
+                compound_synonyms[compound.id])
+
+            for n in names:
                 n = filter_search_term(n)
                 compound_for_name[n] = compound.id
 
