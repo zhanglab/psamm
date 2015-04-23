@@ -1,4 +1,24 @@
 
+v0.7
+----
+
+- Change name of `model` script to `psamm-model`.
+- native: Add YAML format for flux limits. The documentation has been updated
+  to include more information on this format. This changes the `limits` key in
+  `model.yaml` to a list of dicts.
+- Add `--exchange` option to the `randomsparse` command to find random
+  minimal sets of exchange reactions.
+- Change name of `fluxconsistency` command to `fluxcheck`.
+- Allow compounds to be marked as zero-mass (e.g. photons) by setting
+  `zeromass: yes`. These compounds will be exempt from the mass requirements
+  in the `masscheck` command.
+- sbml: Provide access to model ID and name.
+- sbml: Add option to skip boundary condition species when parsing.
+- massconsistency: Fix bugs occurring when zero-mass compounds are specified.
+- command: Log number of consistent reactions in `masscheck`.
+- sbml: Fix a number of minor bugs.
+- command: Fix search command when no alternative compound names are present
+
 v0.6.1
 ------
 
