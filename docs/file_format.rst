@@ -19,6 +19,8 @@ used as a template:
       - include: reactions/biomass.yaml
     media:
       - include: medium.yaml
+    limits:
+      - include: limits.yaml
 
 Biomass
 -------
@@ -162,9 +164,20 @@ Reaction flux limits
 
 The optional ``limits`` property lists the files that are to be combined and
 applied as the reaction flux limits. This can be used to limit certain
-reactions in the model. These files are currently parsed as tables containing
-the reaction ID, the lower limit and (optionally) the upper limit. The
-following fragment is an example of a limits file::
+reactions in the model. The following fragment is an example of a limits file
+in the YAML format. The lower and upper specifies the flux bounds and they are
+both optional:
+
+.. code-block:: yaml
+
+    - reaction: ADK1
+      upper: 10
+    - reaction: ADE2t
+      lower: -50
+      upper: 50
+
+The limits can also be specified using a TSV-file as shown in the following
+fragment::
 
     # Make ADE2t irreversible by imposing a lower bound of 0
     ADE2t    0

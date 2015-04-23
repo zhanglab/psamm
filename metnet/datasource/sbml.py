@@ -211,10 +211,11 @@ class ReactionEntry(_SBMLEntry):
                                     self._reader._sbml_tag('listOfParameters'),
                                     self._reader._sbml_tag('parameter'))):
             param_id = parameter.get('id')
+            param_name = parameter.get('name')
             param_value = float(parameter.get('value'))
             param_units = parameter.get('units')
 
-            yield param_id, param_value, param_units
+            yield param_id, param_name, param_value, param_units
 
 
 class SBMLReader(object):
