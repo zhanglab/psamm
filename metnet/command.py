@@ -731,7 +731,9 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
 
     Given a reaction to optimize and a threshold, delete reactions randomly
     until the flux of the reaction to optimize falls under the threshold.
-    Keep deleting reactions until no more reactions can be deleted.
+    Keep deleting reactions until no more reactions can be deleted. By default
+    this uses standard FBA (not tFBA). Since the internal fluxes are irrelevant
+    the FBA and tFBA are equivalent for this purpose.
     """
 
     name = 'randomsparse'
@@ -740,8 +742,8 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--no-tfba', help='Disable thermodynamic constraints on FBA',
-            action='store_true')
+            '--tfba', help='Enable thermodynamic constraints on FBA',
+            action='store_true', default=False)
         parser.add_argument(
             '--reaction', help='Reaction to maximize', nargs='?')
         parser.add_argument(
@@ -769,7 +771,7 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             raise ValueError(
                 'Invalid threshold, must be in [0;1]: {}'.format(threshold))
 
-        if self._args.no_tfba:
+        if not self._args.tfba:
             fb_problem = fluxanalysis.FluxBalanceProblem
             solver = self._get_solver()
         else:
