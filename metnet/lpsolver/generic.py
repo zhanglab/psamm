@@ -90,5 +90,7 @@ def parse_solver_setting(s):
 
     if key in ('rational', 'integer'):
         value = value.lower() in ('1', 'yes', 'true', 'on')
+    elif key in ('threads',):
+        value = int(value)
 
     return key, value

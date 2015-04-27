@@ -54,6 +54,11 @@ class Problem(BaseProblem):
         # Increase feasibility tolerance from default
         self._cp.parameters.simplex.tolerances.feasibility.set(1e-9)
 
+        # Set number of threads
+        if 'threads' in kwargs:
+            logger.info('Setting threads to {!r}'.format(kwargs['threads']))
+            self._cp.parameters.threads = kwargs['threads']
+
         self._variables = {}
         self._var_names = ('x'+str(i) for i in count(1))
 
