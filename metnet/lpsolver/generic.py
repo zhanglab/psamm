@@ -77,3 +77,17 @@ class Solver(BaseSolver):
     def create_problem(self):
         """Create a :class:`Problem <metnet.lpsolver.lp.Problem>` instance"""
         return self._solver.create_problem()
+
+
+def parse_solver_setting(s):
+    """Parse a string containing a solver setting"""
+
+    try:
+        key, value = s.split('=', 1)
+    except ValueError:
+        key, value = s, 'yes'
+
+    if key in ('rational', 'integer'):
+        value = value.lower() in ('1', 'yes', 'true', 'on')
+
+    return key, value

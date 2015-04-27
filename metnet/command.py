@@ -97,12 +97,7 @@ class SolverCommandMixin(object):
         self._solver_args = {}
         if self._args.solver is not None:
             for s in self._args.solver:
-                try:
-                    key, value = s.split('=', 1)
-                except ValueError:
-                    key, value = s, 'yes'
-                if key in ('rational', 'integer'):
-                    value = value.lower() in ('1', 'yes', 'true', 'on')
+                key, value = generic.parse_solver_setting(s)
                 self._solver_args[key] = value
 
     def _get_solver(self, **kwargs):
