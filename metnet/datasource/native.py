@@ -317,7 +317,7 @@ def parse_compound_file(path, format):
         with open(context.filepath, 'r') as f:
             for compound in modelseed.parse_compound_file(f):
                 yield compound
-    elif format.startswith('tsv'):
+    elif re.match(r'.+\.tsv$', context.filepath) or format == 'tsv':
         logger.debug('Parsing compound file {} as TSV'.format(
             context.filepath))
         with open(context.filepath, 'r') as f:
