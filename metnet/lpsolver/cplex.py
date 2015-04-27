@@ -52,7 +52,9 @@ class Problem(BaseProblem):
         self._cp.set_error_stream(error_stream)
 
         # Increase feasibility tolerance from default
-        self._cp.parameters.simplex.tolerances.feasibility.set(1e-9)
+        feasibility_tolerance = kwargs.get('feasibility_tolerance', 1e-9)
+        self._cp.parameters.simplex.tolerances.feasibility.set(
+            feasibility_tolerance)
 
         # Set number of threads
         if 'threads' in kwargs:
