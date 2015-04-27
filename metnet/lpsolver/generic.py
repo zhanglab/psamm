@@ -59,15 +59,16 @@ class Solver(BaseSolver):
         if len(solvers) == 0:
             raise RequirementsError('No solvers available')
 
-        requirements = {key: value for key, value in kwargs.iteritems()
-                        if value is not None}
-        for req, value in requirements.iteritems():
-            solvers = [s for s in solvers if req in s and s[req] == value]
+        self._requirements = {key: value for key, value in kwargs.iteritems()
+                              if value is not None}
+        for req, value in self._requirements.iteritems():
+            if req in ('integer', 'rational', 'name'):
+                solvers = [s for s in solvers if req in s and s[req] == value]
 
         if len(solvers) == 0:
             raise RequirementsError(
                 'Unable to find a solver matching the specified requirements:'
-                ' {}'.format(requirements))
+                ' {}'.format(self._requirements))
 
         solver = max(solvers, key=operator.itemgetter('priority'))
         logger.debug('Using solver {}'.format(solver['name']))
@@ -76,4 +77,22 @@ class Solver(BaseSolver):
 
     def create_problem(self):
         """Create a :class:`Problem <metnet.lpsolver.lp.Problem>` instance"""
-        return self._solver.create_problem()
+        return self._solver.create_problem(**self._requirements)
+
+
+def parse_solver_setting(s):
+    """Parse a string containing a solver setting"""
+
+    try:
+        key, value = s.split('=', 1)
+    except ValueError:
+        key, value = s, 'yes'
+
+    if key in ('rational', 'integer'):
+        value = value.lower() in ('1', 'yes', 'true', 'on')
+    elif key in ('threads',):
+        value = int(value)
+    elif key in ('feasibility_tolerance',):
+        value = float(value)
+
+    return key, value

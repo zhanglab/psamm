@@ -22,14 +22,15 @@ logger = logging.getLogger(__name__)
 
 
 class Solver(BaseSolver):
-    '''Represents an LP-solver using Cplex'''
+    """Represents an LP-solver using Cplex"""
 
-    def create_problem(self):
-        '''Create a new LP-problem using the solver'''
-        return Problem()
+    def create_problem(self, **kwargs):
+        """Create a new LP-problem using the solver"""
+        return Problem(**kwargs)
+
 
 class Problem(BaseProblem):
-    '''Represents an LP-problem of a cplex.Solver'''
+    """Represents an LP-problem of a cplex.Solver"""
 
     VARTYPE_MAP = {
         VariableType.Continuous: 'C',
@@ -37,7 +38,7 @@ class Problem(BaseProblem):
         VariableType.Integer: 'I'
     }
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self._cp = cp.Cplex()
 
         # Set up output to go to logging streams
@@ -51,7 +52,14 @@ class Problem(BaseProblem):
         self._cp.set_error_stream(error_stream)
 
         # Increase feasibility tolerance from default
-        self._cp.parameters.simplex.tolerances.feasibility.set(1e-9)
+        feasibility_tolerance = kwargs.get('feasibility_tolerance', 1e-9)
+        self._cp.parameters.simplex.tolerances.feasibility.set(
+            feasibility_tolerance)
+
+        # Set number of threads
+        if 'threads' in kwargs:
+            logger.info('Setting threads to {!r}'.format(kwargs['threads']))
+            self._cp.parameters.threads = kwargs['threads']
 
         self._variables = {}
         self._var_names = ('x'+str(i) for i in count(1))
