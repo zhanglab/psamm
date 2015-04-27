@@ -22,14 +22,15 @@ logger = logging.getLogger(__name__)
 
 
 class Solver(BaseSolver):
-    '''Represents an LP-solver using Cplex'''
+    """Represents an LP-solver using Cplex"""
 
-    def create_problem(self):
-        '''Create a new LP-problem using the solver'''
-        return Problem()
+    def create_problem(self, **kwargs):
+        """Create a new LP-problem using the solver"""
+        return Problem(**kwargs)
+
 
 class Problem(BaseProblem):
-    '''Represents an LP-problem of a cplex.Solver'''
+    """Represents an LP-problem of a cplex.Solver"""
 
     VARTYPE_MAP = {
         VariableType.Continuous: 'C',
@@ -37,7 +38,7 @@ class Problem(BaseProblem):
         VariableType.Integer: 'I'
     }
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self._cp = cp.Cplex()
 
         # Set up output to go to logging streams

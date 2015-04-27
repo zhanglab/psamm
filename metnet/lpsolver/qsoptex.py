@@ -15,16 +15,17 @@ from .lp import (VariableSet, Expression, Relation,
                     ObjectiveSense, VariableType, InvalidResultError)
 
 class Solver(BaseSolver):
-    '''Represents an LP solver using QSopt_ex'''
+    """Represents an LP solver using QSopt_ex"""
 
-    def create_problem(self):
-        '''Create a new LP-problem using the solver'''
-        return Problem()
+    def create_problem(self, **kwargs):
+        """Create a new LP-problem using the solver"""
+        return Problem(**kwargs)
+
 
 class Problem(BaseProblem):
-    '''Represents an LP-problem of a qsoptex.Solver'''
+    """Represents an LP-problem of a qsoptex.Solver"""
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self._p = qsoptex.ExactProblem()
         self._p.set_param(qsoptex.Parameter.SIMPLEX_DISPLAY, 1)
 

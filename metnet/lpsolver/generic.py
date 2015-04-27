@@ -59,15 +59,16 @@ class Solver(BaseSolver):
         if len(solvers) == 0:
             raise RequirementsError('No solvers available')
 
-        requirements = {key: value for key, value in kwargs.iteritems()
-                        if value is not None}
-        for req, value in requirements.iteritems():
-            solvers = [s for s in solvers if req in s and s[req] == value]
+        self._requirements = {key: value for key, value in kwargs.iteritems()
+                              if value is not None}
+        for req, value in self._requirements.iteritems():
+            if req in ('integer', 'rational', 'name'):
+                solvers = [s for s in solvers if req in s and s[req] == value]
 
         if len(solvers) == 0:
             raise RequirementsError(
                 'Unable to find a solver matching the specified requirements:'
-                ' {}'.format(requirements))
+                ' {}'.format(self._requirements))
 
         solver = max(solvers, key=operator.itemgetter('priority'))
         logger.debug('Using solver {}'.format(solver['name']))
@@ -76,7 +77,7 @@ class Solver(BaseSolver):
 
     def create_problem(self):
         """Create a :class:`Problem <metnet.lpsolver.lp.Problem>` instance"""
-        return self._solver.create_problem()
+        return self._solver.create_problem(**self._requirements)
 
 
 def parse_solver_setting(s):
