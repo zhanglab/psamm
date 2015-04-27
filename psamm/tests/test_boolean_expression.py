@@ -2,7 +2,7 @@
 
 import unittest
 
-from metnet.expression.boolean import Expression, Variable, And, Or
+from psamm.expression.boolean import Expression, Variable, And, Or
 
 class TestVariable(unittest.TestCase):
     def test_variable_init(self):

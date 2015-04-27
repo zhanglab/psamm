@@ -17,7 +17,7 @@ import os
 import shlex
 import mock
 
-import metnet
+import psamm
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -73,7 +73,7 @@ author = u'Jon Lund Steffensen'
 # built documents.
 #
 # The short X.Y version.
-version = metnet.__version__
+version = psamm.__version__
 # The full version, including alpha/beta/rc tags.
 release = version
 

@@ -4,7 +4,7 @@
 import re
 from decimal import Decimal
 
-from metnet.reaction import Reaction, Compound
+from psamm.reaction import Reaction, Compound
 
 def parse_sudensimple_reaction(s, arrow_rev='<=>', arrow_irrev='->'):
     """Parse a reaction string (SudenSimple)"""

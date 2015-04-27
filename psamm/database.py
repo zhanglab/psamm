@@ -86,7 +86,7 @@ class MetabolicDatabase(object):
 
     @abc.abstractproperty
     def compounds(self):
-        """Itertor of :class:`Compounds <metnet.reaction.Compound>` in the
+        """Itertor of :class:`Compounds <psamm.reaction.Compound>` in the
         database"""
 
     @abc.abstractmethod
@@ -102,7 +102,7 @@ class MetabolicDatabase(object):
         """Return an iterator of reaction compounds and stoichiometric values
 
         The returned iterator contains
-        (:class:`Compound <metnet.reaction.Compound>`, value)-tuples. The value
+        (:class:`Compound <psamm.reaction.Compound>`, value)-tuples. The value
         is negative for left-hand side compounds and positive for right-hand
         side.
         """
@@ -128,7 +128,7 @@ class MetabolicDatabase(object):
         return StoichiometricMatrixView(self)
 
     def get_reaction(self, reaction_id):
-        """Return reaction as a :class:`Reaction <metnet.reaction.Reaction>`"""
+        """Return reaction as a :class:`Reaction <psamm.reaction.Reaction>`"""
 
         direction = Reaction.Right
         if self.is_reversible(reaction_id):
@@ -177,7 +177,7 @@ class DictDatabase(MetabolicDatabase):
 
     def set_reaction(self, reaction_id, reaction):
         """Set the reaction ID to a reaction given by a
-        :class:`Reaction <metnet.reaction.Reaction>`
+        :class:`Reaction <psamm.reaction.Reaction>`
 
         If an existing reaction exists with the given reaction ID it will be
         overwritten.

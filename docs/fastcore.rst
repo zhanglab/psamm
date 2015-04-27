@@ -1,6 +1,6 @@
 
-``metnet.fastcore`` -- Fastcore (approximate consistent subset)
+``psamm.fastcore`` -- Fastcore (approximate consistent subset)
 ===============================================================
 
-.. automodule:: metnet.fastcore
+.. automodule:: psamm.fastcore
    :members:

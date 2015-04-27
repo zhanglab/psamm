@@ -1,6 +1,6 @@
 
-``metnet.lpsolver.cplex`` -- Cplex LP solver
+``psamm.lpsolver.cplex`` -- Cplex LP solver
 ============================================
 
-.. automodule:: metnet.lpsolver.cplex
+.. automodule:: psamm.lpsolver.cplex
    :members:

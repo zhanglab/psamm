@@ -2,8 +2,8 @@
 
 import unittest
 
-from metnet.datasource import native
-from metnet.reaction import Reaction, Compound
+from psamm.datasource import native
+from psamm.reaction import Reaction, Compound
 
 class TestYAMLDataSource(unittest.TestCase):
     def test_parse_reaction_list(self):

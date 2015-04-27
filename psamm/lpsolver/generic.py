@@ -76,7 +76,7 @@ class Solver(BaseSolver):
         self._solver = solver['class']()
 
     def create_problem(self):
-        """Create a :class:`Problem <metnet.lpsolver.lp.Problem>` instance"""
+        """Create a :class:`Problem <psamm.lpsolver.lp.Problem>` instance"""
         return self._solver.create_problem(**self._requirements)
 
 

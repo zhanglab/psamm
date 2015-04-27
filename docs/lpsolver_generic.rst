@@ -1,6 +1,6 @@
 
-``metnet.lpsolver.generic`` -- Generic linear programming solver
+``psamm.lpsolver.generic`` -- Generic linear programming solver
 ================================================================
 
-.. automodule:: metnet.lpsolver.generic
+.. automodule:: psamm.lpsolver.generic
    :members:

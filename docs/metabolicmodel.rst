@@ -1,6 +1,6 @@
 
-``metnet.metabolicmodel`` -- Metabolic model representation
+``psamm.metabolicmodel`` -- Metabolic model representation
 ===========================================================
 
-.. automodule:: metnet.metabolicmodel
+.. automodule:: psamm.metabolicmodel
    :members:

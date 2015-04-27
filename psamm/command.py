@@ -101,7 +101,7 @@ class SolverCommandMixin(object):
                 self._solver_args[key] = value
 
     def _get_solver(self, **kwargs):
-        """Return a new :class:`metnet.lpsolver.lp.Solver` instance"""
+        """Return a new :class:`psamm.lpsolver.lp.Solver` instance"""
         solver_args = dict(kwargs)
         solver_args.update(self._solver_args)
         return generic.Solver(**solver_args)

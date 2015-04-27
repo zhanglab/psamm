@@ -202,7 +202,7 @@ class ReactionEntry(_SBMLEntry):
 
     @property
     def equation(self):
-        """Reaction equation is a :class:`Reaction <metnet.reaction.Reaction>`
+        """Reaction equation is a :class:`Reaction <psamm.reaction.Reaction>`
         object"""
         return self._equation
 

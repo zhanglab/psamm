@@ -2,7 +2,7 @@
 
 import unittest
 
-from metnet.reaction import Reaction, Compound
+from psamm.reaction import Reaction, Compound
 
 class TestCompound(unittest.TestCase):
     def test_compound_init_no_arguments(self):

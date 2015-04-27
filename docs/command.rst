@@ -1,6 +1,6 @@
 
-``metnet.command`` -- Command line interface
+``psamm.command`` -- Command line interface
 ============================================
 
-.. automodule:: metnet.command
+.. automodule:: psamm.command
    :members:

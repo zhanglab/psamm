@@ -1,6 +1,6 @@
 
-``metnet.expression.boolean`` -- Boolean expressions
+``psamm.expression.boolean`` -- Boolean expressions
 ====================================================
 
-.. automodule:: metnet.expression.boolean
+.. automodule:: psamm.expression.boolean
    :members:

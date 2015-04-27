@@ -3,8 +3,8 @@
 import unittest
 from decimal import Decimal
 
-from metnet.reaction import Reaction, Compound
-from metnet.datasource import modelseed
+from psamm.reaction import Reaction, Compound
+from psamm.datasource import modelseed
 
 class TestModelSEED(unittest.TestCase):
     def test_modelseed_parse(self):

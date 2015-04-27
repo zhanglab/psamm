@@ -2,10 +2,10 @@
 
 import unittest
 
-from metnet.metabolicmodel import MetabolicModel, FlipableModelView
-from metnet.database import DictDatabase
-from metnet.reaction import Compound
-from metnet.datasource.modelseed import parse_reaction
+from psamm.metabolicmodel import MetabolicModel, FlipableModelView
+from psamm.database import DictDatabase
+from psamm.reaction import Compound
+from psamm.datasource.modelseed import parse_reaction
 
 class TestMetabolicModel(unittest.TestCase):
     def setUp(self):

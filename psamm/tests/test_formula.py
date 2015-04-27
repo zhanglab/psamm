@@ -2,7 +2,7 @@
 
 import unittest
 
-from metnet.formula import Formula, Atom, Radical
+from psamm.formula import Formula, Atom, Radical
 
 class TestFormula(unittest.TestCase):
     def test_formula_merge_same_formulas_with_same_atoms(self):

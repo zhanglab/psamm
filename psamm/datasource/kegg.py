@@ -3,8 +3,8 @@
 
 import re
 
-from metnet.reaction import Reaction, Compound
-from metnet.expression.affine import Expression
+from psamm.reaction import Reaction, Compound
+from psamm.expression.affine import Expression
 
 
 class ParseError(Exception):

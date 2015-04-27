@@ -2,14 +2,14 @@
 
 import unittest
 
-from metnet.metabolicmodel import MetabolicModel
-from metnet.database import DictDatabase
-from metnet import massconsistency
-from metnet.datasource.modelseed import parse_reaction
-from metnet.reaction import Compound
+from psamm.metabolicmodel import MetabolicModel
+from psamm.database import DictDatabase
+from psamm import massconsistency
+from psamm.datasource.modelseed import parse_reaction
+from psamm.reaction import Compound
 
 try:
-    from metnet.lpsolver import cplex
+    from psamm.lpsolver import cplex
 except ImportError:
     cplex = None
 

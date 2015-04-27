@@ -4,8 +4,8 @@
 import unittest
 from decimal import Decimal
 
-from metnet.reaction import Reaction, Compound
-from metnet.datasource import misc
+from psamm.reaction import Reaction, Compound
+from psamm.datasource import misc
 
 class TestSudenSimple(unittest.TestCase):
     def test_sudensimple_parse(self):

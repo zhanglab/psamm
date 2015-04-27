@@ -2,7 +2,7 @@
 
 import unittest
 
-from metnet.expression.affine import Expression, Variable
+from psamm.expression.affine import Expression, Variable
 
 class TestVariable(unittest.TestCase):
     def test_variable_init(self):

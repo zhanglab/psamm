@@ -1,6 +1,6 @@
 
-``metnet.datasource.sbml`` -- SBML model parser
+``psamm.datasource.sbml`` -- SBML model parser
 ===============================================
 
-.. automodule:: metnet.datasource.sbml
+.. automodule:: psamm.datasource.sbml
    :members:

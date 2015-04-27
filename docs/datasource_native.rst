@@ -1,6 +1,6 @@
 
-``metnet.datasource.native`` -- Native data format parser
+``psamm.datasource.native`` -- Native data format parser
 =========================================================
 
-.. automodule:: metnet.datasource.native
+.. automodule:: psamm.datasource.native
    :members:

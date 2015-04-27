@@ -2,9 +2,9 @@
 
 import unittest
 
-from metnet.database import DictDatabase, ChainedDatabase
-from metnet.reaction import Compound, Reaction
-from metnet.datasource.modelseed import parse_reaction
+from psamm.database import DictDatabase, ChainedDatabase
+from psamm.reaction import Compound, Reaction
+from psamm.datasource.modelseed import parse_reaction
 
 class TestMetabolicDatabase(unittest.TestCase):
     def setUp(self):

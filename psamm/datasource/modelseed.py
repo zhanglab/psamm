@@ -5,7 +5,7 @@ import csv
 import re
 from decimal import Decimal
 
-from metnet.reaction import Reaction, Compound
+from psamm.reaction import Reaction, Compound
 
 
 class ParseError(Exception):

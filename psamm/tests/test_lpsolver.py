@@ -2,10 +2,10 @@
 
 import unittest
 
-from metnet.lpsolver import lp
+from psamm.lpsolver import lp
 
 try:
-    from metnet.lpsolver import cplex
+    from psamm.lpsolver import cplex
 except ImportError:
     cplex = None
 

@@ -2,9 +2,9 @@
 
 import unittest
 
-from metnet.datasource import kegg
-from metnet.reaction import Reaction, Compound
-from metnet.expression.affine import Expression
+from psamm.datasource import kegg
+from psamm.reaction import Reaction, Compound
+from psamm.expression.affine import Expression
 
 class TestKEGG(unittest.TestCase):
     def test_kegg_parse(self):
