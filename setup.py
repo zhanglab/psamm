@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='model_script',
+    name='psamm',
     version='0.7',
     description='Metabolic modelling tools',
     maintainer='Jon Lund Steffensen',
