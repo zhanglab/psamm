@@ -46,6 +46,7 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.coverage',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.napoleon',
     'doilinks'
 ]
 
