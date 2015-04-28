@@ -1,5 +1,5 @@
 
-'''Implementation of Flux Balance Analysis'''
+"""Implementation of Flux Balance Analysis"""
 
 import logging
 import random
@@ -227,11 +227,12 @@ def flux_randomization(model, fixed, solver):
         yield reaction_id, fba.get_flux(reaction_id)
 
 def consistency_check(model, subset, epsilon, solver):
-    '''Check that reaction subset of model is consistent using FBA
+    """Check that reaction subset of model is consistent using FBA
 
-    A reaction is consistent if there is at least one flux solution
-    to the model that both respects the model constraints and also
-    allows the reaction in question to have non-zero flux.
+    Yields all reactions that are *not* flux consistent. A reaction is
+    consistent if there is at least one flux solution to the model that both
+    respects the model constraints and also allows the reaction in question to
+    have non-zero flux.
 
     This can be determined by running FBA on each reaction in turn
     and checking whether the flux in the solution is non-zero. Since FBA
@@ -239,7 +240,8 @@ def consistency_check(model, subset, epsilon, solver):
     reversible reactions), we have to try to both maximize and minimize
     the flux. An optimization to this method is implemented such that if
     checking one reaction results in flux in another unchecked reaction,
-    that reaction will immediately be marked flux consistent.'''
+    that reaction will immediately be marked flux consistent.
+    """
 
     fba = FluxBalanceProblem(model, solver=solver)
 
