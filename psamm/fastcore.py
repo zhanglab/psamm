@@ -173,7 +173,8 @@ def fastcc(model, epsilon, solver):
             subset_i = { reaction }
 
             logger.debug('LP3 on {}'.format(subset_i))
-            supp = support(flux_balance(model, reaction, solver), epsilon)
+            supp = support(flux_balance(
+                model, reaction, tfba=False, solver=solver), epsilon)
         else:
             subset_i = subset
 
