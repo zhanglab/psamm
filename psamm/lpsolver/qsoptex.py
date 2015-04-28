@@ -141,7 +141,7 @@ class Problem(BaseProblem):
         return self._result
 
 class Result(BaseResult):
-    '''Represents the solution to a qsoptex.Problem
+    """Represents the solution to a qsoptex.Problem
 
     This object will be returned from the Problem.solve() method or by
     accessing the Problem.result property after solving a problem. This
@@ -149,7 +149,8 @@ class Result(BaseResult):
 
     Result will evaluate to a boolean according to the success of the
     solution, so checking the truth value of the result will immediately
-    indicate whether solving was successful.'''
+    indicate whether solving was successful.
+    """
 
     def __init__(self, prob):
         self._problem = prob
@@ -160,18 +161,18 @@ class Result(BaseResult):
 
     @property
     def success(self):
-        '''Return boolean indicating whether a solution was found'''
+        """Return boolean indicating whether a solution was found"""
         self._check_valid()
         return self._problem._p.get_status() == 1
 
     @property
     def status(self):
-        '''Return string indicating the error encountered on failure'''
+        """Return string indicating the error encountered on failure"""
         self._check_valid()
-        return 'Status: {}'.format(self._p.get_status())
+        return 'Status: {}'.format(self._problem._p.get_status())
 
     def get_value(self, expression):
-        '''Return value of expression'''
+        """Return value of expression"""
 
         self._check_valid()
         if isinstance(expression, Expression):
