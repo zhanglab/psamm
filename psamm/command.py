@@ -658,7 +658,7 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
         for compound in self._model.parse_compounds():
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
-            if compound.zeromass:
+            if compound.properties.get('zeromass', False):
                 zeromass.add(compound.id)
 
         # Create a set of known mass-inconsistent reactions

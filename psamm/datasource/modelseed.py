@@ -23,8 +23,11 @@ class CompoundEntry(object):
 
     def __init__(self, id, names, formula):
         self._id = id
-        self._names = list(names)
-        self._formula = formula
+        self._properties = {
+            'id': self._id,
+            'names': list(names),
+            'formula': formula
+        }
 
         # Find shortest name
         # Usually the best name is the shortest one,
@@ -33,9 +36,11 @@ class CompoundEntry(object):
         # Since the sort is stable we can obtain this
         # by first reversing the list, then sorting
         # by length.
-        self._name = None
-        if len(self._names) > 0:
-            self._name = sorted(reversed(self._names), key=lambda x: len(x))[0]
+        names = self._properties['names']
+        self._properties['name'] = None
+        if len(self._properties['names']) > 0:
+            name = sorted(reversed(names), key=lambda x: len(x))[0]
+            self._properties['name'] = name
 
     @property
     def id(self):
@@ -43,15 +48,19 @@ class CompoundEntry(object):
 
     @property
     def name(self):
-        return self._name
+        return self._properties.get('name')
 
     @property
     def names(self):
-        return iter(self._names)
+        return iter(self._properties.get('names'))
 
     @property
     def formula(self):
-        return self._formula
+        return self._properties.get('formula')
+
+    @property
+    def properties(self):
+        return dict(self._properties)
 
 
 def parse_compound_file(f):
