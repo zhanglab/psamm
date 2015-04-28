@@ -231,6 +231,9 @@ class FastGapFillCommand(SolverCommandMixin, Command):
             '--epsilon', type=float, help='Threshold for Fastcore',
             default=1e-5)
         parser.add_argument(
+            '--no-tfba', help='Disable thermodynamic constraints on FBA',
+            action='store_true')
+        parser.add_argument(
             'reaction', help='Reaction to maximize', nargs='?')
         super(FastGapFillCommand, cls).init_parser(parser)
 
@@ -238,7 +241,11 @@ class FastGapFillCommand(SolverCommandMixin, Command):
         """Run FastGapFill command"""
 
         # Create solver
-        solver = self._get_solver()
+        enable_tfba = not self._args.no_tfba
+        if enable_tfba:
+            solver = self._get_solver(integer=True)
+        else:
+            solver = self._get_solver()
 
         # Load compound information
         compound_name = {}
@@ -299,7 +306,7 @@ class FastGapFillCommand(SolverCommandMixin, Command):
         for rxnid in induced:
             model_induced.add_reaction(rxnid)
         for rxnid, flux in sorted(fluxanalysis.flux_balance(
-                model_induced, maximized_reaction, tfba=False,
+                model_induced, maximized_reaction, tfba=enable_tfba,
                 solver=solver)):
             reaction_class = 'Dbase'
             weight = weights.get(rxnid, 1)
