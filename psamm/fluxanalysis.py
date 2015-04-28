@@ -9,14 +9,18 @@ from .lpsolver import lp
 # Module-level logging
 logger = logging.getLogger(__name__)
 
+
 class FluxBalanceError(Exception):
-    '''Error indicating that a flux balance cannot be solved'''
+    """Error indicating that a flux balance cannot be solved"""
+
 
 class FluxBalanceProblem(object):
-    '''Maximize the flux of a specific reaction
+    """Maximize the flux of a specific reaction
 
-    The solve method solves the problem for a specific parameter. After solving, the
-    flux can be obtained using the get_flux method.'''
+    The solve method solves the problem for a specific parameter. After
+    solving, the flux can be obtained using the get_flux method. The problem
+    can be solved again with a new objective as many times as needed.
+    """
 
     def __init__(self, model, solver):
         self._prob = solver.create_problem()
@@ -40,13 +44,16 @@ class FluxBalanceProblem(object):
         return self._prob
 
     def solve(self, reaction):
-        '''Solve problem maximizing the given reaction
+        """Solve problem maximizing the given reaction
 
-        If reaction is a dictionary object, each entry is interpreted as a weight on
-        the objective for that reaction (non-existent reaction will have zero weight).'''
+        If reaction is a dictionary object, each entry is interpreted as a
+        weight on the objective for that reaction (non-existent reaction will
+        have zero weight).
+        """
 
         if isinstance(reaction, dict):
-            objective = sum(v * self.get_flux_var(r) for r, v in reaction.iteritems())
+            objective = sum(v * self.get_flux_var(r)
+                            for r, v in reaction.iteritems())
         else:
             objective = self.get_flux_var(reaction)
 
@@ -54,15 +61,17 @@ class FluxBalanceProblem(object):
         self._prob.set_linear_objective(objective)
         result = self._prob.solve(lp.ObjectiveSense.Maximize)
         if not result:
-            raise FluxBalanceError('Non-optimal solution: {}'.format(result.status))
+            raise FluxBalanceError('Non-optimal solution: {}'.format(
+                result.status))
 
     def get_flux_var(self, reaction):
         """Get LP variable representing the reaction flux"""
         return self._prob.var(('v', reaction))
 
     def get_flux(self, reaction):
-        '''Get resulting flux value for reaction'''
+        """Get resulting flux value for reaction"""
         return self._prob.result.get_value(('v', reaction))
+
 
 class FluxBalanceTDProblem(FluxBalanceProblem):
     """Maximize the flux of a specific reaction with thermodynamic constraints
@@ -110,30 +119,52 @@ class FluxBalanceTDProblem(FluxBalanceProblem):
             if not model.is_exchange(reaction_id):
                 p.add_linear_constraints(lhs == p.var(('dmu', reaction_id)))
 
+
 def flux_balance(model, reaction, solver):
-    '''Run flux balance analysis on the given model
+    """Run flux balance analysis on the given model
 
     Yields the reaction id and flux value for each reaction in the model.
 
     This is a convenience function for sertting up and running the
     FluxBalanceProblem. If the FBA is solved for more than one parameter
     it is recommended to setup and reuse the FluxBalanceProblem manually
-    for a speed up.'''
+    for a speed up.
+
+    Args:
+        model: MetabolicModel to solve.
+        reaction: Reaction to maximize. If a dict is given, this instead
+            represents the objective function weights on each reaction.
+        solver: LP solver instance to use.
+
+    Returns:
+        Iterator over reaction ID and reaction flux pairs.
+    """
 
     fba = FluxBalanceProblem(model, solver=solver)
     fba.solve(reaction)
     for reaction in model.reactions:
         yield reaction, fba.get_flux(reaction)
 
+
 def flux_balance_td(model, reaction, solver):
-    '''Run flux balance analysis with thermodynamic constraints
+    """Run flux balance analysis with thermodynamic constraints
 
     Yields the reaction id and flux value for each reaction in the model.
 
     This is a convenience function for sertting up and running the
     FluxBalanceTDProblem. If the tFBA is solved for more than one parameter
     it is recommended to setup and reuse the FluxBalanceTDProblem manually
-    for a speed up.'''
+    for a speed up.
+
+    Args:
+        model: MetabolicModel to solve.
+        reaction: Reaction to maximize. If a dict is given, this instead
+            represents the objective function weights on each reaction.
+        solver: LP solver instance to use.
+
+    Returns:
+        Iterator over reaction ID and reaction flux pairs.
+    """
 
     tfba = FluxBalanceTDProblem(model, solver=solver)
     tfba.solve(reaction)
@@ -147,6 +178,16 @@ def flux_variability(model, reactions, fixed, solver):
     Yields the reaction id, and a tuple of minimum and maximum value for each
     of the given reactions. The fixed reactions are given in a dictionary as
     a reaction id to value mapping.
+
+    Args:
+        model: MetabolicModel to solve.
+        reactions: Reactions on which to report variablity.
+        fixed: dict of additional lower bounds on reaction fluxes.
+        solver: LP solver instance to use.
+
+    Returns:
+        Iterator over pairs of reaction ID and bounds. Bounds are returned as
+        pairs of lower and upper values.
     """
 
     fba = FluxBalanceProblem(model, solver=solver)
@@ -165,10 +206,20 @@ def flux_variability(model, reactions, fixed, solver):
 
 
 def flux_minimization(model, fixed, solver, weights={}):
-    '''Minimize flux of all reactions while keeping certain fluxes fixed
+    """Minimize flux of all reactions while keeping certain fluxes fixed
 
     The fixed reactions are given in a dictionary as reaction id
-    to value mapping. The weighted L1-norm of the fluxes is minimized.'''
+    to value mapping. The weighted L1-norm of the fluxes is minimized.
+
+    Args:
+        model: MetabolicModel to solve.
+        fixed: dict of additional lower bounds on reaction fluxes.
+        solver: LP solver instance to use.
+        weights: dict of weights on the L1-norm terms.
+
+    Returns:
+        An iterator of reaction ID and reaction flux pairs.
+    """
 
     prob = solver.create_problem()
 
@@ -180,8 +231,10 @@ def flux_minimization(model, fixed, solver, weights={}):
         prob.define(('v', reaction_id), lower=lower, upper=upper)
 
     # Define z variables
-    prob.define(*(('z', reaction_id) for reaction_id in model.reactions), lower=0)
-    objective = sum(prob.var(('z', reaction_id)) * weights.get(reaction_id, 1) for reaction_id in model.reactions)
+    prob.define(*(('z', reaction_id) for reaction_id in model.reactions),
+                lower=0)
+    objective = sum(prob.var(('z', reaction_id)) * weights.get(reaction_id, 1)
+                    for reaction_id in model.reactions)
     prob.set_linear_objective(objective)
 
     # Define constraints
@@ -199,9 +252,12 @@ def flux_minimization(model, fixed, solver, weights={}):
     # Solve
     result = prob.solve(lp.ObjectiveSense.Minimize)
     if not result:
-        raise FluxBalanceError('Non-optimal solution: {}'.format(result.status))
+        raise FluxBalanceError('Non-optimal solution: {}'.format(
+            result.status))
 
-    return ((reaction_id, result.get_value(('v', reaction_id))) for reaction_id in model.reactions)
+    return ((reaction_id, result.get_value(('v', reaction_id)))
+            for reaction_id in model.reactions)
+
 
 def flux_randomization(model, fixed, solver):
     """Find a uniformly random flux mode in the solution space
@@ -211,7 +267,16 @@ def flux_randomization(model, fixed, solver):
     (e.g. random walk) are useful.
 
     The reactions in the fixed dictionary are constrained with the
-    associated lower bound."""
+    associated lower bound.
+
+    Args:
+        model: MetabolicModel to solve.
+        fixed: dict of additional lower bounds on reaction fluxes.
+        solver: LP solver instance to use.
+
+    Returns:
+        An iterator of reaction ID and reaction flux pairs.
+    """
 
     optimize = {}
     for reaction_id in model.reactions:
@@ -228,6 +293,7 @@ def flux_randomization(model, fixed, solver):
     for reaction_id in model.reactions:
         yield reaction_id, fba.get_flux(reaction_id)
 
+
 def consistency_check(model, subset, epsilon, solver):
     """Check that reaction subset of model is consistent using FBA
 
@@ -243,6 +309,15 @@ def consistency_check(model, subset, epsilon, solver):
     the flux. An optimization to this method is implemented such that if
     checking one reaction results in flux in another unchecked reaction,
     that reaction will immediately be marked flux consistent.
+
+    Args:
+        model: MetabolicModel to check for consistency.
+        subset: Subset of model reactions to check.
+        epsilon: The threshold at which the flux is considered non-zero.
+        solver: LP solver instance to use.
+
+    Returns:
+        An iterator of flux inconsistent reactions in the subset.
     """
 
     fba = FluxBalanceProblem(model, solver=solver)
@@ -254,13 +329,15 @@ def consistency_check(model, subset, epsilon, solver):
         logger.debug('{} left, checking {}...'.format(len(subset), reaction))
 
         fba.solve(reaction)
-        support = set(rxnid for rxnid in model.reactions if abs(fba.get_flux(rxnid)) >= epsilon)
+        support = set(rxnid for rxnid in model.reactions
+                      if abs(fba.get_flux(rxnid)) >= epsilon)
         subset -= support
         if reaction in support:
             continue
         elif model.is_reversible(reaction):
             fba.solve({ reaction: -1 })
-            support = set(rxnid for rxnid in model.reactions if abs(fba.get_flux(rxnid)) >= epsilon)
+            support = set(rxnid for rxnid in model.reactions
+                          if abs(fba.get_flux(rxnid)) >= epsilon)
             subset -= support
             if reaction in support:
                 continue
