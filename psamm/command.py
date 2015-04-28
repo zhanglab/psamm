@@ -1067,10 +1067,10 @@ class SearchCommand(Command):
                 print()
 
 
-def main(command=None):
+def main(command_class=None):
     """Run the command line interface with the given :class:`Command`
 
-    If no command is specified the user will be able to select a specific
+    If no command class is specified the user will be able to select a specific
     command through the first command line argument.
     """
 
@@ -1083,8 +1083,8 @@ def main(command=None):
         logging.basicConfig(level=logging.INFO)
 
     title = 'Metabolic modeling tools'
-    if command is not None:
-        title = command.title
+    if command_class is not None:
+        title = command_class.title
 
     parser = argparse.ArgumentParser(description=title)
     parser.add_argument('--model', metavar='file', default='.',
@@ -1093,10 +1093,10 @@ def main(command=None):
         '-V', '--version', action='version',
         version='%(prog)s ' + package_version)
 
-    if command is not None:
+    if command_class is not None:
         # Command explicitly given, only allow that command
-        command.init_parser(parser)
-        parser.set_defaults(command=command)
+        command_class.init_parser(parser)
+        parser.set_defaults(command=command_class)
     else:
         # Discover all available commands
         commands = {}
