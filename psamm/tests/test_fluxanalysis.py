@@ -80,6 +80,38 @@ class TestFluxBalanceThermodynamic(unittest.TestCase):
 
 
 @requires_solver
+class TestFluxVariability(unittest.TestCase):
+    def setUp(self):
+        self.database = DictDatabase()
+        self.database.set_reaction('rxn_1', parse_reaction('=> (2) |A|'))
+        self.database.set_reaction('rxn_2', parse_reaction('|A| <=> |B|'))
+        self.database.set_reaction('rxn_3', parse_reaction('|A| => |D|'))
+        self.database.set_reaction('rxn_4', parse_reaction('|A| => |C|'))
+        self.database.set_reaction('rxn_5', parse_reaction('|C| => |D|'))
+        self.database.set_reaction('rxn_6', parse_reaction('|D| =>'))
+
+        self.model = MetabolicModel.load_model(self.database, self.database.reactions)
+        self.model.limits['rxn_5'].upper = 100
+
+        self.solver = cplex.Solver()
+
+    def test_flux_variability(self):
+        fluxes = dict(fluxanalysis.flux_variability(
+            self.model, self.model.reactions, { 'rxn_6': 200 },
+            solver=self.solver))
+
+        self.assertEqual(fluxes['rxn_1'][0], 100)
+
+        self.assertEqual(fluxes['rxn_2'][0], 0)
+        self.assertEqual(fluxes['rxn_2'][1], 0)
+
+        self.assertEqual(fluxes['rxn_5'][0], 0)
+        self.assertEqual(fluxes['rxn_5'][1], 100)
+
+        self.assertEqual(fluxes['rxn_6'][0], 200)
+
+
+@requires_solver
 class TestNaiveConsistency(unittest.TestCase):
     def setUp(self):
         self.database = DictDatabase()

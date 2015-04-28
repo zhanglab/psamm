@@ -140,18 +140,19 @@ def flux_balance_td(model, reaction, solver):
     for reaction in model.reactions:
         yield reaction, tfba.get_flux(reaction)
 
+
 def flux_variability(model, reactions, fixed, solver):
-    '''Find the variability of each reaction while fixing certain fluxes
+    """Find the variability of each reaction while fixing certain fluxes
 
     Yields the reaction id, and a tuple of minimum and maximum value for each
     of the given reactions. The fixed reactions are given in a dictionary as
-    a reaction id to value mapping.'''
+    a reaction id to value mapping.
+    """
 
-    test_model = model.copy()
+    fba = FluxBalanceProblem(model, solver=solver)
     for reaction_id, value in fixed.iteritems():
-        test_model.limits[reaction_id].lower = value
-
-    fba = FluxBalanceProblem(test_model, solver=solver)
+        flux = fba.get_flux_var(reaction_id)
+        fba.prob.add_linear_constraints(flux >= value)
 
     def min_max_solve(reaction_id):
         for direction in (-1, 1):
@@ -161,6 +162,7 @@ def flux_variability(model, reactions, fixed, solver):
     # Solve for each reaction
     for reaction_id in reactions:
         yield reaction_id, tuple(min_max_solve(reaction_id))
+
 
 def flux_minimization(model, fixed, solver, weights={}):
     '''Minimize flux of all reactions while keeping certain fluxes fixed
