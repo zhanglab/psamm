@@ -231,6 +231,9 @@ class FastGapFillCommand(SolverCommandMixin, Command):
             '--epsilon', type=float, help='Threshold for Fastcore',
             default=1e-5)
         parser.add_argument(
+            '--no-tfba', help='Disable thermodynamic constraints on FBA',
+            action='store_true')
+        parser.add_argument(
             'reaction', help='Reaction to maximize', nargs='?')
         super(FastGapFillCommand, cls).init_parser(parser)
 
@@ -238,7 +241,11 @@ class FastGapFillCommand(SolverCommandMixin, Command):
         """Run FastGapFill command"""
 
         # Create solver
-        solver = self._get_solver()
+        enable_tfba = not self._args.no_tfba
+        if enable_tfba:
+            solver = self._get_solver(integer=True)
+        else:
+            solver = self._get_solver()
 
         # Load compound information
         compound_name = {}
@@ -299,7 +306,8 @@ class FastGapFillCommand(SolverCommandMixin, Command):
         for rxnid in induced:
             model_induced.add_reaction(rxnid)
         for rxnid, flux in sorted(fluxanalysis.flux_balance(
-                model_induced, maximized_reaction, solver=solver)):
+                model_induced, maximized_reaction, tfba=enable_tfba,
+                solver=solver)):
             reaction_class = 'Dbase'
             weight = weights.get(rxnid, 1)
             if self._mm.has_reaction(rxnid):
@@ -377,14 +385,14 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
         """Run normal FBA and flux minimization on model, then print output"""
 
         solver = self._get_solver()
-        fba_fluxes = dict(fluxanalysis.flux_balance(self._mm, reaction,
-                                                    solver=solver))
+        fba_fluxes = dict(fluxanalysis.flux_balance(
+            self._mm, reaction, tfba=False, solver=solver))
         optimum = fba_fluxes[reaction]
         epsilon = self._args.epsilon
 
         # Run flux minimization
         fmin_fluxes = dict(fluxanalysis.flux_minimization(
-            self._mm, { reaction: optimum }, solver=solver))
+            self._mm, {reaction: optimum}, solver=solver))
         count = 0
         for reaction_id, flux in fmin_fluxes.iteritems():
             if fba_fluxes[reaction_id] - epsilon > flux:
@@ -398,9 +406,9 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
         solver = self._get_solver(integer=True)
 
         fba_fluxes = dict(fluxanalysis.flux_balance(
-            self._mm, reaction, solver=solver))
-        fluxes = dict(fluxanalysis.flux_balance_td(
-            self._mm, reaction, solver=solver))
+            self._mm, reaction, tfba=False, solver=solver))
+        fluxes = dict(fluxanalysis.flux_balance(
+            self._mm, reaction, tfba=True, solver=solver))
 
         for reaction_id, flux in fluxes.iteritems():
             yield reaction_id, fba_fluxes[reaction_id], flux
@@ -422,6 +430,10 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
             '--fastcore', help='Enable use of Fastcore algorithm',
             action='store_true')
         parser.add_argument(
+            '--no-tfba',
+            help='Disable thermodynamic constraints on flux check',
+            action='store_true')
+        parser.add_argument(
             '--epsilon', type=float, help='Flux threshold',
             default=1e-5)
         super(FluxConsistencyCommand, cls).init_parser(parser)
@@ -435,16 +447,22 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
 
-        solver = self._get_solver()
         epsilon = self._args.epsilon
 
         if self._args.fastcore:
+            solver = self._get_solver()
             inconsistent = set(fastcore.fastcc(
                 self._mm, epsilon, solver=solver))
         else:
+            enable_tfba = not self._args.no_tfba
+            if enable_tfba:
+                solver = self._get_solver(integer=True)
+            else:
+                solver = self._get_solver()
             inconsistent = set(
-                fluxanalysis.consistency_check(self._mm, self._mm.reactions,
-                                               epsilon, solver=solver))
+                fluxanalysis.consistency_check(
+                    self._mm, self._mm.reactions, epsilon,
+                    tfba=enable_tfba, solver=solver))
 
         # Print result
         for reaction in sorted(inconsistent):
@@ -464,6 +482,9 @@ class FluxVariabilityCommand(SolverCommandMixin, Command):
 
     @classmethod
     def init_parser(cls, parser):
+        parser.add_argument(
+            '--no-tfba', help='Disable thermodynamic constraints on FVA',
+            action='store_true')
         parser.add_argument('reaction', help='Reaction to maximize', nargs='?')
         super(FluxVariabilityCommand, cls).init_parser(parser)
 
@@ -487,15 +508,19 @@ class FluxVariabilityCommand(SolverCommandMixin, Command):
             raise ValueError('Specified reaction is not in model: {}'.format(
                 reaction))
 
-        solver = self._get_solver()
+        enable_tfba = not self._args.no_tfba
+        if enable_tfba:
+            solver = self._get_solver(integer=True)
+        else:
+            solver = self._get_solver()
 
         fba_fluxes = dict(fluxanalysis.flux_balance(
-            self._mm, reaction, solver=solver))
+            self._mm, reaction, tfba=False, solver=solver))
         optimum = fba_fluxes[reaction]
 
         flux_bounds = fluxanalysis.flux_variability(
             self._mm, sorted(self._mm.reactions), {reaction: optimum},
-            solver=solver)
+            tfba=enable_tfba, solver=solver)
         for reaction_id, bounds in flux_bounds:
             rx = self._mm.get_reaction(reaction_id)
             rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
@@ -872,8 +897,8 @@ class RobustnessCommand(SolverCommandMixin, Command):
                 model, {reaction: optimum}, solver=solver)
 
         def run_tfba(model, reaction):
-            return fluxanalysis.flux_balance_td(
-                model, reaction, solver=solver)
+            return fluxanalysis.flux_balance(
+                model, reaction, tfba=True, solver=solver)
 
         if self._args.no_tfba:
             run_fba = run_fba_fmin
