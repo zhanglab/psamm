@@ -350,8 +350,10 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
         # Load compound information
         compound_name = {}
         for compound in self._model.parse_compounds():
-            compound_name[compound.id] = (
-                compound.name if compound.name is not None else compound.id)
+            if 'name' in compound.properties:
+                compound_name[compound.id] = compound.properties['name']
+            elif compound.id not in compound_name:
+                compound_name[compound.id] = compound.id
 
         if self._args.reaction is not None:
             reaction = self._args.reaction
@@ -444,8 +446,10 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
         # Load compound information
         compound_name = {}
         for compound in self._model.parse_compounds():
-            compound_name[compound.id] = (
-                compound.name if compound.name is not None else compound.id)
+            if 'name' in compound.properties:
+                compound_name[compound.id] = compound.properties['name']
+            elif compound.id not in compound_name:
+                compound_name[compound.id] = compound.id
 
         epsilon = self._args.epsilon
 
@@ -494,8 +498,10 @@ class FluxVariabilityCommand(SolverCommandMixin, Command):
         # Load compound information
         compound_name = {}
         for compound in self._model.parse_compounds():
-            compound_name[compound.id] = (
-                compound.name if compound.name is not None else compound.id)
+            if 'name' in compound.properties:
+                compound_name[compound.id] = compound.properties['name']
+            elif compound.id not in compound_name:
+                compound_name[compound.id] = compound.id
 
         if self._args.reaction is not None:
             reaction = self._args.reaction
@@ -614,8 +620,10 @@ class GapFillCommand(SolverCommandMixin, Command):
         # Load compound information
         compound_name = {}
         for compound in self._model.parse_compounds():
-            compound_name[compound.id] = (
-                compound.name if compound.name is not None else compound.id)
+            if 'name' in compound.properties:
+                compound_name[compound.id] = compound.properties['name']
+            elif compound.id not in compound_name:
+                compound_name[compound.id] = compound.id
 
         model_compartments = { None, 'e' }
 
@@ -681,8 +689,11 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
         compound_name = {}
         zeromass = set()
         for compound in self._model.parse_compounds():
-            compound_name[compound.id] = (
-                compound.name if compound.name is not None else compound.id)
+            if 'name' in compound.properties:
+                compound_name[compound.id] = compound.properties['name']
+            elif compound.id not in compound_name:
+                compound_name[compound.id] = compound.id
+
             if compound.properties.get('zeromass', False):
                 zeromass.add(compound.id)
 
@@ -910,8 +921,10 @@ class RobustnessCommand(SolverCommandMixin, Command):
         # Load compound information
         compound_name = {}
         for compound in self._model.parse_compounds():
-            compound_name[compound.id] = (
-                compound.name if compound.name is not None else compound.id)
+            if 'name' in compound.properties:
+                compound_name[compound.id] = compound.properties['name']
+            elif compound.id not in compound_name:
+                compound_name[compound.id] = compound.id
 
         if self._args.reaction is not None:
             reaction = self._args.reaction
@@ -1023,20 +1036,25 @@ class SearchCommand(Command):
         compound_formula = {}
         compound_for_name = {}
         for compound in self._model.parse_compounds():
-            compound_name[compound.id] = (
-                compound.name if compound.name is not None else compound.id)
-            compound_synonyms[compound.id] = (
+            if 'name' in compound.properties:
+                compound_name[compound.id] = compound.properties['name']
+            elif compound.id not in compound_name:
+                compound_name[compound.id] = compound.id
+
+            compound_synonyms.setdefault(compound.id, []).extend(
                 compound.properties.get('names', []))
-
-            names = ([compound_name[compound.id]] +
-                compound_synonyms[compound.id])
-
-            for n in names:
-                n = filter_search_term(n)
-                compound_for_name[n] = compound.id
 
             if compound.formula is not None and not '.' in compound.formula:
                 compound_formula[compound.id] = Formula.parse(compound.formula)
+
+        # Create references from names to id
+        for compound_id in compound_name.iterkeys():
+            names = ([compound_name[compound_id]] +
+                compound_synonyms[compound_id])
+
+            for n in names:
+                n = filter_search_term(n)
+                compound_for_name[n] = compound_id
 
         which_command = self._args.which
         if which_command == 'compound':
