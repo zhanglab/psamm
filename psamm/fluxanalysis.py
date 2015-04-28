@@ -83,12 +83,9 @@ class FluxBalanceTDProblem(FluxBalanceProblem):
     Described in [Muller13]_.
     """
 
-    def __init__(self, model, solver):
+    def __init__(self, model, solver, epsilon=1e-5, em=1e5):
         super(FluxBalanceTDProblem, self).__init__(model, solver)
         p = self.prob
-
-        em = 1e5
-        epsilon = 1e-5
 
         for reaction_id in model.reactions:
             # Constrain internal reactions to a direction determined
@@ -103,14 +100,14 @@ class FluxBalanceTDProblem(FluxBalanceProblem):
 
                 lower, upper = model.limits[reaction_id]
                 p.add_linear_constraints(flux >= lower*(1 - alpha),
-                                            flux <= upper*alpha,
-                                            dmu >= -em*alpha + epsilon,
-                                            dmu <= em*(1 - alpha) - epsilon)
+                                         flux <= upper*alpha,
+                                         dmu >= -em*alpha + epsilon,
+                                         dmu <= em*(1 - alpha) - epsilon)
 
         # Define mu variables
         p.define(*(('mu', compound) for compound in model.compounds))
 
-        tdbalance_lhs = { reaction_id: 0 for reaction_id in model.reactions }
+        tdbalance_lhs = {reaction_id: 0 for reaction_id in model.reactions}
         for spec, value in model.matrix.iteritems():
             compound, reaction_id = spec
             if not model.is_exchange(reaction_id):
