@@ -482,6 +482,9 @@ class FluxVariabilityCommand(SolverCommandMixin, Command):
 
     @classmethod
     def init_parser(cls, parser):
+        parser.add_argument(
+            '--no-tfba', help='Disable thermodynamic constraints on FVA',
+            action='store_true')
         parser.add_argument('reaction', help='Reaction to maximize', nargs='?')
         super(FluxVariabilityCommand, cls).init_parser(parser)
 
@@ -505,7 +508,11 @@ class FluxVariabilityCommand(SolverCommandMixin, Command):
             raise ValueError('Specified reaction is not in model: {}'.format(
                 reaction))
 
-        solver = self._get_solver()
+        enable_tfba = not self._args.no_tfba
+        if enable_tfba:
+            solver = self._get_solver(integer=True)
+        else:
+            solver = self._get_solver()
 
         fba_fluxes = dict(fluxanalysis.flux_balance(
             self._mm, reaction, tfba=False, solver=solver))
@@ -513,7 +520,7 @@ class FluxVariabilityCommand(SolverCommandMixin, Command):
 
         flux_bounds = fluxanalysis.flux_variability(
             self._mm, sorted(self._mm.reactions), {reaction: optimum},
-            tfba=False, solver=solver)
+            tfba=enable_tfba, solver=solver)
         for reaction_id, bounds in flux_bounds:
             rx = self._mm.get_reaction(reaction_id)
             rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
