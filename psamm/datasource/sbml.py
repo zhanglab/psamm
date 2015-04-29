@@ -105,6 +105,20 @@ class SpeciesEntry(_SBMLEntry):
         """Whether this compound is a boundary condition"""
         return self._boundary
 
+    @property
+    def properties(self):
+        """All species properties as a dict"""
+        properties = {'id': self._id,
+                      'boundary': self._boundary}
+        if 'name' in self._root.attrib:
+            properties['name'] = self._root.get('name')
+        if 'compartment' in self._root.attrib:
+            properties['compartment'] = self._root.get('compartment')
+        if 'charge' in self._root.attrib:
+            properties['charge'] = int(self._root.get('charge'))
+
+        return properties
+
 
 class ReactionEntry(_SBMLEntry):
     """Reaction entry in SBML file"""
@@ -222,6 +236,17 @@ class ReactionEntry(_SBMLEntry):
             param_units = parameter.get('units')
 
             yield param_id, param_name, param_value, param_units
+
+    @property
+    def properties(self):
+        """All reaction properties as a dict"""
+        properties = {'id': self._id,
+                      'reversible': self._rev,
+                      'equation': self._equation}
+        if 'name' in self._root.attrib:
+            properties['name'] = self._root.get('name')
+
+        return properties
 
 
 class SBMLReader(object):
