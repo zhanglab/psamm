@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 setup(
     name='psamm',
     version='0.7',
-    description='PSAMM metabolic modelrm -ing tools',
+    description='PSAMM metabolic modeling tools',
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
     url='https://github.com/zhanglab/model_script',
