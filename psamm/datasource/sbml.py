@@ -72,10 +72,8 @@ class SpeciesEntry(_SBMLEntry):
     """Species entry in the SBML file"""
 
     def __init__(self, reader, root):
-        self._reader = reader
-        self._root = root
+        super(SpeciesEntry, self).__init__(reader, root)
 
-        self._id = self._element_get_id(root)
         self._name = root.get('name')
         self._comp = root.get('compartment')
 
@@ -112,11 +110,9 @@ class ReactionEntry(_SBMLEntry):
     """Reaction entry in SBML file"""
 
     def __init__(self, reader, root):
-        self._reader = reader
-        self._root = root
+        super(ReactionEntry, self).__init__(reader, root)
 
         self._name = self._root.get('name')
-        self._id = self._element_get_id(root)
         self._rev = self._root.get('reversible', 'true') == 'true'
 
         left, right = [], []
