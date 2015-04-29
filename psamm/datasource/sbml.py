@@ -97,6 +97,12 @@ class SpeciesEntry(_SBMLEntry):
         return self._comp
 
     @property
+    def charge(self):
+        """Species charge"""
+        charge = self._root.get('charge')
+        return int(charge) if charge is not None else None
+
+    @property
     def boundary(self):
         """Whether this compound is a boundary condition"""
         return self._boundary
