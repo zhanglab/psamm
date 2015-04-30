@@ -20,9 +20,11 @@
 from __future__ import absolute_import
 
 import logging
-from itertools import repeat, count, izip
+from itertools import repeat, count
 import numbers
 
+from six import iteritems
+from six.moves import zip
 import cplex as cp
 
 from .lp import Solver as BaseSolver
@@ -127,7 +129,7 @@ class Problem(BaseProblem):
             # the solver to MILP).
             args['types'] = tuple(Problem.VARTYPE_MAP[t] for t in vartype)
 
-        self._variables.update(izip(names, lp_names))
+        self._variables.update(zip(names, lp_names))
         self._cp.variables.add(**args)
 
     def var(self, name):
@@ -177,7 +179,9 @@ class Problem(BaseProblem):
             # represented as a number
             expression = Expression()
 
-        self._cp.objective.set_linear((lp_name, expression.value(var)) for var, lp_name in self._variables.iteritems())
+        self._cp.objective.set_linear(
+            (lp_name, expression.value(var))
+            for var, lp_name in iteritems(self._variables))
 
     def set_objective_sense(self, sense):
         """Set type of problem (maximize or minimize)"""

@@ -39,12 +39,12 @@ class TestYAMLDataSource(unittest.TestCase):
             }
         ]))
 
-        self.assertEquals(len(reactions), 1)
+        self.assertEqual(len(reactions), 1)
 
         reaction = Reaction(Reaction.Bidir,
                             [(Compound('A'), 1), (Compound('B'), 2)],
                             [(Compound('C'), 1)])
-        self.assertEquals(reactions[0].equation, reaction)
+        self.assertEqual(reactions[0].equation, reaction)
 
     def test_parse_reaction_list_missing_value(self):
         with self.assertRaises(native.ParseError):
