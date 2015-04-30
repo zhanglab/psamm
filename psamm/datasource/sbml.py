@@ -98,7 +98,9 @@ class SpeciesEntry(_SBMLEntry):
     def charge(self):
         """Species charge"""
         charge = self._root.get('charge')
-        return int(charge) if charge is not None else None
+        if charge is not None and charge != '':
+            return int(charge)
+        return None
 
     @property
     def boundary(self):
@@ -114,7 +116,7 @@ class SpeciesEntry(_SBMLEntry):
             properties['name'] = self._root.get('name')
         if 'compartment' in self._root.attrib:
             properties['compartment'] = self._root.get('compartment')
-        if 'charge' in self._root.attrib:
+        if 'charge' in self._root.attrib and self._root.get('charge') != '':
             properties['charge'] = int(self._root.get('charge'))
 
         return properties
