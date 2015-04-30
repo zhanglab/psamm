@@ -1,6 +1,6 @@
 
-``metnet.lpsolver.lp`` -- Linear programming problems
+``psamm.lpsolver.lp`` -- Linear programming problems
 =====================================================
 
-.. automodule:: metnet.lpsolver.lp
+.. automodule:: psamm.lpsolver.lp
    :members:

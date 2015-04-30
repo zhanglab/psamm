@@ -26,4 +26,4 @@ using
 
 .. code-block:: shell
 
-    $ python -m metnet.expression.affine -v
+    $ python -m psamm.expression.affine -v

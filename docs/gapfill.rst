@@ -1,6 +1,6 @@
 
-``metnet.gapfill`` -- GapFind/GapFill
+``psamm.gapfill`` -- GapFind/GapFill
 =====================================
 
-.. automodule:: metnet.gapfill
+.. automodule:: psamm.gapfill
    :members:

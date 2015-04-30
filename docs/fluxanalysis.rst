@@ -1,6 +1,6 @@
 
-``metnet.fluxanalysis`` -- Constrain-based reaction flux analysis
+``psamm.fluxanalysis`` -- Constraint-based reaction flux analysis
 =================================================================
 
-.. automodule:: metnet.fluxanalysis
+.. automodule:: psamm.fluxanalysis
    :members:

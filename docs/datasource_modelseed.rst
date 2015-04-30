@@ -1,6 +1,6 @@
 
-``metnet.datasource.modelseed`` -- ModelSEED data parser
+``psamm.datasource.modelseed`` -- ModelSEED data parser
 ========================================================
 
-.. automodule:: metnet.datasource.modelseed
+.. automodule:: psamm.datasource.modelseed
    :members:

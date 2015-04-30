@@ -1,6 +1,6 @@
 
-``metnet.expression.affine`` -- Affine expressions
+``psamm.expression.affine`` -- Affine expressions
 ==================================================
 
-.. automodule:: metnet.expression.affine
+.. automodule:: psamm.expression.affine
    :members:

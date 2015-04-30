@@ -1,6 +1,6 @@
 
-``metnet.datasource.misc`` -- Parsers of miscellaneous data sources
+``psamm.datasource.misc`` -- Parsers of miscellaneous data sources
 ===================================================================
 
-.. automodule:: metnet.datasource.misc
+.. automodule:: psamm.datasource.misc
    :members:

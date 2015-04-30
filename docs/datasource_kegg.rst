@@ -1,6 +1,6 @@
 
-``metnet.datasource.kegg`` -- KEGG data parser
+``psamm.datasource.kegg`` -- KEGG data parser
 ==============================================
 
-.. automodule:: metnet.datasource.kegg
+.. automodule:: psamm.datasource.kegg
    :members:

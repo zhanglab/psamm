@@ -1,6 +1,6 @@
 
-``metnet.massconsistency`` -- Mass consistency check
+``psamm.massconsistency`` -- Mass consistency check
 ====================================================
 
-.. automodule:: metnet.massconsistency
+.. automodule:: psamm.massconsistency
    :members:

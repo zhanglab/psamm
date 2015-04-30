@@ -108,7 +108,7 @@ positive mass to each compound in the model and have each reaction be balanced
 with respect to these mass assignments. If it can be shown that assigning the
 masses is impossible, we have discovered an inconsistency.
 
-Some variants of this idea is implemented in the :mod:`metnet.massconsistency`
+Some variants of this idea is implemented in the :mod:`psamm.massconsistency`
 module. The mass consistency check can be run using
 
 .. code-block:: shell
@@ -125,8 +125,8 @@ all reactions in the model. This will often give a better idea of which
 reactions need fixing. For example the following output might be shown::
 
     [...]
-    INFO:metnet.command:Is consistent? False
-    INFO:metnet.command:Reaction consistency
+    INFO:psamm.command:Is consistent? False
+    INFO:psamm.command:Reaction consistency
     IR01815	7.0     (6) |H+[c]| + |Uroporphyrinogen III[c]| [...]
     IR00307	1.0     |H+[c]| + |L-Arginine[c]| => [...]
     IR00146	0.5     |UTP[c]| + |D-Glucose 1-phosphate[c]| => [...]
@@ -156,8 +156,8 @@ fixing this error the model is consistent::
 
     $ psamm-model masscheck
     [...]
-    INFO:metnet.command:Consistent compounds: 834/834
-    INFO:metnet.command:Is consistent? True
+    INFO:psamm.command:Consistent compounds: 834/834
+    INFO:psamm.command:Is consistent? True
 
 Formula consistency check (``formulacheck``)
 --------------------------------------------

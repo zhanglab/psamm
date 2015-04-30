@@ -1,6 +1,6 @@
 
-``metnet.formula`` -- Chemical compound formula
+``psamm.formula`` -- Chemical compound formula
 ================================================
 
-.. automodule:: metnet.formula
+.. automodule:: psamm.formula
    :members:

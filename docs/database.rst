@@ -1,6 +1,6 @@
 
-``metnet.database`` -- Reaction database
+``psamm.database`` -- Reaction database
 ========================================
 
-.. automodule:: metnet.database
+.. automodule:: psamm.database
    :members:

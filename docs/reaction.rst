@@ -1,6 +1,6 @@
 
-``metnet.reaction`` -- Reaction equations and compounds
+``psamm.reaction`` -- Reaction equations and compounds
 =======================================================
 
-.. automodule:: metnet.reaction
+.. automodule:: psamm.reaction
    :members:
