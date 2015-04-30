@@ -1,4 +1,36 @@
 
+v0.8
+----
+
+- The name of the project (in `setup.py`) changed name to `psamm`.
+- The name of the main package changed from `metnet` to `psamm`.
+- Remove unused scripts related to obsolete GAMS modeling.
+- Assume TSV format for `.tsv` compound files. This removes the need for
+  explicitly specifying `format: tsv` in the include.
+- By default FVA and the flux consistency check will apply thermodynamic
+  constraints. A command line option was added to go back to the previous
+  behavior.
+- Properly report compound names when multiple files are included.
+- Add possibility of supplying additional solver parameters through the command
+  line. Currently, the Cplex solver supports the parameters `threads` (the max
+  number of threads allowed globally) and `feasibility_tolerance` (how much the
+  basic variables of a model are allowed to violate their bounds).
+- command: The command `randomsparse` now defaults to normal FBA without
+  thermodynamic constraints. This is much faster and the additional constraints
+  are guaranteed to not change the result in this case.
+- docs: Enabled napoleon Sphinx extension for Google-style docstring support.
+  This makes docstrings more readable while at the same time improving the
+  generated docs. The `fluxanalysis` module was updated with additional
+  documentation in this format.
+- fluxanalysis: Change the API so that the `tfba` parameter can be given to
+  functions that support thermodynamic constraints to select this mode. The
+  support for thermodynamic constraints was extended to the flux consistency
+  check and FVA.
+- fluxanalysis: Slightly improve FVA by avoiding copying the model.
+- sbml: Provide access to species charge.
+- qsoptex: Fix error when calling the `status()` method of a result.
+- command: Add option to see current version.
+
 v0.7
 ----
 
