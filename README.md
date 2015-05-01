@@ -1,7 +1,7 @@
-Metabolic modelling tools
-=========================
+PSAMM metabolic modeling tools
+==============================
 
-Tools related to metabolic modelling, reconstruction, data parsing and
+Tools related to metabolic modeling, reconstruction, data parsing and
 formatting.
 
 See [NEWS](NEWS.md) for information on recent changes.
