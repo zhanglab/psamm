@@ -11,18 +11,23 @@ class TestMetabolicDatabase(unittest.TestCase):
         self.database = DictDatabase()
         self.database.set_reaction('rxn_1', parse_reaction('=> (2) |A|'))
         self.database.set_reaction('rxn_2', parse_reaction('|A| <=> |B|'))
-        self.database.set_reaction('rxn_3', parse_reaction('|A| => |D|'))
+        self.database.set_reaction('rxn_3', parse_reaction('|A| => |D[e]|'))
         self.database.set_reaction('rxn_4', parse_reaction('|A| => |C|'))
-        self.database.set_reaction('rxn_5', parse_reaction('|C| => |D|'))
-        self.database.set_reaction('rxn_6', parse_reaction('|D| =>'))
+        self.database.set_reaction('rxn_5', parse_reaction('|C| => |D[e]|'))
+        self.database.set_reaction('rxn_6', parse_reaction('|D[e]| =>'))
 
     def test_reactions(self):
-        self.assertEqual(set(self.database.reactions),
-                            { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
+        self.assertEqual(
+            set(self.database.reactions),
+            {'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6'})
 
     def test_compounds(self):
-        self.assertEquals(set(self.database.compounds),
-                            { Compound('A'), Compound('B'), Compound('C'), Compound('D') })
+        self.assertEquals(
+            set(self.database.compounds),
+            {Compound('A'), Compound('B'), Compound('C'), Compound('D', 'e')})
+
+    def test_compartments(self):
+        self.assertEquals(set(self.database.compartments), {None, 'e'})
 
     def test_has_reaction_existing(self):
         self.assertTrue(self.database.has_reaction('rxn_3'))
@@ -48,7 +53,7 @@ class TestMetabolicDatabase(unittest.TestCase):
         self.assertEquals(set(self.database.reversible), { 'rxn_2' })
 
     def test_get_reaction(self):
-        reaction = parse_reaction('|A| => |D|')
+        reaction = parse_reaction('|A| => |D[e]|')
         self.assertEqual(self.database.get_reaction('rxn_3'), reaction)
 
     def test_set_reaction_with_zero_coefficient(self):
@@ -64,7 +69,7 @@ class TestMetabolicDatabase(unittest.TestCase):
         self.assertEqual(self.database.matrix[Compound('A'), 'rxn_4'], -1)
         self.assertEqual(self.database.matrix[Compound('C'), 'rxn_4'], 1)
         self.assertEqual(self.database.matrix[Compound('C'), 'rxn_5'], -1)
-        self.assertEqual(self.database.matrix[Compound('D'), 'rxn_5'], 1)
+        self.assertEqual(self.database.matrix[Compound('D', 'e'), 'rxn_5'], 1)
 
     def test_matrix_get_item_invalid_key(self):
         with self.assertRaises(KeyError):
@@ -81,12 +86,12 @@ class TestMetabolicDatabase(unittest.TestCase):
                         (Compound('A'), 'rxn_2'),
                         (Compound('B'), 'rxn_2'),
                         (Compound('A'), 'rxn_3'),
-                        (Compound('D'), 'rxn_3'),
+                        (Compound('D', 'e'), 'rxn_3'),
                         (Compound('A'), 'rxn_4'),
                         (Compound('C'), 'rxn_4'),
                         (Compound('C'), 'rxn_5'),
-                        (Compound('D'), 'rxn_5'),
-                        (Compound('D'), 'rxn_6') }
+                        (Compound('D', 'e'), 'rxn_5'),
+                        (Compound('D', 'e'), 'rxn_6') }
         self.assertEqual(set(iter(self.database.matrix)), matrix_keys)
 
     def test_matrix_len(self):

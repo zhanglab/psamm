@@ -1,10 +1,11 @@
 
-'''Representation of metabolic network models'''
+"""Representation of metabolic network models"""
 
 from collections import Mapping
 
 from .database import MetabolicDatabase, StoichiometricMatrixView
 from .reaction import Reaction
+
 
 class FluxBounds(object):
     '''Represents lower and upper bounds of flux as a mutable object
@@ -97,6 +98,7 @@ class FluxBounds(object):
     def __repr__(self):
         return '{}({}, {})'.format(self.__class__.__name__, repr(self.lower), repr(self.upper))
 
+
 class LimitsView(Mapping):
     '''Provides a view of the flux bounds defined in the model
 
@@ -122,18 +124,22 @@ class LimitsView(Mapping):
     def __len__(self):
         return sum(1 for _ in self._model.reactions)
 
+
 class MetabolicModel(MetabolicDatabase):
-    '''Represents a metabolic model containing a set of reactions
+    """Represents a metabolic model containing a set of reactions
 
     The model contains a list of reactions referencing the reactions
-    in the associated database.'''
+    in the associated database.
+    """
 
     def __init__(self, database, v_max=1000):
         self._database = database
         self._limits_lower = {}
         self._limits_upper = {}
+
         self._reaction_set = set()
         self._compound_set = set()
+
         self._v_max = v_max
 
     @property
@@ -147,6 +153,14 @@ class MetabolicModel(MetabolicDatabase):
     @property
     def compounds(self):
         return iter(self._compound_set)
+
+    @property
+    def compartments(self):
+        compartment_set = set()
+        for compound in self.compounds:
+            if compound.compartment not in compartment_set:
+                compartment_set.add(compound.compartment)
+                yield compound.compartment
 
     def has_reaction(self, reaction_id):
         return reaction_id in self._reaction_set
