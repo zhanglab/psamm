@@ -89,6 +89,10 @@ class MetabolicDatabase(object):
         """Itertor of :class:`Compounds <psamm.reaction.Compound>` in the
         database"""
 
+    @abc.abstractproperty
+    def compartments(self):
+        """Iterator of compartment IDs in the database"""
+
     @abc.abstractmethod
     def has_reaction(self, reaction_id):
         """Whether the given reaction exists in the database"""
@@ -160,6 +164,14 @@ class DictDatabase(MetabolicDatabase):
     @property
     def compounds(self):
         return iter(self._compound_reactions)
+
+    @property
+    def compartments(self):
+        compartment_set = set()
+        for compound in self.compounds:
+            if compound.compartment not in compartment_set:
+                compartment_set.add(compound.compartment)
+                yield compound.compartment
 
     def has_reaction(self, reaction_id):
         return reaction_id in self._reactions
@@ -250,13 +262,23 @@ class ChainedDatabase(MetabolicDatabase):
 
     @property
     def compounds(self):
-        # Make sure that we only yield each reaction once
+        # Make sure that we only yield each compound once
         compound_set = set()
         for database in self._databases:
             for compound in database.compounds:
                 if compound not in compound_set:
                     compound_set.add(compound)
                     yield compound
+
+    @property
+    def compartments(self):
+        # Make sure that we yield each compartment once
+        compartment_set = set()
+        for database in self._databases:
+            for compartment in database.compartments:
+                if compartment not in compartment_set:
+                    compartment_set.add(compartment)
+                    yield compartment
 
     def has_reaction(self, reaction_id):
         return any(database.has_reaction(reaction_id)
