@@ -263,7 +263,7 @@ class FastGapFillCommand(SolverCommandMixin, Command):
                 compound.name if compound.name is not None else compound.id)
 
         epsilon = self._args.epsilon
-        model_compartments = { None, 'e' }
+        model_compartments = set(self._mm.compartments)
 
         # Add exchange and transport reactions to database
         model_complete = self._mm.copy()
@@ -637,7 +637,7 @@ class GapFillCommand(SolverCommandMixin, Command):
             elif compound.id not in compound_name:
                 compound_name[compound.id] = compound.id
 
-        model_compartments = { None, 'e' }
+        model_compartments = set(self._mm.compartments)
 
         solver = self._get_solver(integer=True)
 
