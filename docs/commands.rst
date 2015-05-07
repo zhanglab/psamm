@@ -69,8 +69,8 @@ the command line to maximize.
 
 By default, this is followed by running the flux balance analysis with
 thermodynamic constraints (tFBA) in order to remove internal flux cycles. The
-results of these two analyses is presented in a two-column table along with the
-reaction IDs.
+result is output as tab-separated values with the reaction ID, the normal FBA
+flux and the thermodynamically constrained flux.
 
 If the parameter ``--no-tfba`` is given, the second column instead represents a
 flux minimization in which the FBA maximum is fixed while the sum of the fluxes
