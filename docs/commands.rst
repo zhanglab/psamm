@@ -164,6 +164,11 @@ If the option ``--exchange`` is given, the model will only try to delete
 exchange reactions. This can be used to provide putative minimal media for
 the model.
 
+The output of the command is a tab-separated list of reaction IDs and a value
+indicating whether the reaction was eliminated (``0`` when eliminated, ``1``
+otherwise). If multiply minimal networks are desired, the command can be run
+again and it will produce a different random minimal network.
+
 Stoichiometric consistency check (``masscheck``)
 ------------------------------------------------
 
