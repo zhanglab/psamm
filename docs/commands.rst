@@ -33,6 +33,33 @@ To see the help text of a command use
 
     $ psamm-model command --help
 
+Linear programming solver
+-------------------------
+
+Many of the commands described below use a linear programming (LP) solver in
+order to perform the analysis. These commands all take an option `--solver`
+which can be used to select which solver to use and to specify additional
+options for the LP solver. For example, in order to run the ``fba`` command
+with the QSopt_ex solver, the option ``--solver name=qsoptex`` can be added:
+
+.. code-block:: shell
+
+    $ psamm-model fba --no-tfba --solver name=qsoptex
+
+Notice that the ``--no-tfba`` option was also added above. This is because the
+normal FBA with thermodynamic constraints (tFBA) uses an integer LP problem
+which QSopt_ex does not support.
+
+The ``--solver`` option can also be used to specify additional options for the
+solver in use. For example, the Cplex solver recognizes the ``threads``
+option which can be used to adjust the maximum number of threads that Cplex
+will use internally (by default, Cplex will use as many threads as there are
+cores on the computer):
+
+.. code-block:: shell
+
+    $ psamm-model fba --solver threads=4
+
 Flux balance analysis (``fba``)
 -------------------------------
 
@@ -42,8 +69,8 @@ the command line to maximize.
 
 By default, this is followed by running the flux balance analysis with
 thermodynamic constraints (tFBA) in order to remove internal flux cycles. The
-results of these two analyses is presented in a two-column table along with the
-reaction IDs.
+result is output as tab-separated values with the reaction ID, the normal FBA
+flux and the thermodynamically constrained flux.
 
 If the parameter ``--no-tfba`` is given, the second column instead represents a
 flux minimization in which the FBA maximum is fixed while the sum of the fluxes
@@ -61,6 +88,31 @@ or with a specific reaction:
 
     $ psamm-model fba ATPM
 
+Flux variability analysis (``fva``)
+-----------------------------------
+
+This command will find the possible flux range of each reaction when the
+biomass is at the maximum value. The command will use the biomass reaction
+specified in the model definition, or alternatively, a reaction can be given on
+the command line.
+
+.. code-block:: shell
+
+    $ psamm-model fva
+
+The output of the command will show each reaction in the model along with the
+minimum and maximum possible flux values as tab-separated values. ::
+
+    PPCK    0.0     135.266721627  [...]
+    PTAr    62.3091585921    1000.0  [...]
+
+In this example the ``PPCK`` reaction has a minimum flux of zero and maximum
+flux of 135.3 units. The ``PTAr`` reaction has a minimum flux of 62.3 and a
+maximum of 1000 units.
+
+If the parameter ``--no-tfba`` is given, the thermodynamic constraints will not
+be included when evaluating model fluxes.
+
 Robustness (``robustness``)
 ---------------------------
 
@@ -72,7 +124,7 @@ steps between the minimum and maximum flux value specified in the model.
 .. code-block:: shell
 
     $ psamm-model robustness \
-	    --steps 200 --minimum -20 --maximum 160 EX_Oxygen
+        --steps 200 --minimum -20 --maximum 160 EX_Oxygen
 
 In the example above, the biomass reaction will be maximized while the
 ``EX_Oxygen`` (oxygen exchange) reaction is fixed at a certain flux in each
@@ -81,6 +133,15 @@ number of iterations can be set using ``--steps``. In each iteration, all
 reactions and the corresponding fluxes will be shown in a table, as well as
 the value of the fixed flux. If the fixed flux results in an infeasible model,
 no output will be shown for that iteration.
+
+The output of the command is a list of tab-separated values indicating a
+reaction ID, the flux of the varying reaction, and the flux of the reaction
+with the given ID.
+
+If the parameter ``--no-tfba`` is given, the thermodynamic constraints are not
+applied when considering whether reactions can take a non-zero flux. This is
+generally faster but less accurate as it allows thermodynamically infeasible
+loops to occur.
 
 Random sparse network (``randomsparse``)
 ----------------------------------------
@@ -98,6 +159,15 @@ When the given reaction is the biomass reaction, this results in a smaller
 model which is still producing biomass within the tolerance given by the
 threshold. Aggregating the results from multiple random sparse networks allows
 classifying reactions as essential, semi-essential or non-essential.
+
+If the option ``--exchange`` is given, the model will only try to delete
+exchange reactions. This can be used to provide putative minimal media for
+the model.
+
+The output of the command is a tab-separated list of reaction IDs and a value
+indicating whether the reaction was eliminated (``0`` when eliminated, ``1``
+otherwise). If multiply minimal networks are desired, the command can be run
+again and it will produce a different random minimal network.
 
 Stoichiometric consistency check (``masscheck``)
 ------------------------------------------------
@@ -175,31 +245,63 @@ followed by the elements ("atoms") in, respectively, the left- and right-hand
 side of the reaction, followed by the elements needed to balance the left- and
 right-hand side, respectively.
 
+Charge consistency check (``chargecheck``)
+------------------------------------------
+
+The charge check will evaluate whether the compound charge is balanced in all
+reactions of the model. Any reactions that have an imbalance of charge will be
+reported along with the excess charge.
+
+.. code-block:: shell
+
+    $ psamm-model chargecheck
+
+Flux consistency check (``fluxcheck``)
+--------------------------------------
+
+The flux consistency check will report any reactions that are unable to take on
+a non-zero flux. This is useful for finding any reactions that do not
+contribute anything to the model simulation. This may indicate that the
+reaction is part of a pathway that is incompletely modeled.
+
+.. code-block:: shell
+
+    $ psamm-model fluxcheck
+
+If the parameter ``--no-tfba`` is given, the thermodynamic constraints are not
+applied when considering whether reactions can take a non-zero flux. This is
+generally faster but less accurate as it allows thermodynamically infeasible
+loops to occur.
+
 GapFind/GapFill (``gapfill``)
 -----------------------------
 
-The GapFind algorithms can be used to identify the compounds that are needed by
+The GapFind algorithm can be used to identify the compounds that are needed by
 reactions in the model but cannot be produced in the model. The GapFill
-algorithm will extend the model with reactions from the parent database and try
-to find a minimal subset that allows all blocked compounds to be produced. This
-command will run GapFind to identify the blocked compounds and then uses
-GapFill to try to reconstruct a model that allows these compounds to be
-produced.
-
-These algorithms are defined in terms of MILP problems and are therefore
-(particularly GapFill) computationally expensive to run for larger models.
+algorithm will try to compute an extension of the model with reactions from the
+reaction database and try to find a minimal subset that allows all blocked
+compounds to be produced. This command will run GapFind to identify the blocked
+compounds and then uses GapFill to try to reconstruct a model that allows these
+compounds to be produced.
 
 .. code-block:: shell
 
     $ psamm-model gapfill
+
+The command will first output a list of blocked compounds and then it will list
+the suggested reactions to add the model in order to unblock the blocked
+compounds.
+
+These algorithms are defined in terms of MILP problems and are therefore
+(particularly GapFill) computationally expensive to run for larger models.
 
 FastGapFill (``fastgapfill``)
 -----------------------------
 
 The FastGapFill algorithm tries to reconstruct a flux consistent model (i.e. a
 model where every reaction takes a non-zero flux for at least one solutions).
-This is done by extending the model with reactions from the parent database and
-trying to find a minimal subset that is flux consistent. The solution is
+This is done by extending the model with reactions from the reaction database
+and trying to find a minimal subset that is flux consistent. The solution is
 approximate.
 
 The database reactions can be assigned a weight (or "cost") using the

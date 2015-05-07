@@ -228,6 +228,15 @@ class FastGapFillCommand(SolverCommandMixin, Command):
             '--penalty', metavar='file', type=argparse.FileType('r'),
             help='List of penalty scores for database reactions')
         parser.add_argument(
+            '--db-weight', metavar='weight', type=float,
+            help='Default weight for database reactions')
+        parser.add_argument(
+            '--tp-weight', metavar='weight', type=float,
+            help='Default weight for transport reactions')
+        parser.add_argument(
+            '--ex-weight', metavar='weight', type=float,
+            help='Default weight for exchange reactions')
+        parser.add_argument(
             '--epsilon', type=float, help='Threshold for Fastcore',
             default=1e-5)
         parser.add_argument(
@@ -254,7 +263,7 @@ class FastGapFillCommand(SolverCommandMixin, Command):
                 compound.name if compound.name is not None else compound.id)
 
         epsilon = self._args.epsilon
-        model_compartments = { None, 'e' }
+        model_compartments = set(self._mm.compartments)
 
         # Add exchange and transport reactions to database
         model_complete = self._mm.copy()
@@ -265,9 +274,12 @@ class FastGapFillCommand(SolverCommandMixin, Command):
 
         # Add penalty weights on reactions
         weights = {}
-        #weights.update((rxnid, 25) for rxnid in db_added)
-        weights.update((rxnid, 50) for rxnid in tp_added)
-        weights.update((rxnid, 250) for rxnid in ex_added)
+        if self._args.db_weight is not None:
+            weights.update((rxnid, self._args.db_weight) for rxnid in db_added)
+        if self._args.tp_weight is not None:
+            weights.update((rxnid, self._args.tp_weight) for rxnid in tp_added)
+        if self._args.ex_weight is not None:
+            weights.update((rxnid, self._args.ex_weight) for rxnid in ex_added)
 
         if self._args.penalty is not None:
             for line in self._args.penalty:
@@ -625,7 +637,7 @@ class GapFillCommand(SolverCommandMixin, Command):
             elif compound.id not in compound_name:
                 compound_name[compound.id] = compound.id
 
-        model_compartments = { None, 'e' }
+        model_compartments = set(self._mm.compartments)
 
         solver = self._get_solver(integer=True)
 

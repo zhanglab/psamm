@@ -146,7 +146,20 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
 
 @requires_solver
 class TestFastcoreTinyBiomassModel(unittest.TestCase):
-    """Test fastcore using a model with tiny values in biomass reaction"""
+    """Test fastcore using a model with tiny values in biomass reaction
+
+    This model is consistent mathematically since there is a flux solution
+    within the flux bounds. However, the numerical nature of the fastcore
+    algorithm requires an epsilon-parameter indicating the minimum flux that
+    is considered non-zero. For this reason, some models with reactions where
+    tiny stoichiometric values appear can be seen as inconsistent by
+    fastcore.
+
+    In this particular model, rxn_2 can take a maximum flux of 1000. At the
+    same time rxn_1 will have to take a flux of 1e-4. This is the maximum
+    possible flux for rxn_1 so running fastcore with an epsilon larger than
+    1e-4 will indicate that the model is not consistent.
+    """
 
     def setUp(self):
         # TODO use mock model instead of actual model

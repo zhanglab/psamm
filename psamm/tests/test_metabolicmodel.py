@@ -13,31 +13,43 @@ class TestMetabolicModel(unittest.TestCase):
         self.database = DictDatabase()
         self.database.set_reaction('rxn_1', parse_reaction('=> (2) |A|'))
         self.database.set_reaction('rxn_2', parse_reaction('|A| <=> |B|'))
-        self.database.set_reaction('rxn_3', parse_reaction('|A| => |D|'))
+        self.database.set_reaction('rxn_3', parse_reaction('|A| => |D[e]|'))
         self.database.set_reaction('rxn_4', parse_reaction('|A| => |C|'))
-        self.database.set_reaction('rxn_5', parse_reaction('|C| => |D|'))
-        self.database.set_reaction('rxn_6', parse_reaction('|D| =>'))
-        self.model = MetabolicModel.load_model(self.database, self.database.reactions)
+        self.database.set_reaction('rxn_5', parse_reaction('|C| => |D[e]|'))
+        self.database.set_reaction('rxn_6', parse_reaction('|D[e]| =>'))
+        self.model = MetabolicModel.load_model(
+            self.database, self.database.reactions)
 
     def test_database_property(self):
         self.assertIs(self.model.database, self.database)
 
     def test_reaction_set(self):
-        self.assertEqual(set(self.model.reactions), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
+        self.assertEqual(set(self.model.reactions),
+                         {'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4',
+                          'rxn_5', 'rxn_6'})
 
     def test_compound_set(self):
-        self.assertEqual(set(self.model.compounds), { Compound('A'), Compound('B'), Compound('C'), Compound('D') })
+        self.assertEqual(set(self.model.compounds),
+                        {Compound('A'), Compound('B'),
+                         Compound('C'), Compound('D', 'e')})
+
+    def test_compartments(self):
+        self.assertEqual(set(self.model.compartments), {None, 'e'})
 
     def test_add_reaction_new(self):
-        self.database.set_reaction('rxn_7', parse_reaction('|D| => |E|'))
+        self.database.set_reaction('rxn_7', parse_reaction('|D[e]| => |E[e]|'))
         self.model.add_reaction('rxn_7')
         self.assertIn('rxn_7', set(self.model.reactions))
-        self.assertIn(Compound('E'), set(self.model.compounds))
+        self.assertIn(Compound('E', 'e'), set(self.model.compounds))
 
     def test_add_reaction_existing(self):
         self.model.add_reaction('rxn_1')
-        self.assertEqual(set(self.model.reactions), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
-        self.assertEqual(set(self.model.compounds), { Compound('A'), Compound('B'), Compound('C'), Compound('D') })
+        self.assertEqual(
+            set(self.model.reactions),
+            {'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6'})
+        self.assertEqual(
+            set(self.model.compounds),
+            {Compound('A'), Compound('B'), Compound('C'), Compound('D', 'e')})
 
     def test_add_reaction_invalid(self):
         with self.assertRaises(Exception):
@@ -45,8 +57,12 @@ class TestMetabolicModel(unittest.TestCase):
 
     def test_remove_reaction_existing(self):
         self.model.remove_reaction('rxn_2')
-        self.assertEqual(set(self.model.reactions), { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
-        self.assertEqual(set(self.model.compounds), { Compound('A'), Compound('C'), Compound('D') })
+        self.assertEqual(
+            set(self.model.reactions),
+            {'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6'})
+        self.assertEqual(
+            set(self.model.compounds),
+            {Compound('A'), Compound('C'), Compound('D', 'e')})
 
     def test_is_reversible_on_reversible(self):
         self.assertTrue(self.model.is_reversible('rxn_2'))

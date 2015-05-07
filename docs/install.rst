@@ -23,15 +23,6 @@ Now the Python module can be installed in the virtual environment using the
 ``pip`` command without requiring ``root`` permissions. When returning to the
 project, simply reactivate the environment by running the second command.
 
-The Cplex Python bindings will have to be installed manually in the virtual
-environment as well. This should be done after activating the virtual
-environment.
-
-1. Go to the Cplex install directory: ``cd /path/to/Cplex``
-2. Go to the appropriate subdirectory based on your platform:
-   ``cd cplex/python/<platform>``
-3. Run ``pip install .``
-
 Dependencies
 ------------
 
@@ -39,9 +30,35 @@ Dependencies
 - PyYAML (for reading the native model format)
 - NumPy (optional; model matrix can be exported to NumPy matrix if available)
 
-The linear programming solver is not strictly required but most analyses
-require one to work. The LP solver *Cplex* is the preferred solver. The
-rational solver *QSopt_ex* does not support MILP problems which means that some
-analyses require *Cplex*. *QSopt_ex* is supported through `python-qsoptex`_.
+PyYAML is installed automatically when PSAMM is installed through ``pip``. The
+linear programming solver is not strictly required but most analyses require
+one to work. The LP solver *Cplex* is the preferred solver. The rational solver
+*QSopt_ex* does not support MILP problems which means that some analyses
+require *Cplex*.
 
-.. _python-qsoptex: https://github.com/jonls/python-qsoptex
+Cplex
+-----
+
+The Cplex Python bindings will have to be installed manually. If you are using
+a virtual environment (as described above) this should be done after activating
+the virtual environment:
+
+1. Go to the Cplex install directory: ``cd /path/to/Cplex``
+2. Go to the appropriate subdirectory based on your platform:
+   ``cd cplex/python/<platform>``
+3. Run ``pip install .``
+
+QSopt_ex
+--------
+
+QSopt_ex is supported through `python-qsoptex`_ which requires `GnuMP`_ and
+the `QSopt_ex library`_. After installing these libraries the Python bindings
+can be installed using ``pip``:
+
+.. code-block:: shell
+
+    $ pip install python-qsoptex
+
+.. _python-qsoptex: https://pypi.python.org/pypi/python-qsoptex
+.. _GnuMP: https://gmplib.org/
+.. _QSopt_ex library: https://github.com/jonls/qsopt-ex
