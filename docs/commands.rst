@@ -88,6 +88,31 @@ or with a specific reaction:
 
     $ psamm-model fba ATPM
 
+Flux variability analysis (``fva``)
+-----------------------------------
+
+This command will find the possible flux range of each reaction when the
+biomass is at the maximum value. The command will use the biomass reaction
+specified in the model definition, or alternatively, a reaction can be given on
+the command line.
+
+.. code-block:: shell
+
+    $ psamm-model fva
+
+The output of the command will show each reaction in the model along with the
+minimum and maximum possible flux values as tab-separated values. ::
+
+    PPCK    0.0     135.266721627  [...]
+    PTAr    62.3091585921    1000.0  [...]
+
+In this example the ``PPCK`` reaction has a minimum flux of zero and maximum
+flux of 135.3 units. The ``PTAr`` reaction has a minimum flux of 62.3 and a
+maximum of 1000 units.
+
+If the parameter ``--no-tfba`` is given, the thermodynamic constraints will not
+be included when evaluating model fluxes.
+
 Robustness (``robustness``)
 ---------------------------
 
