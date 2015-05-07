@@ -33,6 +33,33 @@ To see the help text of a command use
 
     $ psamm-model command --help
 
+Linear programming solver
+-------------------------
+
+Many of the commands described below use a linear programming (LP) solver in
+order to perform the analysis. These commands all take an option `--solver`
+which can be used to select which solver to use and to specify additional
+options for the LP solver. For example, in order to run the ``fba`` command
+with the QSopt_ex solver, the option ``--solver name=qsoptex`` can be added:
+
+.. code-block:: shell
+
+    $ psamm-model fba --no-tfba --solver name=qsoptex
+
+Notice that the ``--no-tfba`` option was also added above. This is because the
+normal FBA with thermodynamic constraints (tFBA) uses an integer LP problem
+which QSopt_ex does not support.
+
+The ``--solver`` option can also be used to specify additional options for the
+solver in use. For example, the Cplex solver recognizes the ``threads``
+option which can be used to adjust the maximum number of threads that Cplex
+will use internally (by default, Cplex will use as many threads as there are
+cores on the computer):
+
+.. code-block:: shell
+
+    $ psamm-model fba --solver threads=4
+
 Flux balance analysis (``fba``)
 -------------------------------
 
