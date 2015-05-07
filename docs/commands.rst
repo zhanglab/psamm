@@ -242,6 +242,23 @@ reported along with the excess charge.
 
     $ psamm-model chargecheck
 
+Flux consistency check (``fluxcheck``)
+--------------------------------------
+
+The flux consistency check will report any reactions that are unable to take on
+a non-zero flux. This is useful for finding any reactions that do not
+contribute anything to the model simulation. This may indicate that the
+reaction is part of a pathway that is incompletely modeled.
+
+.. code-block:: shell
+
+    $ psamm-model fluxcheck
+
+If the parameter ``--no-tfba`` is given, the thermodynamic constraints are not
+applied when considering whether reactions can take a non-zero flux. This is
+generally faster but less accurate as it allows thermodynamically infeasible
+loops to occur.
+
 GapFind/GapFill (``gapfill``)
 -----------------------------
 
