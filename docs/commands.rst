@@ -276,28 +276,32 @@ loops to occur.
 GapFind/GapFill (``gapfill``)
 -----------------------------
 
-The GapFind algorithms can be used to identify the compounds that are needed by
+The GapFind algorithm can be used to identify the compounds that are needed by
 reactions in the model but cannot be produced in the model. The GapFill
-algorithm will extend the model with reactions from the parent database and try
-to find a minimal subset that allows all blocked compounds to be produced. This
-command will run GapFind to identify the blocked compounds and then uses
-GapFill to try to reconstruct a model that allows these compounds to be
-produced.
-
-These algorithms are defined in terms of MILP problems and are therefore
-(particularly GapFill) computationally expensive to run for larger models.
+algorithm will try to compute an extension of the model with reactions from the
+reaction database and try to find a minimal subset that allows all blocked
+compounds to be produced. This command will run GapFind to identify the blocked
+compounds and then uses GapFill to try to reconstruct a model that allows these
+compounds to be produced.
 
 .. code-block:: shell
 
     $ psamm-model gapfill
+
+The command will first output a list of blocked compounds and then it will list
+the suggested reactions to add the model in order to unblock the blocked
+compounds.
+
+These algorithms are defined in terms of MILP problems and are therefore
+(particularly GapFill) computationally expensive to run for larger models.
 
 FastGapFill (``fastgapfill``)
 -----------------------------
 
 The FastGapFill algorithm tries to reconstruct a flux consistent model (i.e. a
 model where every reaction takes a non-zero flux for at least one solutions).
-This is done by extending the model with reactions from the parent database and
-trying to find a minimal subset that is flux consistent. The solution is
+This is done by extending the model with reactions from the reaction database
+and trying to find a minimal subset that is flux consistent. The solution is
 approximate.
 
 The database reactions can be assigned a weight (or "cost") using the
