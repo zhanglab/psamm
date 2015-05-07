@@ -1,4 +1,13 @@
 
+v0.9 (2015-05-07)
+-----------------
+
+- Add methods the internal metabolic model representation to provide the
+  compartments. This is used by commands instead of hardcoding specific
+  model compartments when running `gapfill` or `fastgapfill`.
+- docs: Update documentation on `psamm-model` commands.
+- docs: Update information on installing the linear programming solvers.
+
 v0.8 (2015-04-30)
 -----------------
 
