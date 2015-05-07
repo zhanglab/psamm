@@ -124,7 +124,7 @@ steps between the minimum and maximum flux value specified in the model.
 .. code-block:: shell
 
     $ psamm-model robustness \
-	    --steps 200 --minimum -20 --maximum 160 EX_Oxygen
+        --steps 200 --minimum -20 --maximum 160 EX_Oxygen
 
 In the example above, the biomass reaction will be maximized while the
 ``EX_Oxygen`` (oxygen exchange) reaction is fixed at a certain flux in each
@@ -133,6 +133,10 @@ number of iterations can be set using ``--steps``. In each iteration, all
 reactions and the corresponding fluxes will be shown in a table, as well as
 the value of the fixed flux. If the fixed flux results in an infeasible model,
 no output will be shown for that iteration.
+
+The output of the command is a list of tab-separated values indicating a
+reaction ID, the flux of the varying reaction, and the flux of the reaction
+with the given ID.
 
 Random sparse network (``randomsparse``)
 ----------------------------------------
