@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='psamm',
-    version='0.8',
+    version='0.9',
     description='PSAMM metabolic modeling tools',
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
