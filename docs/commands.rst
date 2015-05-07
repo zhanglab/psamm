@@ -138,6 +138,11 @@ The output of the command is a list of tab-separated values indicating a
 reaction ID, the flux of the varying reaction, and the flux of the reaction
 with the given ID.
 
+If the parameter ``--no-tfba`` is given, the thermodynamic constraints are not
+applied when considering whether reactions can take a non-zero flux. This is
+generally faster but less accurate as it allows thermodynamically infeasible
+loops to occur.
+
 Random sparse network (``randomsparse``)
 ----------------------------------------
 
@@ -154,6 +159,10 @@ When the given reaction is the biomass reaction, this results in a smaller
 model which is still producing biomass within the tolerance given by the
 threshold. Aggregating the results from multiple random sparse networks allows
 classifying reactions as essential, semi-essential or non-essential.
+
+If the option ``--exchange`` is given, the model will only try to delete
+exchange reactions. This can be used to provide putative minimal media for
+the model.
 
 Stoichiometric consistency check (``masscheck``)
 ------------------------------------------------
