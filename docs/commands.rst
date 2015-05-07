@@ -231,6 +231,17 @@ followed by the elements ("atoms") in, respectively, the left- and right-hand
 side of the reaction, followed by the elements needed to balance the left- and
 right-hand side, respectively.
 
+Charge consistency check (``chargecheck``)
+------------------------------------------
+
+The charge check will evaluate whether the compound charge is balanced in all
+reactions of the model. Any reactions that have an imbalance of charge will be
+reported along with the excess charge.
+
+.. code-block:: shell
+
+    $ psamm-model chargecheck
+
 GapFind/GapFill (``gapfill``)
 -----------------------------
 
