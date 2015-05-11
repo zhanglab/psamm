@@ -208,7 +208,7 @@ class MetabolicModel(MetabolicDatabase):
 
         reaction = self._database.get_reaction(reaction_id)
         self._reaction_set.add(reaction_id)
-        for compound, value in reaction.compounds:
+        for compound, _ in reaction.compounds:
             self._compound_set.add(compound)
 
     def remove_reaction(self, reaction):
@@ -234,7 +234,7 @@ class MetabolicModel(MetabolicDatabase):
         added = set()
         for rxnid in self._database.reactions:
             reaction = self._database.get_reaction(rxnid)
-            if all(compound.compartment in compartments for compound, value in reaction.compounds):
+            if all(compound.compartment in compartments for compound, _ in reaction.compounds):
                 if rxnid not in self._reaction_set:
                     added.add(rxnid)
                 self.add_reaction(rxnid)

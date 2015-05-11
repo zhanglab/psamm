@@ -130,8 +130,12 @@ class Reaction(object):
 
     @property
     def compounds(self):
-        '''Sequence of compounds on both sides of the reaction equation'''
-        return self._left + self._right
+        """Sequence of compounds on both sides of the reaction equation
+
+        The sign of the stoichiometric values reflect whether the compound is
+        on the left-hand side (negative) or the right-hand side (positive).
+        """
+        return tuple((c, -v) for c, v in self._left) + self._right
 
     def normalized(self):
         '''Return normalized reaction

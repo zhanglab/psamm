@@ -207,7 +207,7 @@ class DictDatabase(MetabolicDatabase):
         # Add values to global (sparse) stoichiometric matrix
         # Compounds that occur on both sides will get a stoichiometric
         # value based on the sum of the signed values on each side.
-        for compound, value in reaction.compounds:
+        for compound, _ in reaction.compounds:
             if compound not in self._reactions[reaction_id]:
                 self._reactions[reaction_id][compound] = 0
                 self._compound_reactions[compound].add(reaction_id)

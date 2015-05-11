@@ -136,7 +136,8 @@ class TestReaction(unittest.TestCase):
 
     def test_reaction_compounds_property(self):
         r = Reaction(Reaction.Bidir, [(Compound('A'), 1)], [(Compound('B'), 1)])
-        self.assertEquals(list(r.compounds), [(Compound('A'), 1), (Compound('B'), 1)])
+        self.assertEquals(list(r.compounds),
+                          [(Compound('A'), -1), (Compound('B'), 1)])
 
     def test_reaction_normalized_of_bidir(self):
         r = Reaction(Reaction.Bidir, [(Compound('Au'), 1)], [(Compound('Pb'), 1)]).normalized()
