@@ -185,6 +185,10 @@ class NativeModel(object):
         """Return the biomass reaction specified by the model"""
         return self._model.get('biomass', None)
 
+    def get_default_flux_limit(self):
+        """Return the default flux limit specified by the model"""
+        return self._model.get('default_flux_limit', None)
+
     def parse_reactions(self):
         """Yield tuples of reaction ID and reactions defined in the model"""
 

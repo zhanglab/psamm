@@ -65,8 +65,9 @@ class Command(object):
             logger.warning('Only the first medium will be used')
         medium = media[0] if len(media) > 0 else None
 
-        self._mm = MetabolicModel.load_model(database, model.parse_model(),
-                                             medium, model.parse_limits())
+        self._mm = MetabolicModel.load_model(
+            database, model.parse_model(), medium, model.parse_limits(),
+            v_max=model.get_default_flux_limit())
 
     @classmethod
     def init_parser(cls, parser):
