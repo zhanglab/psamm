@@ -333,10 +333,11 @@ class MetabolicModel(MetabolicDatabase):
         # the database. The exchange reaction could be created on the
         # fly when required.
         if medium is not None:
-            for compound, lower, upper in medium:
+            for compound, reaction_id, lower, upper in medium:
                 # Create exchange reaction
-                reaction_id = 'EX_{}_{}'.format(
-                    compound.name, compound.compartment)
+                if reaction_id is None:
+                    reaction_id = 'EX_{}_{}'.format(
+                        compound.name, compound.compartment)
                 model.database.set_reaction(
                     reaction_id, Reaction(Reaction.Bidir, [(compound, 1)], []))
                 model.add_reaction(reaction_id)

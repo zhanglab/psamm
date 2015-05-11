@@ -459,7 +459,7 @@ def parse_reaction_file(path):
 def parse_medium(medium_def):
     """Parse a structured medium definition as obtained from a YAML file
 
-    Returns in iterator of compound, lower and upper bounds.
+    Returns in iterator of compound, reaction, lower and upper bounds.
     """
 
     default_compartment = medium_def.get('compartment')
@@ -467,9 +467,10 @@ def parse_medium(medium_def):
     for compound_def in medium_def.get('compounds', []):
         compartment = compound_def.get('compartment', default_compartment)
         compound = Compound(compound_def['id'], compartment=compartment)
+        reaction = compound_def.get('reaction')
         lower = compound_def.get('lower')
         upper = compound_def.get('upper')
-        yield compound, lower, upper
+        yield compound, reaction, lower, upper
 
 
 def parse_medium_list(path, media):
@@ -542,14 +543,14 @@ def parse_medium_file(path):
         logger.debug('Parsing medium file {} as TSV'.format(
             context.filepath))
         with open(context.filepath, 'r') as f:
-            for compound, lower, upper in parse_medium_table_file(f):
-                yield compound, lower, upper
+            for entry in parse_medium_table_file(f):
+                yield entry
     elif re.match(r'.+\.(yml|yaml)$', context.filepath):
         logger.debug('Parsing medium file {} as YAML'.format(
             context.filepath))
         with open(context.filepath, 'r') as f:
-            for compound, lower, upper in parse_medium_yaml_file(context, f):
-                yield compound, lower, upper
+            for entry in parse_medium_yaml_file(context, f):
+                yield entry
     else:
         raise ParseError('Unable to detect format of medium file {}'.format(
             context.filepath))

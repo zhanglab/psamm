@@ -157,7 +157,9 @@ the ``medium.yaml`` file:
 
 When a medium file is specified, the corresponding exchange reactions are
 automatically added. For example, if the compounds ``o2`` in compartment ``e``
-is in the medium, the exchange reaction ``EX_o2_e`` is added to the model.
+is in the medium, the exchange reaction ``EX_o2_e`` is added to the model. The
+desired ID for the exchange reaction can be set explicitly using the
+``reaction`` attribute.
 
 Reaction flux limits
 --------------------
