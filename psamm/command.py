@@ -432,8 +432,10 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
 class FluxConsistencyCommand(SolverCommandMixin, Command):
     """Check that reactions are flux consistent in a model
 
-    A reaction is flux consistent if there exists any steady-state
-    flux solution where the flux of the given reaction is non-zero.
+    A reaction is flux consistent if there exists any steady-state flux
+    solution where the flux of the given reaction is non-zero. The
+    bounds on the exchange reactions can be removed when performing the
+    consistency check by providing the ``--unrestricted`` option.
     """
 
     name = 'fluxcheck'
@@ -451,6 +453,10 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
         parser.add_argument(
             '--epsilon', type=float, help='Flux threshold',
             default=1e-5)
+        parser.add_argument(
+            '--unrestricted', action='store_true',
+            help='Remove limits on exchange reactions before checking'
+        )
         super(FluxConsistencyCommand, cls).init_parser(parser)
 
     def run(self):
@@ -465,6 +471,12 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
                 compound_name[compound.id] = compound.id
 
         epsilon = self._args.epsilon
+
+        if self._args.unrestricted:
+            # Allow all exchange reactions with no flux limits
+            for reaction in self._mm.reactions:
+                if self._mm.is_exchange(reaction):
+                    del self._mm.limits[reaction].bounds
 
         if self._args.fastcore:
             solver = self._get_solver()
@@ -481,14 +493,42 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
                     self._mm, self._mm.reactions, epsilon,
                     tfba=enable_tfba, solver=solver))
 
-        # Print result
-        for reaction in sorted(inconsistent):
-            rx = self._mm.get_reaction(reaction)
-            rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
-            print('{}\t{}'.format(reaction, rxt))
+        # Count the number of reactions that are fixed at zero. While these
+        # reactions are still inconsistent, they are inconsistent because they
+        # have been explicitly disabled.
+        disabled_exchange = 0
+        disabled_internal = 0
 
-        logger.info('Model has {} inconsistent reactions.'.format(
-            len(inconsistent)))
+        count_exchange = 0
+        total_exchange = 0
+
+        count_internal = 0
+        total_internal = 0
+
+        # Print result
+        for reaction in sorted(self._mm.reactions):
+            disabled = self._mm.limits[reaction].bounds == (0, 0)
+
+            if self._mm.is_exchange(reaction):
+                total_exchange += 1
+                count_exchange += int(reaction in inconsistent)
+                disabled_exchange += int(disabled)
+            else:
+                total_internal += 1
+                count_internal += int(reaction in inconsistent)
+                disabled_internal += int(disabled)
+
+            if reaction in inconsistent:
+                rx = self._mm.get_reaction(reaction)
+                rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
+                print('{}\t{}'.format(reaction, rxt))
+
+        logger.info('Model has {}/{} inconsistent internal reactions'
+                    ' ({} disabled by user)'.format(
+            count_internal, total_internal, disabled_internal))
+        logger.info('Model has {}/{} inconsistent exchange reactions'
+                    ' ({} disabled by user)'.format(
+            count_exchange, total_exchange, disabled_exchange))
 
 
 class FluxVariabilityCommand(SolverCommandMixin, Command):
