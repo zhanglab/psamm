@@ -1,3 +1,19 @@
+# This file is part of PSAMM.
+#
+# PSAMM is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PSAMM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Identify blocked metabolites and possible reconstructions
 
@@ -7,10 +23,10 @@ This implements a variant of the algorithms described in [Kumar07]_.
 from .lpsolver import lp
 
 class GapFillError(Exception):
-    '''Indicates an error while running GapFind/GapFill'''
+    """Indicates an error while running GapFind/GapFill"""
 
 def gapfind(model, solver, epsilon=1e-5, v_max=1000):
-    '''Identify compounds in the model that cannot be produced
+    """Identify compounds in the model that cannot be produced
 
     Yields all compounds that cannot be produced. This method
     assumes implicit sinks for all compounds in the model so
@@ -22,7 +38,8 @@ def gapfind(model, solver, epsilon=1e-5, v_max=1000):
     maximum flux.
 
     This method is implemented as a MILP-program. Therefore it may
-    not be efficient for larger models.'''
+    not be efficient for larger models.
+    """
 
     prob = solver.create_problem()
 
@@ -77,7 +94,7 @@ def gapfind(model, solver, epsilon=1e-5, v_max=1000):
             yield compound
 
 def gapfill(model, core, blocked, solver, epsilon=1e-5, v_max=1000):
-    '''Find a set of reactions to add such that no compounds are blocked
+    """Find a set of reactions to add such that no compounds are blocked
 
     Returns two iterators: first an iterator of reactions not in
     core, that were added to resolve the model. Second, an
@@ -95,7 +112,8 @@ def gapfill(model, core, blocked, solver, epsilon=1e-5, v_max=1000):
     blocked. V_max indicates the maximum flux.
 
     This method is implemented as a MILP-program. Therefore it may
-    not be efficient for larger models.'''
+    not be efficient for larger models.
+    """
 
     prob = solver.create_problem()
 

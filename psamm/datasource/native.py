@@ -1,3 +1,19 @@
+# This file is part of PSAMM.
+#
+# PSAMM is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PSAMM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Module for reading and writing native formats
 
@@ -184,6 +200,10 @@ class NativeModel(object):
     def get_biomass_reaction(self):
         """Return the biomass reaction specified by the model"""
         return self._model.get('biomass', None)
+
+    def get_default_flux_limit(self):
+        """Return the default flux limit specified by the model"""
+        return self._model.get('default_flux_limit', None)
 
     def parse_reactions(self):
         """Yield tuples of reaction ID and reactions defined in the model"""
@@ -459,7 +479,7 @@ def parse_reaction_file(path):
 def parse_medium(medium_def):
     """Parse a structured medium definition as obtained from a YAML file
 
-    Returns in iterator of compound, lower and upper bounds.
+    Returns in iterator of compound, reaction, lower and upper bounds.
     """
 
     default_compartment = medium_def.get('compartment')
@@ -467,9 +487,10 @@ def parse_medium(medium_def):
     for compound_def in medium_def.get('compounds', []):
         compartment = compound_def.get('compartment', default_compartment)
         compound = Compound(compound_def['id'], compartment=compartment)
+        reaction = compound_def.get('reaction')
         lower = compound_def.get('lower')
         upper = compound_def.get('upper')
-        yield compound, lower, upper
+        yield compound, reaction, lower, upper
 
 
 def parse_medium_list(path, media):
@@ -542,14 +563,14 @@ def parse_medium_file(path):
         logger.debug('Parsing medium file {} as TSV'.format(
             context.filepath))
         with open(context.filepath, 'r') as f:
-            for compound, lower, upper in parse_medium_table_file(f):
-                yield compound, lower, upper
+            for entry in parse_medium_table_file(f):
+                yield entry
     elif re.match(r'.+\.(yml|yaml)$', context.filepath):
         logger.debug('Parsing medium file {} as YAML'.format(
             context.filepath))
         with open(context.filepath, 'r') as f:
-            for compound, lower, upper in parse_medium_yaml_file(context, f):
-                yield compound, lower, upper
+            for entry in parse_medium_yaml_file(context, f):
+                yield entry
     else:
         raise ParseError('Unable to detect format of medium file {}'.format(
             context.filepath))

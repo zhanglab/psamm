@@ -1,5 +1,21 @@
+# This file is part of PSAMM.
+#
+# PSAMM is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PSAMM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-'''Module related to loading ModelSEED database files'''
+"""Module related to loading ModelSEED database files"""
 
 import csv
 import re
@@ -9,17 +25,17 @@ from psamm.reaction import Reaction, Compound
 
 
 class ParseError(Exception):
-    '''Exception used to signal errors while parsing'''
-    pass
+    """Exception used to signal errors while parsing"""
 
 
 def decode_name(s):
-    '''Decode names in ModelSEED files'''
+    """Decode names in ModelSEED files"""
     # Some names contain XML-like entity codes
     return re.sub(r'&#(\d+);', lambda x: chr(int(x.group(1))), s)
 
+
 class CompoundEntry(object):
-    '''Representation of entry in a ModelSEED compound table'''
+    """Representation of entry in a ModelSEED compound table"""
 
     def __init__(self, id, names, formula):
         self._id = id
@@ -64,7 +80,7 @@ class CompoundEntry(object):
 
 
 def parse_compound_file(f):
-    '''Iterate over the compound entries in the given file'''
+    """Iterate over the compound entries in the given file"""
 
     f.readline() # Skip header
     for row in csv.reader(f, delimiter='\t'):
@@ -214,6 +230,7 @@ def parse_reaction(s):
 
     return Reaction(direction, parse_compound_list(left),
                     parse_compound_list(right))
+
 
 def format_reaction(reaction):
     """Format reaction as string

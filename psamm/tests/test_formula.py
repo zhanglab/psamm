@@ -1,8 +1,25 @@
 #!/usr/bin/env python
+# This file is part of PSAMM.
+#
+# PSAMM is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PSAMM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 import unittest
 
 from psamm.formula import Formula, Atom, Radical
+
 
 class TestFormula(unittest.TestCase):
     def test_formula_merge_same_formulas_with_same_atoms(self):
@@ -115,6 +132,7 @@ class TestFormula(unittest.TestCase):
         f1, f2 = Formula.balance(Formula.parse('H2(CH2)n'), Formula.parse('CH3O(CH2)n'))
         self.assertEquals(f1, Formula({Atom('C'): 1, Atom('H'): 1, Atom('O'): 1}))
         self.assertEquals(f2, Formula())
+
 
 if __name__ == '__main__':
     unittest.main()

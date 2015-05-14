@@ -1,32 +1,51 @@
+# This file is part of PSAMM.
+#
+# PSAMM is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PSAMM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-'''Various utilities'''
+"""Various utilities"""
 
 import re
 
+
 class LoggerFile(object):
-    '''File-like object that forwards to a logger
+    """File-like object that forwards to a logger
 
     The Cplex API takes a file-like object for writing log output.
     This class allows us to forward the Cplex messages to the
-    Python logging system.'''
+    Python logging system.
+    """
 
     def __init__(self, logger, level):
         self._logger = logger
         self._level = level
 
     def write(self, s):
-        '''Write message to logger'''
+        """Write message to logger"""
         for line in re.split(r'\n+', s):
             if line != '':
                 self._logger.log(self._level, line)
 
     def flush(self):
-        '''Flush stream
+        """Flush stream
 
-        This is a noop.'''
+        This is a noop."""
+
 
 def convex_cardinality_relaxed(f, epsilon=1e-5):
-    '''Transform L1-norm optimization function into approximate cardinality optimization
+    """Transform L1-norm optimization function into approximate cardinality optimization
 
     The given function must optimize a convex problem with
     a weighted L1-norm as the objective. The transformed function
@@ -40,7 +59,8 @@ def convex_cardinality_relaxed(f, epsilon=1e-5):
     (dictionary), and the weights must be set to one if not specified.
     The function must return the non-weighted solution as an iterator
     over (identifier, value)-tuples, either directly or as the first
-    element of a tuple.'''
+    element of a tuple.
+    """
 
     def convex_cardinality_wrapper(*args, **kwargs):
         def dict_result(r):

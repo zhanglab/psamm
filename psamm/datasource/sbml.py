@@ -1,3 +1,19 @@
+# This file is part of PSAMM.
+#
+# PSAMM is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PSAMM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Parser for SBML model files"""
 
@@ -378,7 +394,8 @@ class SBMLWriter(object):
         # Load compound information
         compound_name = {}
         for compound in compounds:
-            compound_name[compound.id] = compound.name if compound.name is not None else compound.id
+            compound_name[compound.id] = (
+                compound.name if compound.name is not None else compound.id)
 
         root = ET.Element(self._sbml_tag('sbml'))
         root.set(self._sbml_tag('level'), '3')
@@ -397,24 +414,33 @@ class SBMLWriter(object):
         for reaction in model.reactions:
             for compound, value in model.get_reaction_values(reaction):
                 if compound.compartment not in model_compartments:
-                    model_compartments[compound.compartment] = next(compartment_id)
+                    model_compartments[compound.compartment] = (
+                        next(compartment_id))
                 if compound not in model_species:
                     model_species[compound] = next(compound_id)
 
         # Create list of compartments
-        compartments = ET.SubElement(model_tag, self._sbml_tag('listOfCompartments'))
+        compartments = ET.SubElement(
+            model_tag, self._sbml_tag('listOfCompartments'))
         for compartment, compartment_id in model_compartments.iteritems():
-            compartment_tag = ET.SubElement(compartments, self._sbml_tag('compartment'))
+            compartment_tag = ET.SubElement(
+                compartments, self._sbml_tag('compartment'))
             compartment_tag.set(self._sbml_tag('id'), compartment_id)
             compartment_tag.set(self._sbml_tag('name'), str(compartment))
 
         # Create list of species
-        species_list = ET.SubElement(model_tag, self._sbml_tag('listOfSpecies'))
+        species_list = ET.SubElement(
+            model_tag, self._sbml_tag('listOfSpecies'))
         for species, species_id in model_species.iteritems():
-            species_tag = ET.SubElement(species_list, self._sbml_tag('species'))
+            species_tag = ET.SubElement(species_list,
+                                        self._sbml_tag('species'))
             species_tag.set(self._sbml_tag('id'), species_id)
-            species_tag.set(self._sbml_tag('name'), str(species.translate(lambda x: compound_name.get(x, x))))
-            species_tag.set(self._sbml_tag('compartment'), model_compartments[species.compartment])
+            species_tag.set(
+                self._sbml_tag('name'),
+                str(species.translate(lambda x: compound_name.get(x, x))))
+            species_tag.set(
+                self._sbml_tag('compartment'),
+                model_compartments[species.compartment])
 
         # Create list of reactions
         reactions = ET.SubElement(model_tag, self._sbml_tag('listOfReactions'))
@@ -422,16 +448,22 @@ class SBMLWriter(object):
             reaction_tag = ET.SubElement(reactions, self._sbml_tag('reaction'))
             reaction_tag.set(self._sbml_tag('id'), next(reaction_id))
             reaction_tag.set(self._sbml_tag('name'), reaction)
-            reaction_tag.set(self._sbml_tag('reversible'), 'true' if model.is_reversible(reaction) else 'false')
+            reaction_tag.set(
+                self._sbml_tag('reversible'),
+                'true' if model.is_reversible(reaction) else 'false')
 
-            reactants = ET.SubElement(reaction_tag, self._sbml_tag('listOfReactants'))
-            products = ET.SubElement(reaction_tag, self._sbml_tag('listOfProducts'))
+            reactants = ET.SubElement(
+                reaction_tag, self._sbml_tag('listOfReactants'))
+            products = ET.SubElement(
+                reaction_tag, self._sbml_tag('listOfProducts'))
 
             for compound, value in model.get_reaction_values(reaction):
                 dest_list = reactants if value < 0 else products
-                spec_ref = ET.SubElement(dest_list, self._sbml_tag('speciesReference'))
-                spec_ref.set(self._sbml_tag('species'), model_species[compound])
-                spec_ref.set(self._sbml_tag('stoichiometry'), str(value))
+                spec_ref = ET.SubElement(
+                    dest_list, self._sbml_tag('speciesReference'))
+                spec_ref.set(
+                    self._sbml_tag('species'), model_species[compound])
+                spec_ref.set(self._sbml_tag('stoichiometry'), str(abs(value)))
 
         tree = ET.ElementTree(root)
         tree.write(file, default_namespace=self._namespace)

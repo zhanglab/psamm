@@ -1,14 +1,32 @@
+# This file is part of PSAMM.
+#
+# PSAMM is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PSAMM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-'''Representations of boolean expressions and variables
+"""Representations of boolean expressions and variables
 
 These classes can be used to represent simple boolean
 expressions and do evaluation with substitutions of
-particular variables.'''
+particular variables.
+"""
 
 import re
 
+
 class Variable(object):
-    '''Represents a variable in a boolean expression'''
+    """Represents a variable in a boolean expression"""
 
     def __init__(self, symbol):
         self._symbol = str(symbol)
@@ -36,8 +54,9 @@ class Variable(object):
     def __hash__(self):
         return hash('Variable') ^ hash(self._symbol)
 
+
 class And(object):
-    '''Represents a conjuction of boolean terms'''
+    """Represents a conjuction of boolean terms"""
 
     def __init__(self, *args):
         terms = set()
@@ -50,7 +69,7 @@ class And(object):
 
     @property
     def terms(self):
-        '''Iterate over terms'''
+        """Iterate over terms"""
         return iter(self._terms)
 
     def substitute(self, mapping):
@@ -90,8 +109,9 @@ class And(object):
     def __hash__(self):
         return hash('And') ^ hash(self._terms)
 
+
 class Or(object):
-    '''Represents a disjuction of boolean terms'''
+    """Represents a disjuction of boolean terms"""
 
     def __init__(self, *args):
         terms = set()
@@ -104,7 +124,7 @@ class Or(object):
 
     @property
     def terms(self):
-        '''Iterate over terms'''
+        """Iterate over terms"""
         return iter(self._terms)
 
     def substitute(self, mapping):
@@ -144,8 +164,9 @@ class Or(object):
     def __hash__(self):
         return hash('Or') ^ hash(self._terms)
 
+
 def Expression(s):
-    '''Parse boolean expression containing and/or operators'''
+    """Parse boolean expression containing and/or operators"""
 
     # Converters for opeartor clauses
     operators = {
