@@ -1,3 +1,19 @@
+# This file is part of PSAMM.
+#
+# PSAMM is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PSAMM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Test miscellaneous reaction parsers"""
 
@@ -6,6 +22,7 @@ from decimal import Decimal
 
 from psamm.reaction import Reaction, Compound
 from psamm.datasource import misc
+
 
 class TestSudenSimple(unittest.TestCase):
     def test_sudensimple_parse(self):
@@ -22,6 +39,7 @@ class TestSudenSimple(unittest.TestCase):
         r = misc.parse_sudensimple_reaction('1 H2 + 0.5 O2 <=> 1 H2O')
         self.assertEquals(r, Reaction(Reaction.Bidir, [(Compound('H2'), 1), (Compound('O2'), Decimal('0.5'))],
                                       [(Compound('H2O'), 1)]))
+
 
 class TestMetNet(unittest.TestCase):
     def test_metnet_parse_with_global_compartment(self):
@@ -55,6 +73,7 @@ class TestMetNet(unittest.TestCase):
         self.assertEquals(r, Reaction(Reaction.Bidir,
                                       [(Compound('3pg', 'c'), 1), (Compound('atp', 'c'), 1)],
                                       [(Compound('13dpg', 'c'), 1), (Compound('adp', 'c'), 1)]))
+
 
 if __name__ == '__main__':
     unittest.main()

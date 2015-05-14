@@ -1,5 +1,21 @@
+# This file is part of PSAMM.
+#
+# PSAMM is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PSAMM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-'''Linear programming solver using QSopt_ex'''
+"""Linear programming solver using QSopt_ex"""
 
 from __future__ import absolute_import
 
@@ -13,6 +29,7 @@ from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
 from .lp import (VariableSet, Expression, Relation,
                     ObjectiveSense, VariableType, InvalidResultError)
+
 
 class Solver(BaseSolver):
     """Represents an LP solver using QSopt_ex"""
@@ -36,16 +53,17 @@ class Problem(BaseProblem):
 
     @property
     def qsoptex(self):
-        '''The underlying qsoptex.ExactProblem object'''
+        """The underlying qsoptex.ExactProblem object"""
         return self._p
 
     def define(self, *names, **kwargs):
-        '''Define variable in the problem
+        """Define variable in the problem
 
         Variables must be defined before they can be accessed by var() or set().
         This function takes keyword arguments lower and upper to define the
         bounds of the variable (default: -inf to inf). The keyword argument types
-        can be used to select the type of the variable (Only Continuous is suported).'''
+        can be used to select the type of the variable (Only Continuous is suported).
+        """
 
         names = tuple(names)
         lower = kwargs.get('lower', None)
@@ -73,23 +91,24 @@ class Problem(BaseProblem):
             self._p.add_variable(0, lower, upper, name)
 
     def var(self, name):
-        '''Return the variable as an expression'''
+        """Return the variable as an expression"""
         if name not in self._variables:
             raise ValueError('Undefined variable: {}'.format(name))
         return Expression({ name: 1 })
 
     def set(self, names):
-        '''Return the set of variables as an expression'''
+        """Return the set of variables as an expression"""
         names = tuple(names)
         if any(name not in self._variables for name in names):
             raise ValueError('Undefined variables: {}'.format(set(names) - set(self._variables)))
         return Expression({ VariableSet(names): 1 })
 
     def add_linear_constraints(self, *relations):
-        '''Add constraints to the problem
+        """Add constraints to the problem
 
         Each constraint is represented by a Relation, and the
-        expression in that relation can be a set expression.'''
+        expression in that relation can be a set expression.
+        """
         for relation in relations:
             if isinstance(relation, bool):
                 # A bool in place of a relation is accepted to mean
@@ -109,7 +128,7 @@ class Problem(BaseProblem):
                     self._p.add_linear_constraint(relation.sense, values, -expression.offset)
 
     def set_linear_objective(self, expression):
-        '''Set linear objective of problem'''
+        """Set linear objective of problem"""
 
         if isinstance(expression, numbers.Number):
             # Allow expressions with no variables as objective,
@@ -119,7 +138,7 @@ class Problem(BaseProblem):
         self._p.set_linear_objective((lp_name, expression.value(var)) for var, lp_name in self._variables.iteritems())
 
     def set_objective_sense(self, sense):
-        '''Set type of problem (maximize or minimize)'''
+        """Set type of problem (maximize or minimize)"""
         if sense == ObjectiveSense.Minimize:
             self._p.set_objective_sense(qsoptex.ObjectiveSense.MINIMIZE)
         elif sense == ObjectiveSense.Maximize:
@@ -128,7 +147,7 @@ class Problem(BaseProblem):
             raise ValueError('Invalid objective sense')
 
     def solve(self, sense=None):
-        '''Solve problem'''
+        """Solve problem"""
         if sense is not None:
             self.set_objective_sense(sense)
         self._p.solve()

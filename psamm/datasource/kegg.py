@@ -1,5 +1,21 @@
+# This file is part of PSAMM.
+#
+# PSAMM is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PSAMM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-'''Module related to loading KEGG database files'''
+"""Module related to loading KEGG database files"""
 
 import re
 
@@ -8,11 +24,11 @@ from psamm.expression.affine import Expression
 
 
 class ParseError(Exception):
-    '''Exception used to signal errors while parsing'''
-    pass
+    """Exception used to signal errors while parsing"""
+
 
 class CompoundEntry(object):
-    '''Representation of entry in KEGG compound file'''
+    """Representation of entry in KEGG compound file"""
 
     def __init__(self, values):
         self.values = dict(values)
@@ -98,8 +114,9 @@ class CompoundEntry(object):
     def __repr__(self):
         return '<CompoundEntry "{}">'.format(self.id)
 
+
 def parse_compound_file(f):
-    '''Iterate over the compound entries in the given file'''
+    """Iterate over the compound entries in the given file"""
 
     section_id = None
     compound = {}
