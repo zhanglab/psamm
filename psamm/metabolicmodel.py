@@ -1,3 +1,19 @@
+# This file is part of PSAMM.
+#
+# PSAMM is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PSAMM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Representation of metabolic network models"""
 
@@ -8,11 +24,12 @@ from .reaction import Reaction
 
 
 class FluxBounds(object):
-    '''Represents lower and upper bounds of flux as a mutable object
+    """Represents lower and upper bounds of flux as a mutable object
 
     This object is used internally in the model representation. Changing
     the state of the object will change the underlying model parameters.
-    Deleting a value will reset that value to the defaults.'''
+    Deleting a value will reset that value to the defaults.
+    """
 
     def __init__(self, model, reaction):
         self._model = model
@@ -88,11 +105,11 @@ class FluxBounds(object):
         del self.upper
 
     def __eq__(self, other):
-        '''Equality test'''
+        """Equality test"""
         return isinstance(other, FluxBounds) and self.lower == other.lower and self.upper == other.upper
 
     def __ne__(self, other):
-        '''Inequality test'''
+        """Inequality test"""
         return not self == other
 
     def __repr__(self):
@@ -100,11 +117,12 @@ class FluxBounds(object):
 
 
 class LimitsView(Mapping):
-    '''Provides a view of the flux bounds defined in the model
+    """Provides a view of the flux bounds defined in the model
 
     This object is used internally in MetabolicModel to
     expose a dictonary view of the FluxBounds associated
-    with the model reactions.'''
+    with the model reactions.
+    """
 
     def __init__(self, model):
         super(LimitsView, self).__init__()
@@ -171,13 +189,13 @@ class MetabolicModel(MetabolicDatabase):
         return self._database.get_reaction(reaction_id)
 
     def get_reaction_values(self, reaction_id):
-        '''Return stoichiometric values of reaction as a dictionary'''
+        """Return stoichiometric values of reaction as a dictionary"""
         if reaction_id not in self._reaction_set:
             raise ValueError('Unknown reaction: {}'.format(repr(reaction_id)))
         return self._database.get_reaction_values(reaction_id)
 
     def get_compound_reactions(self, compound_id):
-        '''Iterate over all reaction ids the includes the given compound'''
+        """Iterate over all reaction ids the includes the given compound"""
         if compound_id not in self._compound_set:
             raise ValueError('Compound not in model: {}'.format(compound_id))
 
@@ -186,13 +204,13 @@ class MetabolicModel(MetabolicDatabase):
                 yield reaction_id
 
     def is_reversible(self, reaction_id):
-        '''Whether the given reaction is reversible'''
+        """Whether the given reaction is reversible"""
         if reaction_id not in self._reaction_set:
             raise ValueError('Reaction not in model: {}'.format(reaction_id))
         return self._database.is_reversible(reaction_id)
 
     def is_exchange(self, reaction_id):
-        '''Whether the given reaction is an exchange reaction'''
+        """Whether the given reaction is an exchange reaction"""
         reaction = self.get_reaction(reaction_id)
         return len(reaction.left) == 0 or len(reaction.right) == 0
 
@@ -201,7 +219,7 @@ class MetabolicModel(MetabolicDatabase):
         return LimitsView(self)
 
     def add_reaction(self, reaction_id):
-        '''Add reaction to model'''
+        """Add reaction to model"""
 
         if reaction_id in self._reaction_set:
             return
@@ -212,7 +230,7 @@ class MetabolicModel(MetabolicDatabase):
             self._compound_set.add(compound)
 
     def remove_reaction(self, reaction):
-        '''Remove reaction from model'''
+        """Remove reaction from model"""
 
         if reaction not in self._reaction_set:
             return
@@ -229,7 +247,7 @@ class MetabolicModel(MetabolicDatabase):
                 self._compound_set.remove(compound)
 
     def add_all_database_reactions(self, compartments={None, 'e'}):
-        '''Add all reactions from database that occur in given compartments'''
+        """Add all reactions from database that occur in given compartments"""
 
         added = set()
         for rxnid in self._database.reactions:
@@ -242,7 +260,7 @@ class MetabolicModel(MetabolicDatabase):
         return added
 
     def add_all_exchange_reactions(self, allow_duplicates=False):
-        '''Add all exchange reactions to database and to model'''
+        """Add all exchange reactions to database and to model"""
 
         all_reactions = {}
         if not allow_duplicates:
@@ -269,7 +287,7 @@ class MetabolicModel(MetabolicDatabase):
         return added
 
     def add_all_transport_reactions(self, allow_duplicates=False):
-        '''Add all transport reactions to database and to model'''
+        """Add all transport reactions to database and to model"""
 
         all_reactions = {}
         if not allow_duplicates:
@@ -301,7 +319,7 @@ class MetabolicModel(MetabolicDatabase):
         return added
 
     def copy(self):
-        '''Return copy of model'''
+        """Return copy of model"""
 
         model = self.__class__(self._database)
         model._limits_lower = dict(self._limits_lower)
@@ -315,7 +333,8 @@ class MetabolicModel(MetabolicDatabase):
                    v_max=None):
         """Get model from reaction name iterator
 
-        The model will contain all reactions of the iterator."""
+        The model will contain all reactions of the iterator.
+        """
 
         model_args = {}
         if v_max is not None:
@@ -355,10 +374,11 @@ class MetabolicModel(MetabolicDatabase):
 
 
 class FlipableFluxBounds(FluxBounds):
-    '''FluxBounds object for a FlipableModelView
+    """FluxBounds object for a FlipableModelView
 
     This object is used internally in the FlipableModelView to represent
-    the bounds of flux on a reaction that can be flipped.'''
+    the bounds of flux on a reaction that can be flipped.
+    """
 
     def __init__(self, view, reaction):
         super(FlipableFluxBounds, self).__init__(view._model, reaction)
@@ -378,24 +398,26 @@ class FlipableFluxBounds(FluxBounds):
 
     @property
     def lower(self):
-        '''Lower bound'''
+        """Lower bound"""
         if self._reaction in self._view._flipped:
             return -super(FlipableFluxBounds, self).upper
         return super(FlipableFluxBounds, self).lower
 
     @property
     def upper(self):
-        '''Upper bound'''
+        """Upper bound"""
         if self._reaction in self._view._flipped:
             return -super(FlipableFluxBounds, self).lower
         return super(FlipableFluxBounds, self).upper
 
+
 class FlipableStoichiometricMatrixView(StoichiometricMatrixView):
-    '''Provides a matrix view that flips with the underlying flipable model view
+    """Provides a matrix view that flips with the underlying flipable model view
 
     This object is used internally in FlipableModelView to
     expose a matrix view that negates the stoichiometric
-    values of flipped reactions.'''
+    values of flipped reactions.
+    """
 
     def __init__(self, view):
         super(FlipableStoichiometricMatrixView, self).__init__(view._model)
@@ -410,12 +432,14 @@ class FlipableStoichiometricMatrixView(StoichiometricMatrixView):
         compound, reaction = key
         return self._value_mul(reaction) * super(FlipableStoichiometricMatrixView, self).__getitem__(key)
 
+
 class FlipableLimitsView(LimitsView):
-    '''Provides a limits view that flips with the underlying flipable model view
+    """Provides a limits view that flips with the underlying flipable model view
 
     This object is used internally in FlipableModelView to
     expose a limits view that flips the bounds of all flipped
-    reactions.'''
+    reactions.
+    """
 
     def __init__(self, view):
         super(FlipableLimitsView, self).__init__(view._model)
@@ -424,14 +448,16 @@ class FlipableLimitsView(LimitsView):
     def _create_bounds(self, reaction):
         return FlipableFluxBounds(self._view, reaction)
 
+
 class FlipableModelView(object):
-    '''Proxy wrapper of model objects allowing a flipped set of reactions
+    """Proxy wrapper of model objects allowing a flipped set of reactions
 
     The proxy will forward all properties normally except
     that flipped reactions will appear to have stoichiometric
     values negated in the matrix property, and have bounds in
     the limits property flipped. This view is needed for
-    some algorithms.'''
+    some algorithms.
+    """
 
     def __init__(self, model, flipped=set()):
         self._model = model

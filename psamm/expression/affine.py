@@ -1,29 +1,49 @@
+# This file is part of PSAMM.
+#
+# PSAMM is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PSAMM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-'''Representations of affine expressions and variables
+"""Representations of affine expressions and variables
 
 These classes can be used to represent affine expressions
 and do manipulation and evaluation with substitutions of
-particular variables.'''
+particular variables.
+"""
 
 import re
 import numbers
 import functools
 from collections import Counter, defaultdict
 
+
 @functools.total_ordering
 class Variable(object):
-    '''Represents a variable in an expression
+    """Represents a variable in an expression
 
-    Equality of variables is based on the symbol.'''
+    Equality of variables is based on the symbol.
+    """
 
     def __init__(self, symbol):
-        '''Create variable with given symbol
+        """Create variable with given symbol
 
         Symbol must start with a letter or underscore but
         can contain numbers in other positions.
 
         >>> Variable('x')
-        Variable('x')'''
+        Variable('x')
+        """
 
         if not re.match(r'^[^\d\W]\w*\Z', symbol):
             raise ValueError('Invalid symbol {}'.format(symbol))
@@ -31,21 +51,22 @@ class Variable(object):
 
     @property
     def symbol(self):
-        '''Symbol of variable
+        """Symbol of variable
 
         >>> Variable('x').symbol
         'x'
-        '''
+        """
         return self._symbol
 
     def simplify(self):
-        '''Return simplified expression
+        """Return simplified expression
 
         The simplified form of a variable is always the
         variable itself.
 
         >>> Variable('x').simplify()
-        Variable('x')'''
+        Variable('x')
+        """
         return self
 
     def substitute(self, mapping):
@@ -86,7 +107,7 @@ class Variable(object):
         return Expression({ self: -1 })
 
     def __eq__(self, other):
-        '''Check equality of variables'''
+        """Check equality of variables"""
         if isinstance(other, Expression):
             return other == self
         return isinstance(other, Variable) and self._symbol == other._symbol
@@ -108,17 +129,18 @@ class Variable(object):
     def __repr__(self):
         return 'Variable({})'.format(repr(self._symbol))
 
+
 class Expression(object):
-    '''Represents an affine expression (e.g. 2x + 3y - z + 5)'''
+    """Represents an affine expression (e.g. 2x + 3y - z + 5)"""
 
     def __init__(self, *args):
-        '''Create new expression
+        """Create new expression
 
         >>> Expression({ Variable('x'): 2 }, 3)
         Expression('2x + 3')
         >>> Expression({ Variable('x'): 1, Variable('y'): 1 })
         Expression('x + y')
-        '''
+        """
 
         if len(args) == 1 and isinstance(args[0], basestring):
             # Parse as string
@@ -137,10 +159,11 @@ class Expression(object):
             raise TypeError('Expression() requires one or two arguments')
 
     def _parse_string(self, s):
-        '''Parse expression string
+        """Parse expression string
 
         Variables must be valid variable symbols and
-        coefficients must be integers.'''
+        coefficients must be integers.
+        """
 
         scanner = re.compile(r'''
             (\s+) |         # whitespace
@@ -190,11 +213,12 @@ class Expression(object):
         return variables, offset
 
     def simplify(self):
-        '''Return simplified expression
+        """Return simplified expression
 
         If the expression is of the form 'x', the variable will be returned,
         and if the expression contains no variables, the offset will be returned
-        as a number.'''
+        as a number.
+        """
         result = self.__class__(self._variables, self._offset)
         if len(result._variables) == 0:
             return result._offset
@@ -218,11 +242,11 @@ class Expression(object):
         return (expr + self._offset).simplify()
 
     def variables(self):
-        '''Return iterator of variables in expression'''
+        """Return iterator of variables in expression"""
         return iter(self._variables)
 
     def __add__(self, other):
-        '''Add expressions, variables or numbers'''
+        """Add expressions, variables or numbers"""
 
         if isinstance(other, numbers.Number):
             return self.__class__(self._variables, self._offset + other)
@@ -239,14 +263,14 @@ class Expression(object):
         return self + other
 
     def __sub__(self, other):
-        '''Subtract expressions, variables or numbers'''
+        """Subtract expressions, variables or numbers"""
         return self + -other
 
     def __rsub__(self, other):
         return -self + other
 
     def __mul__(self, other):
-        '''Multiply by scalar'''
+        """Multiply by scalar"""
         if isinstance(other, numbers.Number):
             if other == 0:
                 return self.__class__()
@@ -257,7 +281,7 @@ class Expression(object):
         return self * other
 
     def __div__(self, other):
-        '''Divide by scalar'''
+        """Divide by scalar"""
         if isinstance(other, numbers.Number):
             return self.__class__({ var: value/other for var, value in self._variables.iteritems()}, self._offset/other)
         return NotImplemented
@@ -266,7 +290,7 @@ class Expression(object):
         return self * -1
 
     def __eq__(self, other):
-        '''Expression equality'''
+        """Expression equality"""
         if isinstance(other, Expression):
             return self._variables == other._variables and self._offset == other._offset
         elif isinstance(other, Variable):

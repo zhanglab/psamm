@@ -1,5 +1,21 @@
+# This file is part of PSAMM.
+#
+# PSAMM is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PSAMM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-'''Linear programming solver using Cplex'''
+"""Linear programming solver using Cplex"""
 
 from __future__ import absolute_import
 
@@ -70,18 +86,19 @@ class Problem(BaseProblem):
 
     @property
     def cplex(self):
-        '''The underlying Cplex object'''
+        """The underlying Cplex object"""
         return self._cp
 
     def define(self, *names, **kwargs):
-        '''Define variable in the problem
+        """Define variable in the problem
 
         Variables must be defined before they can be accessed by var() or set().
         This function takes keyword arguments lower and upper to define the
         bounds of the variable (default: -inf to inf). The keyword argument types can
         be used to select the type of the variable (Continuous (default), Binary or
         Integer). Setting any variables different than Continuous will turn the problem
-        into an MILP problem.'''
+        into an MILP problem.
+        """
 
         names = tuple(names)
         lower = kwargs.get('lower', None)
@@ -114,23 +131,24 @@ class Problem(BaseProblem):
         self._cp.variables.add(**args)
 
     def var(self, name):
-        '''Return the variable as an expression'''
+        """Return the variable as an expression"""
         if name not in self._variables:
             raise ValueError('Undefined variable: {}'.format(name))
         return Expression({ name: 1 })
 
     def set(self, names):
-        '''Return the set of variables as an expression'''
+        """Return the set of variables as an expression"""
         names = tuple(names)
         if any(name not in self._variables for name in names):
             raise ValueError('Undefined variables: {}'.format(set(names) - set(self._variables)))
         return Expression({ VariableSet(names): 1 })
 
     def add_linear_constraints(self, *relations):
-        '''Add constraints to the problem
+        """Add constraints to the problem
 
         Each constraint is represented by a Relation, and the
-        expression in that relation can be a set expression.'''
+        expression in that relation can be a set expression.
+        """
         for relation in relations:
             if isinstance(relation, bool):
                 # A bool in place of a relation is accepted to mean
@@ -152,7 +170,7 @@ class Problem(BaseProblem):
                                                 rhs=tuple(repeat(float(-expression.offset), len(pairs))))
 
     def set_linear_objective(self, expression):
-        '''Set linear objective of problem'''
+        """Set linear objective of problem"""
 
         if isinstance(expression, numbers.Number):
             # Allow expressions with no variables as objective,
@@ -162,7 +180,7 @@ class Problem(BaseProblem):
         self._cp.objective.set_linear((lp_name, expression.value(var)) for var, lp_name in self._variables.iteritems())
 
     def set_objective_sense(self, sense):
-        '''Set type of problem (maximize or minimize)'''
+        """Set type of problem (maximize or minimize)"""
         if sense == ObjectiveSense.Minimize:
             self._cp.objective.set_sense(self._cp.objective.sense.minimize)
         elif sense == ObjectiveSense.Maximize:
@@ -171,7 +189,7 @@ class Problem(BaseProblem):
             raise ValueError('Invalid objective sense')
 
     def solve(self, sense=None):
-        '''Solve problem'''
+        """Solve problem"""
         if sense is not None:
             self.set_objective_sense(sense)
         self._cp.solve()
@@ -185,7 +203,7 @@ class Problem(BaseProblem):
 
 
 class Result(BaseResult):
-    '''Represents the solution to a cplex.Problem
+    """Represents the solution to a cplex.Problem
 
     This object will be returned from the cplex.Problem.solve() method or by
     accessing the cplex.Problem.result property after solving a problem. This
@@ -193,7 +211,8 @@ class Result(BaseResult):
 
     Result will evaluate to a boolean according to the success of the
     solution, so checking the truth value of the result will immediately
-    indicate whether solving was successful.'''
+    indicate whether solving was successful.
+    """
 
     def __init__(self, prob):
         self._problem = prob
@@ -204,7 +223,7 @@ class Result(BaseResult):
 
     @property
     def success(self):
-        '''Return boolean indicating whether a solution was found'''
+        """Return boolean indicating whether a solution was found"""
         self._check_valid()
         return self._problem._cp.solution.get_status() in (
             self._problem._cp.solution.status.optimal,
@@ -213,12 +232,12 @@ class Result(BaseResult):
 
     @property
     def status(self):
-        '''Return string indicating the error encountered on failure'''
+        """Return string indicating the error encountered on failure"""
         self._check_valid()
         return self._problem._cp.solution.get_status_string()
 
     def get_value(self, expression):
-        '''Return value of expression'''
+        """Return value of expression"""
 
         self._check_valid()
         if isinstance(expression, Expression):
