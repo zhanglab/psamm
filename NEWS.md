@@ -1,4 +1,20 @@
 
+v0.10 (2015-05-14)
+------------------
+
+- This software is now GPLv3 licensed. A copy of the license is included in
+  [LICENSE](LICENSE).
+- Allow setting the default flux limit in `model.yaml`. Previously a limit
+  of 1000 units was used, and this value is still used if not specified.
+- Allow setting the reaction name of the implicit exchange reactions
+  specified in the medium definition.
+- sbml: Change the SBML writer to avoid negative values for reaction
+  stoichiometry. Some software packages do not handle negative values
+  correctly when loading SBML files.
+- command: Add a new option to `fluxcheck` where the restrictions imposed on
+  the exchange reactions are removed before the consistency check.
+- cplex: Use numerical emphasis mode by default.
+
 v0.9 (2015-05-07)
 -----------------
 
