@@ -16,7 +16,7 @@ Use `pip` to install (it is recommended to use a
 [Virtualenv](https://virtualenv.pypa.io/)):
 
 ``` shell
-$ pip install git+ssh://git@github.com/zhanglab/model_script.git
+$ pip install git+ssh://git@github.com/zhanglab/psamm.git
 ```
 
 Documentation
@@ -26,13 +26,13 @@ See the bundled documentation for more information. The documentation can be
 generated using [Sphinx](http://sphinx-doc.org/):
 
 ``` shell
-$ git clone git@github.com:zhanglab/model_script.git
-$ pip install -e model_script[docs]
-$ cd model_script/docs/
+$ git clone git@github.com:zhanglab/psamm.git
+$ pip install -e psamm[docs]
+$ cd psamm/docs/
 $ make html
 ```
 
-Then open `model_script/docs/_build/html/index.html`.
+Then open `psamm/docs/_build/html/index.html`.
 
 Software license
 ----------------
