@@ -49,10 +49,10 @@ The Cplex Python bindings will have to be installed manually. If you are using
 a virtual environment (as described above) this should be done after activating
 the virtual environment:
 
-1. Go to the Cplex install directory: ``cd /path/to/Cplex``
-2. Go to the appropriate subdirectory based on your platform:
-   ``cd cplex/python/<platform>``
-3. Run ``pip install .``
+1. Locate the directory where Cplex was installed (e.g. ``/path/to/IBM/ILOG/CPLEX_StudioXXX``).
+2. Locate the appropriate subdirectory based on your platform:
+   ``cplex/python/<platform>`` (e.g. ``cplex/python/x86-64_osx``).
+3. Use ``pip`` to install the package from this directory: ``pip install /path/to/IBM/ILOG/CPLEX_StudioXXX/cplex/python/<platform>``
 
 QSopt_ex
 --------
