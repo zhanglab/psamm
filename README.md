@@ -16,7 +16,15 @@ Use `pip` to install (it is recommended to use a
 [Virtualenv](https://virtualenv.pypa.io/)):
 
 ``` shell
-$ pip install git+ssh://git@github.com/zhanglab/psamm.git
+$ pip install git+https://github.com/zhanglab/psamm.git
+```
+
+The `psamm-import` tool is developed in
+[a separate repository](https://github.com/zhanglab/psamm-import). After
+installing PSAMM the `psamm-import` tool can be installed using:
+
+``` shell
+$ pip install git+https://github.com/zhanglab/psamm-import.git
 ```
 
 Documentation
