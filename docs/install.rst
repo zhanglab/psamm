@@ -2,17 +2,16 @@
 Install
 =======
 
-The Python module can be installed using ``pip``. It is also possible to
-install a specific tag or branch by appending the name to the Git URL (e.g.
-append ``@v0.1`` to get the tag ``v0.1``). This will typically require ``root``
-permission.
+The Python module can be installed using ``pip``. This will typically require
+*root* permissions.
 
 .. code-block:: shell
 
-    $ pip install git+ssh://git@github.com/zhanglab/model_script.git
+    $ pip install git+https://github.com/zhanglab/psamm.git
 
-Another option is to use ``virtualenv``. First set up a new environment in the
-project directory, and activate it.
+Another option that does not require *root* permissions is to use a
+`Virtualenv`_. First set up a new environment in your project directory and
+activate it:
 
 .. code-block:: shell
 
@@ -20,8 +19,15 @@ project directory, and activate it.
     $ . env/bin/activate
 
 Now the Python module can be installed in the virtual environment using the
-``pip`` command without requiring ``root`` permissions. When returning to the
+``pip`` command without requiring *root* permissions. When returning to the
 project, simply reactivate the environment by running the second command.
+
+The *psamm-import* tool is developed in a separate Git repository. After
+installing PSAMM, the *psamm-import* tool can be installed using:
+
+.. code-block:: shell
+
+    $ pip install git+https://github.com/zhanglab/psamm-import.git
 
 Dependencies
 ------------
@@ -59,6 +65,7 @@ can be installed using ``pip``:
 
     $ pip install python-qsoptex
 
+.. _Virtualenv: https://virtualenv.pypa.io/
 .. _python-qsoptex: https://pypi.python.org/pypi/python-qsoptex
 .. _GnuMP: https://gmplib.org/
 .. _QSopt_ex library: https://github.com/jonls/qsopt-ex
