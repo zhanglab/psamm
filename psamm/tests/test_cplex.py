@@ -25,7 +25,7 @@ try:
 except ImportError:
     cplex = None
 
-requires_solver = unittest.skipIf(cplex is None, 'solver not available')
+requires_solver = unittest.skipIf(cplex is None, 'Cplex solver not available')
 
 
 @requires_solver

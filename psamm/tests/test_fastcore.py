@@ -22,16 +22,9 @@ from psamm.metabolicmodel import MetabolicModel
 from psamm.database import DictDatabase
 from psamm import fastcore
 from psamm.datasource.modelseed import parse_reaction
-
-try:
-    from psamm.lpsolver import cplex
-except ImportError:
-    cplex = None
-
-requires_solver = unittest.skipIf(cplex is None, 'solver not available')
+from psamm.lpsolver import generic
 
 
-@requires_solver
 class TestFastcoreSimpleVlassisModel(unittest.TestCase):
     """Test fastcore using the simple model in [Vlassis14]_."""
 
@@ -46,7 +39,11 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
         self.database.set_reaction('rxn_6', parse_reaction('|D| =>'))
         self.model = MetabolicModel.load_model(
             self.database, self.database.reactions)
-        self.solver = cplex.Solver()
+
+        try:
+            self.solver = generic.Solver()
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an LP solver for tests')
 
     def test_lp10(self):
         result = fastcore.lp10(self.model, { 'rxn_6' },
@@ -160,7 +157,6 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
                               solver=self.solver)
 
 
-@requires_solver
 class TestFastcoreTinyBiomassModel(unittest.TestCase):
     """Test fastcore using a model with tiny values in biomass reaction
 
@@ -185,7 +181,11 @@ class TestFastcoreTinyBiomassModel(unittest.TestCase):
             parse_reaction('(0.000001) |A| =>'))
         self.model = MetabolicModel.load_model(
             self.database, self.database.reactions)
-        self.solver = cplex.Solver()
+
+        try:
+            self.solver = generic.Solver()
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an LP solver for tests')
 
     def test_fastcc_is_consistent(self):
         self.assertTrue(fastcore.fastcc_is_consistent(
@@ -203,7 +203,6 @@ class TestFastcoreTinyBiomassModel(unittest.TestCase):
             self.model, core, 0.1, solver=self.solver)), { 'rxn_1', 'rxn_2' })
 
 
-@requires_solver
 class TestFlippingModel(unittest.TestCase):
     """Test fastcore on a model that has to flip"""
 
@@ -216,7 +215,11 @@ class TestFlippingModel(unittest.TestCase):
         self.database.set_reaction('rxn_4', parse_reaction('|C| <=>'))
         self.model = MetabolicModel.load_model(
             self.database, self.database.reactions)
-        self.solver = cplex.Solver()
+
+        try:
+            self.solver = generic.Solver()
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an LP solver for tests')
 
     def test_fastcore_induced_model(self):
         core = { 'rxn_2', 'rxn_3' }

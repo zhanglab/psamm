@@ -23,16 +23,9 @@ from psamm.database import DictDatabase
 from psamm import massconsistency
 from psamm.datasource.modelseed import parse_reaction
 from psamm.reaction import Compound
-
-try:
-    from psamm.lpsolver import cplex
-except ImportError:
-    cplex = None
-
-requires_solver = unittest.skipIf(cplex is None, 'solver not available')
+from psamm.lpsolver import generic
 
 
-@requires_solver
 class TestMassConsistency(unittest.TestCase):
     """Test mass consistency using a simple model"""
 
@@ -47,7 +40,10 @@ class TestMassConsistency(unittest.TestCase):
         self.database.set_reaction('rxn_6', parse_reaction('|D| =>'))
         self.model = MetabolicModel.load_model(self.database, self.database.reactions)
 
-        self.solver = cplex.Solver()
+        try:
+            self.solver = generic.Solver()
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an LP solver for tests')
 
     def test_mass_consistent_is_consistent(self):
         exchange = { 'rxn_1', 'rxn_6' }
@@ -77,7 +73,6 @@ class TestMassConsistency(unittest.TestCase):
             self.assertIn(r, self.model.reactions)
 
 
-@requires_solver
 class TestMassConsistencyZeroMass(unittest.TestCase):
     """Test mass consistency using a model with zero-mass compound"""
 
@@ -91,7 +86,10 @@ class TestMassConsistencyZeroMass(unittest.TestCase):
         self.model = MetabolicModel.load_model(
             self.database, self.database.reactions)
 
-        self.solver = cplex.Solver()
+        try:
+            self.solver = generic.Solver()
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an LP solver for tests')
 
     def test_is_consistent_with_zeromass(self):
         consistent = massconsistency.is_consistent(
