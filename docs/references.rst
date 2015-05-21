@@ -2,6 +2,9 @@
 References
 ==========
 
+.. [Steffensen15] Steffensen JL, Dufault-Thompson K, Zhang Y. PSAMM: A Portable
+    System for the Analysis of Metabolic Models. Submitted.
+
 .. [Gevorgyan08] Gevorgyan A, Poolman MG, Fell DA. Detection of stoichiometric
     inconsistencies in biomolecular models. Bioinformatics. 2008;24: 2245–2251.
     :doi:`10.1093/bioinformatics/btn425`.
