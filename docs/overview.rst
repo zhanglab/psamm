@@ -7,12 +7,12 @@ reconstruction, data parsing and formatting, consistency checking,
 automatic gap filling, and model simulations.
 
 PSAMM is developed as an open source project, coordinated through `Github`_.
-The PSAMM software is being developed at the `University of Rhode Island`_ and
+The PSAMM software is being developed in the `Zhang Laboratory`_ at the University of Rhode Island and
 is the subject of a research article that has been submitted for
 review. [Steffensen15]_
 
 .. _Github: https://github.com/zhanglab/psamm
-.. _University of Rhode Island: http://zhanglab.uri.edu/
+.. _Zhang Laboratory: http://zhanglab.uri.edu/
 
 Software license
 ----------------
