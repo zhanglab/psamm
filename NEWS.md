@@ -1,4 +1,10 @@
 
+v0.10.1 (2015-05-21)
+--------------------
+
+- Update README with new repository names and improved install instructions.
+- docs: Add improved install instructions based on README.
+
 v0.10 (2015-05-14)
 ------------------
 
