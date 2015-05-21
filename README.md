@@ -1,6 +1,9 @@
 PSAMM metabolic modeling tools
 ==============================
 
+[![Build Status](https://travis-ci.org/zhanglab/psamm.svg)](https://travis-ci.org/zhanglab/psamm)
+[![Documentation Status](https://readthedocs.org/projects/psamm/badge/?version=latest)](https://readthedocs.org/projects/psamm/?badge=latest)
+
 Tools related to metabolic modeling, reconstruction, data parsing and
 formatting, consistency checking, automatic gap filling, and model simulations.
 
@@ -30,17 +33,8 @@ $ pip install git+https://github.com/zhanglab/psamm-import.git
 Documentation
 -------------
 
-See the bundled documentation for more information. The documentation can be
-generated using [Sphinx](http://sphinx-doc.org/):
-
-``` shell
-$ git clone git@github.com:zhanglab/psamm.git
-$ pip install -e psamm[docs]
-$ cd psamm/docs/
-$ make html
-```
-
-Then open `psamm/docs/_build/html/index.html`.
+The documentation for PSAMM is available at
+[Read the Docs](https://psamm.readthedocs.org/).
 
 Software license
 ----------------
