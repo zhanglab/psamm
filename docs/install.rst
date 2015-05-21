@@ -7,7 +7,7 @@ The Python module can be installed using ``pip``. This will typically require
 
 .. code-block:: shell
 
-    $ pip install git+https://github.com/zhanglab/psamm.git
+    $ pip install psamm
 
 Another option that does not require *root* permissions is to use a
 `Virtualenv`_. First set up a new environment in your project directory and

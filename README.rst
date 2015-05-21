@@ -7,6 +7,9 @@ PSAMM metabolic modeling tools
 .. image:: https://readthedocs.org/projects/psamm/badge/?version=latest
    :alt: Documentation Status
    :target: https://readthedocs.org/projects/psamm/?badge=latest
+.. image:: https://badge.fury.io/py/psamm.svg
+   :alt: Package Status
+   :target: https://pypi.python.org/pypi/psamm
 
 Tools related to metabolic modeling, reconstruction, data parsing and
 formatting, consistency checking, automatic gap filling, and model simulations.
@@ -25,7 +28,7 @@ Use `pip` to install (it is recommended to use a Virtualenv_):
 
 .. code:: shell
 
-    $ pip install git+https://github.com/zhanglab/psamm.git
+    $ pip install psamm
 
 The `psamm-import` tool is developed in `a separate repository`_. After
 installing PSAMM the `psamm-import` tool can be installed using:
