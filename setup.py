@@ -24,7 +24,7 @@ setup(
     description='PSAMM metabolic modeling tools',
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
-    url='https://github.com/zhanglab/model_script',
+    url='https://github.com/zhanglab/psamm',
     license='GNU GPLv3+',
 
     classifiers = [
