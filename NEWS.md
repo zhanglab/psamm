@@ -1,4 +1,13 @@
 
+v0.10.2 (2015-05-22)
+--------------------
+
+- Various minor documentation and packaging updates. PSAMM is now available
+  through [PyPI](https://pypi.python.org/pypi/psamm) and the documentation has
+  been updated to reflect this. The documentation is available through
+  [Read the Docs](https://psamm.readthedocs.org/). Lastly, the test suite is
+  automatically run by [Travis CI](https://travis-ci.org/zhanglab/psamm).
+
 v0.10.1 (2015-05-21)
 --------------------
 

@@ -1,46 +1,51 @@
 PSAMM metabolic modeling tools
 ==============================
 
+.. image:: https://travis-ci.org/zhanglab/psamm.svg?branch=develop
+   :alt: Build Status
+   :target: https://travis-ci.org/zhanglab/psamm
+.. image:: https://readthedocs.org/projects/psamm/badge/?version=latest
+   :alt: Documentation Status
+   :target: https://readthedocs.org/projects/psamm/?badge=latest
+.. image:: https://badge.fury.io/py/psamm.svg
+   :alt: Package Status
+   :target: https://pypi.python.org/pypi/psamm
+
 Tools related to metabolic modeling, reconstruction, data parsing and
 formatting, consistency checking, automatic gap filling, and model simulations.
 
-See [NEWS](NEWS.md) for information on recent changes. The `master` branch
+See NEWS_ for information on recent changes. The `master` branch
 tracks the latest release while the `develop` branch is the latest version in
 development. Please apply any pull requests to the `develop` branch when
 creating the pull request.
 
+.. _NEWS: NEWS.md
+
 Install
 -------
 
-Use `pip` to install (it is recommended to use a
-[Virtualenv](https://virtualenv.pypa.io/)):
+Use `pip` to install (it is recommended to use a Virtualenv_):
 
-``` shell
-$ pip install git+https://github.com/zhanglab/psamm.git
-```
+.. code:: shell
 
-The `psamm-import` tool is developed in
-[a separate repository](https://github.com/zhanglab/psamm-import). After
+    $ pip install psamm
+
+The `psamm-import` tool is developed in `a separate repository`_. After
 installing PSAMM the `psamm-import` tool can be installed using:
 
-``` shell
-$ pip install git+https://github.com/zhanglab/psamm-import.git
-```
+.. code:: shell
+
+    $ pip install git+https://github.com/zhanglab/psamm-import.git
+
+.. _Virtualenv: https://virtualenv.pypa.io/
+.. _a separate repository: https://github.com/zhanglab/psamm-import
 
 Documentation
 -------------
 
-See the bundled documentation for more information. The documentation can be
-generated using [Sphinx](http://sphinx-doc.org/):
+The documentation for PSAMM is available at `Read the Docs`_.
 
-``` shell
-$ git clone git@github.com:zhanglab/psamm.git
-$ pip install -e psamm[docs]
-$ cd psamm/docs/
-$ make html
-```
-
-Then open `psamm/docs/_build/html/index.html`.
+.. _Read the Docs: https://psamm.readthedocs.org/
 
 Software license
 ----------------
@@ -58,4 +63,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-See [LICENCE](LICENSE).
+See LICENSE_.
+
+.. _LICENSE: LICENSE

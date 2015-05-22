@@ -18,17 +18,25 @@
 
 from setuptools import setup, find_packages
 
+# Read long description
+with open('README.rst') as f:
+    long_description = f.read()
+
 setup(
     name='psamm',
-    version='0.10.1',
+    version='0.10.2',
     description='PSAMM metabolic modeling tools',
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
-    url='https://github.com/zhanglab/model_script',
+    url='https://github.com/zhanglab/psamm',
     license='GNU GPLv3+',
 
+    long_description=long_description,
+
     classifiers = [
-        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)'
+        'Development Status :: 4 - Beta',
+        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+        'Programming Language :: Python :: 2.7'
     ],
 
     packages=find_packages(),
