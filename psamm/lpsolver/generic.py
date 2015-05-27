@@ -19,6 +19,7 @@
 
 from __future__ import absolute_import
 
+import os
 import operator
 import logging
 
@@ -81,12 +82,24 @@ class Solver(BaseSolver):
             if req in ('integer', 'rational', 'name'):
                 solvers = [s for s in solvers if req in s and s[req] == value]
 
+        # Obtain solver priority from environment variable, if specified.
+        priority = {}
+        if 'PSAMM_SOLVER' in os.environ:
+            solver_names = os.environ['PSAMM_SOLVER'].split(',')
+            for i, solver_name in enumerate(solver_names):
+                priority[solver_name] = len(solver_names) - i
+            solvers = [s for s in solvers if s['name'] in priority]
+        else:
+            # Use built-in priorities
+            for solver in solvers:
+                priority[solver['name']] = solver['priority']
+
         if len(solvers) == 0:
             raise RequirementsError(
                 'Unable to find a solver matching the specified requirements:'
                 ' {}'.format(self._requirements))
 
-        solver = max(solvers, key=operator.itemgetter('priority'))
+        solver = max(solvers, key=lambda s: priority.get(s['name'], 0))
         logger.debug('Using solver {}'.format(solver['name']))
 
         self._solver = solver['class']()
