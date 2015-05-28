@@ -15,7 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Base objects for representation of LP problems
+"""Base objects for representation of LP problems.
 
 A linear programming problem is built from a number of constraints and an
 objective function. The objective function is a linear expression represented
@@ -90,9 +90,9 @@ class Expression(object):
         of the variables is a set variable then a single iterator will be
         yielded.
         """
-
         count = max(1 if not isinstance(var, VariableSet) else
                     len(var) for var in self._variables)
+
         def value_set(n):
             for variable, value in iteritems(self._variables):
                 if isinstance(variable, VariableSet):

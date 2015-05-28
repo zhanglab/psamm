@@ -15,7 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Parser and representation of chemical formulas
+"""Parser and representation of chemical formulas.
 
 Chemical formulas (:class:`.Formula`) are represented as a number of
 :class:`FormulaElements <.FormulaElement>` with associated counts. A
@@ -42,8 +42,8 @@ class FormulaElement(object):
         """Add formula elements creating subformulas"""
         if isinstance(other, FormulaElement):
             if self == other:
-                return Formula({ self: 2 })
-            return Formula({ self: 1, other: 1 })
+                return Formula({self: 2})
+            return Formula({self: 1, other: 1})
         return NotImplemented
 
     def __radd__(self, other):
@@ -51,21 +51,21 @@ class FormulaElement(object):
 
     def __or__(self, other):
         """Merge formula elements into one formula"""
-        return Formula({ self: 1 }) | other
+        return Formula({self: 1}) | other
 
     def __ror__(self, other):
         return self | other
 
     def __mul__(self, other):
         """Multiply formula element by other"""
-        return Formula({ self: other })
+        return Formula({self: other})
 
     def __rmul__(self, other):
         return self * other
 
     def repeat(self, count):
         """Repeat formula element by creating a subformula"""
-        return Formula({ self: count })
+        return Formula({self: count})
 
     def variables(self):
         """Iterator over variables in formula element"""
@@ -256,8 +256,10 @@ class Formula(FormulaElement):
         for element, value in hill_sorted_elements(self._values):
             def grouped(element, value):
                 return '({}){}'.format(element, value if value != 1 else '')
+
             def nongrouped(element, value):
                 return '{}{}'.format(element, value if value != 1 else '')
+
             if isinstance(element, Radical):
                 if len(element.symbol) == 1:
                     s += nongrouped(element, value)
@@ -279,7 +281,7 @@ class Formula(FormulaElement):
             values.update(other._values)
             return Formula(values)
         elif isinstance(other, FormulaElement):
-            return self | Formula({ other: 1 })
+            return self | Formula({other: 1})
         return NotImplemented
 
     def __mul__(self, other):

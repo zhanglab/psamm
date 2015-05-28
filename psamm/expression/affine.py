@@ -15,7 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Representations of affine expressions and variables
+"""Representations of affine expressions and variables.
 
 These classes can be used to represent affine expressions
 and do manipulation and evaluation with substitutions of
@@ -78,40 +78,41 @@ class Variable(object):
         567
         >>> Variable('x').substitute(lambda v: {'y': 42}.get(v.symbol, v))
         Variable('x')
-        >>> Variable('x').substitute(lambda v: {'x': 123, 'y': 56}.get(v.symbol, v))
+        >>> Variable('x').substitute(
+        ...     lambda v: {'x': 123, 'y': 56}.get(v.symbol, v))
         123
         """
 
         return mapping(self)
 
     def __add__(self, other):
-        return Expression({ self: 1 }) + other
+        return Expression({self: 1}) + other
 
     def __radd__(self, other):
         return self + other
 
     def __sub__(self, other):
-        return Expression({ self: 1 }) - other
+        return Expression({self: 1}) - other
 
     def __rsub__(self, other):
         return -self + other
 
     def __mul__(self, other):
-        return Expression({ self: 1 }) * other
+        return Expression({self: 1}) * other
 
     def __rmul__(self, other):
         return self * other
 
     def __div__(self, other):
-        return Expression({ self: 1 }) / other
+        return Expression({self: 1}) / other
 
     __truediv__ = __div__
 
     def __floordiv__(self, other):
-        return Expression({ self: 1}) // other
+        return Expression({self: 1}) // other
 
     def __neg__(self):
-        return Expression({ self: -1 })
+        return Expression({self: -1})
 
     def __eq__(self, other):
         """Check equality of variables"""
@@ -195,7 +196,9 @@ class Expression(object):
         for match in re.finditer(scanner, s):
             whitespace, variable, number, sign, end, error = match.groups()
             if error is not None:
-                raise ValueError('Invalid token in expression string: {}'.format(match.group(0)))
+                raise ValueError(
+                    'Invalid token in expression string: {}'.format(
+                        match.group(0)))
             elif whitespace is not None:
                 continue
             elif variable is not None and state in (0, 2, 3):
@@ -213,7 +216,9 @@ class Expression(object):
                 if state == 3:
                     offset += state_number
             else:
-                raise ValueError('Invalid token in expression string: {}'.format(match.group(0)))
+                raise ValueError(
+                    'Invalid token in expression string: {}'.format(
+                        match.group(0)))
 
         # Remove zero-coefficient elements
         variables = {var: value for var, value in iteritems(variables)
@@ -221,11 +226,11 @@ class Expression(object):
         return variables, offset
 
     def simplify(self):
-        """Return simplified expression
+        """Return simplified expression.
 
         If the expression is of the form 'x', the variable will be returned,
-        and if the expression contains no variables, the offset will be returned
-        as a number.
+        and if the expression contains no variables, the offset will be
+        returned as a number.
         """
         result = self.__class__(self._variables, self._offset)
         if len(result._variables) == 0:
@@ -239,9 +244,11 @@ class Expression(object):
     def substitute(self, mapping):
         """Return expression with variables substituted
 
-        >>> Expression('x + 2y').substitute(lambda v: {'y': -3}.get(v.symbol, v))
+        >>> Expression('x + 2y').substitute(
+        ...     lambda v: {'y': -3}.get(v.symbol, v))
         Expression('x - 6')
-        >>> Expression('x + 2y').substitute(lambda v: {'y': Variable('z')}.get(v.symbol, v))
+        >>> Expression('x + 2y').substitute(
+        ...     lambda v: {'y': Variable('z')}.get(v.symbol, v))
         Expression('x + 2z')
         """
         expr = self.__class__()
@@ -259,12 +266,12 @@ class Expression(object):
         if isinstance(other, numbers.Number):
             return self.__class__(self._variables, self._offset + other)
         elif isinstance(other, Variable):
-            return self + Expression({ other: 1 })
+            return self + Expression({other: 1})
         elif isinstance(other, Expression):
             variables = Counter(self._variables)
             variables.update(other._variables)
             variables = {var: value for var, value in iteritems(variables)
-                         if value != 0 }
+                         if value != 0}
             return self.__class__(variables, self._offset + other._offset)
         return NotImplemented
 
@@ -283,9 +290,9 @@ class Expression(object):
         if isinstance(other, numbers.Number):
             if other == 0:
                 return self.__class__()
-            return self.__class__({var: value*other for var, value
+            return self.__class__({var: value * other for var, value
                                    in iteritems(self._variables)},
-                                  self._offset*other)
+                                  self._offset * other)
         return NotImplemented
 
     def __rmul__(self, other):
@@ -303,7 +310,7 @@ class Expression(object):
 
     def __floordiv__(self, other):
         if isinstance(other, numbers.Number):
-            return self.__class__({var: value // other for val, value
+            return self.__class__({var: value // other for var, value
                                    in iteritems(self._variables)},
                                   self._offset // other)
         return NotImplemented
@@ -314,7 +321,8 @@ class Expression(object):
     def __eq__(self, other):
         """Expression equality"""
         if isinstance(other, Expression):
-            return self._variables == other._variables and self._offset == other._offset
+            return (self._variables == other._variables and
+                    self._offset == other._offset)
         elif isinstance(other, Variable):
             # Check that there is just one variable in the expression
             # with a coefficient of one.

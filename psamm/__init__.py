@@ -15,7 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Metabolic networks module"""
+"""Metabolic networks module."""
 
 from pkg_resources import get_distribution
 

@@ -15,7 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Implementation of Flux Balance Analysis"""
+"""Implementation of Flux Balance Analysis."""
 
 import logging
 import random
@@ -57,7 +57,7 @@ class FluxBalanceProblem(object):
             self._prob.define(('v', reaction_id), lower=lower, upper=upper)
 
         # Define constraints
-        massbalance_lhs = { compound: 0 for compound in model.compounds }
+        massbalance_lhs = {compound: 0 for compound in model.compounds}
         for spec, value in iteritems(model.matrix):
             compound, reaction_id = spec
             massbalance_lhs[compound] += self.get_flux_var(reaction_id) * value
@@ -118,7 +118,7 @@ class FluxBalanceTDProblem(FluxBalanceProblem):
             # by alpha.
             if not model.is_exchange(reaction_id):
                 p.define(('alpha', reaction_id), types=lp.VariableType.Binary)
-                p.define(('dmu', reaction_id)) # Delta mu
+                p.define(('dmu', reaction_id))  # Delta mu
 
                 flux = self.get_flux_var(reaction_id)
                 alpha = p.var(('alpha', reaction_id))
@@ -197,7 +197,7 @@ def flux_variability(model, reactions, fixed, tfba, solver):
 
     def min_max_solve(reaction_id):
         for direction in (-1, 1):
-            fba.solve({ reaction_id: direction })
+            fba.solve({reaction_id: direction})
             yield fba.get_flux(reaction_id)
 
     # Solve for each reaction
@@ -242,7 +242,7 @@ def flux_minimization(model, fixed, solver, weights={}):
     z = prob.set(('z', rxnid) for rxnid in model.reactions)
     prob.add_linear_constraints(z >= v, v >= -z)
 
-    massbalance_lhs = { compound: 0 for compound in model.compounds }
+    massbalance_lhs = {compound: 0 for compound in model.compounds}
     for spec, value in iteritems(model.matrix):
         compound, rxnid = spec
         massbalance_lhs[compound] += value * prob.var(('v', rxnid))
@@ -337,7 +337,7 @@ def consistency_check(model, subset, epsilon, tfba, solver):
         if reaction in support:
             continue
         elif model.is_reversible(reaction):
-            fba.solve({ reaction: -1 })
+            fba.solve({reaction: -1})
             support = set(rxnid for rxnid in model.reactions
                           if abs(fba.get_flux(rxnid)) >= epsilon)
             subset -= support

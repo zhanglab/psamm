@@ -15,13 +15,14 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Various utilities"""
+"""Various utilities."""
 
 import re
+import math
 
 
 class LoggerFile(object):
-    """File-like object that forwards to a logger
+    """File-like object that forwards to a logger.
 
     The Cplex API takes a file-like object for writing log output.
     This class allows us to forward the Cplex messages to the
@@ -33,19 +34,19 @@ class LoggerFile(object):
         self._level = level
 
     def write(self, s):
-        """Write message to logger"""
+        """Write message to logger."""
         for line in re.split(r'\n+', s):
             if line != '':
                 self._logger.log(self._level, line)
 
     def flush(self):
-        """Flush stream
+        """Flush stream.
 
         This is a noop."""
 
 
 def convex_cardinality_relaxed(f, epsilon=1e-5):
-    """Transform L1-norm optimization function into approximate cardinality optimization
+    """Transform L1-norm optimization function into cardinality optimization.
 
     The given function must optimize a convex problem with
     a weighted L1-norm as the objective. The transformed function
@@ -78,14 +79,16 @@ def convex_cardinality_relaxed(f, epsilon=1e-5):
         # Iterate until the difference from one iteration to
         # the next is less than epsilon.
         while True:
-            weights = { identifier: update_weight(value) for identifier, value in result.iteritems() }
+            weights = {identifier: update_weight(value)
+                       for identifier, value in result.iteritems()}
             kwargs['weights'] = weights
 
             last_result = result
             full_result = f(*args, **kwargs)
             result = dict_result(full_result)
 
-            delta = math.sqrt(sum(pow(value - last_result[identifier], 2) for identifier, value in result.iteritems()))
+            delta = math.sqrt(sum(pow(value - last_result[identifier], 2)
+                                  for identifier, value in result.iteritems()))
             if delta < epsilon:
                 break
 

@@ -15,12 +15,11 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Generic interface to LP solver instantiation"""
+"""Generic interface to LP solver instantiation."""
 
 from __future__ import absolute_import
 
 import os
-import operator
 import logging
 
 from .lp import Solver as BaseSolver

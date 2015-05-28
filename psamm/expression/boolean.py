@@ -15,7 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Representations of boolean expressions and variables
+"""Representations of boolean expressions and variables.
 
 These classes can be used to represent simple boolean
 expressions and do evaluation with substitutions of
@@ -165,7 +165,7 @@ class Or(object):
         return hash('Or') ^ hash(self._terms)
 
 
-def Expression(s):
+def Expression(s):  # noqa
     """Parse boolean expression containing and/or operators"""
 
     # Converters for opeartor clauses
@@ -185,8 +185,10 @@ def Expression(s):
     ''', re.DOTALL | re.VERBOSE)
 
     # Parsed using two states and a stack of open clauses
-    # At state 0 (not expect_operator): Expect variable, or parenthesis group start.
-    # At state 1 (expect_operator): Expect operator, parenthesis group end, or end.
+    # At state 0 (not expect_operator): Expect variable, or parenthesis group
+    #  start.
+    # At state 1 (expect_operator): Expect operator, parenthesis group end, or
+    #  end.
     expect_operator = False
     clause_stack = []
     current_clause = []
@@ -201,7 +203,8 @@ def Expression(s):
         space, group, operator, variable, end, error = match.groups()
 
         if error is not None:
-            raise ValueError('Invalid token in expression string: {}'.format(repr(match.group(0))))
+            raise ValueError('Invalid token in expression string: {}'.format(
+                repr(match.group(0))))
         elif space is not None:
             continue
         elif expect_operator and operator is not None:
@@ -230,7 +233,8 @@ def Expression(s):
             current_clause = []
             clause_operator = None
         else:
-            raise ValueError('Invalid token in expression string: {}'.format(repr(match.group(0))))
+            raise ValueError('Invalid token in expression string: {}'.format(
+                repr(match.group(0))))
 
     if len(clause_stack) > 0:
         raise ValueError('Unbalanced parenthesis group in expression')
