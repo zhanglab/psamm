@@ -240,8 +240,8 @@ class NativeModel(object):
     def parse_media(self):
         """Yield each medium defined in the model
 
-        A medium is a generator of tuples of compound, lower, and upper bound
-        flux limits
+        A medium is a generator of tuples of compound, reaction ID, lower, and
+        upper bound flux limits.
         """
 
         if 'media' in self._model:
