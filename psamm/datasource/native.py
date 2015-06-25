@@ -397,12 +397,14 @@ def parse_reaction(reaction_def):
     if reaction_id is None:
         raise ParseError('Reaction ID missing')
 
+    reaction_props = dict(reaction_def)
+
     # Parse reaction equation
     if 'equation' in reaction_def:
-        reaction_def['equation'] = (
+        reaction_props['equation'] = (
             parse_reaction_equation(reaction_def['equation']))
 
-    return ReactionEntry(reaction_id, reaction_def)
+    return ReactionEntry(reaction_id, reaction_props)
 
 
 def parse_reaction_list(path, reactions):
