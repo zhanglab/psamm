@@ -23,6 +23,8 @@ from fractions import Fraction
 from functools import partial
 from itertools import count
 
+from six import itervalues
+
 from ..database import MetabolicDatabase, DictDatabase
 from ..reaction import Reaction, Compound
 
@@ -359,7 +361,7 @@ class SBMLReader(object):
     @property
     def reactions(self):
         """Iterator over :class:`ReactionEntries <.ReactionEntry>`"""
-        return self._model_reactions.itervalues()
+        return itervalues(self._model_reactions)
 
     @property
     def species(self):
@@ -367,7 +369,7 @@ class SBMLReader(object):
 
         This will not yield boundary condition species if those are ignored.
         """
-        return (c for c in self._model_species.itervalues()
+        return (c for c in itervalues(self._model_species)
                 if not self._ignore_boundary or not c.boundary)
 
     @property

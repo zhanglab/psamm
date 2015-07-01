@@ -26,6 +26,8 @@ from .lpsolver import lp
 from .fluxanalysis import flux_balance
 from .metabolicmodel import FlipableModelView
 
+from six import iteritems
+
 # Module-level logging
 logger = logging.getLogger(__name__)
 
@@ -89,11 +91,11 @@ def lp7(model, reaction_subset, epsilon, solver):
     prob.add_linear_constraints(v >= z)
 
     massbalance_lhs = { compound: 0 for compound in model.compounds }
-    for spec, value in model.matrix.iteritems():
+    for spec, value in iteritems(model.matrix):
         compound, rxnid = spec
         massbalance_lhs[compound] += prob.var(('v', rxnid)) * value
     prob.add_linear_constraints(
-        *(lhs == 0 for compound, lhs in massbalance_lhs.iteritems()))
+        *(lhs == 0 for compound, lhs in iteritems(massbalance_lhs)))
 
     # Solve
     result = prob.solve(lp.ObjectiveSense.Maximize)
@@ -136,11 +138,11 @@ def lp10(model, subset_k, subset_p, epsilon, scaling, solver, weights={}):
     prob.add_linear_constraints(z >= v, v >= -z)
 
     massbalance_lhs = { compound: 0 for compound in model.compounds }
-    for spec, value in model.matrix.iteritems():
+    for spec, value in iteritems(model.matrix):
         compound, rxnid = spec
         massbalance_lhs[compound] += prob.var(('v', rxnid)) * value
     prob.add_linear_constraints(
-        *(lhs == 0 for compound, lhs in massbalance_lhs.iteritems()))
+        *(lhs == 0 for compound, lhs in iteritems(massbalance_lhs)))
 
     # Solve
     result = prob.solve(lp.ObjectiveSense.Minimize)

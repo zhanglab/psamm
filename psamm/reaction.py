@@ -78,8 +78,10 @@ class Compound(object):
 
     def __lt__(self, other):
         if isinstance(other, Compound):
-            return ((self._name, self._compartment, self._arguments) <
-                    (other._name, other._compartment, other._arguments))
+            def tuple_repr(c):
+                comp = c._compartment if c._compartment is not None else ''
+                return (c._name, comp, c._arguments)
+            return tuple_repr(self) < tuple_repr(other)
         return NotImplemented
 
     def __hash__(self):

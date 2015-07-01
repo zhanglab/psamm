@@ -19,9 +19,11 @@
 
 from __future__ import absolute_import
 
-from itertools import repeat, count, izip
+from itertools import repeat, count
 import numbers
 
+from six import iteritems
+from six.moves import zip
 import qsoptex
 
 from .lp import Solver as BaseSolver
@@ -84,8 +86,8 @@ class Problem(BaseProblem):
         # Assign default values
         vartype = (VariableType.Continuous if value is None else value for value in vartype)
 
-        self._variables.update(izip(names, lp_names))
-        for name, lower, upper, t in izip(lp_names, lower, upper, vartype):
+        self._variables.update(zip(names, lp_names))
+        for name, lower, upper, t in zip(lp_names, lower, upper, vartype):
             if t != VariableType.Continuous:
                 raise ValueError('Solver does not support non-continuous types')
             self._p.add_variable(0, lower, upper, name)
@@ -135,7 +137,9 @@ class Problem(BaseProblem):
             # represented as a number
             expression = Expression()
 
-        self._p.set_linear_objective((lp_name, expression.value(var)) for var, lp_name in self._variables.iteritems())
+        self._p.set_linear_objective(
+            (lp_name, expression.value(var))
+            for var, lp_name in iteritems(self._variables))
 
     def set_objective_sense(self, sense):
         """Set type of problem (maximize or minimize)"""

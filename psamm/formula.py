@@ -27,6 +27,10 @@ import re
 from collections import Counter
 import functools
 import operator
+import numbers
+
+from six import iteritems
+from six.moves import reduce
 
 from .expression.affine import Expression
 
@@ -163,7 +167,7 @@ class Formula(FormulaElement):
         self._values = {}
         self._variables = set()
 
-        for element, value in values.iteritems():
+        for element, value in iteritems(values):
             if not isinstance(element, FormulaElement):
                 raise ValueError('Not a formula element: {}'.format(
                     repr(element)))
@@ -178,7 +182,7 @@ class Formula(FormulaElement):
 
     def substitute(self, **kwargs):
         result = self.__class__()
-        for element, value in self._values.iteritems():
+        for element, value in iteritems(self._values):
             if callable(getattr(value, 'substitute', None)):
                 value = value.substitute(**kwargs)
                 if isinstance(value, int) and value <= 0:
@@ -199,7 +203,7 @@ class Formula(FormulaElement):
         while len(stack) > 0:
             var, value = stack.pop()
             if isinstance(var, Formula):
-                for sub_var, sub_value in var._values.iteritems():
+                for sub_var, sub_value in iteritems(var._values):
                     stack.append((sub_var, value*sub_value))
             else:
                 if var in result:
@@ -213,7 +217,7 @@ class Formula(FormulaElement):
 
     def items(self):
         """Iterate over (:class:`.FormulaElement`, value)-pairs"""
-        return self._values.iteritems()
+        return iteritems(self._values)
 
     def is_variable(self):
         return len(self._variables) > 0
@@ -240,12 +244,12 @@ class Formula(FormulaElement):
                 if Atom('H') in values:
                     yield Atom('H'), values[Atom('H')]
                 for element, value in sorted(
-                        values.iteritems(), key=element_sort_key):
+                        iteritems(values), key=element_sort_key):
                     if element not in (Atom('C'), Atom('H')):
                         yield element, value
             else:
                 for element, value in sorted(
-                        values.iteritems(), key=element_sort_key):
+                        iteritems(values), key=element_sort_key):
                     yield element, value
 
         s = ''
@@ -280,12 +284,12 @@ class Formula(FormulaElement):
 
     def __mul__(self, other):
         """Multiply formula element by other"""
-        values = {key: value*other for key, value in self._values.iteritems()}
+        values = {key: value*other for key, value in iteritems(self._values)}
         return Formula(values)
 
     def __hash__(self):
         h = hash('Formula')
-        for element, value in self._values.iteritems():
+        for element, value in iteritems(self._values):
             h ^= hash(element) ^ hash(value)
         return h
 
@@ -314,7 +318,7 @@ class Formula(FormulaElement):
             if isinstance(form, Formula) and len(form._values) == 1:
                 # A radical in a singleton subformula is interpreted as a
                 # numbered radical.
-                element, value = next(form._values.iteritems())
+                element, value = next(iteritems(form._values))
                 if isinstance(element, Radical):
                     return Radical('{}{}'.format(element.symbol, value))
             return form
@@ -386,16 +390,17 @@ class Formula(FormulaElement):
         Given complete formulas for right side and left side of a reaction,
         calculate formulas for the missing compounds on both sides. Return
         as a left, right tuple. Formulas can be flattened before balancing
-        to diregard grouping structure.
+        to disregard grouping structure.
         """
 
         def missing(formula, other):
-            for element, value in formula._values.iteritems():
+            for element, value in iteritems(formula._values):
                 if element not in other._values:
                     yield value*element
-                elif value - other._values[element] > 0:
+                else:
                     delta = value - other._values[element]
-                    yield delta*element
+                    if isinstance(delta, numbers.Number) and delta > 0:
+                        yield delta*element
 
         return (reduce(operator.or_, missing(rhs, lhs), Formula()),
                 reduce(operator.or_, missing(lhs, rhs), Formula()))

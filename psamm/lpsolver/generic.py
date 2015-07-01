@@ -25,6 +25,8 @@ import logging
 
 from .lp import Solver as BaseSolver
 
+from six import iteritems
+
 logger = logging.getLogger(__name__)
 _solvers = []
 
@@ -76,9 +78,9 @@ class Solver(BaseSolver):
         if len(solvers) == 0:
             raise RequirementsError('No solvers available')
 
-        self._requirements = {key: value for key, value in kwargs.iteritems()
+        self._requirements = {key: value for key, value in iteritems(kwargs)
                               if value is not None}
-        for req, value in self._requirements.iteritems():
+        for req, value in iteritems(self._requirements):
             if req in ('integer', 'rational', 'name'):
                 solvers = [s for s in solvers if req in s and s[req] == value]
 

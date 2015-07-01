@@ -48,7 +48,10 @@ setup(
 
     test_suite='psamm.tests',
 
-    install_requires=['PyYAML>=3.11,<4.0'],
+    install_requires=[
+        'PyYAML>=3.11,<4.0',
+        'six'
+    ],
     extras_require={
         'docs': ['sphinx', 'mock']
     })

@@ -31,6 +31,7 @@ import re
 import csv
 
 import yaml
+from six import string_types
 
 from ..reaction import Reaction, Compound
 from . import modelseed
@@ -59,7 +60,7 @@ class FilePathContext(object):
     def __init__(self, arg):
         """Create new context from a path or existing context"""
 
-        if isinstance(arg, basestring):
+        if isinstance(arg, string_types):
             self._filepath = arg
         else:
             self._filepath = arg.filepath
@@ -373,7 +374,7 @@ def parse_reaction_equation(equation_def):
             compound = Compound(compound_id, compartment=compound_compartment)
             yield compound, value
 
-    if isinstance(equation_def, basestring):
+    if isinstance(equation_def, string_types):
         return modelseed.parse_reaction(equation_def).normalized()
 
     compartment = equation_def.get('compartment', None)

@@ -20,6 +20,8 @@
 import abc
 from collections import defaultdict, Mapping
 
+from six import iteritems, add_metaclass
+
 from .reaction import Reaction
 
 
@@ -91,10 +93,9 @@ class StoichiometricMatrixView(Mapping):
         return matrix
 
 
+@add_metaclass(abc.ABCMeta)
 class MetabolicDatabase(object):
     """Database of metabolic reactions"""
-
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractproperty
     def reactions(self):
@@ -198,7 +199,7 @@ class DictDatabase(MetabolicDatabase):
     def get_reaction_values(self, reaction_id):
         if reaction_id not in self._reactions:
             raise ValueError('Unknown reaction: {}'.format(repr(reaction_id)))
-        return self._reactions[reaction_id].iteritems()
+        return iteritems(self._reactions[reaction_id])
 
     def get_compound_reactions(self, compound_id):
         return iter(self._compound_reactions[compound_id])
@@ -235,7 +236,7 @@ class DictDatabase(MetabolicDatabase):
         # Remove reaction from compound reactions if the resulting
         # stoichiometric value turned out to be zero.
         zero_compounds = set()
-        for compound, value in self._reactions[reaction_id].iteritems():
+        for compound, value in iteritems(self._reactions[reaction_id]):
             if value == 0:
                 zero_compounds.add(compound)
 

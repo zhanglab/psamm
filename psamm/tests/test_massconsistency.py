@@ -25,6 +25,8 @@ from psamm.datasource.modelseed import parse_reaction
 from psamm.reaction import Compound
 from psamm.lpsolver import generic
 
+from six import iteritems
+
 
 class TestMassConsistency(unittest.TestCase):
     """Test mass consistency using a simple model"""
@@ -100,7 +102,7 @@ class TestMassConsistencyZeroMass(unittest.TestCase):
         compounds = dict(massconsistency.check_compound_consistency(
             self.model, solver=self.solver, zeromass={'Z'}))
         self.assertEquals(compounds[Compound('Z')], 0)
-        for c, value in compounds.iteritems():
+        for c, value in iteritems(compounds):
             if c.name != 'Z':
                 self.assertGreaterEqual(value, 1)
 
@@ -109,7 +111,7 @@ class TestMassConsistencyZeroMass(unittest.TestCase):
             self.model, solver=self.solver, zeromass={'Z'})
         reactions = dict(reactions)
 
-        for r, value in reactions.iteritems():
+        for r, value in iteritems(reactions):
             self.assertEqual(value, 0)
 
 

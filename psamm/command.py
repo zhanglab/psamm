@@ -48,10 +48,13 @@ from .datasource import sbml
 from . import fluxanalysis, massconsistency, fastcore
 from .lpsolver import generic
 
+from six import add_metaclass
+
 # Module-level logging
 logger = logging.getLogger(__name__)
 
 
+@add_metaclass(abc.ABCMeta)
 class Command(object):
     """Represents a command in the interface, operating on a model
 
@@ -64,8 +67,6 @@ class Command(object):
     :class:`argparse.ArgumentParser` as desired. The resulting argument
     namespace will be passed to the constructor.
     """
-
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, model, args):
         self._model = model
