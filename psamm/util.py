@@ -20,6 +20,8 @@
 import re
 import math
 
+from six import iteritems
+
 
 class LoggerFile(object):
     """File-like object that forwards to a logger.
@@ -80,7 +82,7 @@ def convex_cardinality_relaxed(f, epsilon=1e-5):
         # the next is less than epsilon.
         while True:
             weights = {identifier: update_weight(value)
-                       for identifier, value in result.iteritems()}
+                       for identifier, value in iteritems(result)}
             kwargs['weights'] = weights
 
             last_result = result
@@ -88,12 +90,12 @@ def convex_cardinality_relaxed(f, epsilon=1e-5):
             result = dict_result(full_result)
 
             delta = math.sqrt(sum(pow(value - last_result[identifier], 2)
-                                  for identifier, value in result.iteritems()))
+                                  for identifier, value in iteritems(result)))
             if delta < epsilon:
                 break
 
         if isinstance(full_result, tuple):
-            return (result.iteritems(),) + full_result[1:]
-        return result.iteritems()
+            return (iteritems(result),) + full_result[1:]
+        return iteritems(result)
 
     return convex_cardinality_wrapper

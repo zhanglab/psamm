@@ -48,7 +48,7 @@ from .datasource import sbml
 from . import fluxanalysis, massconsistency, fastcore
 from .lpsolver import generic
 
-from six import add_metaclass
+from six import add_metaclass, iteritems
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -430,7 +430,7 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
         fmin_fluxes = dict(fluxanalysis.flux_minimization(
             self._mm, {reaction: optimum}, solver=solver))
         count = 0
-        for reaction_id, flux in fmin_fluxes.iteritems():
+        for reaction_id, flux in iteritems(fmin_fluxes):
             if fba_fluxes[reaction_id] - epsilon > flux:
                 count += 1
             yield reaction_id, fba_fluxes[reaction_id], flux
@@ -446,7 +446,7 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
         fluxes = dict(fluxanalysis.flux_balance(
             self._mm, reaction, tfba=True, solver=solver))
 
-        for reaction_id, flux in fluxes.iteritems():
+        for reaction_id, flux in iteritems(fluxes):
             yield reaction_id, fba_fluxes[reaction_id], flux
 
 
@@ -1237,7 +1237,7 @@ def main(command_class=None):
 
         # Create parsers for subcommands
         subparsers = parser.add_subparsers(title='Command')
-        for name, values in sorted(commands.iteritems()):
+        for name, values in sorted(iteritems(commands)):
             title, command_class = values
             subparser = subparsers.add_parser(name, help=title)
             subparser.set_defaults(command=command_class)

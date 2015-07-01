@@ -23,7 +23,7 @@ from fractions import Fraction
 from functools import partial
 from itertools import count
 
-from six import itervalues
+from six import itervalues, iteritems
 
 from ..reaction import Reaction, Compound
 
@@ -422,7 +422,7 @@ class SBMLWriter(object):
         # Create list of compartments
         compartments = ET.SubElement(
             model_tag, self._sbml_tag('listOfCompartments'))
-        for compartment, compartment_id in model_compartments.iteritems():
+        for compartment, compartment_id in iteritems(model_compartments):
             compartment_tag = ET.SubElement(
                 compartments, self._sbml_tag('compartment'))
             compartment_tag.set(self._sbml_tag('id'), compartment_id)
@@ -431,7 +431,7 @@ class SBMLWriter(object):
         # Create list of species
         species_list = ET.SubElement(
             model_tag, self._sbml_tag('listOfSpecies'))
-        for species, species_id in model_species.iteritems():
+        for species, species_id in iteritems(model_species):
             species_tag = ET.SubElement(species_list,
                                         self._sbml_tag('species'))
             species_tag.set(self._sbml_tag('id'), species_id)

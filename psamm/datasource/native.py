@@ -31,7 +31,7 @@ import re
 import csv
 
 import yaml
-from six import string_types
+from six import string_types, iteritems
 
 from ..reaction import Reaction, Compound
 from . import modelseed
@@ -303,7 +303,7 @@ def parse_compound_table_file(path, f):
         if 'id' not in row or row['id'].strip() == '':
             raise ParseError('Expected `id` column in table')
 
-        props = {key: value for key, value in row.iteritems() if value != ''}
+        props = {key: value for key, value in iteritems(row) if value != ''}
         yield CompoundEntry(row['id'], props)
 
 
@@ -446,7 +446,7 @@ def parse_reaction_table_file(f):
         if 'id' not in row or row['id'].strip() == '':
             raise ParseError('Expected `id` column in table')
 
-        props = {key: value for key, value in row.iteritems() if value != ''}
+        props = {key: value for key, value in iteritems(row) if value != ''}
 
         if 'equation' in props:
             props['equation'] = modelseed.parse_reaction(props['equation'])

@@ -20,6 +20,8 @@
 This implements a variant of the algorithms described in [Kumar07]_.
 """
 
+from six import iteritems
+
 from .lpsolver import lp
 
 
@@ -51,7 +53,7 @@ def gapfind(model, solver, epsilon=1e-5, v_max=1000):
 
     # Define constraints on production of metabolites in reaction
     binary_cons_lhs = {compound: 0 for compound in model.compounds}
-    for spec, value in model.matrix.iteritems():
+    for spec, value in iteritems(model.matrix):
         compound, reaction_id = spec
         if value != 0 and (reaction_id in model.reversible or value > 0):
             prob.define(('w', reaction_id, compound),
@@ -74,15 +76,15 @@ def gapfind(model, solver, epsilon=1e-5, v_max=1000):
     objective = sum(prob.var(('xp', compound)) for compound in model.compounds)
     prob.set_linear_objective(objective)
 
-    for compound, lhs in binary_cons_lhs.iteritems():
+    for compound, lhs in iteritems(binary_cons_lhs):
         prob.add_linear_constraints(lhs >= prob.var(('xp', compound)))
 
     # Define mass balance constraints
     massbalance_lhs = {compound: 0 for compound in model.compounds}
-    for spec, value in model.matrix.iteritems():
+    for spec, value in iteritems(model.matrix):
         compound, reaction_id = spec
         massbalance_lhs[compound] += prob.var(('v', reaction_id)) * value
-    for compound, lhs in massbalance_lhs.iteritems():
+    for compound, lhs in iteritems(massbalance_lhs):
         # The constraint is merely >0 meaning that we have implicit sinks
         # for all compounds.
         prob.add_linear_constraints(lhs >= 0)
@@ -156,7 +158,7 @@ def gapfill(model, core, blocked, solver, epsilon=1e-5, v_max=1000):
 
     # Define constraints on production of blocked metabolites in reaction
     binary_cons_lhs = {compound: 0 for compound in blocked}
-    for spec, value in model.matrix.iteritems():
+    for spec, value in iteritems(model.matrix):
         compound, reaction_id = spec
         if compound in blocked and value != 0:
             prob.define(('w', reaction_id, compound),
@@ -171,16 +173,16 @@ def gapfill(model, core, blocked, solver, epsilon=1e-5, v_max=1000):
             if reaction_id in model.reversible or value > 0:
                 binary_cons_lhs[compound] += w
 
-    for compound, lhs in binary_cons_lhs.iteritems():
+    for compound, lhs in iteritems(binary_cons_lhs):
         if compound in blocked:
             prob.add_linear_constraints(lhs >= 1)
 
     # Define mass balance constraints
     massbalance_lhs = {compound: 0 for compound in model.compounds}
-    for spec, value in model.matrix.iteritems():
+    for spec, value in iteritems(model.matrix):
         compound, reaction_id = spec
         massbalance_lhs[compound] += prob.var(('v', reaction_id)) * value
-    for compound, lhs in massbalance_lhs.iteritems():
+    for compound, lhs in iteritems(massbalance_lhs):
         # The constraint is merely >0 meaning that we have implicit sinks
         # for all compounds.
         prob.add_linear_constraints(lhs >= 0)
