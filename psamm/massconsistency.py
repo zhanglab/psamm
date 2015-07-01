@@ -63,10 +63,11 @@ def is_consistent(database, solver, exchange=set(), zeromass=set()):
         sum(prob.var(('m', compound)) for compound in compound_set))
 
     # Define constraints
-    massbalance_lhs = { reaction: 0 for reaction in database.reactions }
+    massbalance_lhs = {reaction: 0 for reaction in database.reactions}
     for spec, value in iteritems(database.matrix):
         compound, reaction = spec
-        massbalance_lhs[reaction] += prob.var(('m', compound.in_compartment(None))) * value
+        mass = prob.var(('m', compound.in_compartment(None)))
+        massbalance_lhs[reaction] += mass * value
     for reaction, lhs in iteritems(massbalance_lhs):
         if reaction not in exchange:
             prob.add_linear_constraints(lhs == 0)
@@ -114,7 +115,7 @@ def check_reaction_consistency(database, solver, exchange=set(),
     z = prob.set(('z', reaction_id) for reaction_id in database.reactions)
     prob.add_linear_constraints(z >= r, r >= -z)
 
-    massbalance_lhs = { reaction_id: 0 for reaction_id in database.reactions }
+    massbalance_lhs = {reaction_id: 0 for reaction_id in database.reactions}
     for spec, value in iteritems(database.matrix):
         compound, reaction_id = spec
         mass_var = prob.var(('m', compound.in_compartment(None)))
@@ -179,7 +180,7 @@ def check_compound_consistency(database, solver, exchange=set(),
     m = prob.set(('m', compound) for compound in compound_set)
     prob.add_linear_constraints(m >= z)
 
-    massbalance_lhs = { reaction_id: 0 for reaction_id in database.reactions }
+    massbalance_lhs = {reaction_id: 0 for reaction_id in database.reactions}
     for spec, value in iteritems(database.matrix):
         compound, reaction_id = spec
         mass_var = prob.var(('m', compound.in_compartment(None)))

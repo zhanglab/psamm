@@ -16,7 +16,7 @@
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
-"""Command line interface
+"""Command line interface.
 
 Each command in the command line interface is implemented as a subclass of
 :class:`Command`. Commands are automatically discovered based on this
@@ -38,7 +38,7 @@ import math
 import abc
 
 from . import __version__ as package_version
-from .formula import Formula, Radical
+from .formula import Formula
 from .gapfill import gapfind, gapfill
 from .database import DictDatabase
 from .metabolicmodel import MetabolicModel
@@ -205,7 +205,8 @@ class ConsoleCommand(Command):
         # and related packages at this point when we are certain
         # they are needed.
         from code import InteractiveConsole
-        import readline, rlcompleter
+        import readline
+        import rlcompleter
 
         readline.set_completer(rlcompleter.Completer(namespace).complete)
         readline.parse_and_bind('tab: complete')
@@ -287,7 +288,8 @@ class FastGapFillCommand(SolverCommandMixin, Command):
         # Add exchange and transport reactions to database
         model_complete = self._mm.copy()
         logger.info('Adding database, exchange and transport reactions')
-        db_added = model_complete.add_all_database_reactions(model_compartments)
+        db_added = model_complete.add_all_database_reactions(
+            model_compartments)
         ex_added = model_complete.add_all_exchange_reactions()
         tp_added = model_complete.add_all_transport_reactions()
 
@@ -344,9 +346,10 @@ class FastGapFillCommand(SolverCommandMixin, Command):
             if self._mm.has_reaction(rxnid):
                 reaction_class = 'Model'
                 weight = 0
-            reaction = model_complete.get_reaction(rxnid).translated_compounds(lambda x: compound_name.get(x, x))
+            rx = model_complete.get_reaction(rxnid)
+            rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
             print('{}\t{}\t{}\t{}\t{}'.format(
-                rxnid, reaction_class, weight, flux, reaction))
+                rxnid, reaction_class, weight, flux, rxt))
 
         logger.info('Calculating Fastcc consistent subset of induced model')
         consistent_core = fastcore.fastcc_consistent_subset(
@@ -538,15 +541,16 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
 
             if reaction in inconsistent:
                 rx = self._mm.get_reaction(reaction)
-                rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
+                rxt = rx.translated_compounds(
+                    lambda x: compound_name.get(x, x))
                 print('{}\t{}'.format(reaction, rxt))
 
         logger.info('Model has {}/{} inconsistent internal reactions'
                     ' ({} disabled by user)'.format(
-            count_internal, total_internal, disabled_internal))
+                        count_internal, total_internal, disabled_internal))
         logger.info('Model has {}/{} inconsistent exchange reactions'
                     ' ({} disabled by user)'.format(
-            count_exchange, total_exchange, disabled_exchange))
+                        count_exchange, total_exchange, disabled_exchange))
 
 
 class FluxVariabilityCommand(SolverCommandMixin, Command):
@@ -884,11 +888,12 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
         p.solve(reaction)
         flux_threshold = p.get_flux(reaction) * threshold
 
-        logger.info('Flux threshold for {} is {}'.format(reaction, flux_threshold))
+        logger.info('Flux threshold for {} is {}'.format(
+            reaction, flux_threshold))
 
         if self._args.exchange:
             model_test = self._mm.copy()
-            essential = { reaction }
+            essential = {reaction}
             deleted = set()
             exchange = set()
             for reaction_id in self._mm.reactions:
@@ -897,7 +902,7 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             test_set = set(exchange) - essential
         else:
             model_test = self._mm.copy()
-            essential = { reaction }
+            essential = {reaction}
             deleted = set()
             test_set = set(self._mm.reactions) - essential
 
@@ -907,26 +912,32 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             saved_bounds = model_test.limits[testing_reaction].bounds
             model_test.limits[testing_reaction].bounds = 0, 0
 
-            logger.info('Trying FBA without reaction {}...'.format(testing_reaction))
+            logger.info('Trying FBA without reaction {}...'.format(
+                testing_reaction))
 
             p = fb_problem(model_test, solver)
             try:
                 p.solve(reaction)
             except fluxanalysis.FluxBalanceError:
-                logger.info('FBA is infeasible, marking {} as essential'.format(testing_reaction))
+                logger.info(
+                    'FBA is infeasible, marking {} as essential'.format(
+                        testing_reaction))
                 model_test.limits[testing_reaction].bound = saved_bounds
                 essential.add(testing_reaction)
                 continue
 
-            logger.debug('Reaction {} has flux {}'.format(reaction, p.get_flux(reaction)))
+            logger.debug('Reaction {} has flux {}'.format(
+                reaction, p.get_flux(reaction)))
 
             if p.get_flux(reaction) < flux_threshold:
                 model_test.limits[testing_reaction].bounds = saved_bounds
                 essential.add(testing_reaction)
-                logger.info('Reaction {} was essential'.format(testing_reaction))
+                logger.info('Reaction {} was essential'.format(
+                    testing_reaction))
             else:
                 deleted.add(testing_reaction)
                 logger.info('Reaction {} was deleted'.format(testing_reaction))
+
         if self._args.exchange:
             for reaction_id in sorted(exchange):
                 value = 0 if reaction_id in deleted else 1
@@ -935,6 +946,7 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             for reaction_id in sorted(self._mm.reactions):
                 value = 0 if reaction_id in deleted else 1
                 print('{}\t{}'.format(reaction_id, value))
+
 
 class RobustnessCommand(SolverCommandMixin, Command):
     """Run robustness analysis on metabolic model
@@ -1115,13 +1127,13 @@ class SearchCommand(Command):
             compound_synonyms.setdefault(compound.id, []).extend(
                 compound.properties.get('names', []))
 
-            if compound.formula is not None and not '.' in compound.formula:
+            if compound.formula is not None and '.' not in compound.formula:
                 compound_formula[compound.id] = Formula.parse(compound.formula)
 
         # Create references from names to id
         for compound_id in compound_name.iterkeys():
             names = ([compound_name[compound_id]] +
-                compound_synonyms[compound_id])
+                     compound_synonyms[compound_id])
 
             for n in names:
                 n = filter_search_term(n)

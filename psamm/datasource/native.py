@@ -15,7 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Module for reading and writing native formats
+"""Module for reading and writing native formats.
 
 These formats are either table-based or YAML-based. Table-based formats
 are space-separated and empty lines are ignored. Comments starting with
@@ -187,7 +187,7 @@ class NativeModel(object):
                     with open(self._context.filepath, 'r') as f:
                         self._model = yaml.load(f)
                         break
-                except Exception as e:
+                except Exception:
                     logger.debug('Failed to load model file', exc_info=True)
             else:
                 # No model could be loaded
@@ -585,7 +585,7 @@ def parse_limit(limit_def):
     Returns a tuple of reaction, lower and upper bound.
     """
 
-    if not 'reaction' in limit_def:
+    if 'reaction' not in limit_def:
         raise ParseError('Expected reaction key in limit entry')
 
     reaction = limit_def.get('reaction')

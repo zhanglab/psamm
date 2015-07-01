@@ -25,7 +25,6 @@ from itertools import count
 
 from six import itervalues
 
-from ..database import MetabolicDatabase, DictDatabase
 from ..reaction import Reaction, Compound
 
 
@@ -63,12 +62,11 @@ class _SBMLEntry(object):
         self._id = self._element_get_id(root)
 
     def _element_get_id(self, element):
-        """Get id of reaction or species element
+        """Get id of reaction or species element.
 
-        In old levels the name is used as the id. This method returns the correct
-        attribute depending on the level.
+        In old levels the name is used as the id. This method returns the
+        correct attribute depending on the level.
         """
-
         if self._reader._level > 1:
             entry_id = element.get('id')
         else:

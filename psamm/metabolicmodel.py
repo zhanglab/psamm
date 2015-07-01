@@ -15,7 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Representation of metabolic network models"""
+"""Representation of metabolic network models."""
 
 from collections import Mapping
 
@@ -60,7 +60,10 @@ class FluxBounds(object):
         try:
             return self._model._limits_lower[self._reaction]
         except KeyError:
-            return -self._model._v_max if self._model.is_reversible(self._reaction) else 0
+            if self._model.is_reversible(self._reaction):
+                return -self._model._v_max
+            else:
+                return 0
 
     @lower.setter
     def lower(self, value):
@@ -106,14 +109,17 @@ class FluxBounds(object):
 
     def __eq__(self, other):
         """Equality test"""
-        return isinstance(other, FluxBounds) and self.lower == other.lower and self.upper == other.upper
+        return (isinstance(other, FluxBounds) and
+                self.lower == other.lower and
+                self.upper == other.upper)
 
     def __ne__(self, other):
         """Inequality test"""
         return not self == other
 
     def __repr__(self):
-        return '{}({}, {})'.format(self.__class__.__name__, repr(self.lower), repr(self.upper))
+        return '{}({}, {})'.format(
+            self.__class__.__name__, repr(self.lower), repr(self.upper))
 
 
 class LimitsView(Mapping):
@@ -242,8 +248,10 @@ class MetabolicModel(MetabolicDatabase):
         # Remove compound from compound_set if it is not referenced
         # by any other reactions in the model.
         for compound, value in self._database.get_reaction_values(reaction):
-            reactions = frozenset(self._database.get_compound_reactions(compound))
-            if all(other_reaction not in self._reaction_set for other_reaction in reactions):
+            reactions = frozenset(
+                self._database.get_compound_reactions(compound))
+            if all(other_reaction not in self._reaction_set
+                   for other_reaction in reactions):
                 self._compound_set.remove(compound)
 
     def add_all_database_reactions(self, compartments={None, 'e'}):
@@ -252,7 +260,8 @@ class MetabolicModel(MetabolicDatabase):
         added = set()
         for rxnid in self._database.reactions:
             reaction = self._database.get_reaction(rxnid)
-            if all(compound.compartment in compartments for compound, _ in reaction.compounds):
+            if all(compound.compartment in compartments
+                   for compound, _ in reaction.compounds):
                 if rxnid not in self._reaction_set:
                     added.add(rxnid)
                 self.add_reaction(rxnid)
@@ -274,7 +283,8 @@ class MetabolicModel(MetabolicDatabase):
         for compound in sorted(self.compounds):
             rxnid_ex = ('rxnex', compound)
             if not self._database.has_reaction(rxnid_ex):
-                reaction_ex = Reaction(Reaction.Bidir, [(compound.in_compartment('e'), 1)], [])
+                reaction_ex = Reaction(
+                    Reaction.Bidir, [(compound.in_compartment('e'), 1)], [])
                 if reaction_ex not in all_reactions:
                     self._database.set_reaction(rxnid_ex, reaction_ex)
                 else:
@@ -305,8 +315,10 @@ class MetabolicModel(MetabolicDatabase):
 
             rxnid_tp = ('rxntp', compound)
             if not self._database.has_reaction(rxnid_tp):
-                reaction_tp = Reaction(Reaction.Bidir, [(compound.in_compartment('e'), 1)],
-                                        [(compound, 1)])
+                reaction_tp = Reaction(
+                    Reaction.Bidir,
+                    [(compound.in_compartment('e'), 1)],
+                    [(compound, 1)])
                 if reaction_tp not in all_reactions:
                     self._database.set_reaction(rxnid_tp, reaction_tp)
                 else:
@@ -374,7 +386,7 @@ class MetabolicModel(MetabolicDatabase):
 
 
 class FlipableFluxBounds(FluxBounds):
-    """FluxBounds object for a FlipableModelView
+    """FluxBounds object for a FlipableModelView.
 
     This object is used internally in the FlipableModelView to represent
     the bounds of flux on a reaction that can be flipped.
@@ -412,7 +424,7 @@ class FlipableFluxBounds(FluxBounds):
 
 
 class FlipableStoichiometricMatrixView(StoichiometricMatrixView):
-    """Provides a matrix view that flips with the underlying flipable model view
+    """Provides a matrix view that flips with the flipable model view.
 
     This object is used internally in FlipableModelView to
     expose a matrix view that negates the stoichiometric
@@ -430,11 +442,13 @@ class FlipableStoichiometricMatrixView(StoichiometricMatrixView):
         if len(key) != 2:
             raise KeyError(key)
         compound, reaction = key
-        return self._value_mul(reaction) * super(FlipableStoichiometricMatrixView, self).__getitem__(key)
+        orig_value = (
+            super(FlipableStoichiometricMatrixView, self).__getitem__(key))
+        return self._value_mul(reaction) * orig_value
 
 
 class FlipableLimitsView(LimitsView):
-    """Provides a limits view that flips with the underlying flipable model view
+    """Provides a limits view that flips with the flipable model view.
 
     This object is used internally in FlipableModelView to
     expose a limits view that flips the bounds of all flipped
@@ -450,7 +464,7 @@ class FlipableLimitsView(LimitsView):
 
 
 class FlipableModelView(object):
-    """Proxy wrapper of model objects allowing a flipped set of reactions
+    """Proxy wrapper of model objects allowing a flipped set of reactions.
 
     The proxy will forward all properties normally except
     that flipped reactions will appear to have stoichiometric

@@ -15,7 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Module related to loading KEGG database files"""
+"""Module related to loading KEGG database files."""
 
 import re
 
@@ -165,7 +165,8 @@ def parse_reaction(s):
 
             fields = cpd.strip().split(' ')
             if len(fields) > 2:
-                raise ParseError('Malformed compound specification: {}'.format(cpd))
+                raise ParseError(
+                    'Malformed compound specification: {}'.format(cpd))
             if len(fields) == 1:
                 count = 1
                 compound = parse_compound(fields[0])

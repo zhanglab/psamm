@@ -15,18 +15,20 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Miscellaneaus data source functions"""
+"""Miscellaneaus data source functions."""
 
 import re
 from decimal import Decimal
 
 from psamm.reaction import Reaction, Compound
 
+
 def parse_sudensimple_reaction(s, arrow_rev='<=>', arrow_irrev='->'):
     """Parse a reaction string (SudenSimple)"""
 
     # Compile pattern for matching reaction arrows
-    arrow_pattern = re.compile('(' + ('|'.join(re.escape(x) for x in (arrow_irrev, arrow_rev))) + ')')
+    arrow_pattern = re.compile(
+        '(' + ('|'.join(re.escape(x) for x in (arrow_irrev, arrow_rev))) + ')')
 
     def parse_compound_list(s):
         if s.strip() == '':
@@ -59,14 +61,16 @@ def parse_sudensimple_reaction(s, arrow_rev='<=>', arrow_irrev='->'):
     left, arrow, right = arrow_pattern.split(s, maxsplit=1)
     direction = Reaction.Right if arrow == arrow_irrev else Reaction.Bidir
 
-    return Reaction(direction, parse_compound_list(left), parse_compound_list(right))
+    return Reaction(direction, parse_compound_list(left),
+                    parse_compound_list(right))
 
 
 def parse_metnet_reaction(s, arrow_rev='<==>', arrow_irrev='-->'):
     """Parser for the reaction format in MetNet model"""
 
     # Compile pattern for matching reaction arrows
-    arrow_pattern = re.compile('(' + ('|'.join(re.escape(x) for x in (arrow_irrev, arrow_rev))) + ')')
+    arrow_pattern = re.compile(
+        '(' + ('|'.join(re.escape(x) for x in (arrow_irrev, arrow_rev))) + ')')
 
     def parse_compound_list(s, global_comp):
         if s.strip() == '':

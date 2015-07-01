@@ -5,3 +5,4 @@ env:
     - TOXENV=py27-nosolver
     - TOXENV=py34-nosolver
     - TOXENV=docs
+    - TOXENV=flake
