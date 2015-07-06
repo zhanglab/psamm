@@ -41,6 +41,8 @@ SBML_NS_L2_V5 = 'http://www.sbml.org/sbml/level2/version5'
 # Level 3 namespaces
 SBML_NS_L3_V1_CORE = 'http://www.sbml.org/sbml/level3/version1/core'
 
+MATHML_NS = 'http://www.w3.org/1998/Math/MathML'
+
 
 def _tag(tag, namespace=None):
     """Prepend namespace to tag name"""
@@ -391,6 +393,8 @@ class SBMLWriter(object):
     def write_model(self, file, model, compounds):
         """Write a given model to file"""
 
+        ET.register_namespace('mathml', MATHML_NS)
+
         # Load compound information
         compound_name = {}
         for compound in compounds:
@@ -464,6 +468,24 @@ class SBMLWriter(object):
                 spec_ref.set(
                     self._sbml_tag('species'), model_species[compound])
                 spec_ref.set(self._sbml_tag('stoichiometry'), str(abs(value)))
+
+            # Create COBRA-compliant parameter list
+            kl_tag = ET.SubElement(reaction_tag, self._sbml_tag('kineticLaw'))
+            math_tag = ET.SubElement(kl_tag, self._sbml_tag('math'))
+            ci_tag = ET.SubElement(math_tag, _tag('ci', MATHML_NS))
+            ci_tag.text = 'FLUX_VALUE'
+            param_list = ET.SubElement(
+                kl_tag, self._sbml_tag('listOfParameters'))
+            ET.SubElement(param_list, self._sbml_tag('parameter'), {
+                self._sbml_tag('id'): 'LOWER_BOUND',
+                self._sbml_tag('name'): 'LOWER_BOUND',
+                self._sbml_tag('value'): str(model.limits[reaction].lower)
+            })
+            ET.SubElement(param_list, self._sbml_tag('parameter'), {
+                self._sbml_tag('id'): 'UPPER_BOUND',
+                self._sbml_tag('name'): 'UPPER_BOUND',
+                self._sbml_tag('value'): str(model.limits[reaction].upper)
+            })
 
         tree = ET.ElementTree(root)
         tree.write(file, default_namespace=self._namespace)
