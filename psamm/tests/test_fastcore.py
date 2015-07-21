@@ -169,9 +169,9 @@ class TestFastcoreTinyBiomassModel(unittest.TestCase):
     fastcore.
 
     In this particular model, rxn_2 can take a maximum flux of 1000. At the
-    same time rxn_1 will have to take a flux of 1e-4. This is the maximum
+    same time rxn_1 will have to take a flux of 1e-3. This is the maximum
     possible flux for rxn_1 so running fastcore with an epsilon larger than
-    1e-4 will indicate that the model is not consistent.
+    1e-3 will indicate that the model is not consistent.
     """
 
     def setUp(self):
@@ -190,18 +190,21 @@ class TestFastcoreTinyBiomassModel(unittest.TestCase):
 
     def test_fastcc_is_consistent(self):
         self.assertTrue(fastcore.fastcc_is_consistent(
-            self.model, 0.001, solver=self.solver))
+            self.model, 0.0001, solver=self.solver))
+
+    def test_fastcc_is_consistent_high_epsilon(self):
+        self.assertFalse(fastcore.fastcc_is_consistent(
+            self.model, 0.1, solver=self.solver))
 
     def test_fastcore_induced_model(self):
-        core = { 'rxn_2' }
-        self.assertEquals(set(fastcore.fastcore(
-            self.model, core, 0.001, solver=self.solver)),
-            { 'rxn_1', 'rxn_2' })
+        core = {'rxn_2'}
+        self.assertEqual(set(fastcore.fastcore(
+            self.model, core, 0.0001, solver=self.solver)), {'rxn_1', 'rxn_2'})
 
     def test_fastcore_induced_model_high_epsilon(self):
-        core = { 'rxn_2' }
-        self.assertEquals(set(fastcore.fastcore(
-            self.model, core, 0.1, solver=self.solver)), { 'rxn_1', 'rxn_2' })
+        core = {'rxn_2'}
+        self.assertEqual(set(fastcore.fastcore(
+            self.model, core, 0.1, solver=self.solver)), {'rxn_1', 'rxn_2'})
 
 
 class TestFlippingModel(unittest.TestCase):
