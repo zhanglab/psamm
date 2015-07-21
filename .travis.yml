@@ -3,8 +3,6 @@ install: pip install tox
 script: tox -v
 env:
     - TOXENV=py27-nosolver
-    - TOXENV=py27-qsoptex
     - TOXENV=py34-nosolver
-    - TOXENV=py34-qsoptex
     - TOXENV=docs
     - TOXENV=flake
