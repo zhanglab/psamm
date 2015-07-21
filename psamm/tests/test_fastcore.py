@@ -77,7 +77,8 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
 
         result = fastcore.lp7(self.model, {'rxn_5'}, 0.001, solver=self.solver)
         supp = set(fastcore.support_positive(result, 0.001*0.999))
-        self.assertEqual(supp, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
+        # Test that the support contains at least the given reactions
+        self.assertLessEqual({'rxn_4', 'rxn_5', 'rxn_6'}, supp)
 
     def test_find_sparse_mode_singleton(self):
         core = { 'rxn_1' }
