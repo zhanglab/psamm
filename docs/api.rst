@@ -16,6 +16,7 @@ PSAMM API
    expression_boolean
    fastcore
    fluxanalysis
+   fluxcoupling
    formula
    gapfill
    lpsolver_lp
