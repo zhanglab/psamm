@@ -302,6 +302,15 @@ class Solver(object):
 
 
 @add_metaclass(abc.ABCMeta)
+class Constraint(object):
+    """Represents a constraint within an LP Problem"""
+
+    @abc.abstractmethod
+    def delete(self):
+        """Remove constraint from Problem instance"""
+
+
+@add_metaclass(abc.ABCMeta)
 class Problem(object):
     """Representation of LP Problem instance
 
@@ -330,8 +339,9 @@ class Problem(object):
     def add_linear_constraints(self, *relations):
         """Add constraints to the problem
 
-        Each constraint is represented by a :class:`.Relation`, and the
-        expression in that relation can be a set expression.
+        Each constraint is given as a :class:`.Relation`, and the expression
+        in that relation can be a set expression. Returns a sequence of
+        :class:`.Constraint`s.
         """
 
     @abc.abstractmethod

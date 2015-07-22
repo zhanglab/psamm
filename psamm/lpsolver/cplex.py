@@ -28,6 +28,7 @@ from six.moves import zip
 import cplex as cp
 
 from .lp import Solver as BaseSolver
+from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
 from .lp import (VariableSet, Expression, Relation,
@@ -83,6 +84,7 @@ class Problem(BaseProblem):
 
         self._variables = {}
         self._var_names = ('x'+str(i) for i in count(1))
+        self._constr_names = ('c'+str(i) for i in count(1))
 
         self._result = None
 
@@ -147,12 +149,41 @@ class Problem(BaseProblem):
                 set(names) - set(self._variables)))
         return Expression({VariableSet(names): 1})
 
+    def _add_constraints(self, relation):
+        """Add the given relation as one or more constraints
+
+        Return a list of the names of the constraints added.
+        """
+        if relation.sense in (
+                Relation.StrictlyGreater, Relation.StrictlyLess):
+            raise ValueError(
+                'Strict relations are invalid in LP-problems:'
+                ' {}'.format(relation))
+
+        expression = relation.expression
+        pairs = []
+        for value_set in expression.value_sets():
+            ind, val = zip(*((self._variables[variable], float(value))
+                             for variable, value in value_set))
+            pairs.append(cp.SparsePair(ind=ind, val=val))
+
+        names = [next(self._constr_names) for _ in pairs]
+
+        self._cp.linear_constraints.add(
+            names=names, lin_expr=pairs,
+            senses=tuple(repeat(relation.sense, len(pairs))),
+            rhs=tuple(repeat(float(-expression.offset), len(pairs))))
+
+        return names
+
     def add_linear_constraints(self, *relations):
         """Add constraints to the problem
 
         Each constraint is represented by a Relation, and the
         expression in that relation can be a set expression.
         """
+        constraints = []
+
         for relation in relations:
             if isinstance(relation, bool):
                 # A bool in place of a relation is accepted to mean
@@ -161,23 +192,12 @@ class Problem(BaseProblem):
                 # '0 == 0' or '2 >= 3').
                 if not relation:
                     raise ValueError('Unsatisfiable relation added')
+                constraints.append(Constraint(self, None))
             else:
-                if relation.sense in (
-                        Relation.StrictlyGreater, Relation.StrictlyLess):
-                    raise ValueError(
-                        'Strict relations are invalid in LP-problems:'
-                        ' {}'.format(relation))
+                for name in self._add_constraints(relation):
+                    constraints.append(Constraint(self, name))
 
-                expression = relation.expression
-                pairs = []
-                for value_set in expression.value_sets():
-                    ind, val = zip(*((self._variables[variable], float(value))
-                                     for variable, value in value_set))
-                    pairs.append(cp.SparsePair(ind=ind, val=val))
-                self._cp.linear_constraints.add(
-                    lin_expr=pairs,
-                    senses=tuple(repeat(relation.sense, len(pairs))),
-                    rhs=tuple(repeat(float(-expression.offset), len(pairs))))
+        return constraints
 
     def set_linear_objective(self, expression):
         """Set linear objective of problem"""
@@ -212,6 +232,18 @@ class Problem(BaseProblem):
     @property
     def result(self):
         return self._result
+
+
+class Constraint(BaseConstraint):
+    """Represents a constraint in a cplex.Problem"""
+
+    def __init__(self, prob, name):
+        self._prob = prob
+        self._name = name
+
+    def delete(self):
+        if self._name is not None:
+            self._prob._cp.linear_constraints.delete(self._name)
 
 
 class Result(BaseResult):
