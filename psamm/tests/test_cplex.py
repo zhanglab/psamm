@@ -52,7 +52,7 @@ class TestCplexProblem(unittest.TestCase):
         self.assertAlmostEqual(result.get_value('y'), 10)
 
     def test_result_to_bool_conversion_on_optimal(self):
-        '''Run a feasible LP problem and check that the result evaluates to True'''
+        """Run a feasible LP problem and check that the result is True"""
         prob = self.solver.create_problem()
         prob.define('x', 'y', lower=0, upper=10)
         prob.add_linear_constraints(prob.var('x') + prob.var('y') <= 12)
@@ -63,7 +63,7 @@ class TestCplexProblem(unittest.TestCase):
         self.assertTrue(result)
 
     def test_result_to_bool_conversion_on_infeasible(self):
-        '''Run an infeasible LP problem and check that the result evaluates to False'''
+        """Run an infeasible LP problem and check that the result is False"""
         prob = self.solver.create_problem()
         prob.define('x', 'y', 'z', lower=0, upper=10)
         prob.add_linear_constraints(2*prob.var('x') == -prob.var('y'),
@@ -73,6 +73,23 @@ class TestCplexProblem(unittest.TestCase):
         prob.set_linear_objective(2*prob.var('x'))
         result = prob.solve()
         self.assertFalse(result)
+
+    def test_constraint_delete(self):
+        prob = self.solver.create_problem()
+        prob.define('x', 'y', lower=0, upper=10)
+        prob.add_linear_constraints(prob.var('x') + prob.var('y') <= 12)
+        c1, = prob.add_linear_constraints(prob.var('x') <= 5)
+
+        prob.set_objective_sense(lp.ObjectiveSense.Maximize)
+        prob.set_linear_objective(prob.var('x'))
+
+        result = prob.solve()
+        self.assertAlmostEqual(result.get_value('x'), 5)
+
+        # Delete constraint
+        c1.delete()
+        result = prob.solve()
+        self.assertAlmostEqual(result.get_value('x'), 10)
 
 
 if __name__ == '__main__':

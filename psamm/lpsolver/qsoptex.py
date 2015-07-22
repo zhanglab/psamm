@@ -27,6 +27,7 @@ from six.moves import zip
 import qsoptex
 
 from .lp import Solver as BaseSolver
+from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
 from .lp import (VariableSet, Expression, Relation,
@@ -50,6 +51,7 @@ class Problem(BaseProblem):
 
         self._variables = {}
         self._var_names = ('x'+str(i) for i in count(1))
+        self._constr_names = ('c'+str(i) for i in count(1))
 
         self._result = None
 
@@ -109,12 +111,38 @@ class Problem(BaseProblem):
                 set(names) - set(self._variables)))
         return Expression({VariableSet(names): 1})
 
+    def _add_constraints(self, relation):
+        """Add the given relation as one or more constraints
+
+        Return a list of the names of the constraints added.
+        """
+        if relation.sense in (
+                Relation.StrictlyGreater, Relation.StrictlyLess):
+            raise ValueError(
+                'Strict relations are invalid in LP-problems: {}'.format(
+                    relation))
+
+        expression = relation.expression
+        names = []
+        for value_set in expression.value_sets():
+            values = ((self._variables[variable], value)
+                      for variable, value in value_set)
+            constr_name = next(self._constr_names)
+            self._p.add_linear_constraint(
+                sense=relation.sense, values=values, rhs=-expression.offset,
+                name=constr_name)
+            names.append(constr_name)
+
+        return names
+
     def add_linear_constraints(self, *relations):
         """Add constraints to the problem
 
         Each constraint is represented by a Relation, and the
         expression in that relation can be a set expression.
         """
+        constraints = []
+
         for relation in relations:
             if isinstance(relation, bool):
                 # A bool in place of a relation is accepted to mean
@@ -123,19 +151,12 @@ class Problem(BaseProblem):
                 # '0 == 0' or '2 >= 3').
                 if not relation:
                     raise ValueError('Unsatisfiable relation added')
+                constraints.append(Constraint(self, None))
             else:
-                if relation.sense in (
-                        Relation.StrictlyGreater, Relation.StrictlyLess):
-                    raise ValueError(
-                        'Strict relations are invalid in LP-problems:'
-                        ' {}'.format(relation))
+                for name in self._add_constraints(relation):
+                    constraints.append(Constraint(self, name))
 
-                expression = relation.expression
-                for value_set in expression.value_sets():
-                    values = ((self._variables[variable], value)
-                              for variable, value in value_set)
-                    self._p.add_linear_constraint(
-                        relation.sense, values, -expression.offset)
+        return constraints
 
     def set_linear_objective(self, expression):
         """Set linear objective of problem"""
@@ -170,6 +191,18 @@ class Problem(BaseProblem):
     @property
     def result(self):
         return self._result
+
+
+class Constraint(BaseConstraint):
+    """Represents a constraint in a qsoptex.Problem"""
+
+    def __init__(self, prob, name):
+        self._prob = prob
+        self._name = name
+
+    def delete(self):
+        if self._name is not None:
+            self._prob._p.delete_linear_constraint(self._name)
 
 
 class Result(BaseResult):
