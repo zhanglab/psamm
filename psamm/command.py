@@ -56,7 +56,7 @@ logger = logging.getLogger(__name__)
 
 @add_metaclass(abc.ABCMeta)
 class Command(object):
-    """Represents a command in the interface, operating on a model
+    """Represents a command in the interface, operating on a model.
 
     Subclasses must define name and title as class attributes. The constructor
     will be given the NativeModel and the command line namespace. The subclass
@@ -97,7 +97,7 @@ class Command(object):
 
 
 class SolverCommandMixin(object):
-    """Mixin for commands that use an LP solver
+    """Mixin for commands that use an LP solver.
 
     This adds a ``--solver`` parameter to the command that the user can use to
     select a specific solver. It also adds the method :meth:`_get_solver` which
@@ -127,7 +127,7 @@ class SolverCommandMixin(object):
 
 
 class ChargeBalanceCommand(Command):
-    """Check whether compound charge in a given database or model is balanced
+    """Check whether compound charge in a given database or model is balanced.
 
     Balanced reactions are those reactions where the total charge
     is consistent on the left and right side of the reaction equation.
@@ -186,7 +186,7 @@ class ChargeBalanceCommand(Command):
 
 
 class ConsoleCommand(Command):
-    """Start an interactive Python console with the given model loaded"""
+    """Start an interactive Python console with the given model loaded."""
 
     name = 'console'
     title = 'Start Python console with metabolic model loaded'
@@ -237,7 +237,7 @@ class ConsoleCommand(Command):
 
 
 class FastGapFillCommand(SolverCommandMixin, Command):
-    """Run FastGapFill algorithm on a metabolic model"""
+    """Run FastGapFill algorithm on a metabolic model."""
 
     name = 'fastgapfill'
     title = 'Run FastGapFill on a metabolic model'
@@ -362,7 +362,7 @@ class FastGapFillCommand(SolverCommandMixin, Command):
 
 
 class FluxBalanceCommand(SolverCommandMixin, Command):
-    """Run flux balance analysis on a metabolic model"""
+    """Run flux balance analysis on a metabolic model."""
 
     name = 'fba'
     title = 'Run flux balance analysis on a metabolic model'
@@ -451,7 +451,7 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
 
 
 class FluxConsistencyCommand(SolverCommandMixin, Command):
-    """Check that reactions are flux consistent in a model
+    """Check that reactions are flux consistent in a model.
 
     A reaction is flux consistent if there exists any steady-state flux
     solution where the flux of the given reaction is non-zero. The
@@ -554,7 +554,7 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
 
 
 class FluxVariabilityCommand(SolverCommandMixin, Command):
-    """Run flux variablity analysis on a metabolic model"""
+    """Run flux variablity analysis on a metabolic model."""
 
     name = 'fva'
     title = 'Run flux variability analysis on a metabolic model'
@@ -610,10 +610,10 @@ class FluxVariabilityCommand(SolverCommandMixin, Command):
 
 
 class FormulaBalanceCommand(Command):
-    """Check whether reactions in a given database or model are balanced
+    """Check whether reactions in a model are elementally balanced.
 
-    Balanced reactions are those reactions where the number of atoms
-    is consistent on the left and right side of the reaction equation.
+    Balanced reactions are those reactions where the number of elements
+    (atoms) is consistent on the left and right side of the reaction equation.
     Reactions that are not balanced will be printed out.
     """
 
@@ -684,7 +684,7 @@ class FormulaBalanceCommand(Command):
 
 
 class GapFillCommand(SolverCommandMixin, Command):
-    """Command that runs GapFind and GapFill on a metabolic model"""
+    """Run GapFind and GapFill on a metabolic model."""
 
     name = 'gapfill'
     title = 'Run GapFind and GapFill on a metabolic model'
@@ -741,7 +741,7 @@ class GapFillCommand(SolverCommandMixin, Command):
 
 
 class MassConsistencyCommand(SolverCommandMixin, Command):
-    """Command that checks whether a database is mass consistent"""
+    """Check whether a model is mass consistent."""
 
     name = 'masscheck'
     title = 'Run mass consistency check on a database'
@@ -833,7 +833,7 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
 
 
 class RandomSparseNetworkCommand(SolverCommandMixin, Command):
-    """Find random minimal network of model
+    """Find random minimal network of model.
 
     Given a reaction to optimize and a threshold, delete reactions randomly
     until the flux of the reaction to optimize falls under the threshold.
@@ -949,7 +949,7 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
 
 
 class RobustnessCommand(SolverCommandMixin, Command):
-    """Run robustness analysis on metabolic model
+    """Run robustness analysis on metabolic model.
 
     Given a reaction to maximize and a reaction to vary,
     the robustness analysis will run FBA while fixing the
@@ -1055,7 +1055,7 @@ class RobustnessCommand(SolverCommandMixin, Command):
 
 
 class SBMLExport(Command):
-    """Export model as SBML file"""
+    """Export model as SBML file."""
 
     name = 'sbmlexport'
     title = 'Export model as SBML file'
@@ -1067,7 +1067,7 @@ class SBMLExport(Command):
 
 
 class SearchCommand(Command):
-    """Defines the search command"""
+    """Search for reactions and compounds in a model."""
 
     name = 'search'
     title = 'Search the database of reactions or compounds'
@@ -1194,7 +1194,7 @@ class SearchCommand(Command):
 
 
 def main(command_class=None):
-    """Run the command line interface with the given :class:`Command`
+    """Run the command line interface with the given :class:`Command`.
 
     If no command class is specified the user will be able to select a specific
     command through the first command line argument.
@@ -1239,7 +1239,9 @@ def main(command_class=None):
         subparsers = parser.add_subparsers(title='Command')
         for name, values in sorted(iteritems(commands)):
             title, command_class = values
-            subparser = subparsers.add_parser(name, help=title)
+            description = command_class.__doc__
+            subparser = subparsers.add_parser(
+                name, help=title, description=description)
             subparser.set_defaults(command=command_class)
             command_class.init_parser(subparser)
 
