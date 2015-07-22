@@ -169,6 +169,21 @@ indicating whether the reaction was eliminated (``0`` when eliminated, ``1``
 otherwise). If multiply minimal networks are desired, the command can be run
 again and it will produce a different random minimal network.
 
+Flux coupling analysis (``fluxcoupling``)
+-----------------------------------------
+
+The flux coupling analysis identifies any reaction pairs where the flux of one
+reaction constrains the flux of another reaction. The reactions can be coupled
+in three distinct ways depending on the ratio between the reaction fluxes.
+
+The reactions can be fully coupled (the ratio is static and non-zero);
+partially coupled (the ratio is bounded and non-zero); or directionally
+coupled (the ratio is non-zero).
+
+.. code-block:: shell
+
+    $ psamm-model fluxcoupling
+
 Stoichiometric consistency check (``masscheck``)
 ------------------------------------------------
 
