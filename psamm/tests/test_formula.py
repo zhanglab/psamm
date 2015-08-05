@@ -118,6 +118,14 @@ class TestFormula(unittest.TestCase):
         self.assertEqual(f, Formula({Atom('C'): 2, Atom('H'): 4, Atom('N'): 1,
                                         Atom('O'): 2, Radical('R1'): 1}))
 
+    def test_formula_is_not_variable(self):
+        f = Formula.parse('C6H12O6')
+        self.assertFalse(f.is_variable())
+
+    def test_formula_is_variable(self):
+        f = Formula.parse('C2H4NO2R(C2H2NOR)n')
+        self.assertTrue(f.is_variable())
+
     def test_formula_balance_missing_on_one_side(self):
         f1, f2 = Formula.balance(Formula.parse('H2O'), Formula.parse('OH'))
         self.assertEqual(f1, Formula())

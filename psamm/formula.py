@@ -317,26 +317,29 @@ class Formula(FormulaElement):
 
         def transform_subformula(form):
             '''Extract radical if subformula is a singleton with a radical'''
-            if isinstance(form, Formula) and len(form._values) == 1:
+            if isinstance(form, dict) and len(form) == 1:
                 # A radical in a singleton subformula is interpreted as a
                 # numbered radical.
-                element, value = next(iteritems(form._values))
+                element, value = next(iteritems(form))
                 if isinstance(element, Radical):
                     return Radical('{}{}'.format(element.symbol, value))
             return form
 
         stack = []
-        formula = Formula()
+        formula = {}
         expect_count = False
 
         def close(formula, count=1):
             if len(stack) == 0:
                 raise ValueError('Unbalanced parenthesis group in formula')
             subformula = transform_subformula(formula)
+            if isinstance(subformula, dict):
+                subformula = Formula(subformula)
+
             formula = stack.pop()
-            if subformula not in formula._values:
-                formula._values[subformula] = 0
-            formula._values[subformula] += count
+            if subformula not in formula:
+                formula[subformula] = 0
+            formula[subformula] += count
             return formula
 
         for match in re.finditer(scanner, s):
@@ -352,7 +355,7 @@ class Formula(FormulaElement):
                 if expect_count:
                     formula = close(formula)
                 stack.append(formula)
-                formula = Formula()
+                formula = {}
                 expect_count = False
             elif group is not None and group == ')':
                 if expect_count:
@@ -383,7 +386,7 @@ class Formula(FormulaElement):
         if len(stack) > 0:
             raise ValueError('Unbalanced parenthesis group in formula')
 
-        return formula
+        return Formula(formula)
 
     @classmethod
     def balance(cls, lhs, rhs):
