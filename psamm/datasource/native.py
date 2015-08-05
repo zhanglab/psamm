@@ -34,6 +34,7 @@ import yaml
 from six import string_types, iteritems
 
 from ..reaction import Reaction, Compound
+from .context import FilePathContext, FileMark
 from . import modelseed
 
 
@@ -48,39 +49,6 @@ class ParseError(Exception):
     """Exception used to signal errors while parsing"""
 
 
-class FilePathContext(object):
-    """A file context that keeps track of contextual information
-
-    When a file is loaded, all files specified in that file must be loaded
-    relative to the first file. This is made possible by keeping a context
-    that remembers where a file was loaded so that other files can be loaded
-    relatively.
-    """
-
-    def __init__(self, arg):
-        """Create new context from a path or existing context"""
-
-        if isinstance(arg, string_types):
-            self._filepath = arg
-        else:
-            self._filepath = arg.filepath
-        self._basepath = os.path.dirname(self._filepath)
-
-    @property
-    def filepath(self):
-        return self._filepath
-
-    @property
-    def basepath(self):
-        return self._basepath
-
-    def resolve(self, relpath):
-        return FilePathContext(os.path.join(self._basepath, relpath))
-
-    def __str__(self):
-        return self._filepath
-
-
 def whendefined(func, value):
     """Apply func to value if value is not None"""
     return func(value) if value is not None else None
@@ -89,9 +57,10 @@ def whendefined(func, value):
 class CompoundEntry(object):
     """Representation of a compound entry in a native model"""
 
-    def __init__(self, compound_id, properties):
+    def __init__(self, compound_id, properties, filemark=None):
         self._id = compound_id
         self._properties = dict(properties)
+        self._filemark = filemark
 
     @property
     def id(self):
@@ -125,17 +94,22 @@ class CompoundEntry(object):
     def properties(self):
         return self._properties
 
+    @property
+    def filemark(self):
+        return self._filemark
+
 
 class ReactionEntry(object):
     """Representation of a reaction entry in a native model"""
 
-    def __init__(self, id, properties):
+    def __init__(self, id, properties, filemark=None):
         self._id = id
         self._properties = dict(properties)
         self._name = self._properties.get('name')
         self._equation = self._properties.get('equation')
         self._ec = self._properties.get('ec')
         self._genes = self._properties.get('genes')
+        self._filemark = filemark
 
     @property
     def id(self):
@@ -160,6 +134,10 @@ class ReactionEntry(object):
     @property
     def properties(self):
         return self._properties
+
+    @property
+    def filemark(self):
+        return self._filemark
 
 
 class NativeModel(object):
@@ -262,7 +240,7 @@ class NativeModel(object):
                 yield compound
 
 
-def parse_compound(compound_def):
+def parse_compound(compound_def, context=None):
     """Parse a structured compound definition as obtained from a YAML file
 
     Returns a CompoundEntry."""
@@ -271,7 +249,8 @@ def parse_compound(compound_def):
     if compound_id is None:
         raise ParseError('Compound ID missing')
 
-    return CompoundEntry(compound_id, compound_def)
+    mark = FileMark(context, None, None)
+    return CompoundEntry(compound_id, compound_def, mark)
 
 
 def parse_compound_list(path, compounds):
@@ -289,7 +268,7 @@ def parse_compound_list(path, compounds):
             for compound in parse_compound_file(include_context, file_format):
                 yield compound
         else:
-            yield parse_compound(compound_def)
+            yield parse_compound(compound_def, context)
 
 
 def parse_compound_table_file(path, f):
@@ -299,12 +278,15 @@ def parse_compound_table_file(path, f):
     which property is contained in each column.
     """
 
-    for row in csv.DictReader(f, delimiter='\t'):
+    context = FilePathContext(path)
+
+    for i, row in enumerate(csv.DictReader(f, delimiter='\t')):
         if 'id' not in row or row['id'].strip() == '':
             raise ParseError('Expected `id` column in table')
 
         props = {key: value for key, value in iteritems(row) if value != ''}
-        yield CompoundEntry(row['id'], props)
+        mark = FileMark(context, i, None)
+        yield CompoundEntry(row['id'], props, mark)
 
 
 def parse_compound_yaml_file(path, f):
@@ -329,19 +311,19 @@ def parse_compound_file(path, format):
             (format is None or format == 'yaml')):
         logger.debug('Parsing compound file {} as YAML'.format(
             context.filepath))
-        with open(context.filepath, 'r') as f:
+        with context.open('r') as f:
             for compound in parse_compound_yaml_file(context, f):
                 yield compound
     elif format == 'modelseed':
         logger.debug('Parsing compound file {} as ModelSEED TSV'.format(
             context.filepath))
-        with open(context.filepath, 'r') as f:
-            for compound in modelseed.parse_compound_file(f):
+        with context.open('r') as f:
+            for compound in modelseed.parse_compound_file(f, context):
                 yield compound
     elif re.match(r'.+\.tsv$', context.filepath) or format == 'tsv':
         logger.debug('Parsing compound file {} as TSV'.format(
             context.filepath))
-        with open(context.filepath, 'r') as f:
+        with context.open('r') as f:
             for compound in parse_compound_table_file(context, f):
                 yield compound
     else:
@@ -388,7 +370,7 @@ def parse_reaction_equation(equation_def):
                     parse_compound_list(left), parse_compound_list(right))
 
 
-def parse_reaction(reaction_def):
+def parse_reaction(reaction_def, context=None):
     """Parse a structured reaction definition as obtained from a YAML file
 
     Returns a ReactionEntry.
@@ -405,7 +387,8 @@ def parse_reaction(reaction_def):
         reaction_props['equation'] = (
             parse_reaction_equation(reaction_def['equation']))
 
-    return ReactionEntry(reaction_id, reaction_props)
+    mark = FileMark(context, None, None)
+    return ReactionEntry(reaction_id, reaction_props, mark)
 
 
 def parse_reaction_list(path, reactions):
@@ -423,7 +406,7 @@ def parse_reaction_list(path, reactions):
             for reaction in parse_reaction_file(include_context):
                 yield reaction
         else:
-            yield parse_reaction(reaction_def)
+            yield parse_reaction(reaction_def, context)
 
 
 def parse_reaction_yaml_file(path, f):
@@ -435,14 +418,16 @@ def parse_reaction_yaml_file(path, f):
     return parse_reaction_list(path, yaml.load(f))
 
 
-def parse_reaction_table_file(f):
+def parse_reaction_table_file(path, f):
     """Parse a tab-separated file containing reaction IDs and properties
 
     The reaction properties are parsed according to the header which specifies
     which property is contained in each column.
     """
 
-    for row in csv.DictReader(f, delimiter='\t'):
+    context = FilePathContext(path)
+
+    for lineno, row in enumerate(csv.DictReader(f, delimiter='\t')):
         if 'id' not in row or row['id'].strip() == '':
             raise ParseError('Expected `id` column in table')
 
@@ -451,7 +436,8 @@ def parse_reaction_table_file(f):
         if 'equation' in props:
             props['equation'] = modelseed.parse_reaction(props['equation'])
 
-        yield ReactionEntry(row['id'], props)
+        mark = FileMark(context, lineno, 0)
+        yield ReactionEntry(row['id'], props, mark)
 
 
 def parse_reaction_file(path):
@@ -465,13 +451,13 @@ def parse_reaction_file(path):
     if re.match(r'.+\.tsv$', context.filepath):
         logger.debug('Parsing reaction file {} as TSV'.format(
             context.filepath))
-        with open(context.filepath, 'r') as f:
-            for reaction in parse_reaction_table_file(f):
+        with context.open('r') as f:
+            for reaction in parse_reaction_table_file(context, f):
                 yield reaction
     elif re.match(r'.+\.(yml|yaml)$', context.filepath):
         logger.debug('Parsing reaction file {} as YAML'.format(
             context.filepath))
-        with open(context.filepath, 'r') as f:
+        with context.open('r') as f:
             for reaction in parse_reaction_yaml_file(context, f):
                 yield reaction
     else:
@@ -565,13 +551,13 @@ def parse_medium_file(path):
     if re.match(r'.+\.tsv$', context.filepath):
         logger.debug('Parsing medium file {} as TSV'.format(
             context.filepath))
-        with open(context.filepath, 'r') as f:
+        with context.open('r') as f:
             for entry in parse_medium_table_file(f):
                 yield entry
     elif re.match(r'.+\.(yml|yaml)$', context.filepath):
         logger.debug('Parsing medium file {} as YAML'.format(
             context.filepath))
-        with open(context.filepath, 'r') as f:
+        with context.open('r') as f:
             for entry in parse_medium_yaml_file(context, f):
                 yield entry
     else:
@@ -661,13 +647,13 @@ def parse_limits_file(path):
     if re.match(r'.+\.tsv$', context.filepath):
         logger.debug('Parsing limits file {} as TSV'.format(
             context.filepath))
-        with open(context.filepath, 'r') as f:
+        with context.open('r') as f:
             for limit in parse_limits_table_file(f):
                 yield limit
     elif re.match(r'.+\.(yml|yaml)$', context.filepath):
         logger.debug('Parsing limits file {} as YAML'.format(
             context.filepath))
-        with open(context.filepath, 'r') as f:
+        with context.open('r') as f:
             for limit in parse_limits_yaml_file(context, f):
                 yield limit
     else:
@@ -744,11 +730,11 @@ def parse_model_file(path):
 
     if re.match(r'.+\.tsv$', context.filepath):
         logger.debug('Parsing model file {} as TSV'.format(context.filepath))
-        with open(context.filepath, 'r') as f:
+        with context.open('r') as f:
             for reaction_id in parse_model_table_file(context, f):
                 yield reaction_id
     elif re.match(r'.+\.(yml|yaml)$', context.filepath):
         logger.debug('Parsing model file {} as YAML'.format(context.filepath))
-        with open(context.filepath, 'r') as f:
+        with context.open('r') as f:
             for reaction_id in parse_model_yaml_file(context, f):
                 yield reaction_id
