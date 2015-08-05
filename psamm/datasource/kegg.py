@@ -115,15 +115,91 @@ class CompoundEntry(object):
         return '<CompoundEntry "{}">'.format(self.id)
 
 
-def parse_compound_file(f):
-    """Iterate over the compound entries in the given file"""
+class ReactionEntry(object):
+    """Representation of entry in KEGG reaction file"""
+
+    def __init__(self, values):
+        self.values = dict(values)
+        if 'entry' not in values:
+            raise ParseError('Missing reaction identifier')
+        self._id, _ = values['entry'][0].split(None, 1)
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def name(self):
+        try:
+            return next(self.names)
+        except StopIteration:
+            return None
+
+    @property
+    def names(self):
+        if 'name' in self.values:
+            for line in self.values['name']:
+                for name in line.rstrip(';').split(';'):
+                    yield name.strip()
+
+    @property
+    def definition(self):
+        if 'definition' not in self.values:
+            return None
+        return self.values['definition'][0]
+
+    @property
+    def equation(self):
+        if 'equation' not in self.values:
+            return None
+        return self.values['equation'][0]
+
+    @property
+    def enzymes(self):
+        if 'enzyme' in self.values:
+            for line in self.values['enzyme']:
+                for enzyme in line.split():
+                    yield enzyme
+
+    @property
+    def pathways(self):
+        if 'pathway' in self.values:
+            for line in self.values['pathway']:
+                pathway, name = line.split(None, 1)
+                yield pathway, name
+
+    @property
+    def comment(self):
+        if 'comment' not in self.values:
+            return None
+        return '\n'.join(self.values['comment'])
+
+    @property
+    def rpairs(self):
+        if 'rpair' in self.values:
+            for line in self.values['rpair']:
+                pair, compounds, rp_type = line.split(None, 2)
+                compounds = tuple(compounds.split('_', 1))
+                yield pair, compounds, rp_type
+
+    def __getitem__(self, name):
+        if name not in self.values:
+            raise AttributeError('Attribute does not exist: {}'.format(name))
+        return self._values[name]
+
+    def __repr__(self):
+        return '<ReactionEntry "{}">'.format(self.id)
+
+
+def _parse_kegg_entries(f, entry_class):
+    """Iterate over entries in KEGG file."""
 
     section_id = None
     compound = {}
     for line in f:
         if line.strip() == '///':
             # End of compound
-            yield CompoundEntry(compound)
+            yield entry_class(compound)
             compound = {}
             section_id = None
         else:
@@ -136,6 +212,16 @@ def parse_compound_file(f):
                 compound[section_id].append(line.strip())
             else:
                 raise ParseError('Missing section identifier')
+
+
+def parse_compound_file(f):
+    """Iterate over the compound entries in the given file."""
+    return _parse_kegg_entries(f, CompoundEntry)
+
+
+def parse_reaction_file(f):
+    """Iterate over the reaction entries in the given file."""
+    return _parse_kegg_entries(f, ReactionEntry)
 
 
 def parse_reaction(s):
