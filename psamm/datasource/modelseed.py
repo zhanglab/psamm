@@ -21,7 +21,8 @@ import csv
 import re
 from decimal import Decimal
 
-from psamm.reaction import Reaction, Compound
+from ..reaction import Reaction, Compound
+from .context import FileMark
 
 
 class ParseError(Exception):
@@ -37,7 +38,7 @@ def decode_name(s):
 class CompoundEntry(object):
     """Representation of entry in a ModelSEED compound table"""
 
-    def __init__(self, id, names, formula):
+    def __init__(self, id, names, formula, filemark=None):
         self._id = id
         self._properties = {
             'id': self._id,
@@ -57,6 +58,8 @@ class CompoundEntry(object):
         if len(self._properties['names']) > 0:
             name = sorted(reversed(names), key=lambda x: len(x))[0]
             self._properties['name'] = name
+
+        self._filemark = filemark
 
     @property
     def id(self):
@@ -78,12 +81,16 @@ class CompoundEntry(object):
     def properties(self):
         return dict(self._properties)
 
+    @property
+    def filemark(self):
+        return self._filemark
 
-def parse_compound_file(f):
+
+def parse_compound_file(f, context=None):
     """Iterate over the compound entries in the given file"""
 
     f.readline()  # Skip header
-    for row in csv.reader(f, delimiter='\t'):
+    for lineno, row in enumerate(csv.reader(f, delimiter='\t')):
         compound_id, names, formula = row[:3]
         names = (decode_name(name) for name in names.split(',<br>'))
 
@@ -101,7 +108,8 @@ def parse_compound_file(f):
         if formula == '' or formula == 'noformula':
             formula = None
 
-        yield CompoundEntry(compound_id, names, formula)
+        mark = FileMark(context, lineno, 0)
+        yield CompoundEntry(compound_id, names, formula, filemark=mark)
 
 
 def parse_reaction(s):

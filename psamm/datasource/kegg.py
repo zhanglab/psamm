@@ -19,8 +19,9 @@
 
 import re
 
-from psamm.reaction import Reaction, Compound
-from psamm.expression.affine import Expression
+from .context import FileMark
+from ..reaction import Reaction, Compound
+from ..expression.affine import Expression
 
 
 class ParseError(Exception):
@@ -30,11 +31,12 @@ class ParseError(Exception):
 class CompoundEntry(object):
     """Representation of entry in KEGG compound file"""
 
-    def __init__(self, values):
+    def __init__(self, values, filemark=None):
         self.values = dict(values)
         if 'entry' not in values:
             raise ParseError('Missing compound identifier')
         self._id, _ = values['entry'][0].split(None, 1)
+        self._filemark = filemark
 
     @property
     def id(self):
@@ -111,6 +113,10 @@ class CompoundEntry(object):
             raise AttributeError('Attribute does not exist: {}'.format(name))
         return self._values[name]
 
+    @property
+    def filemark(self):
+        return self._filemark
+
     def __repr__(self):
         return '<CompoundEntry "{}">'.format(self.id)
 
@@ -118,11 +124,12 @@ class CompoundEntry(object):
 class ReactionEntry(object):
     """Representation of entry in KEGG reaction file"""
 
-    def __init__(self, values):
+    def __init__(self, values, filemark=None):
         self.values = dict(values)
         if 'entry' not in values:
             raise ParseError('Missing reaction identifier')
         self._id, _ = values['entry'][0].split(None, 1)
+        self._filemark = filemark
 
     @property
     def id(self):
@@ -187,22 +194,32 @@ class ReactionEntry(object):
             raise AttributeError('Attribute does not exist: {}'.format(name))
         return self._values[name]
 
+    @property
+    def filemark(self):
+        return self._filemark
+
     def __repr__(self):
         return '<ReactionEntry "{}">'.format(self.id)
 
 
-def _parse_kegg_entries(f, entry_class):
+def _parse_kegg_entries(f, entry_class, context=None):
     """Iterate over entries in KEGG file."""
 
     section_id = None
+    entry_line = None
     compound = {}
-    for line in f:
+    for lineno, line in enumerate(f):
         if line.strip() == '///':
             # End of compound
-            yield entry_class(compound)
+            mark = FileMark(context, entry_line, 0)
+            yield entry_class(compound, filemark=mark)
             compound = {}
             section_id = None
+            entry_line = None
         else:
+            if entry_line is None:
+                entry_line = lineno
+
             # Look for beginning of section
             m = re.match(r'([A-Z_]+)\s+(.*)', line.rstrip())
             if m is not None:
@@ -211,17 +228,18 @@ def _parse_kegg_entries(f, entry_class):
             elif section_id is not None:
                 compound[section_id].append(line.strip())
             else:
-                raise ParseError('Missing section identifier')
+                raise ParseError(
+                    'Missing section identifier at line {}'.format(lineno))
 
 
-def parse_compound_file(f):
+def parse_compound_file(f, context=None):
     """Iterate over the compound entries in the given file."""
-    return _parse_kegg_entries(f, CompoundEntry)
+    return _parse_kegg_entries(f, CompoundEntry, context)
 
 
-def parse_reaction_file(f):
+def parse_reaction_file(f, context=None):
     """Iterate over the reaction entries in the given file."""
-    return _parse_kegg_entries(f, ReactionEntry)
+    return _parse_kegg_entries(f, ReactionEntry, context)
 
 
 def parse_reaction(s):
