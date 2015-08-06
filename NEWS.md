@@ -1,4 +1,20 @@
 
+v0.11 (2015-08-06)
+------------------
+
+- Add new flux coupling analysis command and API module.
+- Add parser for KEGG reaction files.
+- Export COBRA-compatible flux constraints when exporting to SBML.
+- Improve the command descriptions in the command line interface.
+- Extend the search command to report information on which file the
+  compound/reaction was parsed from.
+- Add support for Python 3.4.
+- Fix Fastcore unit tests that failed using an exact solver.
+- Change unit tests to allow covering solvers other than Cplex.
+- Optionally use tox for unit test management. This allows independently
+  testing with multiple versions of Python and with different solvers.
+- Adapt code to conform to PEP-8.
+
 v0.10.2 (2015-05-22)
 --------------------
 

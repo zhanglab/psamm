@@ -24,7 +24,7 @@ with open('README.rst') as f:
 
 setup(
     name='psamm',
-    version='0.10.2',
+    version='0.11',
     description='PSAMM metabolic modeling tools',
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
@@ -36,7 +36,8 @@ setup(
     classifiers = [
         'Development Status :: 4 - Beta',
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
-        'Programming Language :: Python :: 2.7'
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.4'
     ],
 
     packages=find_packages(),
