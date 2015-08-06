@@ -1259,6 +1259,8 @@ class SearchCommand(Command):
                         ', '.join(compound.properties['names'])))
                 if 'formula' in compound.properties:
                     print('Formula: {}'.format(compound.properties['formula']))
+                if compound.filemark is not None:
+                    print('Parsed from: {}'.format(compound.filemark))
                 print()
         elif which_command == 'reaction':
             selected_reactions = set()
@@ -1298,6 +1300,8 @@ class SearchCommand(Command):
                     lambda x: compound_name.get(x, x))
                 if reaction.equation != translated_equation:
                     print('Reaction (names): {}'.format(translated_equation))
+                if reaction.filemark is not None:
+                    print('Parsed from: {}'.format(reaction.filemark))
                 print()
 
 
