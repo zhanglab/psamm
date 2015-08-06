@@ -15,13 +15,14 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Module related to loading ModelSEED database files"""
+"""Module related to loading ModelSEED database files."""
 
 import csv
 import re
 from decimal import Decimal
 
-from psamm.reaction import Reaction, Compound
+from ..reaction import Reaction, Compound
+from .context import FileMark
 
 
 class ParseError(Exception):
@@ -37,7 +38,7 @@ def decode_name(s):
 class CompoundEntry(object):
     """Representation of entry in a ModelSEED compound table"""
 
-    def __init__(self, id, names, formula):
+    def __init__(self, id, names, formula, filemark=None):
         self._id = id
         self._properties = {
             'id': self._id,
@@ -57,6 +58,8 @@ class CompoundEntry(object):
         if len(self._properties['names']) > 0:
             name = sorted(reversed(names), key=lambda x: len(x))[0]
             self._properties['name'] = name
+
+        self._filemark = filemark
 
     @property
     def id(self):
@@ -78,12 +81,16 @@ class CompoundEntry(object):
     def properties(self):
         return dict(self._properties)
 
+    @property
+    def filemark(self):
+        return self._filemark
 
-def parse_compound_file(f):
+
+def parse_compound_file(f, context=None):
     """Iterate over the compound entries in the given file"""
 
-    f.readline() # Skip header
-    for row in csv.reader(f, delimiter='\t'):
+    f.readline()  # Skip header
+    for lineno, row in enumerate(csv.reader(f, delimiter='\t')):
         compound_id, names, formula = row[:3]
         names = (decode_name(name) for name in names.split(',<br>'))
 
@@ -101,7 +108,8 @@ def parse_compound_file(f):
         if formula == '' or formula == 'noformula':
             formula = None
 
-        yield CompoundEntry(compound_id, names, formula)
+        mark = FileMark(context, lineno, 0)
+        yield CompoundEntry(compound_id, names, formula, filemark=mark)
 
 
 def parse_reaction(s):
@@ -156,7 +164,8 @@ def parse_reaction(s):
 
         m = re.match(r'^\((.+)\)|(.+)$', count)
         if not m:
-            raise ParseError('Unable to parse compound count: {}'.format(count))
+            raise ParseError(
+                'Unable to parse compound count: {}'.format(count))
 
         number = m.group(1) if m.group(1) is not None else m.group(2)
         return parse_compound_number(number)
@@ -185,7 +194,8 @@ def parse_reaction(s):
         elif len(cmpd) == 1:
             name = parse_compound_name(cmpd[0])
         else:
-            raise ParseError('Unexpected number of tokens in compound: {}'.format(cmpd))
+            raise ParseError(
+                'Unexpected number of tokens in compound: {}'.format(cmpd))
 
         compartment = None
         m = re.match(r'^(.+?)\[(.+)\]$', name)
@@ -244,7 +254,8 @@ def format_reaction(reaction):
         <comp-list>    ::= '' | <compound> | <compound> ' + ' <comp-list>
         <compound>     ::= <comp-count> ' ' <comp-spec> | <comp-spec>
         <comp-count>   ::= '(' <decimal> ')'
-        <comp-spec>    ::= '|' <comp-name> '|' | '|' <comp-name> '[' <comp-compart> ']' '|'
+        <comp-spec>    ::= '|' <comp-name> '|' | '|' <comp-name>
+                           '[' <comp-compart> ']' '|'
         <comp-compart> ::= <alpha>
         <comp-name>    ::= <any characters other than "|">
     """
@@ -259,8 +270,10 @@ def format_reaction(reaction):
 
     def format_compound_list(cmpds):
         """Format compound list"""
-        return ' + '.join(format_compound(compound, count) for compound, count in cmpds)
+        return ' + '.join(format_compound(compound, count)
+                          for compound, count in cmpds)
 
-    return '{} {} {}'.format(format_compound_list(reaction.left),
-                             '?' if reaction.direction == '' else reaction.direction,
-                             format_compound_list(reaction.right))
+    return '{} {} {}'.format(
+        format_compound_list(reaction.left),
+        '?' if reaction.direction == '' else reaction.direction,
+        format_compound_list(reaction.right))

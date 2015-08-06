@@ -22,16 +22,9 @@ from psamm.metabolicmodel import MetabolicModel
 from psamm.database import DictDatabase
 from psamm import fluxanalysis
 from psamm.datasource.modelseed import parse_reaction
-
-try:
-    from psamm.lpsolver import cplex
-except ImportError:
-    cplex = None
-
-requires_solver = unittest.skipIf(cplex is None, 'solver not available')
+from psamm.lpsolver import generic
 
 
-@requires_solver
 class TestFluxBalance(unittest.TestCase):
     def setUp(self):
         self.database = DictDatabase()
@@ -43,7 +36,11 @@ class TestFluxBalance(unittest.TestCase):
         self.database.set_reaction('rxn_6', parse_reaction('|D| =>'))
         self.model = MetabolicModel.load_model(
             self.database, self.database.reactions)
-        self.solver = cplex.Solver()
+
+        try:
+            self.solver = generic.Solver()
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an LP solver for tests')
 
     def test_flux_balance_rxn_1(self):
         fluxes = dict(fluxanalysis.flux_balance(
@@ -73,7 +70,6 @@ class TestFluxBalance(unittest.TestCase):
         self.assertEqual(fluxes['rxn_6'], 1000)
 
 
-@requires_solver
 class TestFluxBalanceThermodynamic(unittest.TestCase):
     def setUp(self):
         self.database = DictDatabase()
@@ -90,7 +86,10 @@ class TestFluxBalanceThermodynamic(unittest.TestCase):
         self.model.limits['ex_A'].lower = -10 # Low uptake
         self.model.limits['ex_D'].lower = 0 # No uptake
 
-        self.solver = cplex.Solver()
+        try:
+            self.solver = generic.Solver(integer=True)
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an MILP solver for tests')
 
     def test_flux_balance_tfba_exchange_d(self):
         fluxes = dict(fluxanalysis.flux_balance(
@@ -102,7 +101,6 @@ class TestFluxBalanceThermodynamic(unittest.TestCase):
         self.assertEquals(fluxes['rxn_5'], 0)
 
 
-@requires_solver
 class TestFluxVariability(unittest.TestCase):
     def setUp(self):
         self.database = DictDatabase()
@@ -119,7 +117,10 @@ class TestFluxVariability(unittest.TestCase):
             self.database, self.database.reactions)
         self.model.limits['rxn_5'].upper = 100
 
-        self.solver = cplex.Solver()
+        try:
+            self.solver = generic.Solver(integer=True)
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an MILP solver for tests')
 
     def test_flux_variability(self):
         fluxes = dict(fluxanalysis.flux_variability(
@@ -158,7 +159,6 @@ class TestFluxVariability(unittest.TestCase):
         self.assertEqual(fluxes['rxn_8'][1], 0)
 
 
-@requires_solver
 class TestFluxConsistency(unittest.TestCase):
     def setUp(self):
         self.database = DictDatabase()
@@ -172,7 +172,11 @@ class TestFluxConsistency(unittest.TestCase):
         self.database.set_reaction('rxn_8', parse_reaction('|F| => |E|'))
         self.model = MetabolicModel.load_model(
             self.database, self.database.reactions)
-        self.solver = cplex.Solver()
+
+        try:
+            self.solver = generic.Solver(integer=True)
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an MILP solver for tests')
 
     def test_check_on_consistent(self):
         self.model.remove_reaction('rxn_2')

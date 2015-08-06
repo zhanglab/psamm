@@ -22,16 +22,9 @@ from psamm.metabolicmodel import MetabolicModel
 from psamm.database import DictDatabase
 from psamm import fastcore
 from psamm.datasource.modelseed import parse_reaction
-
-try:
-    from psamm.lpsolver import cplex
-except ImportError:
-    cplex = None
-
-requires_solver = unittest.skipIf(cplex is None, 'solver not available')
+from psamm.lpsolver import generic
 
 
-@requires_solver
 class TestFastcoreSimpleVlassisModel(unittest.TestCase):
     """Test fastcore using the simple model in [Vlassis14]_."""
 
@@ -46,7 +39,11 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
         self.database.set_reaction('rxn_6', parse_reaction('|D| =>'))
         self.model = MetabolicModel.load_model(
             self.database, self.database.reactions)
-        self.solver = cplex.Solver()
+
+        try:
+            self.solver = generic.Solver()
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an LP solver for tests')
 
     def test_lp10(self):
         result = fastcore.lp10(self.model, { 'rxn_6' },
@@ -80,7 +77,8 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
 
         result = fastcore.lp7(self.model, {'rxn_5'}, 0.001, solver=self.solver)
         supp = set(fastcore.support_positive(result, 0.001*0.999))
-        self.assertEqual(supp, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
+        # Test that the support contains at least the given reactions
+        self.assertLessEqual({'rxn_4', 'rxn_5', 'rxn_6'}, supp)
 
     def test_find_sparse_mode_singleton(self):
         core = { 'rxn_1' }
@@ -160,7 +158,6 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
                               solver=self.solver)
 
 
-@requires_solver
 class TestFastcoreTinyBiomassModel(unittest.TestCase):
     """Test fastcore using a model with tiny values in biomass reaction
 
@@ -172,9 +169,9 @@ class TestFastcoreTinyBiomassModel(unittest.TestCase):
     fastcore.
 
     In this particular model, rxn_2 can take a maximum flux of 1000. At the
-    same time rxn_1 will have to take a flux of 1e-4. This is the maximum
+    same time rxn_1 will have to take a flux of 1e-3. This is the maximum
     possible flux for rxn_1 so running fastcore with an epsilon larger than
-    1e-4 will indicate that the model is not consistent.
+    1e-3 will indicate that the model is not consistent.
     """
 
     def setUp(self):
@@ -185,25 +182,31 @@ class TestFastcoreTinyBiomassModel(unittest.TestCase):
             parse_reaction('(0.000001) |A| =>'))
         self.model = MetabolicModel.load_model(
             self.database, self.database.reactions)
-        self.solver = cplex.Solver()
+
+        try:
+            self.solver = generic.Solver()
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an LP solver for tests')
 
     def test_fastcc_is_consistent(self):
         self.assertTrue(fastcore.fastcc_is_consistent(
-            self.model, 0.001, solver=self.solver))
+            self.model, 0.0001, solver=self.solver))
+
+    def test_fastcc_is_consistent_high_epsilon(self):
+        self.assertFalse(fastcore.fastcc_is_consistent(
+            self.model, 0.1, solver=self.solver))
 
     def test_fastcore_induced_model(self):
-        core = { 'rxn_2' }
-        self.assertEquals(set(fastcore.fastcore(
-            self.model, core, 0.001, solver=self.solver)),
-            { 'rxn_1', 'rxn_2' })
+        core = {'rxn_2'}
+        self.assertEqual(set(fastcore.fastcore(
+            self.model, core, 0.0001, solver=self.solver)), {'rxn_1', 'rxn_2'})
 
     def test_fastcore_induced_model_high_epsilon(self):
-        core = { 'rxn_2' }
-        self.assertEquals(set(fastcore.fastcore(
-            self.model, core, 0.1, solver=self.solver)), { 'rxn_1', 'rxn_2' })
+        core = {'rxn_2'}
+        self.assertEqual(set(fastcore.fastcore(
+            self.model, core, 0.1, solver=self.solver)), {'rxn_1', 'rxn_2'})
 
 
-@requires_solver
 class TestFlippingModel(unittest.TestCase):
     """Test fastcore on a model that has to flip"""
 
@@ -216,7 +219,11 @@ class TestFlippingModel(unittest.TestCase):
         self.database.set_reaction('rxn_4', parse_reaction('|C| <=>'))
         self.model = MetabolicModel.load_model(
             self.database, self.database.reactions)
-        self.solver = cplex.Solver()
+
+        try:
+            self.solver = generic.Solver()
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an LP solver for tests')
 
     def test_fastcore_induced_model(self):
         core = { 'rxn_2', 'rxn_3' }

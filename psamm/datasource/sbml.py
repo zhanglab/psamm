@@ -23,7 +23,8 @@ from fractions import Fraction
 from functools import partial
 from itertools import count
 
-from ..database import MetabolicDatabase, DictDatabase
+from six import itervalues, iteritems
+
 from ..reaction import Reaction, Compound
 
 
@@ -39,6 +40,8 @@ SBML_NS_L2_V5 = 'http://www.sbml.org/sbml/level2/version5'
 
 # Level 3 namespaces
 SBML_NS_L3_V1_CORE = 'http://www.sbml.org/sbml/level3/version1/core'
+
+MATHML_NS = 'http://www.w3.org/1998/Math/MathML'
 
 
 def _tag(tag, namespace=None):
@@ -61,12 +64,11 @@ class _SBMLEntry(object):
         self._id = self._element_get_id(root)
 
     def _element_get_id(self, element):
-        """Get id of reaction or species element
+        """Get id of reaction or species element.
 
-        In old levels the name is used as the id. This method returns the correct
-        attribute depending on the level.
+        In old levels the name is used as the id. This method returns the
+        correct attribute depending on the level.
         """
-
         if self._reader._level > 1:
             entry_id = element.get('id')
         else:
@@ -359,7 +361,7 @@ class SBMLReader(object):
     @property
     def reactions(self):
         """Iterator over :class:`ReactionEntries <.ReactionEntry>`"""
-        return self._model_reactions.itervalues()
+        return itervalues(self._model_reactions)
 
     @property
     def species(self):
@@ -367,7 +369,7 @@ class SBMLReader(object):
 
         This will not yield boundary condition species if those are ignored.
         """
-        return (c for c in self._model_species.itervalues()
+        return (c for c in itervalues(self._model_species)
                 if not self._ignore_boundary or not c.boundary)
 
     @property
@@ -390,6 +392,8 @@ class SBMLWriter(object):
 
     def write_model(self, file, model, compounds):
         """Write a given model to file"""
+
+        ET.register_namespace('mathml', MATHML_NS)
 
         # Load compound information
         compound_name = {}
@@ -422,7 +426,7 @@ class SBMLWriter(object):
         # Create list of compartments
         compartments = ET.SubElement(
             model_tag, self._sbml_tag('listOfCompartments'))
-        for compartment, compartment_id in model_compartments.iteritems():
+        for compartment, compartment_id in iteritems(model_compartments):
             compartment_tag = ET.SubElement(
                 compartments, self._sbml_tag('compartment'))
             compartment_tag.set(self._sbml_tag('id'), compartment_id)
@@ -431,7 +435,7 @@ class SBMLWriter(object):
         # Create list of species
         species_list = ET.SubElement(
             model_tag, self._sbml_tag('listOfSpecies'))
-        for species, species_id in model_species.iteritems():
+        for species, species_id in iteritems(model_species):
             species_tag = ET.SubElement(species_list,
                                         self._sbml_tag('species'))
             species_tag.set(self._sbml_tag('id'), species_id)
@@ -464,6 +468,24 @@ class SBMLWriter(object):
                 spec_ref.set(
                     self._sbml_tag('species'), model_species[compound])
                 spec_ref.set(self._sbml_tag('stoichiometry'), str(abs(value)))
+
+            # Create COBRA-compliant parameter list
+            kl_tag = ET.SubElement(reaction_tag, self._sbml_tag('kineticLaw'))
+            math_tag = ET.SubElement(kl_tag, self._sbml_tag('math'))
+            ci_tag = ET.SubElement(math_tag, _tag('ci', MATHML_NS))
+            ci_tag.text = 'FLUX_VALUE'
+            param_list = ET.SubElement(
+                kl_tag, self._sbml_tag('listOfParameters'))
+            ET.SubElement(param_list, self._sbml_tag('parameter'), {
+                self._sbml_tag('id'): 'LOWER_BOUND',
+                self._sbml_tag('name'): 'LOWER_BOUND',
+                self._sbml_tag('value'): str(model.limits[reaction].lower)
+            })
+            ET.SubElement(param_list, self._sbml_tag('parameter'), {
+                self._sbml_tag('id'): 'UPPER_BOUND',
+                self._sbml_tag('name'): 'UPPER_BOUND',
+                self._sbml_tag('value'): str(model.limits[reaction].upper)
+            })
 
         tree = ET.ElementTree(root)
         tree.write(file, default_namespace=self._namespace)

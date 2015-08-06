@@ -15,7 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Base objects for representation of LP problems
+"""Base objects for representation of LP problems.
 
 A linear programming problem is built from a number of constraints and an
 objective function. The objective function is a linear expression represented
@@ -32,6 +32,9 @@ constructed faster.
 import numbers
 from collections import Counter
 import abc
+
+from six import add_metaclass, iteritems
+from six.moves import range
 
 
 class VariableSet(tuple):
@@ -74,7 +77,7 @@ class Expression(object):
 
     def values(self):
         """Iterator of (variable, value)-pairs in expression"""
-        return self._variables.iteritems()
+        return iteritems(self._variables)
 
     def value(self, variable):
         return self._variables.get(variable, 0)
@@ -87,16 +90,16 @@ class Expression(object):
         of the variables is a set variable then a single iterator will be
         yielded.
         """
-
         count = max(1 if not isinstance(var, VariableSet) else
                     len(var) for var in self._variables)
+
         def value_set(n):
-            for variable, value in self._variables.iteritems():
+            for variable, value in iteritems(self._variables):
                 if isinstance(variable, VariableSet):
                     yield variable[n], value
                 else:
                     yield variable, value
-        for i in xrange(count):
+        for i in range(count):
             yield value_set(i)
 
     def __add__(self, other):
@@ -121,7 +124,7 @@ class Expression(object):
 
     def __mul__(self, other):
         return self.__class__(
-            {var: value*other for var, value in self._variables.iteritems()},
+            {var: value*other for var, value in iteritems(self._variables)},
             self._offset*other)
 
     def __rmul__(self, other):
@@ -180,7 +183,7 @@ class Expression(object):
 
         def all_terms():
             count_vars = 0
-            for name, value in sorted(self._variables.iteritems()):
+            for name, value in sorted(iteritems(self._variables)):
                 if value != 0:
                     count_vars += 1
                     if isinstance(name, VariableSet):
@@ -289,16 +292,25 @@ class VariableType(object):
     """Binary variable type (0 or 1)"""
 
 
+@add_metaclass(abc.ABCMeta)
 class Solver(object):
     """Factory for LP Problem instances"""
-
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def create_problem(self):
         """Create a new :class:`.Problem` instance"""
 
 
+@add_metaclass(abc.ABCMeta)
+class Constraint(object):
+    """Represents a constraint within an LP Problem"""
+
+    @abc.abstractmethod
+    def delete(self):
+        """Remove constraint from Problem instance"""
+
+
+@add_metaclass(abc.ABCMeta)
 class Problem(object):
     """Representation of LP Problem instance
 
@@ -306,8 +318,6 @@ class Problem(object):
     responsibility of the solver interface to translate the object into a
     unique string if required by the underlying LP solver.
     """
-
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def define(self, *names, **kwargs):
@@ -329,8 +339,9 @@ class Problem(object):
     def add_linear_constraints(self, *relations):
         """Add constraints to the problem
 
-        Each constraint is represented by a :class:`.Relation`, and the
-        expression in that relation can be a set expression.
+        Each constraint is given as a :class:`.Relation`, and the expression
+        in that relation can be a set expression. Returns a sequence of
+        :class:`.Constraint`s.
         """
 
     @abc.abstractmethod
@@ -377,6 +388,8 @@ class Result(object):
     def __nonzero__(self):
         """Whether solution was optimal"""
         return self.success
+
+    __bool__ = __nonzero__
 
     @abc.abstractproperty
     def status(self):

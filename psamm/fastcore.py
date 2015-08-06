@@ -26,6 +26,8 @@ from .lpsolver import lp
 from .fluxanalysis import flux_balance
 from .metabolicmodel import FlipableModelView
 
+from six import iteritems
+
 # Module-level logging
 logger = logging.getLogger(__name__)
 
@@ -88,12 +90,12 @@ def lp7(model, reaction_subset, epsilon, solver):
     z = prob.set(('z', rxnid) for rxnid in reaction_subset)
     prob.add_linear_constraints(v >= z)
 
-    massbalance_lhs = { compound: 0 for compound in model.compounds }
-    for spec, value in model.matrix.iteritems():
+    massbalance_lhs = {compound: 0 for compound in model.compounds}
+    for spec, value in iteritems(model.matrix):
         compound, rxnid = spec
         massbalance_lhs[compound] += prob.var(('v', rxnid)) * value
     prob.add_linear_constraints(
-        *(lhs == 0 for compound, lhs in massbalance_lhs.iteritems()))
+        *(lhs == 0 for compound, lhs in iteritems(massbalance_lhs)))
 
     # Solve
     result = prob.solve(lp.ObjectiveSense.Maximize)
@@ -135,12 +137,12 @@ def lp10(model, subset_k, subset_p, epsilon, scaling, solver, weights={}):
     v = prob.set(('v', rxnid) for rxnid in subset_p)
     prob.add_linear_constraints(z >= v, v >= -z)
 
-    massbalance_lhs = { compound: 0 for compound in model.compounds }
-    for spec, value in model.matrix.iteritems():
+    massbalance_lhs = {compound: 0 for compound in model.compounds}
+    for spec, value in iteritems(model.matrix):
         compound, rxnid = spec
         massbalance_lhs[compound] += prob.var(('v', rxnid)) * value
     prob.add_linear_constraints(
-        *(lhs == 0 for compound, lhs in massbalance_lhs.iteritems()))
+        *(lhs == 0 for compound, lhs in iteritems(massbalance_lhs)))
 
     # Solve
     result = prob.solve(lp.ObjectiveSense.Minimize)
@@ -186,7 +188,7 @@ def fastcc(model, epsilon, solver):
     while len(subset) > 0:
         if singleton:
             reaction = next(iter(subset))
-            subset_i = { reaction }
+            subset_i = {reaction}
 
             logger.debug('LP3 on {}'.format(subset_i))
             supp = support(flux_balance(
@@ -198,7 +200,8 @@ def fastcc(model, epsilon, solver):
             supp = support(lp7(model, subset_i, epsilon, solver), epsilon)
         consistent_subset.update(supp)
 
-        logger.debug('|A| = {}, A = {}'.format(len(consistent_subset), consistent_subset))
+        logger.debug('|A| = {}, A = {}'.format(
+            len(consistent_subset), consistent_subset))
 
         if not subset.isdisjoint(consistent_subset):
             subset -= consistent_subset

@@ -15,7 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Definitions related to reaction equations and parsing of such equations"""
+"""Definitions related to reaction equations and parsing of such equations."""
 
 import functools
 
@@ -26,9 +26,10 @@ class Compound(object):
 
     A compound is a named entity in the reaction equations representing a
     chemical compound. A compound can represent a generalized chemical entity
-    (e.g. polyphosphate) and the arguments can be used to instantiate a specific
-    chemical entity (e.g. polyphosphate(3)) by passing a number as an argument
-    or a partially specified entity by passing an expression (e.g. polyphosphate(n)).
+    (e.g. polyphosphate) and the arguments can be used to instantiate a
+    specific chemical entity (e.g. polyphosphate(3)) by passing a number as an
+    argument or a partially specified entity by passing an expression (e.g.
+    polyphosphate(n)).
     """
 
     def __init__(self, name, compartment=None, arguments=()):
@@ -57,7 +58,8 @@ class Compound(object):
         >>> Compound('Pb').translate(lambda x: x.lower())
         Compound('pb')
         """
-        return self.__class__(func(self._name), self._compartment, self._arguments)
+        return self.__class__(
+            func(self._name), self._compartment, self._arguments)
 
     def in_compartment(self, compartment):
         """Return an instance of this compound in the specified compartment
@@ -69,17 +71,19 @@ class Compound(object):
 
     def __eq__(self, other):
         return (isinstance(other, Compound) and
-            self._name == other._name and
-            self._compartment == other._compartment and
-            self._arguments == other._arguments)
+                self._name == other._name and
+                self._compartment == other._compartment and
+                self._arguments == other._arguments)
 
     def __ne__(self, other):
         return not self == other
 
     def __lt__(self, other):
         if isinstance(other, Compound):
-            return ((self._name, self._compartment, self._arguments) <
-                    (other._name, other._compartment, other._arguments))
+            def tuple_repr(c):
+                comp = c._compartment if c._compartment is not None else ''
+                return (c._name, comp, c._arguments)
+            return tuple_repr(self) < tuple_repr(other)
         return NotImplemented
 
     def __hash__(self):
@@ -140,12 +144,12 @@ class Reaction(object):
 
     @property
     def left(self):
-        """Sequence of compounds on the left-hand side of the reaction equation"""
+        """Compounds on the left-hand side of the reaction equation."""
         return self._left
 
     @property
     def right(self):
-        """Sequence of compounds on the right-hand side of the reaction equation"""
+        """Compounds on the right-hand side of the reaction equation."""
         return self._right
 
     @property
@@ -175,20 +179,21 @@ class Reaction(object):
         return Reaction(direction, left, right)
 
     def translated_compounds(self, translate):
-        """Return reaction where compound names have been translated
+        """Return reaction where compound names have been translated.
 
-        For each compound the translate function is called with the compound name
-        and the returned value is used as the new compound name. A new reaction is
-        returned with the substituted compound names.
+        For each compound the translate function is called with the compound
+        name and the returned value is used as the new compound name. A new
+        reaction is returned with the substituted compound names.
         """
-
-        left = ((compound.translate(translate), count) for compound, count in self._left)
-        right = ((compound.translate(translate), count) for compound, count in self._right)
+        left = ((compound.translate(translate), count)
+                for compound, count in self._left)
+        right = ((compound.translate(translate), count)
+                 for compound, count in self._right)
 
         return Reaction(self._direction, left, right)
 
     def copy(self):
-        """Returns a distinct copy as a new Reaction object"""
+        """Returns a distinct copy as a new Reaction object."""
         return self.__class__(self._direction, self._left, self._right)
 
     def __str__(self):
@@ -202,14 +207,17 @@ class Reaction(object):
 
         def format_compound_list(cmpds):
             """Format compound list"""
-            return ' + '.join(format_compound(compound, count) for compound, count in cmpds)
+            return ' + '.join(format_compound(compound, count)
+                              for compound, count in cmpds)
 
-        return '{} {} {}'.format(format_compound_list(self._left),
-                                 '?' if self._direction == '' else self._direction,
-                                 format_compound_list(self._right))
+        return '{} {} {}'.format(
+            format_compound_list(self._left),
+            '?' if self._direction == '' else self._direction,
+            format_compound_list(self._right))
 
     def __repr__(self):
-        return 'Reaction({}, {}, {})'.format(repr(self._direction), repr(self._left), repr(self._right))
+        return 'Reaction({}, {}, {})'.format(
+            repr(self._direction), repr(self._left), repr(self._right))
 
     def __eq__(self, other):
         """Indicate equality of self and other"""
@@ -221,7 +229,8 @@ class Reaction(object):
         return not self == other
 
     def __hash__(self):
-        return hash('Reaction') ^ hash(self._direction) ^ hash(self._left) ^ hash(self._right)
+        return (hash('Reaction') ^ hash(self._direction) ^
+                hash(self._left) ^ hash(self._right))
 
 
 if __name__ == '__main__':

@@ -14,16 +14,39 @@ modules. The test suite is run by changing to the project directory and running
 
     $ ./setup.py test
 
+To run the tests on all the supported Python platforms with additional tests
+for coding style (PEP8) and building documentation, use tox_:
+
+.. code-block:: shell
+
+    $ tox
+
+When testing with tox, the URL for the Cplex python module must be provided in
+the environment variable ``CPLEX_PYTHON_PACKAGE`` for the Cplex tests to
+succeed. For example:
+
+.. code-block:: shell
+
+    $ export CPLEX_PYTHON_PACKAGE=file:///path/to/IBM/ILOG/CPLEX_StudioXXX/cplex/python/x86-64_osx
+    $ tox
+
+Adding new tests
+----------------
+
 Adding or improving tests for python modules is highly encouraged. A test suite
 for a new module should be created in ``tests/test_<modulename>.py``. These
 test suites use the built-in :mod:`unittest` module.
 
+Documentation tests
+-------------------
+
 In addition, some modules have documentation that can be tested using the
 :mod:`doctest` module. These test suites should also run without failure
-before any commits. They can be run from the ``model_script`` directory by
-specifying the particular module (e.g the ``affine`` module in ``expression``)
-using
+before any commits. They can be run by specifying the particular module (e.g
+the ``affine`` module in ``expression``) using
 
 .. code-block:: shell
 
     $ python -m psamm.expression.affine -v
+
+.. _tox: https://testrun.org/tox/

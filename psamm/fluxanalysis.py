@@ -15,12 +15,14 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Implementation of Flux Balance Analysis"""
+"""Implementation of Flux Balance Analysis."""
 
 import logging
 import random
 
 from .lpsolver import lp
+
+from six import iteritems
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -55,11 +57,11 @@ class FluxBalanceProblem(object):
             self._prob.define(('v', reaction_id), lower=lower, upper=upper)
 
         # Define constraints
-        massbalance_lhs = { compound: 0 for compound in model.compounds }
-        for spec, value in model.matrix.iteritems():
+        massbalance_lhs = {compound: 0 for compound in model.compounds}
+        for spec, value in iteritems(model.matrix):
             compound, reaction_id = spec
             massbalance_lhs[compound] += self.get_flux_var(reaction_id) * value
-        for compound, lhs in massbalance_lhs.iteritems():
+        for compound, lhs in iteritems(massbalance_lhs):
             self._prob.add_linear_constraints(lhs == 0)
 
     @property
@@ -77,7 +79,7 @@ class FluxBalanceProblem(object):
 
         if isinstance(reaction, dict):
             objective = sum(v * self.get_flux_var(r)
-                            for r, v in reaction.iteritems())
+                            for r, v in iteritems(reaction))
         else:
             objective = self.get_flux_var(reaction)
 
@@ -116,7 +118,7 @@ class FluxBalanceTDProblem(FluxBalanceProblem):
             # by alpha.
             if not model.is_exchange(reaction_id):
                 p.define(('alpha', reaction_id), types=lp.VariableType.Binary)
-                p.define(('dmu', reaction_id)) # Delta mu
+                p.define(('dmu', reaction_id))  # Delta mu
 
                 flux = self.get_flux_var(reaction_id)
                 alpha = p.var(('alpha', reaction_id))
@@ -132,11 +134,11 @@ class FluxBalanceTDProblem(FluxBalanceProblem):
         p.define(*(('mu', compound) for compound in model.compounds))
 
         tdbalance_lhs = {reaction_id: 0 for reaction_id in model.reactions}
-        for spec, value in model.matrix.iteritems():
+        for spec, value in iteritems(model.matrix):
             compound, reaction_id = spec
             if not model.is_exchange(reaction_id):
                 tdbalance_lhs[reaction_id] += p.var(('mu', compound)) * value
-        for reaction_id, lhs in tdbalance_lhs.iteritems():
+        for reaction_id, lhs in iteritems(tdbalance_lhs):
             if not model.is_exchange(reaction_id):
                 p.add_linear_constraints(lhs == p.var(('dmu', reaction_id)))
 
@@ -189,13 +191,13 @@ def flux_variability(model, reactions, fixed, tfba, solver):
 
     fba = _get_fba_problem(model, tfba, solver)
 
-    for reaction_id, value in fixed.iteritems():
+    for reaction_id, value in iteritems(fixed):
         flux = fba.get_flux_var(reaction_id)
         fba.prob.add_linear_constraints(flux >= value)
 
     def min_max_solve(reaction_id):
         for direction in (-1, 1):
-            fba.solve({ reaction_id: direction })
+            fba.solve({reaction_id: direction})
             yield fba.get_flux(reaction_id)
 
     # Solve for each reaction
@@ -240,11 +242,11 @@ def flux_minimization(model, fixed, solver, weights={}):
     z = prob.set(('z', rxnid) for rxnid in model.reactions)
     prob.add_linear_constraints(z >= v, v >= -z)
 
-    massbalance_lhs = { compound: 0 for compound in model.compounds }
-    for spec, value in model.matrix.iteritems():
+    massbalance_lhs = {compound: 0 for compound in model.compounds}
+    for spec, value in iteritems(model.matrix):
         compound, rxnid = spec
         massbalance_lhs[compound] += value * prob.var(('v', rxnid))
-    for compound, lhs in massbalance_lhs.iteritems():
+    for compound, lhs in iteritems(massbalance_lhs):
         prob.add_linear_constraints(lhs == 0)
 
     # Solve
@@ -285,7 +287,7 @@ def flux_randomization(model, fixed, tfba, solver):
             optimize[reaction_id] = random.random()
 
     fba = _get_fba_problem(model, tfba, solver)
-    for reaction_id, value in fixed.iteritems():
+    for reaction_id, value in iteritems(fixed):
         fba.prob.add_linear_constraints(fba.get_flux_var(reaction_id) >= value)
 
     fba.solve(optimize)
@@ -335,7 +337,7 @@ def consistency_check(model, subset, epsilon, tfba, solver):
         if reaction in support:
             continue
         elif model.is_reversible(reaction):
-            fba.solve({ reaction: -1 })
+            fba.solve({reaction: -1})
             support = set(rxnid for rxnid in model.reactions
                           if abs(fba.get_flux(rxnid)) >= epsilon)
             subset -= support

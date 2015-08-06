@@ -15,16 +15,18 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Representation of metabolic network databases"""
+"""Representation of metabolic network databases."""
 
 import abc
 from collections import defaultdict, Mapping
+
+from six import iteritems, add_metaclass
 
 from .reaction import Reaction
 
 
 class StoichiometricMatrixView(Mapping):
-    """Provides a sparse matrix view on the stoichiometry of a database
+    """Provides a sparse matrix view on the stoichiometry of a database.
 
     This object is used internally in the database to expose a sparse matrix
     view of the model stoichiometry. This class should not be instantied,
@@ -65,11 +67,10 @@ class StoichiometricMatrixView(Mapping):
                    for reaction in self._database.reactions)
 
     def __array__(self):
-        """Return Numpy ndarray instance of matrix
+        """Return Numpy ndarray instance of matrix.
 
         The matrix is indexed by sorted compound, reaction-keys
         """
-
         import numpy  # NumPy is only required for this method
 
         compound_list = sorted(self._database.compounds)
@@ -91,35 +92,34 @@ class StoichiometricMatrixView(Mapping):
         return matrix
 
 
+@add_metaclass(abc.ABCMeta)
 class MetabolicDatabase(object):
-    """Database of metabolic reactions"""
-
-    __metaclass__ = abc.ABCMeta
+    """Database of metabolic reactions."""
 
     @abc.abstractproperty
     def reactions(self):
-        """Iterator of reactions IDs in the database"""
+        """Iterator of reactions IDs in the database."""
 
     @abc.abstractproperty
     def compounds(self):
         """Itertor of :class:`Compounds <psamm.reaction.Compound>` in the
-        database"""
+        database."""
 
     @abc.abstractproperty
     def compartments(self):
-        """Iterator of compartment IDs in the database"""
+        """Iterator of compartment IDs in the database."""
 
     @abc.abstractmethod
     def has_reaction(self, reaction_id):
-        """Whether the given reaction exists in the database"""
+        """Whether the given reaction exists in the database."""
 
     @abc.abstractmethod
     def is_reversible(self, reaction_id):
-        """Whether the given reaction is reversible"""
+        """Whether the given reaction is reversible."""
 
     @abc.abstractmethod
     def get_reaction_values(self, reaction_id):
-        """Return an iterator of reaction compounds and stoichiometric values
+        """Return an iterator of reaction compounds and stoichiometric values.
 
         The returned iterator contains
         (:class:`Compound <psamm.reaction.Compound>`, value)-tuples. The value
@@ -129,35 +129,35 @@ class MetabolicDatabase(object):
 
     @abc.abstractmethod
     def get_compound_reactions(self, compound_id):
-        """Return an iterator of reactions containing the compound
+        """Return an iterator of reactions containing the compound.
 
         Reactions are returned as IDs.
         """
 
     @property
     def reversible(self):
-        """The set of reversible reactions"""
+        """The set of reversible reactions."""
         return set(reaction_id for reaction_id in self.reactions
                    if self.is_reversible(reaction_id))
 
     @property
     def matrix(self):
-        """Mapping from compound, reaction to stoichiometric value
+        """Mapping from compound, reaction to stoichiometric value.
 
         This is an instance of :class:`StoichiometricMatrixView`."""
         return StoichiometricMatrixView(self)
 
     def get_reaction(self, reaction_id):
-        """Return reaction as a :class:`Reaction <psamm.reaction.Reaction>`"""
+        """Return reaction as a :class:`Reaction <psamm.reaction.Reaction>`."""
 
         direction = Reaction.Right
         if self.is_reversible(reaction_id):
             direction = Reaction.Bidir
 
         left = ((compound, -value) for compound, value in
-            self.get_reaction_values(reaction_id) if value < 0)
+                self.get_reaction_values(reaction_id) if value < 0)
         right = ((compound, value) for compound, value in
-            self.get_reaction_values(reaction_id) if value > 0)
+                 self.get_reaction_values(reaction_id) if value > 0)
 
         return Reaction(direction, left, right)
 
@@ -198,7 +198,7 @@ class DictDatabase(MetabolicDatabase):
     def get_reaction_values(self, reaction_id):
         if reaction_id not in self._reactions:
             raise ValueError('Unknown reaction: {}'.format(repr(reaction_id)))
-        return self._reactions[reaction_id].iteritems()
+        return iteritems(self._reactions[reaction_id])
 
     def get_compound_reactions(self, compound_id):
         return iter(self._compound_reactions[compound_id])
@@ -235,7 +235,7 @@ class DictDatabase(MetabolicDatabase):
         # Remove reaction from compound reactions if the resulting
         # stoichiometric value turned out to be zero.
         zero_compounds = set()
-        for compound, value in self._reactions[reaction_id].iteritems():
+        for compound, value in iteritems(self._reactions[reaction_id]):
             if value == 0:
                 zero_compounds.add(compound)
 

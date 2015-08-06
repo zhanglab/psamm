@@ -15,7 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Parser and representation of chemical formulas
+"""Parser and representation of chemical formulas.
 
 Chemical formulas (:class:`.Formula`) are represented as a number of
 :class:`FormulaElements <.FormulaElement>` with associated counts. A
@@ -27,6 +27,10 @@ import re
 from collections import Counter
 import functools
 import operator
+import numbers
+
+from six import iteritems
+from six.moves import reduce
 
 from .expression.affine import Expression
 
@@ -38,8 +42,8 @@ class FormulaElement(object):
         """Add formula elements creating subformulas"""
         if isinstance(other, FormulaElement):
             if self == other:
-                return Formula({ self: 2 })
-            return Formula({ self: 1, other: 1 })
+                return Formula({self: 2})
+            return Formula({self: 1, other: 1})
         return NotImplemented
 
     def __radd__(self, other):
@@ -47,21 +51,21 @@ class FormulaElement(object):
 
     def __or__(self, other):
         """Merge formula elements into one formula"""
-        return Formula({ self: 1 }) | other
+        return Formula({self: 1}) | other
 
     def __ror__(self, other):
         return self | other
 
     def __mul__(self, other):
         """Multiply formula element by other"""
-        return Formula({ self: other })
+        return Formula({self: other})
 
     def __rmul__(self, other):
         return self * other
 
     def repeat(self, count):
         """Repeat formula element by creating a subformula"""
-        return Formula({ self: count })
+        return Formula({self: count})
 
     def variables(self):
         """Iterator over variables in formula element"""
@@ -163,7 +167,7 @@ class Formula(FormulaElement):
         self._values = {}
         self._variables = set()
 
-        for element, value in values.iteritems():
+        for element, value in iteritems(values):
             if not isinstance(element, FormulaElement):
                 raise ValueError('Not a formula element: {}'.format(
                     repr(element)))
@@ -178,7 +182,7 @@ class Formula(FormulaElement):
 
     def substitute(self, **kwargs):
         result = self.__class__()
-        for element, value in self._values.iteritems():
+        for element, value in iteritems(self._values):
             if callable(getattr(value, 'substitute', None)):
                 value = value.substitute(**kwargs)
                 if isinstance(value, int) and value <= 0:
@@ -199,7 +203,7 @@ class Formula(FormulaElement):
         while len(stack) > 0:
             var, value = stack.pop()
             if isinstance(var, Formula):
-                for sub_var, sub_value in var._values.iteritems():
+                for sub_var, sub_value in iteritems(var._values):
                     stack.append((sub_var, value*sub_value))
             else:
                 if var in result:
@@ -213,7 +217,7 @@ class Formula(FormulaElement):
 
     def items(self):
         """Iterate over (:class:`.FormulaElement`, value)-pairs"""
-        return self._values.iteritems()
+        return iteritems(self._values)
 
     def is_variable(self):
         return len(self._variables) > 0
@@ -240,20 +244,22 @@ class Formula(FormulaElement):
                 if Atom('H') in values:
                     yield Atom('H'), values[Atom('H')]
                 for element, value in sorted(
-                        values.iteritems(), key=element_sort_key):
+                        iteritems(values), key=element_sort_key):
                     if element not in (Atom('C'), Atom('H')):
                         yield element, value
             else:
                 for element, value in sorted(
-                        values.iteritems(), key=element_sort_key):
+                        iteritems(values), key=element_sort_key):
                     yield element, value
 
         s = ''
         for element, value in hill_sorted_elements(self._values):
             def grouped(element, value):
                 return '({}){}'.format(element, value if value != 1 else '')
+
             def nongrouped(element, value):
                 return '{}{}'.format(element, value if value != 1 else '')
+
             if isinstance(element, Radical):
                 if len(element.symbol) == 1:
                     s += nongrouped(element, value)
@@ -275,17 +281,17 @@ class Formula(FormulaElement):
             values.update(other._values)
             return Formula(values)
         elif isinstance(other, FormulaElement):
-            return self | Formula({ other: 1 })
+            return self | Formula({other: 1})
         return NotImplemented
 
     def __mul__(self, other):
         """Multiply formula element by other"""
-        values = {key: value*other for key, value in self._values.iteritems()}
+        values = {key: value*other for key, value in iteritems(self._values)}
         return Formula(values)
 
     def __hash__(self):
         h = hash('Formula')
-        for element, value in self._values.iteritems():
+        for element, value in iteritems(self._values):
             h ^= hash(element) ^ hash(value)
         return h
 
@@ -311,26 +317,29 @@ class Formula(FormulaElement):
 
         def transform_subformula(form):
             '''Extract radical if subformula is a singleton with a radical'''
-            if isinstance(form, Formula) and len(form._values) == 1:
+            if isinstance(form, dict) and len(form) == 1:
                 # A radical in a singleton subformula is interpreted as a
                 # numbered radical.
-                element, value = next(form._values.iteritems())
+                element, value = next(iteritems(form))
                 if isinstance(element, Radical):
                     return Radical('{}{}'.format(element.symbol, value))
             return form
 
         stack = []
-        formula = Formula()
+        formula = {}
         expect_count = False
 
         def close(formula, count=1):
             if len(stack) == 0:
                 raise ValueError('Unbalanced parenthesis group in formula')
             subformula = transform_subformula(formula)
+            if isinstance(subformula, dict):
+                subformula = Formula(subformula)
+
             formula = stack.pop()
-            if subformula not in formula._values:
-                formula._values[subformula] = 0
-            formula._values[subformula] += count
+            if subformula not in formula:
+                formula[subformula] = 0
+            formula[subformula] += count
             return formula
 
         for match in re.finditer(scanner, s):
@@ -346,7 +355,7 @@ class Formula(FormulaElement):
                 if expect_count:
                     formula = close(formula)
                 stack.append(formula)
-                formula = Formula()
+                formula = {}
                 expect_count = False
             elif group is not None and group == ')':
                 if expect_count:
@@ -377,7 +386,7 @@ class Formula(FormulaElement):
         if len(stack) > 0:
             raise ValueError('Unbalanced parenthesis group in formula')
 
-        return formula
+        return Formula(formula)
 
     @classmethod
     def balance(cls, lhs, rhs):
@@ -386,16 +395,17 @@ class Formula(FormulaElement):
         Given complete formulas for right side and left side of a reaction,
         calculate formulas for the missing compounds on both sides. Return
         as a left, right tuple. Formulas can be flattened before balancing
-        to diregard grouping structure.
+        to disregard grouping structure.
         """
 
         def missing(formula, other):
-            for element, value in formula._values.iteritems():
+            for element, value in iteritems(formula._values):
                 if element not in other._values:
                     yield value*element
-                elif value - other._values[element] > 0:
+                else:
                     delta = value - other._values[element]
-                    yield delta*element
+                    if isinstance(delta, numbers.Number) and delta > 0:
+                        yield delta*element
 
         return (reduce(operator.or_, missing(rhs, lhs), Formula()),
                 reduce(operator.or_, missing(lhs, rhs), Formula()))

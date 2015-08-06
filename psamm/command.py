@@ -16,7 +16,7 @@
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
-"""Command line interface
+"""Command line interface.
 
 Each command in the command line interface is implemented as a subclass of
 :class:`Command`. Commands are automatically discovered based on this
@@ -38,22 +38,25 @@ import math
 import abc
 
 from . import __version__ as package_version
-from .formula import Formula, Radical
+from .formula import Formula
 from .gapfill import gapfind, gapfill
 from .database import DictDatabase
 from .metabolicmodel import MetabolicModel
 from .reaction import Compound
 from .datasource.native import NativeModel
 from .datasource import sbml
-from . import fluxanalysis, massconsistency, fastcore
+from . import fluxanalysis, fluxcoupling, massconsistency, fastcore
 from .lpsolver import generic
+
+from six import add_metaclass, iteritems
 
 # Module-level logging
 logger = logging.getLogger(__name__)
 
 
+@add_metaclass(abc.ABCMeta)
 class Command(object):
-    """Represents a command in the interface, operating on a model
+    """Represents a command in the interface, operating on a model.
 
     Subclasses must define name and title as class attributes. The constructor
     will be given the NativeModel and the command line namespace. The subclass
@@ -64,8 +67,6 @@ class Command(object):
     :class:`argparse.ArgumentParser` as desired. The resulting argument
     namespace will be passed to the constructor.
     """
-
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, model, args):
         self._model = model
@@ -96,7 +97,7 @@ class Command(object):
 
 
 class SolverCommandMixin(object):
-    """Mixin for commands that use an LP solver
+    """Mixin for commands that use an LP solver.
 
     This adds a ``--solver`` parameter to the command that the user can use to
     select a specific solver. It also adds the method :meth:`_get_solver` which
@@ -126,7 +127,7 @@ class SolverCommandMixin(object):
 
 
 class ChargeBalanceCommand(Command):
-    """Check whether compound charge in a given database or model is balanced
+    """Check whether compound charge in a given database or model is balanced.
 
     Balanced reactions are those reactions where the total charge
     is consistent on the left and right side of the reaction equation.
@@ -185,7 +186,7 @@ class ChargeBalanceCommand(Command):
 
 
 class ConsoleCommand(Command):
-    """Start an interactive Python console with the given model loaded"""
+    """Start an interactive Python console with the given model loaded."""
 
     name = 'console'
     title = 'Start Python console with metabolic model loaded'
@@ -204,7 +205,8 @@ class ConsoleCommand(Command):
         # and related packages at this point when we are certain
         # they are needed.
         from code import InteractiveConsole
-        import readline, rlcompleter
+        import readline
+        import rlcompleter
 
         readline.set_completer(rlcompleter.Completer(namespace).complete)
         readline.parse_and_bind('tab: complete')
@@ -235,7 +237,7 @@ class ConsoleCommand(Command):
 
 
 class FastGapFillCommand(SolverCommandMixin, Command):
-    """Run FastGapFill algorithm on a metabolic model"""
+    """Run FastGapFill algorithm on a metabolic model."""
 
     name = 'fastgapfill'
     title = 'Run FastGapFill on a metabolic model'
@@ -286,7 +288,8 @@ class FastGapFillCommand(SolverCommandMixin, Command):
         # Add exchange and transport reactions to database
         model_complete = self._mm.copy()
         logger.info('Adding database, exchange and transport reactions')
-        db_added = model_complete.add_all_database_reactions(model_compartments)
+        db_added = model_complete.add_all_database_reactions(
+            model_compartments)
         ex_added = model_complete.add_all_exchange_reactions()
         tp_added = model_complete.add_all_transport_reactions()
 
@@ -343,9 +346,10 @@ class FastGapFillCommand(SolverCommandMixin, Command):
             if self._mm.has_reaction(rxnid):
                 reaction_class = 'Model'
                 weight = 0
-            reaction = model_complete.get_reaction(rxnid).translated_compounds(lambda x: compound_name.get(x, x))
+            rx = model_complete.get_reaction(rxnid)
+            rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
             print('{}\t{}\t{}\t{}\t{}'.format(
-                rxnid, reaction_class, weight, flux, reaction))
+                rxnid, reaction_class, weight, flux, rxt))
 
         logger.info('Calculating Fastcc consistent subset of induced model')
         consistent_core = fastcore.fastcc_consistent_subset(
@@ -358,7 +362,7 @@ class FastGapFillCommand(SolverCommandMixin, Command):
 
 
 class FluxBalanceCommand(SolverCommandMixin, Command):
-    """Run flux balance analysis on a metabolic model"""
+    """Run flux balance analysis on a metabolic model."""
 
     name = 'fba'
     title = 'Run flux balance analysis on a metabolic model'
@@ -426,7 +430,7 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
         fmin_fluxes = dict(fluxanalysis.flux_minimization(
             self._mm, {reaction: optimum}, solver=solver))
         count = 0
-        for reaction_id, flux in fmin_fluxes.iteritems():
+        for reaction_id, flux in iteritems(fmin_fluxes):
             if fba_fluxes[reaction_id] - epsilon > flux:
                 count += 1
             yield reaction_id, fba_fluxes[reaction_id], flux
@@ -442,12 +446,12 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
         fluxes = dict(fluxanalysis.flux_balance(
             self._mm, reaction, tfba=True, solver=solver))
 
-        for reaction_id, flux in fluxes.iteritems():
+        for reaction_id, flux in iteritems(fluxes):
             yield reaction_id, fba_fluxes[reaction_id], flux
 
 
 class FluxConsistencyCommand(SolverCommandMixin, Command):
-    """Check that reactions are flux consistent in a model
+    """Check that reactions are flux consistent in a model.
 
     A reaction is flux consistent if there exists any steady-state flux
     solution where the flux of the given reaction is non-zero. The
@@ -537,19 +541,135 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
 
             if reaction in inconsistent:
                 rx = self._mm.get_reaction(reaction)
-                rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
+                rxt = rx.translated_compounds(
+                    lambda x: compound_name.get(x, x))
                 print('{}\t{}'.format(reaction, rxt))
 
         logger.info('Model has {}/{} inconsistent internal reactions'
                     ' ({} disabled by user)'.format(
-            count_internal, total_internal, disabled_internal))
+                        count_internal, total_internal, disabled_internal))
         logger.info('Model has {}/{} inconsistent exchange reactions'
                     ' ({} disabled by user)'.format(
-            count_exchange, total_exchange, disabled_exchange))
+                        count_exchange, total_exchange, disabled_exchange))
+
+
+class FluxCouplingCommand(SolverCommandMixin, Command):
+    """Find flux coupled reactions in the model.
+
+    This identifies any reaction pairs where the flux of one reaction
+    constrains the flux of another reaction. The reactions can be coupled in
+    three distinct ways depending on the ratio between the reaction fluxes.
+    The reactions can be fully coupled (the ratio is static and non-zero);
+    partially coupled (the ratio is bounded and non-zero); or directionally
+    coupled (the ratio is non-zero).
+    """
+
+    name = 'fluxcoupling'
+    title = 'Find flux coupled reactions in model'
+
+    def run(self):
+        solver = self._get_solver()
+
+        max_reaction = self._model.get_biomass_reaction()
+        if max_reaction is None:
+            raise ValueError('The biomass reaction was not specified')
+
+        fba_fluxes = dict(fluxanalysis.flux_balance(
+            self._mm, max_reaction, tfba=False, solver=solver))
+        optimum = fba_fluxes[max_reaction]
+
+        self._fcp = fluxcoupling.FluxCouplingProblem(
+            self._mm, {max_reaction: 0.999 * optimum}, solver)
+
+        self._coupled = {}
+        self._groups = []
+
+        reactions = sorted(self._mm.reactions)
+        for i, reaction1 in enumerate(reactions):
+            if reaction1 in self._coupled:
+                continue
+
+            for reaction2 in reactions[i+1:]:
+                if (reaction2 in self._coupled and
+                        (self._coupled[reaction2] ==
+                         self._coupled.get(reaction1))):
+                    continue
+
+                self._check_reactions(reaction1, reaction2)
+
+        logger.info('Coupled groups:')
+        for i, group in enumerate(self._groups):
+            if group is not None:
+                logger.info('{}: {}'.format(i, ', '.join(sorted(group))))
+
+    def _check_reactions(self, reaction1, reaction2):
+        logger.debug('Solving for {}, {}'.format(reaction1, reaction2))
+        lower, upper = self._fcp.solve(reaction1, reaction2)
+
+        logger.debug('Result: {}, {}'.format(lower, upper))
+
+        coupling = fluxcoupling.classify_coupling((lower, upper))
+        if coupling in (fluxcoupling.CouplingClass.DirectionalForward,
+                        fluxcoupling.CouplingClass.DirectionalReverse):
+            text = 'Directional, v1 / v2 in [{}, {}]'.format(lower, upper)
+            if (coupling == fluxcoupling.CouplingClass.DirectionalReverse and
+                    not self._mm.is_reversible(reaction1) and lower == 0.0):
+                return
+        elif coupling == fluxcoupling.CouplingClass.Full:
+            text = 'Full: v1 / v2 = {}'.format(lower)
+            self._couple_reactions(reaction1, reaction2)
+        elif coupling == fluxcoupling.CouplingClass.Partial:
+            text = 'Partial: v1 / v2 in [{}; {}]'.format(lower, upper)
+            self._couple_reactions(reaction1, reaction2)
+        else:
+            return
+
+        print('{}\t{}\t{}\t{}\t{}'.format(
+            reaction1, reaction2, lower, upper, text))
+
+    def _couple_reactions(self, reaction1, reaction2):
+        logger.debug('Couple {} and {}'.format(reaction1, reaction2))
+
+        if reaction1 in self._coupled and reaction2 in self._coupled:
+            if self._coupled[reaction1] == self._coupled[reaction2]:
+                return
+            logger.debug('Merge groups {}, {}'.format(
+                self._coupled[reaction1], self._coupled[reaction2]))
+            group_index = len(self._groups)
+            group = (self._groups[self._coupled[reaction1]] |
+                     self._groups[self._coupled[reaction2]])
+            logger.debug('New group is {}: {}'.format(
+                group_index, sorted(group)))
+            self._groups.append(group)
+            self._groups[self._coupled[reaction1]] = None
+            self._groups[self._coupled[reaction2]] = None
+            for reaction in group:
+                self._coupled[reaction] = group_index
+        elif reaction1 in self._coupled:
+            group_index = self._coupled[reaction1]
+            group = self._groups[group_index]
+            logger.debug('Put {} into existing group {}: {}'.format(
+                reaction2, self._coupled[reaction1], group))
+            self._coupled[reaction2] = group_index
+            group.add(reaction2)
+        elif reaction2 in self._coupled:
+            group_index = self._coupled[reaction2]
+            group = self._groups[group_index]
+            logger.debug('Put {} into existing group {}: {}'.format(
+                reaction1, self._coupled[reaction2], group))
+            self._coupled[reaction1] = group_index
+            group.add(reaction1)
+        else:
+            group = set([reaction1, reaction2])
+            group_index = len(self._groups)
+            logger.debug('Creating new group {}'.format(group_index))
+            self._coupled[reaction1] = group_index
+            self._coupled[reaction2] = group_index
+            self._groups.append(group)
 
 
 class FluxVariabilityCommand(SolverCommandMixin, Command):
-    """Run flux variablity analysis on a metabolic model"""
+    """Run flux variablity analysis on a metabolic model."""
 
     name = 'fva'
     title = 'Run flux variability analysis on a metabolic model'
@@ -605,10 +725,10 @@ class FluxVariabilityCommand(SolverCommandMixin, Command):
 
 
 class FormulaBalanceCommand(Command):
-    """Check whether reactions in a given database or model are balanced
+    """Check whether reactions in a model are elementally balanced.
 
-    Balanced reactions are those reactions where the number of atoms
-    is consistent on the left and right side of the reaction equation.
+    Balanced reactions are those reactions where the number of elements
+    (atoms) is consistent on the left and right side of the reaction equation.
     Reactions that are not balanced will be printed out.
     """
 
@@ -679,7 +799,7 @@ class FormulaBalanceCommand(Command):
 
 
 class GapFillCommand(SolverCommandMixin, Command):
-    """Command that runs GapFind and GapFill on a metabolic model"""
+    """Run GapFind and GapFill on a metabolic model."""
 
     name = 'gapfill'
     title = 'Run GapFind and GapFill on a metabolic model'
@@ -736,7 +856,7 @@ class GapFillCommand(SolverCommandMixin, Command):
 
 
 class MassConsistencyCommand(SolverCommandMixin, Command):
-    """Command that checks whether a database is mass consistent"""
+    """Check whether a model is mass consistent."""
 
     name = 'masscheck'
     title = 'Run mass consistency check on a database'
@@ -828,7 +948,7 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
 
 
 class RandomSparseNetworkCommand(SolverCommandMixin, Command):
-    """Find random minimal network of model
+    """Find random minimal network of model.
 
     Given a reaction to optimize and a threshold, delete reactions randomly
     until the flux of the reaction to optimize falls under the threshold.
@@ -883,11 +1003,12 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
         p.solve(reaction)
         flux_threshold = p.get_flux(reaction) * threshold
 
-        logger.info('Flux threshold for {} is {}'.format(reaction, flux_threshold))
+        logger.info('Flux threshold for {} is {}'.format(
+            reaction, flux_threshold))
 
         if self._args.exchange:
             model_test = self._mm.copy()
-            essential = { reaction }
+            essential = {reaction}
             deleted = set()
             exchange = set()
             for reaction_id in self._mm.reactions:
@@ -896,7 +1017,7 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             test_set = set(exchange) - essential
         else:
             model_test = self._mm.copy()
-            essential = { reaction }
+            essential = {reaction}
             deleted = set()
             test_set = set(self._mm.reactions) - essential
 
@@ -906,26 +1027,32 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             saved_bounds = model_test.limits[testing_reaction].bounds
             model_test.limits[testing_reaction].bounds = 0, 0
 
-            logger.info('Trying FBA without reaction {}...'.format(testing_reaction))
+            logger.info('Trying FBA without reaction {}...'.format(
+                testing_reaction))
 
             p = fb_problem(model_test, solver)
             try:
                 p.solve(reaction)
             except fluxanalysis.FluxBalanceError:
-                logger.info('FBA is infeasible, marking {} as essential'.format(testing_reaction))
+                logger.info(
+                    'FBA is infeasible, marking {} as essential'.format(
+                        testing_reaction))
                 model_test.limits[testing_reaction].bound = saved_bounds
                 essential.add(testing_reaction)
                 continue
 
-            logger.debug('Reaction {} has flux {}'.format(reaction, p.get_flux(reaction)))
+            logger.debug('Reaction {} has flux {}'.format(
+                reaction, p.get_flux(reaction)))
 
             if p.get_flux(reaction) < flux_threshold:
                 model_test.limits[testing_reaction].bounds = saved_bounds
                 essential.add(testing_reaction)
-                logger.info('Reaction {} was essential'.format(testing_reaction))
+                logger.info('Reaction {} was essential'.format(
+                    testing_reaction))
             else:
                 deleted.add(testing_reaction)
                 logger.info('Reaction {} was deleted'.format(testing_reaction))
+
         if self._args.exchange:
             for reaction_id in sorted(exchange):
                 value = 0 if reaction_id in deleted else 1
@@ -935,8 +1062,9 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
                 value = 0 if reaction_id in deleted else 1
                 print('{}\t{}'.format(reaction_id, value))
 
+
 class RobustnessCommand(SolverCommandMixin, Command):
-    """Run robustness analysis on metabolic model
+    """Run robustness analysis on metabolic model.
 
     Given a reaction to maximize and a reaction to vary,
     the robustness analysis will run FBA while fixing the
@@ -1042,7 +1170,7 @@ class RobustnessCommand(SolverCommandMixin, Command):
 
 
 class SBMLExport(Command):
-    """Export model as SBML file"""
+    """Export model as SBML file."""
 
     name = 'sbmlexport'
     title = 'Export model as SBML file'
@@ -1054,7 +1182,7 @@ class SBMLExport(Command):
 
 
 class SearchCommand(Command):
-    """Defines the search command"""
+    """Search for reactions and compounds in a model."""
 
     name = 'search'
     title = 'Search the database of reactions or compounds'
@@ -1088,7 +1216,7 @@ class SearchCommand(Command):
             help='Comma-separated list of compound IDs')
 
     def run(self):
-        """Run search command"""
+        """Run search command."""
 
         def parse_compound(s):
             """Parse a compound specification with optional compartment"""
@@ -1100,88 +1228,85 @@ class SearchCommand(Command):
         def filter_search_term(s):
             return re.sub(r'[^a-z0-9]+', '', s.lower())
 
-        # Load compound information
-        compound_name = {}
-        compound_synonyms = {}
-        compound_formula = {}
-        compound_for_name = {}
-        for compound in self._model.parse_compounds():
-            if 'name' in compound.properties:
-                compound_name[compound.id] = compound.properties['name']
-            elif compound.id not in compound_name:
-                compound_name[compound.id] = compound.id
-
-            compound_synonyms.setdefault(compound.id, []).extend(
-                compound.properties.get('names', []))
-
-            if compound.formula is not None and not '.' in compound.formula:
-                compound_formula[compound.id] = Formula.parse(compound.formula)
-
-        # Create references from names to id
-        for compound_id in compound_name.iterkeys():
-            names = ([compound_name[compound_id]] +
-                compound_synonyms[compound_id])
-
-            for n in names:
-                n = filter_search_term(n)
-                compound_for_name[n] = compound_id
-
         which_command = self._args.which
         if which_command == 'compound':
-            compound_ids = []
-            for name in self._args.name:
-                search_name = filter_search_term(name)
-                if search_name in compound_for_name:
-                    compound_ids.append(compound_for_name[search_name])
-            for compound_id in self._args.id:
-                if compound_id in compound_name:
-                    compound_ids.append(compound_id)
+            selected_compounds = set()
+
+            for compound in self._model.parse_compounds():
+                if len(self._args.id) > 0:
+                    if any(c == compound.id for c in self._args.id):
+                        selected_compounds.add(compound)
+                        continue
+
+                if len(self._args.name) > 0:
+                    names = set()
+                    if 'name' in compound.properties:
+                        names.add(compound.properties['name'])
+                    names.update(compound.properties.get('names', []))
+                    names = set(filter_search_term(n) for n in names)
+                    if any(filter_search_term(n) in names
+                            for n in self._args.name):
+                        selected_compounds.add(compound)
+                        continue
 
             # Show results
-            for compound_id in compound_ids:
-                print('ID: {}'.format(compound_id))
-                if compound_id in compound_name:
-                    print('Name: {}'.format(compound_name[compound_id]))
-                if compound_id in compound_synonyms:
-                    print('Synonyms: {}'.format(
-                        ', '.join(compound_synonyms[compound_id])))
-                if compound_id in compound_formula:
-                    print('Formula: {}'.format(compound_formula[compound_id]))
+            for compound in selected_compounds:
+                print('ID: {}'.format(compound.id))
+                if 'name' in compound.properties:
+                    print('Name: {}'.format(compound.properties['name']))
+                if 'names' in compound.properties:
+                    print('Additional names: {}'.format(
+                        ', '.join(compound.properties['names'])))
+                if 'formula' in compound.properties:
+                    print('Formula: {}'.format(compound.properties['formula']))
+                if compound.filemark is not None:
+                    print('Parsed from: {}'.format(compound.filemark))
                 print()
         elif which_command == 'reaction':
-            reaction_ids = []
-            for reaction_id in self._args.id:
-                if reaction_id in self._mm.reactions:
-                    reaction_ids.append(reaction_id)
+            selected_reactions = set()
+
+            # Prepare translation table from compound id to name
+            compound_name = {}
+            for compound in self._model.parse_compounds():
+                if 'name' in compound.properties:
+                    compound_name[compound.id] = compound.properties['name']
+
+            # Prepare sets of matched compounds
+            search_compounds = []
             for compound_list in self._args.compound:
-                matched_reactions = None
+                compound_set = set()
                 for compound_spec in compound_list.split(','):
-                    compound = parse_compound(compound_spec.strip())
-                    if matched_reactions is None:
-                        matched_reactions = set(
-                            self._mm.get_compound_reactions(compound))
-                    else:
-                        matched_reactions &= set(
-                            self._mm.get_compound_reactions(compound))
-                if matched_reactions is not None:
-                    reaction_ids.extend(matched_reactions)
+                    compound_set.add(parse_compound(compound_spec.strip()))
+                search_compounds.append(compound_set)
+
+            for reaction in self._model.parse_reactions():
+                if len(self._args.id) > 0:
+                    if any(r == reaction.id for r in self._args.id):
+                        selected_reactions.add(reaction)
+                        continue
+
+                if len(search_compounds) > 0:
+                    compounds = set(c for c, _ in reaction.equation.compounds)
+                    if any(c.issubset(compounds) for c in search_compounds):
+                        selected_reactions.add(reaction)
+                        continue
 
             # Show results
-            for reaction_id in reaction_ids:
-                print('ID: {}'.format(reaction_id))
-
-                reaction = self._mm.get_reaction(reaction_id)
+            for reaction in selected_reactions:
+                print('ID: {}'.format(reaction.id))
                 print('Reaction (IDs): {}'.format(
-                    self._mm.get_reaction(reaction_id)))
-                translated_reaction = reaction.translated_compounds(
+                    reaction.equation))
+                translated_equation = reaction.equation.translated_compounds(
                     lambda x: compound_name.get(x, x))
-                if reaction != translated_reaction:
-                    print('Reaction (names): {}'.format(translated_reaction))
+                if reaction.equation != translated_equation:
+                    print('Reaction (names): {}'.format(translated_equation))
+                if reaction.filemark is not None:
+                    print('Parsed from: {}'.format(reaction.filemark))
                 print()
 
 
 def main(command_class=None):
-    """Run the command line interface with the given :class:`Command`
+    """Run the command line interface with the given :class:`Command`.
 
     If no command class is specified the user will be able to select a specific
     command through the first command line argument.
@@ -1224,9 +1349,11 @@ def main(command_class=None):
 
         # Create parsers for subcommands
         subparsers = parser.add_subparsers(title='Command')
-        for name, values in sorted(commands.iteritems()):
+        for name, values in sorted(iteritems(commands)):
             title, command_class = values
-            subparser = subparsers.add_parser(name, help=title)
+            description = command_class.__doc__
+            subparser = subparsers.add_parser(
+                name, help=title, description=description)
             subparser.set_defaults(command=command_class)
             command_class.init_parser(subparser)
 

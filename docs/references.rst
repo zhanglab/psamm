@@ -5,6 +5,9 @@ References
 .. [Steffensen15] Steffensen JL, Dufault-Thompson K, Zhang Y. PSAMM: A Portable
     System for the Analysis of Metabolic Models. Submitted.
 
+.. [Burgard04] Burgard AP, Nikolaev E V, Schilling CH, Maranas CD. Flux
+    coupling analysis of genome-scale metabolic network reconstructions.
+    Genome Res. 2004;14: 301–312. :doi:`10.1101/gr.1926504`.
 .. [Gevorgyan08] Gevorgyan A, Poolman MG, Fell DA. Detection of stoichiometric
     inconsistencies in biomolecular models. Bioinformatics. 2008;24: 2245–2251.
     :doi:`10.1093/bioinformatics/btn425`.

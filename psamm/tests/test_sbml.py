@@ -23,7 +23,7 @@ from psamm.reaction import Reaction, Compound
 
 from decimal import Decimal
 from fractions import Fraction
-from StringIO import StringIO
+from six import StringIO
 
 
 class TestSBMLDatabaseL1V2(unittest.TestCase):
@@ -77,7 +77,7 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
 
     def test_compounds_exist(self):
         species = {entry.id: entry for entry in self.reader.species}
-        self.assertEquals(len(species), 5)
+        self.assertEqual(len(species), 5)
 
         self.assertEqual(species['Glucose'].id, 'Glucose')
         self.assertEqual(species['Glucose'].name, 'Glucose')
@@ -182,7 +182,7 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
 
     def test_compounds_exist(self):
         species = {entry.id: entry for entry in self.reader.species}
-        self.assertEquals(len(species), 5)
+        self.assertEqual(len(species), 5)
 
         self.assertEqual(species['M_Glucose'].id, 'M_Glucose')
         self.assertEqual(species['M_Glucose'].name, 'Glucose')
@@ -287,7 +287,7 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
 
     def test_compounds_exist(self):
         species = {entry.id: entry for entry in self.reader.species}
-        self.assertEquals(len(species), 5)
+        self.assertEqual(len(species), 5)
 
         self.assertEqual(species['M_Glucose'].id, 'M_Glucose')
         self.assertEqual(species['M_Glucose'].name, 'Glucose')
