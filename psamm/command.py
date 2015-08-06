@@ -1216,7 +1216,7 @@ class SearchCommand(Command):
             help='Comma-separated list of compound IDs')
 
     def run(self):
-        """Run search command"""
+        """Run search command."""
 
         def parse_compound(s):
             """Parse a compound specification with optional compartment"""
@@ -1228,83 +1228,76 @@ class SearchCommand(Command):
         def filter_search_term(s):
             return re.sub(r'[^a-z0-9]+', '', s.lower())
 
-        # Load compound information
-        compound_name = {}
-        compound_synonyms = {}
-        compound_formula = {}
-        compound_for_name = {}
-        for compound in self._model.parse_compounds():
-            if 'name' in compound.properties:
-                compound_name[compound.id] = compound.properties['name']
-            elif compound.id not in compound_name:
-                compound_name[compound.id] = compound.id
-
-            compound_synonyms.setdefault(compound.id, []).extend(
-                compound.properties.get('names', []))
-
-            if compound.formula is not None and '.' not in compound.formula:
-                compound_formula[compound.id] = Formula.parse(compound.formula)
-
-        # Create references from names to id
-        for compound_id in compound_name.iterkeys():
-            names = ([compound_name[compound_id]] +
-                     compound_synonyms[compound_id])
-
-            for n in names:
-                n = filter_search_term(n)
-                compound_for_name[n] = compound_id
-
         which_command = self._args.which
         if which_command == 'compound':
-            compound_ids = []
-            for name in self._args.name:
-                search_name = filter_search_term(name)
-                if search_name in compound_for_name:
-                    compound_ids.append(compound_for_name[search_name])
-            for compound_id in self._args.id:
-                if compound_id in compound_name:
-                    compound_ids.append(compound_id)
+            selected_compounds = set()
+
+            for compound in self._model.parse_compounds():
+                if len(self._args.id) > 0:
+                    if any(c == compound.id for c in self._args.id):
+                        selected_compounds.add(compound)
+                        continue
+
+                if len(self._args.name) > 0:
+                    names = set()
+                    if 'name' in compound.properties:
+                        names.add(compound.properties['name'])
+                    names.update(compound.properties.get('names', []))
+                    names = set(filter_search_term(n) for n in names)
+                    if any(filter_search_term(n) in names
+                            for n in self._args.name):
+                        selected_compounds.add(compound)
+                        continue
 
             # Show results
-            for compound_id in compound_ids:
-                print('ID: {}'.format(compound_id))
-                if compound_id in compound_name:
-                    print('Name: {}'.format(compound_name[compound_id]))
-                if compound_id in compound_synonyms:
-                    print('Synonyms: {}'.format(
-                        ', '.join(compound_synonyms[compound_id])))
-                if compound_id in compound_formula:
-                    print('Formula: {}'.format(compound_formula[compound_id]))
+            for compound in selected_compounds:
+                print('ID: {}'.format(compound.id))
+                if 'name' in compound.properties:
+                    print('Name: {}'.format(compound.properties['name']))
+                if 'names' in compound.properties:
+                    print('Additional names: {}'.format(
+                        ', '.join(compound.properties['names'])))
+                if 'formula' in compound.properties:
+                    print('Formula: {}'.format(compound.properties['formula']))
                 print()
         elif which_command == 'reaction':
-            reaction_ids = []
-            for reaction_id in self._args.id:
-                if reaction_id in self._mm.reactions:
-                    reaction_ids.append(reaction_id)
+            selected_reactions = set()
+
+            # Prepare translation table from compound id to name
+            compound_name = {}
+            for compound in self._model.parse_compounds():
+                if 'name' in compound.properties:
+                    compound_name[compound.id] = compound.properties['name']
+
+            # Prepare sets of matched compounds
+            search_compounds = []
             for compound_list in self._args.compound:
-                matched_reactions = None
+                compound_set = set()
                 for compound_spec in compound_list.split(','):
-                    compound = parse_compound(compound_spec.strip())
-                    if matched_reactions is None:
-                        matched_reactions = set(
-                            self._mm.get_compound_reactions(compound))
-                    else:
-                        matched_reactions &= set(
-                            self._mm.get_compound_reactions(compound))
-                if matched_reactions is not None:
-                    reaction_ids.extend(matched_reactions)
+                    compound_set.add(parse_compound(compound_spec.strip()))
+                search_compounds.append(compound_set)
+
+            for reaction in self._model.parse_reactions():
+                if len(self._args.id) > 0:
+                    if any(r == reaction.id for r in self._args.id):
+                        selected_reactions.add(reaction)
+                        continue
+
+                if len(search_compounds) > 0:
+                    compounds = set(c for c, _ in reaction.equation.compounds)
+                    if any(c.issubset(compounds) for c in search_compounds):
+                        selected_reactions.add(reaction)
+                        continue
 
             # Show results
-            for reaction_id in reaction_ids:
-                print('ID: {}'.format(reaction_id))
-
-                reaction = self._mm.get_reaction(reaction_id)
+            for reaction in selected_reactions:
+                print('ID: {}'.format(reaction.id))
                 print('Reaction (IDs): {}'.format(
-                    self._mm.get_reaction(reaction_id)))
-                translated_reaction = reaction.translated_compounds(
+                    reaction.equation))
+                translated_equation = reaction.equation.translated_compounds(
                     lambda x: compound_name.get(x, x))
-                if reaction != translated_reaction:
-                    print('Reaction (names): {}'.format(translated_reaction))
+                if reaction.equation != translated_equation:
+                    print('Reaction (names): {}'.format(translated_equation))
                 print()
 
 
