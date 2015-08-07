@@ -239,6 +239,10 @@ class NativeModel(object):
                     self._context, self._model['compounds']):
                 yield compound
 
+    @property
+    def context(self):
+        return self._context
+
 
 def parse_compound(compound_def, context=None):
     """Parse a structured compound definition as obtained from a YAML file

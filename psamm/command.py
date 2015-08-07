@@ -72,6 +72,11 @@ class Command(object):
         self._model = model
         self._args = args
 
+        name = self._model.get_name()
+        if name is None:
+            name = str(self._model.context)
+        logger.info('Model: {}'.format(name))
+
         # Create metabolic model
         database = DictDatabase()
         for reaction in model.parse_reactions():
