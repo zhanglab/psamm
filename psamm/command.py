@@ -47,6 +47,7 @@ from .datasource.native import NativeModel
 from .datasource import sbml
 from . import fluxanalysis, fluxcoupling, massconsistency, fastcore
 from .lpsolver import generic
+from . import util
 
 from six import add_metaclass, iteritems
 
@@ -76,6 +77,10 @@ class Command(object):
         if name is None:
             name = str(self._model.context)
         logger.info('Model: {}'.format(name))
+
+        version = util.git_try_describe(self._model.context.basepath)
+        if version is not None:
+            logger.info('Model Git version: {}'.format(version))
 
         # Create metabolic model
         database = DictDatabase()

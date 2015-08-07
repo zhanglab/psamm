@@ -19,6 +19,7 @@
 
 import re
 import math
+import subprocess
 
 from six import iteritems
 
@@ -45,6 +46,25 @@ class LoggerFile(object):
         """Flush stream.
 
         This is a noop."""
+
+
+def git_try_describe(repo_path):
+    """Try to describe the current commit of a Git repository.
+
+    Return a string containing a string with the commit ID and/or a base tag,
+    if successful. Otherwise, return None.
+    """
+    try:
+        p = subprocess.Popen(['git', 'describe', '--always', '--dirty'],
+                             cwd=repo_path, stdout=subprocess.PIPE)
+        output, _ = p.communicate()
+    except:
+        return None
+    else:
+        if p.returncode == 0:
+            return output.strip()
+
+    return None
 
 
 def convex_cardinality_relaxed(f, epsilon=1e-5):
