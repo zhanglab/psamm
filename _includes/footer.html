@@ -1,0 +1,29 @@
+<footer class="container-fluid">
+  <div class="container">
+    <div class="row">
+      <div class="col-md-4 col-sm-6">
+        <ul class="list-unstyled">
+          <li><strong>Zhang Laboratory</strong></li>
+          <li>University of Rhode Island</li>
+          {% if site.github_username %}
+          <li>
+            <a href="https://github.com/{{ site.github_username }}">
+              <span class="fa fa-github"></span>
+              <span class="username">{{ site.github_username }}</span>
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+      <div class="col-md-4 col-sm-6">
+        <p>
+          The <strong>PSAMM</strong> software is being developed in the
+          <a href="http://zhanglab.uri.edu/">Zhang Laboratory</a> at the
+          <a href="http://uri.edu/">University of Rhode Island</a>
+          and is the subject of a research article that has been submitted for
+          review.
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
