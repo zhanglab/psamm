@@ -55,6 +55,16 @@ from six import add_metaclass, iteritems
 logger = logging.getLogger(__name__)
 
 
+class CommandError(Exception):
+    """Error from running a command.
+
+    This should be raised from a ``Command.run()`` if any arguments are
+    misspecified. When the command is run and the ``CommandError`` is raised,
+    the caller will exit with an error code and print appropriate usage
+    information.
+    """
+
+
 @add_metaclass(abc.ABCMeta)
 class Command(object):
     """Represents a command in the interface, operating on a model.
@@ -337,11 +347,12 @@ class FastGapFillCommand(SolverCommandMixin, Command):
         else:
             maximized_reaction = self._model.get_biomass_reaction()
             if maximized_reaction is None:
-                raise ValueError('The maximized reaction was not specified')
+                raise CommandError('The maximized reaction was not specified')
 
         if not not self._mm.has_reaction(maximized_reaction):
-            raise ValueError(('The biomass reaction is not a valid model' +
-                              ' reaction: {}').format(maximized_reaction))
+            raise CommandError(
+                'The biomass reaction is not a valid model'
+                ' reaction: {}'.format(maximized_reaction))
 
         logger.info('Flux balance on induced model maximizing {}'.format(
             maximized_reaction))
@@ -404,10 +415,10 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
         else:
             reaction = self._model.get_biomass_reaction()
             if reaction is None:
-                raise ValueError('The biomass reaction was not specified')
+                raise CommandError('The biomass reaction was not specified')
 
         if not self._mm.has_reaction(reaction):
-            raise ValueError('Specified reaction is not in model: {}'.format(
+            raise CommandError('Specified reaction is not in model: {}'.format(
                 reaction))
 
         if self._args.no_tfba:
@@ -582,7 +593,7 @@ class FluxCouplingCommand(SolverCommandMixin, Command):
 
         max_reaction = self._model.get_biomass_reaction()
         if max_reaction is None:
-            raise ValueError('The biomass reaction was not specified')
+            raise CommandError('The biomass reaction was not specified')
 
         fba_fluxes = dict(fluxanalysis.flux_balance(
             self._mm, max_reaction, tfba=False, solver=solver))
@@ -708,10 +719,10 @@ class FluxVariabilityCommand(SolverCommandMixin, Command):
         else:
             reaction = self._model.get_biomass_reaction()
             if reaction is None:
-                raise ValueError('The biomass reaction was not specified')
+                raise CommandError('The biomass reaction was not specified')
 
         if not self._mm.has_reaction(reaction):
-            raise ValueError('Specified reaction is not in model: {}'.format(
+            raise CommandError('Specified reaction is not in model: {}'.format(
                 reaction))
 
         enable_tfba = not self._args.no_tfba
@@ -991,15 +1002,15 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
         else:
             reaction = self._model.get_biomass_reaction()
             if reaction is None:
-                raise ValueError('The biomass reaction was not specified')
+                raise CommandError('The biomass reaction was not specified')
 
         if not self._mm.has_reaction(reaction):
-            raise ValueError('Specified reaction is not in model: {}'.format(
+            raise CommandError('Specified reaction is not in model: {}'.format(
                 reaction))
 
         threshold = self._args.threshold
         if threshold < 0.0 or threshold > 1.0:
-            raise ValueError(
+            raise CommandError(
                 'Invalid threshold, must be in [0;1]: {}'.format(threshold))
 
         if not self._args.tfba:
@@ -1139,20 +1150,20 @@ class RobustnessCommand(SolverCommandMixin, Command):
         else:
             reaction = self._model.get_biomass_reaction()
             if reaction is None:
-                raise ValueError('The biomass reaction was not specified')
+                raise CommandError('The biomass reaction was not specified')
 
         if not self._mm.has_reaction(reaction):
-            raise ValueError('Specified reaction is not in model: {}'.format(
+            raise CommandError('Specified reaction is not in model: {}'.format(
                 reaction))
 
         varying_reaction = self._args.varying
         if not self._mm.has_reaction(varying_reaction):
-            raise ValueError('Specified reaction is not in model: {}'.format(
+            raise CommandError('Specified reaction is not in model: {}'.format(
                 varying_reaction))
 
         steps = self._args.steps
         if steps <= 0:
-            raise ValueError('Invalid number of steps: {}\n'.format(steps))
+            raise CommandError('Invalid number of steps: {}\n'.format(steps))
 
         # Run FBA on model at different fixed flux values
         flux_min = self._mm.limits[varying_reaction].lower
@@ -1163,7 +1174,7 @@ class RobustnessCommand(SolverCommandMixin, Command):
             flux_max = self._args.maximum
 
         if flux_min > flux_max:
-            raise ValueError('Invalid flux range: {}, {}\n'.format(
+            raise CommandError('Invalid flux range: {}, {}\n'.format(
                 flux_min, flux_max))
 
         for i in xrange(steps):
@@ -1374,7 +1385,10 @@ def main(command_class=None):
 
     # Instantiate command with model and run
     command = args.command(model, args)
-    command.run()
+    try:
+        command.run()
+    except CommandError as e:
+        parser.error(str(e))
 
 
 if __name__ == '__main__':
