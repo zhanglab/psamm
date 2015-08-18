@@ -337,11 +337,11 @@ class Problem(object):
 
     @abc.abstractmethod
     def add_linear_constraints(self, *relations):
-        """Add constraints to the problem
+        """Add constraints to the problem.
 
         Each constraint is given as a :class:`.Relation`, and the expression
         in that relation can be a set expression. Returns a sequence of
-        :class:`.Constraint`s.
+        :class:`Constraints <.Constraint>`.
         """
 
     @abc.abstractmethod
