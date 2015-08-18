@@ -976,6 +976,9 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
     Keep deleting reactions until no more reactions can be deleted. By default
     this uses standard FBA (not tFBA). Since the internal fluxes are irrelevant
     the FBA and tFBA are equivalent for this purpose.
+
+    The threshold can be specified as an absolute flux (e.g. '1.23') or a
+    relative flux of the full model flux (e.g. '40.5%').
     """
 
     name = 'randomsparse'
@@ -987,10 +990,10 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             '--tfba', help='Enable thermodynamic constraints on FBA',
             action='store_true', default=False)
         parser.add_argument(
-            '--reaction', help='Reaction to maximize', nargs='?')
+            '--reaction', help='Reaction to maximize')
         parser.add_argument(
-            'threshold', help='Relative threshold of max reaction flux',
-            type=float)
+            'threshold', help='Threshold of max reaction flux',
+            type=util.MaybeRelative)
         parser.add_argument(
             '--exchange', help='Only analyze the exchange reaction in model',
             action='store_true')
@@ -1008,11 +1011,6 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             raise CommandError('Specified reaction is not in model: {}'.format(
                 reaction))
 
-        threshold = self._args.threshold
-        if threshold < 0.0 or threshold > 1.0:
-            raise CommandError(
-                'Invalid threshold, must be in [0;1]: {}'.format(threshold))
-
         if not self._args.tfba:
             fb_problem = fluxanalysis.FluxBalanceProblem
             solver = self._get_solver()
@@ -1021,8 +1019,13 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             solver = self._get_solver(integer=True)
 
         p = fb_problem(self._mm, solver)
-        p.solve(reaction)
-        flux_threshold = p.get_flux(reaction) * threshold
+
+        threshold = self._args.threshold
+        if threshold.relative:
+            p.solve(reaction)
+            threshold.reference = p.get_flux(reaction)
+
+        flux_threshold = float(threshold)
 
         logger.info('Flux threshold for {} is {}'.format(
             reaction, flux_threshold))
