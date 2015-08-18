@@ -48,6 +48,71 @@ class LoggerFile(object):
         This is a noop."""
 
 
+class MaybeRelative(object):
+    """Helper type for parsing possibly relative parameters.
+
+    >>> arg = MaybeRelative('40%')
+    >>> arg.reference = 200.0
+    >>> float(arg)
+    80.0
+
+    >>> arg = MaybeRelative('24.5')
+    >>> arg.reference = 150.0
+    >>> float(arg)
+    24.5
+    """
+
+    def __init__(self, s):
+        try:
+            self._value = float(s)
+            self._relative = False
+        except ValueError:
+            self._value = self._parse_percentage(s)
+            self._relative = True
+
+        self._reference = None
+
+    @classmethod
+    def _parse_percentage(cls, s):
+        """Parse string as a percentage (e.g. '42.0%') and return as float."""
+        m = re.match('^(.+)%$', s)
+        if not m:
+            raise ValueError('Unable to parse as percentage: {}'.format(
+                repr(s)))
+
+        return float(m.group(1)) / 100.0
+
+    @property
+    def relative(self):
+        """Whether the parsed number was relative."""
+        return self._relative
+
+    @property
+    def reference(self):
+        """The reference used for converting to absolute value."""
+        return self._reference
+
+    @reference.setter
+    def reference(self, value):
+        self._reference = value
+
+    def __float__(self):
+        if self._relative:
+            if self._reference is None:
+                raise ValueError('Reference not set!')
+            return self._reference * self._value
+        else:
+            return self._value
+
+    def __repr__(self):
+        if self._relative:
+            return '<{}, {:.1%} of {}>'.format(
+                self.__class__.__name__, self._value, self._reference)
+        else:
+            return '<{}, {}>'.format(
+                self.__class__.__name__, self._value)
+
+
 def git_try_describe(repo_path):
     """Try to describe the current commit of a Git repository.
 
