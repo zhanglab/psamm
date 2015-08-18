@@ -1030,38 +1030,35 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
         logger.info('Flux threshold for {} is {}'.format(
             reaction, flux_threshold))
 
+        essential = {reaction}
+        deleted = set()
         if self._args.exchange:
-            model_test = self._mm.copy()
-            essential = {reaction}
-            deleted = set()
-            exchange = set()
+            reactions = set()
             for reaction_id in self._mm.reactions:
                 if self._mm.is_exchange(reaction_id):
-                    exchange.add(reaction_id)
-            test_set = set(exchange) - essential
+                    reactions.add(reaction_id)
         else:
-            model_test = self._mm.copy()
-            essential = {reaction}
-            deleted = set()
-            test_set = set(self._mm.reactions) - essential
+            reactions = set(self._mm.reactions)
+
+        test_set = reactions - essential
 
         while len(test_set) > 0:
             testing_reaction = random.sample(test_set, 1)[0]
             test_set.remove(testing_reaction)
-            saved_bounds = model_test.limits[testing_reaction].bounds
-            model_test.limits[testing_reaction].bounds = 0, 0
+
+            flux_var = p.get_flux_var(testing_reaction)
+            c, = p.prob.add_linear_constraints(flux_var == 0)
 
             logger.info('Trying FBA without reaction {}...'.format(
                 testing_reaction))
 
-            p = fb_problem(model_test, solver)
             try:
                 p.solve(reaction)
             except fluxanalysis.FluxBalanceError:
                 logger.info(
                     'FBA is infeasible, marking {} as essential'.format(
                         testing_reaction))
-                model_test.limits[testing_reaction].bound = saved_bounds
+                c.delete()
                 essential.add(testing_reaction)
                 continue
 
@@ -1069,7 +1066,7 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
                 reaction, p.get_flux(reaction)))
 
             if p.get_flux(reaction) < flux_threshold:
-                model_test.limits[testing_reaction].bounds = saved_bounds
+                c.delete()
                 essential.add(testing_reaction)
                 logger.info('Reaction {} was essential'.format(
                     testing_reaction))
@@ -1077,14 +1074,9 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
                 deleted.add(testing_reaction)
                 logger.info('Reaction {} was deleted'.format(testing_reaction))
 
-        if self._args.exchange:
-            for reaction_id in sorted(exchange):
-                value = 0 if reaction_id in deleted else 1
-                print('{}\t{}'.format(reaction_id, value))
-        else:
-            for reaction_id in sorted(self._mm.reactions):
-                value = 0 if reaction_id in deleted else 1
-                print('{}\t{}'.format(reaction_id, value))
+        for reaction_id in sorted(reactions):
+            value = 0 if reaction_id in deleted else 1
+            print('{}\t{}'.format(reaction_id, value))
 
 
 class RobustnessCommand(SolverCommandMixin, Command):
