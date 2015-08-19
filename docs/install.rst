@@ -2,32 +2,35 @@
 Install
 =======
 
-The Python module can be installed using ``pip``. This will typically require
-*root* permissions.
-
-.. code-block:: shell
-
-    $ pip install psamm
-
-Another option that does not require *root* permissions is to use a
-`Virtualenv`_. First set up a new environment in your project directory and
-activate it:
+PSAMM can be installed using the Python package installer ``pip``. We recommend
+that you use a `Virtualenv`_ when installing PSAMM. First, create a Virtualenv
+in your project directory and activate the environment. On Linux/OSX the
+following terminal commands can be used:
 
 .. code-block:: shell
 
     $ virtualenv env
-    $ . env/bin/activate
+    $ source env/bin/activate
 
-Now the Python module can be installed in the virtual environment using the
-``pip`` command without requiring *root* permissions. When returning to the
-project, simply reactivate the environment by running the second command.
+Then, install PSAMM using the ``pip`` command:
+
+.. code-block:: shell
+
+    (env) $ pip install psamm
+
+When returning to the project from a new terminal window, simply reactivate
+the environment by running
+
+.. code-block:: shell
+
+    $ source env/bin/activate
 
 The *psamm-import* tool is developed in a separate Git repository. After
 installing PSAMM, the *psamm-import* tool can be installed using:
 
 .. code-block:: shell
 
-    $ pip install git+https://github.com/zhanglab/psamm-import.git
+    (env) $ pip install git+https://github.com/zhanglab/psamm-import.git
 
 Dependencies
 ------------
@@ -41,6 +44,8 @@ linear programming solver is not strictly required but most analyses require
 one to work. The LP solver *Cplex* is the preferred solver. The rational solver
 *QSopt_ex* does not support MILP problems which means that some analyses
 require *Cplex*.
+
+.. _install-cplex:
 
 Cplex
 -----
