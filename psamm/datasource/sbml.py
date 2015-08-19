@@ -22,10 +22,14 @@ from decimal import Decimal
 from fractions import Fraction
 from functools import partial
 from itertools import count
+import logging
 
 from six import itervalues, iteritems
 
 from ..reaction import Reaction, Compound
+
+
+logger = logging.getLogger(__name__)
 
 
 # Level 1 namespaces
@@ -160,12 +164,13 @@ class ReactionEntry(_SBMLEntry):
                         # Skip boundary species when ignoring these
                         continue
                 except KeyError:
+                    message = ('Reaction {} references non-existent'
+                               ' species {}'.format(self._id, species_id))
                     if not self._reader._strict:
                         # In non-strict mode simply skip these references
+                        logger.warn(message)
                         continue
-                    raise ParseError(
-                        'Reaction {} references non-existent'
-                        ' species {}'.format(self._id, species_id))
+                    raise ParseError(message)
 
                 species_id, species_comp = (
                     species_entry.id, species_entry.compartment)
