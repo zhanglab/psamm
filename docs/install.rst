@@ -57,7 +57,13 @@ the virtual environment:
 1. Locate the directory where Cplex was installed (e.g. ``/path/to/IBM/ILOG/CPLEX_StudioXXX``).
 2. Locate the appropriate subdirectory based on your platform:
    ``cplex/python/<platform>`` (e.g. ``cplex/python/x86-64_osx``).
-3. Use ``pip`` to install the package from this directory: ``pip install /path/to/IBM/ILOG/CPLEX_StudioXXX/cplex/python/<platform>``
+3. Use ``pip`` to install the package from this directory using the following
+   command.
+
+.. code-block:: shell
+
+    (env) $ pip install \
+        /path/to/IBM/ILOG/CPLEX_StudioXXX/cplex/python/<platform>
 
 QSopt_ex
 --------
@@ -68,7 +74,7 @@ can be installed using ``pip``:
 
 .. code-block:: shell
 
-    $ pip install python-qsoptex
+    (env) $ pip install python-qsoptex
 
 .. _Virtualenv: https://virtualenv.pypa.io/
 .. _python-qsoptex: https://pypi.python.org/pypi/python-qsoptex
