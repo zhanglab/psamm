@@ -56,6 +56,19 @@ try:
 except ImportError:
     pass
 
+# Try to load Gurobi solver
+try:
+    from . import gurobi
+    _solvers.append({
+        'class': gurobi.Solver,
+        'name': 'gurobi',
+        'integer': True,
+        'rational': False,
+        'priority': 9
+    })
+except ImportError:
+    pass
+
 
 class RequirementsError(Exception):
     """Error resolving solver requirements"""
