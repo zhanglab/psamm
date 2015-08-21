@@ -12,6 +12,7 @@ Contents:
    file_format
    commands
    development
+   faq
    api
    references
 
