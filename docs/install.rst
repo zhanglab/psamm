@@ -32,15 +32,17 @@ installing PSAMM, the *psamm-import* tool can be installed using:
 Dependencies
 ------------
 
-- Linear programming solver (*Cplex*, *QSopt_ex*)
+- Linear programming solver (*Cplex*, *Gurobi*, or *QSopt_ex*)
 - PyYAML (for reading the native model format)
 - NumPy (optional; model matrix can be exported to NumPy matrix if available)
 
 PyYAML is installed automatically when PSAMM is installed through ``pip``. The
 linear programming solver is not strictly required but most analyses require
-one to work. The LP solver *Cplex* is the preferred solver. The rational solver
-*QSopt_ex* does not support MILP problems which means that some analyses
-require *Cplex*.
+one to work. The LP solver *Cplex* is the preferred solver. We recently added
+support for the LP solver *Gurobi*.
+
+The rational solver *QSopt_ex* does not support MILP problems which means that
+some analyses require one of the other solvers.
 
 Cplex
 -----
@@ -53,6 +55,21 @@ the virtual environment:
 2. Locate the appropriate subdirectory based on your platform:
    ``cplex/python/<platform>`` (e.g. ``cplex/python/x86-64_osx``).
 3. Use ``pip`` to install the package from this directory: ``pip install /path/to/IBM/ILOG/CPLEX_StudioXXX/cplex/python/<platform>``
+
+Gurobi
+------
+
+The Gurobi Python bindings will have to be installed into the virtualenv. After
+activating the virtualenv:
+
+1. Locate the directory where the Guropi python bindings were installed. For
+   example, on OSX this directory is ``/Library/gurobiXXX/mac64`` where ``XXX``
+   is a version code.
+2. Use ``pip`` to install the package from this directory. For example:
+
+.. code-block:: shell
+
+    (env) $ pip install /Library/gurobi604/mac64
 
 QSopt_ex
 --------
