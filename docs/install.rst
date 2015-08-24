@@ -35,17 +35,18 @@ installing PSAMM, the *psamm-import* tool can be installed using:
 Dependencies
 ------------
 
-- Linear programming solver (*Cplex*, *Gurobi*, or *QSopt_ex*)
+- Linear programming solver (*Cplex*, *Gurobi*, *GLPK* or *QSopt_ex*)
 - PyYAML (for reading the native model format)
 - NumPy (optional; model matrix can be exported to NumPy matrix if available)
 
 PyYAML is installed automatically when PSAMM is installed through ``pip``. The
 linear programming solver is not strictly required but most analyses require
 one to work. The LP solver *Cplex* is the preferred solver. We recently added
-support for the LP solver *Gurobi*.
+support for the LP solver *Gurobi* and *GLPK*.
 
 The rational solver *QSopt_ex* does not support MILP problems which means that
-some analyses require one of the other solvers.
+some analyses require one of the other solvers. The MILP support in *GLPK* is
+still experimental so it is disabled by default.
 
 .. _install-cplex:
 
@@ -92,6 +93,16 @@ activating the virtualenv:
 .. code-block:: shell
 
     (env) $ pip install /Library/gurobi604/mac64
+
+GLPK
+----
+
+The GLPK solver requires the GLPK library to be installed. The ``swiglpk``
+Python bindings are required for PSAMM to use the GLPK library.
+
+.. code-block:: shell
+
+    (env) $ pip install swiglpk
 
 QSopt_ex
 --------
