@@ -22,6 +22,7 @@ PSAMM API
    lpsolver_lp
    lpsolver_generic
    lpsolver_cplex
+   lpsolver_gurobi
    lpsolver_qsoptex
    massconsistency
    metabolicmodel
