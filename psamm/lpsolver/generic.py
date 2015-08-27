@@ -17,7 +17,7 @@
 
 """Generic interface to LP solver instantiation."""
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import os
 import logging
@@ -28,6 +28,7 @@ from six import iteritems
 
 logger = logging.getLogger(__name__)
 _solvers = []
+_solver_import_errors = {}
 
 
 # Try to load Cplex solver
@@ -40,8 +41,8 @@ try:
         'rational': False,
         'priority': 10
     })
-except ImportError:
-    pass
+except ImportError as e:
+    _solver_import_errors['cplex'] = str(e)
 
 # Try to load QSopt_ex solver
 try:
@@ -53,8 +54,8 @@ try:
         'rational': True,
         'priority': 5
     })
-except ImportError:
-    pass
+except ImportError as e:
+    _solver_import_errors['qsoptex'] = str(e)
 
 # Try to load Gurobi solver
 try:
@@ -66,8 +67,8 @@ try:
         'rational': False,
         'priority': 9
     })
-except ImportError:
-    pass
+except ImportError as e:
+    _solver_import_errors['gurobi'] = str(e)
 
 
 class RequirementsError(Exception):
@@ -139,3 +140,24 @@ def parse_solver_setting(s):
         value = float(value)
 
     return key, value
+
+
+def list_solvers():
+    """Print list of solvers."""
+    if len(_solvers) > 0:
+        print('Available solvers:')
+        for solver in _solvers:
+            print('Name: {}'.format(solver['name']))
+            print('Priority: {}'.format(solver['priority']))
+            print('MILP (integer) problem support: {}'.format(
+                solver['integer']))
+            print('Rational solution: {}'.format(solver['rational']))
+            print('Class: {}'.format(solver['class']))
+            print()
+    else:
+        print('No solvers available!')
+        print()
+
+    print('Unavailable solvers:')
+    for solver, error in iteritems(_solver_import_errors):
+        print('{}: {}'.format(solver, error))
