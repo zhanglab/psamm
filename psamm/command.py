@@ -142,12 +142,13 @@ def main(command_class=None):
     """
 
     # Set up logging for the command line interface
-    if 'DEBUG' in os.environ:
-        level = getattr(logging, os.environ['DEBUG'].upper(), None)
+    if 'PSAMM_DEBUG' in os.environ:
+        level = getattr(logging, os.environ['PSAMM_DEBUG'].upper(), None)
         if level is not None:
             logging.basicConfig(level=level)
     else:
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(
+            level=logging.INFO, format='%(levelname)s: %(message)s')
 
     title = 'Metabolic modeling tools'
     if command_class is not None:
