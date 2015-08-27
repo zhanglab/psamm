@@ -15,6 +15,8 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+from __future__ import print_function
+
 import re
 
 from ..command import Command
