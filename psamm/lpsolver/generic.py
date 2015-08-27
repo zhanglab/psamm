@@ -104,7 +104,7 @@ class Solver(BaseSolver):
 
         self._requirements = {key: value for key, value in iteritems(kwargs)
                               if value is not None}
-        solvers = filter_solvers(_solvers, self._requirements)
+        solvers = list(filter_solvers(_solvers, self._requirements))
 
         # Obtain solver priority from environment variable, if specified.
         priority = {}
