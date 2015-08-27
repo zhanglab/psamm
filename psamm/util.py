@@ -121,7 +121,8 @@ def git_try_describe(repo_path):
     """
     try:
         p = subprocess.Popen(['git', 'describe', '--always', '--dirty'],
-                             cwd=repo_path, stdout=subprocess.PIPE)
+                             cwd=repo_path, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
         output, _ = p.communicate()
     except:
         return None
