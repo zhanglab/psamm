@@ -142,8 +142,8 @@ def main(command_class=None):
     """
 
     # Set up logging for the command line interface
-    if 'DEBUG' in os.environ:
-        level = getattr(logging, os.environ['DEBUG'].upper(), None)
+    if 'PSAMM_DEBUG' in os.environ:
+        level = getattr(logging, os.environ['PSAMM_DEBUG'].upper(), None)
         if level is not None:
             logging.basicConfig(level=level)
     else:
