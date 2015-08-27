@@ -46,6 +46,22 @@ setup(
         'console_scripts': [
             'psamm-model = psamm.command:main',
             'psamm-list-lpsolvers = psamm.lpsolver.generic:list_solvers'
+        ],
+        'psamm.commands': [
+            'chargecheck = psamm.commands.chargecheck:ChargeBalanceCommand',
+            'console = psamm.commands.console:ConsoleCommand',
+            'fastgapfill = psamm.commands.fastgapfill:FastGapFillCommand',
+            'fba = psamm.commands.fba:FluxBalanceCommand',
+            'fluxcheck = psamm.commands.fluxcheck:FluxConsistencyCommand',
+            'fluxcoupling = psamm.commands.fluxcoupling:FluxCouplingCommand',
+            'formulacheck = psamm.commands.formulacheck:FormulaBalanceCommand',
+            'fva = psamm.commands.fva:FluxVariabilityCommand',
+            'gapfill = psamm.commands.gapfill:GapFillCommand',
+            'masscheck = psamm.commands.masscheck:MassConsistencyCommand',
+            'randomsparse = psamm.commands.randomsparse:RandomSparseNetworkCommand',
+            'robustness = psamm.commands.robustness:RobustnessCommand',
+            'sbmlexport = psamm.commands.sbmlexport:SBMLExport',
+            'search = psamm.commands.search:SearchCommand'
         ]
     },
 
