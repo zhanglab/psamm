@@ -44,7 +44,8 @@ setup(
     packages=find_packages(),
     entry_points = {
         'console_scripts': [
-            'psamm-model = psamm.command:main'
+            'psamm-model = psamm.command:main',
+            'psamm-list-lpsolvers = psamm.lpsolver.generic:list_solvers'
         ]
     },
 
