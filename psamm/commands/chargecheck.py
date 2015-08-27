@@ -24,15 +24,12 @@ logger = logging.getLogger(__name__)
 
 
 class ChargeBalanceCommand(Command):
-    """Check whether compound charge in a given database or model is balanced.
+    """Check whether compound charge is balanced.
 
     Balanced reactions are those reactions where the total charge
     is consistent on the left and right side of the reaction equation.
     Reactions that are not balanced will be printed out.
     """
-
-    name = 'chargecheck'
-    title = 'Check charge balance on a model or database'
 
     def run(self):
         """Run charge balance command"""

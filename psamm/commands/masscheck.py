@@ -24,10 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class MassConsistencyCommand(SolverCommandMixin, Command):
-    """Check whether a model is mass consistent."""
-
-    name = 'masscheck'
-    title = 'Run mass consistency check on a database'
+    """Check whether the model is mass consistent."""
 
     @classmethod
     def init_parser(cls, parser):

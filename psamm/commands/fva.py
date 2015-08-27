@@ -20,10 +20,7 @@ from .. import fluxanalysis
 
 
 class FluxVariabilityCommand(SolverCommandMixin, Command):
-    """Run flux variablity analysis on a metabolic model."""
-
-    name = 'fva'
-    title = 'Run flux variability analysis on a metabolic model'
+    """Run flux variablity analysis on the model."""
 
     @classmethod
     def init_parser(cls, parser):

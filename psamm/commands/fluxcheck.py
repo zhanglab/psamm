@@ -32,9 +32,6 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
     consistency check by providing the ``--unrestricted`` option.
     """
 
-    name = 'fluxcheck'
-    title = 'Check that the model is flux consistent'
-
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(

@@ -34,9 +34,6 @@ class FluxCouplingCommand(SolverCommandMixin, Command):
     coupled (the ratio is non-zero).
     """
 
-    name = 'fluxcoupling'
-    title = 'Find flux coupled reactions in model'
-
     def run(self):
         solver = self._get_solver()
 

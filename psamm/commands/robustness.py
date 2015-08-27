@@ -20,7 +20,7 @@ from .. import fluxanalysis
 
 
 class RobustnessCommand(SolverCommandMixin, Command):
-    """Run robustness analysis on metabolic model.
+    """Run robustness analysis on the model.
 
     Given a reaction to maximize and a reaction to vary,
     the robustness analysis will run FBA while fixing the
@@ -28,9 +28,6 @@ class RobustnessCommand(SolverCommandMixin, Command):
     be fixed at the specified number of steps between the
     minimum and maximum flux value specified in the model.
     """
-
-    name = 'robustness'
-    title = 'Run robustness analysis on a metabolic model'
 
     @classmethod
     def init_parser(cls, parser):

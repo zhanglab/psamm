@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class RandomSparseNetworkCommand(SolverCommandMixin, Command):
-    """Find random minimal network of model.
+    """Find a random minimal network of model reactions.
 
     Given a reaction to optimize and a threshold, delete reactions randomly
     until the flux of the reaction to optimize falls under the threshold.
@@ -37,9 +37,6 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
     The threshold can be specified as an absolute flux (e.g. '1.23') or a
     relative flux of the full model flux (e.g. '40.5%').
     """
-
-    name = 'randomsparse'
-    title = 'Generate a random sparse network of model reactions'
 
     @classmethod
     def init_parser(cls, parser):

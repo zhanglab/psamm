@@ -177,10 +177,11 @@ def main(command_class=None):
                     canonical))
 
         # Create parsers for subcommands
-        subparsers = parser.add_subparsers(title='Command')
+        subparsers = parser.add_subparsers(title='Commands', metavar='command')
         for name, command_class in sorted(iteritems(commands)):
+            title, _, _ = command_class.__doc__.partition('\n\n')
             subparser = subparsers.add_parser(
-                name, help=command_class.title,
+                name, help=title.rstrip('.'),
                 description=command_class.__doc__)
             subparser.set_defaults(command=command_class)
             command_class.init_parser(subparser)

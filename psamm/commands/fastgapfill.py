@@ -25,10 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class FastGapFillCommand(SolverCommandMixin, Command):
-    """Run FastGapFill algorithm on a metabolic model."""
-
-    name = 'fastgapfill'
-    title = 'Run FastGapFill on a metabolic model'
+    """Run the FastGapFill gap-filling algorithm on model."""
 
     @classmethod
     def init_parser(cls, parser):

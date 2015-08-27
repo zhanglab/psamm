@@ -24,9 +24,6 @@ from ..command import Command
 class SBMLExport(Command):
     """Export model as SBML file."""
 
-    name = 'sbmlexport'
-    title = 'Export model as SBML file'
-
     def run(self):
         writer = sbml.SBMLWriter()
         writer.write_model(

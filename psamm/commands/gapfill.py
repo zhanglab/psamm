@@ -24,10 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class GapFillCommand(SolverCommandMixin, Command):
-    """Run GapFind and GapFill on a metabolic model."""
-
-    name = 'gapfill'
-    title = 'Run GapFind and GapFill on a metabolic model'
+    """Run the GapFind and GapFill algorithms on the model."""
 
     def run(self):
         """Run GapFill command"""

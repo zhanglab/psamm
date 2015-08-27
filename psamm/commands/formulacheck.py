@@ -25,15 +25,12 @@ logger = logging.getLogger(__name__)
 
 
 class FormulaBalanceCommand(Command):
-    """Check whether reactions in a model are elementally balanced.
+    """Check whether reactions in the model are elementally balanced.
 
     Balanced reactions are those reactions where the number of elements
     (atoms) is consistent on the left and right side of the reaction equation.
     Reactions that are not balanced will be printed out.
     """
-
-    name = 'formulacheck'
-    title = 'Check formula balance on a model or database'
 
     def run(self):
         """Run formula balance command"""

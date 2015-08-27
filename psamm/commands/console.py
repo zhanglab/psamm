@@ -19,10 +19,7 @@ from ..command import Command
 
 
 class ConsoleCommand(Command):
-    """Start an interactive Python console with the given model loaded."""
-
-    name = 'console'
-    title = 'Start Python console with metabolic model loaded'
+    """Start an interactive Python console with the model loaded."""
 
     @classmethod
     def init_parser(cls, parser):

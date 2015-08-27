@@ -22,10 +22,7 @@ from ..reaction import Compound
 
 
 class SearchCommand(Command):
-    """Search for reactions and compounds in a model."""
-
-    name = 'search'
-    title = 'Search the database of reactions or compounds'
+    """Search for reactions and compounds in the model."""
 
     @classmethod
     def init_parser(cls, parser):

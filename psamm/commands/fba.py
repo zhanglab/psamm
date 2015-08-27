@@ -26,10 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class FluxBalanceCommand(SolverCommandMixin, Command):
-    """Run flux balance analysis on a metabolic model."""
-
-    name = 'fba'
-    title = 'Run flux balance analysis on a metabolic model'
+    """Run flux balance analysis on the model."""
 
     @classmethod
     def init_parser(cls, parser):
