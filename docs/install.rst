@@ -57,15 +57,22 @@ a virtual environment (as described above) this should be done after activating
 the virtual environment:
 
 1. Locate the directory where Cplex was installed (e.g. ``/path/to/IBM/ILOG/CPLEX_StudioXXX``).
-2. Locate the appropriate subdirectory based on your platform:
-   ``cplex/python/<platform>`` (e.g. ``cplex/python/x86-64_osx``).
+2. Locate the appropriate subdirectory based on your platform and Python
+   version: ``cplex/python/<version>/<platform>``
+   (e.g. ``cplex/python/2.7/x86-64_osx``).
 3. Use ``pip`` to install the package from this directory using the following
    command.
 
 .. code-block:: shell
 
     (env) $ pip install \
-        /path/to/IBM/ILOG/CPLEX_StudioXXX/cplex/python/<platform>
+        /path/to/IBM/ILOG/CPLEX_Studio1262/cplex/python/<version>/<platform>
+
+.. note::
+
+    Python 3 support was added in a recent release of Cplex. Older versions
+    only support Python 2. If you are using Python 3 make sure that you have
+    the latest version of Cplex installed.
 
 Gurobi
 ------

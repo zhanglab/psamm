@@ -21,14 +21,28 @@ for coding style (PEP8) and building documentation, use tox_:
 
     $ tox
 
-When testing with tox, the URL for the Cplex python module must be provided in
-the environment variable ``CPLEX_PYTHON_PACKAGE`` for the Cplex tests to
-succeed. For example:
+When testing with tox, the local path for the Cplex python module must be
+provided in the environment variables ``CPLEX_PYTHON2_PACKAGE`` and
+``CPLEX_PYTHON3_PACKAGE`` for Python 2 and Python 3, respectively. For example:
 
 .. code-block:: shell
 
-    $ export CPLEX_PYTHON_PACKAGE=file:///path/to/IBM/ILOG/CPLEX_StudioXXX/cplex/python/x86-64_osx
-    $ tox
+    $ export CPLEX_PYTHON2_PACKAGE=/path/to/IBM/ILOG/CPLEX_StudioXXX/cplex/python/2.7/x86-64_osx
+    $ export CPLEX_PYTHON3_PACKAGE=/path/to/IBM/ILOG/CPLEX_StudioXXX/cplex/python/3.4/x86-64_osx
+    $ tox -e py27-cplex,py34-cplex
+
+.. note::
+
+    Python 3 support was added in a recent release of Cplex. Older versions
+    only support Python 2.
+
+Similarly, the local path to the Gurobi package must be specified in the
+environment variable ``GUROBI_PYTHON_PACKAGE``:
+
+.. code-block:: shell
+
+    $ export GUROBI_PYTHON_PACKAGE=/Library/gurobi604/mac64
+    $ tox -e py27-gurobi
 
 Adding new tests
 ----------------
