@@ -11,8 +11,10 @@ PSAMM metabolic modeling tools
    :alt: Package Status
    :target: https://pypi.python.org/pypi/psamm
 
-Tools related to metabolic modeling, reconstruction, data parsing and
-formatting, consistency checking, automatic gap filling, and model simulations.
+PSAMM is an open source software that is designed for the curation and analysis
+of metabolic models. It supports model version tracking, model annotation, data
+integration, data parsing and formatting, consistency checking, automatic gap
+filling, and model simulations.
 
 See NEWS_ for information on recent changes. The ``master`` branch
 tracks the latest release while the ``develop`` branch is the latest version in
