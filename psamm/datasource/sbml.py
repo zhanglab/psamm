@@ -198,8 +198,12 @@ class ReactionEntry(_SBMLEntry):
                     denom = int(species.get('denominator', 1))
                     species_value = Fraction(value, denom)
                 except ValueError:
+                    message = ('Non-integer stoichiometry is not allowed in'
+                               ' SBML level 1 (reaction {})'.format(self.id))
                     if self._reader._strict:
-                        raise
+                        raise ParseError(message)
+                    else:
+                        logger.warning(message)
                     species_value = Decimal(species.get('stoichiometry', 1))
             elif self._reader._level == 2:
                 # Stoichiometric value is a double but can alternatively be
