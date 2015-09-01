@@ -66,17 +66,18 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
                 reaction))
 
         if not self._args.tfba:
-            fb_problem = fluxanalysis.FluxBalanceProblem
             solver = self._get_solver()
         else:
-            fb_problem = fluxanalysis.FluxBalanceTDProblem
             solver = self._get_solver(integer=True)
 
-        p = fb_problem(self._mm, solver)
+        p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+
+        if self._args.tfba:
+            p.add_thermodynamic()
 
         threshold = self._args.threshold
         if threshold.relative:
-            p.solve(reaction)
+            p.maximize(reaction)
             threshold.reference = p.get_flux(reaction)
 
         flux_threshold = float(threshold)
@@ -107,7 +108,7 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
                 testing_reaction))
 
             try:
-                p.solve(reaction)
+                p.maximize(reaction)
             except fluxanalysis.FluxBalanceError:
                 logger.info(
                     'FBA is infeasible, marking {} as essential'.format(

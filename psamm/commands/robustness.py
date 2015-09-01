@@ -55,7 +55,7 @@ class RobustnessCommand(SolverCommandMixin, Command):
 
         def run_fba_fmin(model, reaction):
             fba = fluxanalysis.FluxBalanceProblem(model, solver=solver)
-            fba.solve(reaction)
+            fba.maximize(reaction)
             optimum = fba.get_flux(reaction)
             return fluxanalysis.flux_minimization(
                 model, {reaction: optimum}, solver=solver)
