@@ -1,4 +1,10 @@
 
+v0.12.1 (2015-09-01)
+--------------------
+
+- Fix tiny bug in setup.py resulting in failure to upload the 0.12 package to
+  PyPI.
+
 v0.12 (2015-09-01)
 ------------------
 
