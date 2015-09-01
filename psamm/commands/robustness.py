@@ -53,22 +53,9 @@ class RobustnessCommand(SolverCommandMixin, Command):
     def run(self):
         """Run flux analysis command"""
 
-        def run_fba_fmin(model, reaction):
-            fba = fluxanalysis.FluxBalanceProblem(model, solver=solver)
-            fba.solve(reaction)
-            optimum = fba.get_flux(reaction)
-            return fluxanalysis.flux_minimization(
-                model, {reaction: optimum}, solver=solver)
-
-        def run_tfba(model, reaction):
-            return fluxanalysis.flux_balance(
-                model, reaction, tfba=True, solver=solver)
-
         if self._args.no_tfba:
-            run_fba = run_fba_fmin
             solver = self._get_solver()
         else:
-            run_fba = run_tfba
             solver = self._get_solver(integer=True)
 
         # Load compound information
@@ -111,14 +98,27 @@ class RobustnessCommand(SolverCommandMixin, Command):
             raise CommandError('Invalid flux range: {}, {}\n'.format(
                 flux_min, flux_max))
 
+        # Remove the limits on the varying reaction. We will instead fix this
+        # reaction explicitly in the following loop.
+        del self._mm.limits[varying_reaction].bounds
+
+        p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+
         for i in range(steps):
             fixed_flux = flux_min + i*(flux_max - flux_min)/float(steps-1)
-            test_model = self._mm.copy()
-            test_model.limits[varying_reaction].bounds = fixed_flux, fixed_flux
+            flux_var = p.get_flux_var(varying_reaction)
+            c, = p.prob.add_linear_constraints(flux_var == fixed_flux)
 
             try:
-                for other_reaction, flux in run_fba(test_model, reaction):
+                if self._args.no_tfba:
+                    p.max_min_l1(reaction)
+                else:
+                    p.maximize(reaction)
+                for other_reaction in self._mm.reactions:
                     print('{}\t{}\t{}'.format(
-                        other_reaction, fixed_flux, flux))
+                        other_reaction, fixed_flux,
+                        p.get_flux(other_reaction)))
             except fluxanalysis.FluxBalanceError:
                 pass
+            finally:
+                c.delete()

@@ -69,6 +69,39 @@ class TestFluxBalance(unittest.TestCase):
         self.assertAlmostEqual(fluxes['rxn_2'], 0)
         self.assertAlmostEqual(fluxes['rxn_6'], 1000)
 
+    def test_flux_balance_object_maximize(self):
+        p = fluxanalysis.FluxBalanceProblem(self.model, self.solver)
+        p.maximize('rxn_6')
+        self.assertAlmostEqual(p.get_flux('rxn_1'), 500)
+        self.assertAlmostEqual(p.get_flux('rxn_2'), 0)
+        self.assertAlmostEqual(p.get_flux('rxn_6'), 1000)
+
+    def test_flux_balance_object_minimize_l1(self):
+        p = fluxanalysis.FluxBalanceProblem(self.model, self.solver)
+        p.prob.add_linear_constraints(p.get_flux_var('rxn_6') == 1000)
+        p.minimize_l1()
+        self.assertAlmostEqual(p.get_flux('rxn_1'), 500)
+        self.assertAlmostEqual(p.get_flux('rxn_2'), 0)
+        self.assertAlmostEqual(p.get_flux('rxn_3'), 1000)
+        self.assertAlmostEqual(p.get_flux('rxn_4'), 0)
+        self.assertAlmostEqual(p.get_flux('rxn_5'), 0)
+        self.assertAlmostEqual(p.get_flux('rxn_6'), 1000)
+
+    def test_flux_balance_object_max_min_l1(self):
+        p = fluxanalysis.FluxBalanceProblem(self.model, self.solver)
+        p.max_min_l1('rxn_6')
+        self.assertAlmostEqual(p.get_flux('rxn_1'), 500)
+        self.assertAlmostEqual(p.get_flux('rxn_2'), 0)
+        self.assertAlmostEqual(p.get_flux('rxn_3'), 1000)
+        self.assertAlmostEqual(p.get_flux('rxn_4'), 0)
+        self.assertAlmostEqual(p.get_flux('rxn_5'), 0)
+        self.assertAlmostEqual(p.get_flux('rxn_6'), 1000)
+
+        # The temporary constraint on the reaction rxn_6 should go away. If
+        # not, the next maximize will raise a FluxBalanceError.
+        p.prob.add_linear_constraints(p.get_flux_var('rxn_1') == 10)
+        p.maximize('rxn_6')
+        self.assertAlmostEqual(p.get_flux('rxn_6'), 20)
 
 class TestFluxBalanceThermodynamic(unittest.TestCase):
     def setUp(self):
