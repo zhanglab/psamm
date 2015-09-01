@@ -18,6 +18,8 @@
 from ..command import Command, SolverCommandMixin, CommandError
 from .. import fluxanalysis
 
+from six.moves import range
+
 
 class RobustnessCommand(SolverCommandMixin, Command):
     """Run robustness analysis on the model.
@@ -109,7 +111,7 @@ class RobustnessCommand(SolverCommandMixin, Command):
             raise CommandError('Invalid flux range: {}, {}\n'.format(
                 flux_min, flux_max))
 
-        for i in xrange(steps):
+        for i in range(steps):
             fixed_flux = flux_min + i*(flux_max - flux_min)/float(steps-1)
             test_model = self._mm.copy()
             test_model.limits[varying_reaction].bounds = fixed_flux, fixed_flux
