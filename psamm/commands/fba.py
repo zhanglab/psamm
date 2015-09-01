@@ -40,7 +40,7 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
         super(FluxBalanceCommand, cls).init_parser(parser)
 
     def run(self):
-        """Run flux analysis command"""
+        """Run flux analysis command."""
 
         # Load compound information
         compound_name = {}
@@ -79,33 +79,41 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
         logger.info('Maximum flux: {}'.format(optimum))
 
     def run_fba_minimized(self, reaction):
-        """Run normal FBA and flux minimization on model, then print output"""
+        """Run normal FBA and flux minimization on model."""
 
-        solver = self._get_solver()
-        fba_fluxes = dict(fluxanalysis.flux_balance(
-            self._mm, reaction, tfba=False, solver=solver))
-        optimum = fba_fluxes[reaction]
         epsilon = self._args.epsilon
 
+        solver = self._get_solver()
+        p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+
+        # Maximize reaction flux
+        p.maximize(reaction)
+        fluxes = {r: p.get_flux(r) for r in self._mm.reactions}
+
         # Run flux minimization
-        fmin_fluxes = dict(fluxanalysis.flux_minimization(
-            self._mm, {reaction: optimum}, solver=solver))
+        flux_var = p.get_flux_var(reaction)
+        p.prob.add_linear_constraints(flux_var == p.get_flux(reaction))
+        p.minimize_l1()
         count = 0
-        for reaction_id, flux in iteritems(fmin_fluxes):
-            if fba_fluxes[reaction_id] - epsilon > flux:
+        for reaction_id in self._mm.reactions:
+            flux = p.get_flux(reaction_id)
+            if abs(flux - fluxes[reaction_id]) > epsilon:
                 count += 1
-            yield reaction_id, fba_fluxes[reaction_id], flux
+            yield reaction_id, fluxes[reaction_id], flux
         logger.info('Minimized reactions: {}'.format(count))
 
     def run_tfba(self, reaction):
-        """Run FBA and tFBA on model"""
+        """Run FBA and tFBA on model."""
 
         solver = self._get_solver(integer=True)
+        p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
 
-        fba_fluxes = dict(fluxanalysis.flux_balance(
-            self._mm, reaction, tfba=False, solver=solver))
-        fluxes = dict(fluxanalysis.flux_balance(
-            self._mm, reaction, tfba=True, solver=solver))
+        p.maximize(reaction)
+        fba_fluxes = {r: p.get_flux(r) for r in self._mm.reactions}
+
+        p.add_thermodynamic()
+        p.maximize(reaction)
+        fluxes = {r: p.get_flux(r) for r in self._mm.reactions}
 
         for reaction_id, flux in iteritems(fluxes):
             yield reaction_id, fba_fluxes[reaction_id], flux
