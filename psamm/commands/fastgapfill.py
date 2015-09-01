@@ -114,7 +114,7 @@ class FastGapFillCommand(SolverCommandMixin, Command):
             if maximized_reaction is None:
                 raise CommandError('The maximized reaction was not specified')
 
-        if not not self._mm.has_reaction(maximized_reaction):
+        if not self._mm.has_reaction(maximized_reaction):
             raise CommandError(
                 'The biomass reaction is not a valid model'
                 ' reaction: {}'.format(maximized_reaction))
