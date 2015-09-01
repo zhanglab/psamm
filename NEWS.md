@@ -1,4 +1,37 @@
 
+v0.12 (2015-09-01)
+------------------
+
+- Add support for the Gurobi LP solver (Python 2.7 only).
+- Fix a bug in the `fastgapfill` command that caused the biomass reaction to
+  never be found in the model.
+- Add command line tool `psamm-list-lpsolvers` which will list the available
+  solvers, and report their attributes and whether they can be successfully
+  loaded.
+- Change the way the threshold parameter on the `randomsparse` command is
+  parsed. A threshold relative to the maximum flux is now given using
+  percentage notation (e.g. `95%`) while an absolute flux threshold is given as
+  a number (e.g `1.34`).
+- Log the model name at the beginning of every command. If the model exists in
+  a Git repository, the current Git commit ID is also reported.
+- Produce warnings when encountering invalid SBML constructs using non-strict
+  parsing. Previously, some of these could only be noticed when using the
+  strict mode.
+- Improve error reports from commands. This means that usage information is now
+  printed when a command fails to parse an argument.
+- Improve the API in the `fluxanalysis` module to allow commands to more
+  easily reuse LP problems. This improves the speed of robustness analysis in
+  particular.
+- Improve and expand the install instructions in the documentation.
+- Reorganize implementations of commands into the `psamm.commands` package. The
+  commands are now discovered through the entry point mechanism from
+  `setuptools` allowing any package to install additional commands into the
+  PSAMM user interface.
+- Use a simpler output format for log messages unless the environment variable
+  `PSAMM_DEBUG` is set. If set, this variable determines the logging level
+  (e.g. `PSAMM_DEBUG=debug` enables more messages).
+- Include Python 3.3 in the tox test suite.
+
 v0.11 (2015-08-06)
 ------------------
 
