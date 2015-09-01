@@ -2,14 +2,15 @@
 Overview
 ========
 
-PSAMM is a collection of tools related to metabolic modeling, model
-reconstruction, data parsing and formatting, consistency checking,
-automatic gap filling, and model simulations.
+PSAMM is an open source software that is designed for the curation and analysis
+of metabolic models. It supports model version tracking, model annotation, data
+integration, data parsing and formatting, consistency checking, automatic gap
+filling, and model simulations.
 
 PSAMM is developed as an open source project, coordinated through `Github`_.
-The PSAMM software is being developed in the `Zhang Laboratory`_ at the University of Rhode Island and
-is the subject of a research article that has been submitted for
-review. [Steffensen15]_
+The PSAMM software is being developed in the `Zhang Laboratory`_ at the
+University of Rhode Island and is the subject of a research article that has
+been submitted for review. [Steffensen15]_
 
 .. _Github: https://github.com/zhanglab/psamm
 .. _Zhang Laboratory: http://zhanglab.uri.edu/

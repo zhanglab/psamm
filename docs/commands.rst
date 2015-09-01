@@ -153,12 +153,13 @@ specifying the reaction explicitly.
 
 .. code-block:: shell
 
-    $ psamm-model randomsparse 0.95
+    $ psamm-model randomsparse 95%
 
 When the given reaction is the biomass reaction, this results in a smaller
 model which is still producing biomass within the tolerance given by the
-threshold. Aggregating the results from multiple random sparse networks allows
-classifying reactions as essential, semi-essential or non-essential.
+threshold. The tolerance can be specified as a relative value (as above) or as
+an absolute flux. Aggregating the results from multiple random sparse networks
+allows classifying reactions as essential, semi-essential or non-essential.
 
 If the option ``--exchange`` is given, the model will only try to delete
 exchange reactions. This can be used to provide putative minimal media for
@@ -166,8 +167,8 @@ the model.
 
 The output of the command is a tab-separated list of reaction IDs and a value
 indicating whether the reaction was eliminated (``0`` when eliminated, ``1``
-otherwise). If multiply minimal networks are desired, the command can be run
-again and it will produce a different random minimal network.
+otherwise). If multiple minimal networks are desired, the command can be run
+again and it will sample another random minimal network.
 
 Flux coupling analysis (``fluxcoupling``)
 -----------------------------------------

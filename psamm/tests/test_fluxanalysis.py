@@ -45,30 +45,63 @@ class TestFluxBalance(unittest.TestCase):
     def test_flux_balance_rxn_1(self):
         fluxes = dict(fluxanalysis.flux_balance(
             self.model, 'rxn_1', tfba=False, solver=self.solver))
-        self.assertEqual(fluxes['rxn_1'], 500)
-        self.assertEqual(fluxes['rxn_2'], 0)
-        self.assertEqual(fluxes['rxn_6'], 1000)
+        self.assertAlmostEqual(fluxes['rxn_1'], 500)
+        self.assertAlmostEqual(fluxes['rxn_2'], 0)
+        self.assertAlmostEqual(fluxes['rxn_6'], 1000)
 
     def test_flux_balance_rxn_2(self):
         fluxes = dict(fluxanalysis.flux_balance(
             self.model, 'rxn_2', tfba=False, solver=self.solver))
-        self.assertEqual(fluxes['rxn_2'], 0)
+        self.assertAlmostEqual(fluxes['rxn_2'], 0)
 
     def test_flux_balance_rxn_3(self):
         fluxes = dict(fluxanalysis.flux_balance(
             self.model, 'rxn_3', tfba=False, solver=self.solver))
-        self.assertEqual(fluxes['rxn_1'], 500)
-        self.assertEqual(fluxes['rxn_2'], 0)
-        self.assertEqual(fluxes['rxn_3'], 1000)
-        self.assertEqual(fluxes['rxn_6'], 1000)
+        self.assertAlmostEqual(fluxes['rxn_1'], 500)
+        self.assertAlmostEqual(fluxes['rxn_2'], 0)
+        self.assertAlmostEqual(fluxes['rxn_3'], 1000)
+        self.assertAlmostEqual(fluxes['rxn_6'], 1000)
 
     def test_flux_balance_rxn_6(self):
         fluxes = dict(fluxanalysis.flux_balance(
             self.model, 'rxn_6', tfba=False, solver=self.solver))
-        self.assertEqual(fluxes['rxn_1'], 500)
-        self.assertEqual(fluxes['rxn_2'], 0)
-        self.assertEqual(fluxes['rxn_6'], 1000)
+        self.assertAlmostEqual(fluxes['rxn_1'], 500)
+        self.assertAlmostEqual(fluxes['rxn_2'], 0)
+        self.assertAlmostEqual(fluxes['rxn_6'], 1000)
 
+    def test_flux_balance_object_maximize(self):
+        p = fluxanalysis.FluxBalanceProblem(self.model, self.solver)
+        p.maximize('rxn_6')
+        self.assertAlmostEqual(p.get_flux('rxn_1'), 500)
+        self.assertAlmostEqual(p.get_flux('rxn_2'), 0)
+        self.assertAlmostEqual(p.get_flux('rxn_6'), 1000)
+
+    def test_flux_balance_object_minimize_l1(self):
+        p = fluxanalysis.FluxBalanceProblem(self.model, self.solver)
+        p.prob.add_linear_constraints(p.get_flux_var('rxn_6') == 1000)
+        p.minimize_l1()
+        self.assertAlmostEqual(p.get_flux('rxn_1'), 500)
+        self.assertAlmostEqual(p.get_flux('rxn_2'), 0)
+        self.assertAlmostEqual(p.get_flux('rxn_3'), 1000)
+        self.assertAlmostEqual(p.get_flux('rxn_4'), 0)
+        self.assertAlmostEqual(p.get_flux('rxn_5'), 0)
+        self.assertAlmostEqual(p.get_flux('rxn_6'), 1000)
+
+    def test_flux_balance_object_max_min_l1(self):
+        p = fluxanalysis.FluxBalanceProblem(self.model, self.solver)
+        p.max_min_l1('rxn_6')
+        self.assertAlmostEqual(p.get_flux('rxn_1'), 500)
+        self.assertAlmostEqual(p.get_flux('rxn_2'), 0)
+        self.assertAlmostEqual(p.get_flux('rxn_3'), 1000)
+        self.assertAlmostEqual(p.get_flux('rxn_4'), 0)
+        self.assertAlmostEqual(p.get_flux('rxn_5'), 0)
+        self.assertAlmostEqual(p.get_flux('rxn_6'), 1000)
+
+        # The temporary constraint on the reaction rxn_6 should go away. If
+        # not, the next maximize will raise a FluxBalanceError.
+        p.prob.add_linear_constraints(p.get_flux_var('rxn_1') == 10)
+        p.maximize('rxn_6')
+        self.assertAlmostEqual(p.get_flux('rxn_6'), 20)
 
 class TestFluxBalanceThermodynamic(unittest.TestCase):
     def setUp(self):
@@ -94,11 +127,11 @@ class TestFluxBalanceThermodynamic(unittest.TestCase):
     def test_flux_balance_tfba_exchange_d(self):
         fluxes = dict(fluxanalysis.flux_balance(
             self.model, 'ex_D', tfba=True, solver=self.solver))
-        self.assertEquals(fluxes['ex_A'], -10)
-        self.assertEquals(fluxes['ex_D'], 10)
-        self.assertEquals(fluxes['rxn_2'], 10)
-        self.assertEquals(fluxes['rxn_4'], 0)
-        self.assertEquals(fluxes['rxn_5'], 0)
+        self.assertAlmostEqual(fluxes['ex_A'], -10)
+        self.assertAlmostEqual(fluxes['ex_D'], 10)
+        self.assertAlmostEqual(fluxes['rxn_2'], 10)
+        self.assertAlmostEqual(fluxes['rxn_4'], 0)
+        self.assertAlmostEqual(fluxes['rxn_5'], 0)
 
 
 class TestFluxVariability(unittest.TestCase):
@@ -127,15 +160,15 @@ class TestFluxVariability(unittest.TestCase):
             self.model, self.model.reactions, {'rxn_6': 200},
             tfba=False, solver=self.solver))
 
-        self.assertEqual(fluxes['rxn_1'][0], 100)
+        self.assertAlmostEqual(fluxes['rxn_1'][0], 100)
 
-        self.assertEqual(fluxes['rxn_2'][0], 0)
-        self.assertEqual(fluxes['rxn_2'][1], 0)
+        self.assertAlmostEqual(fluxes['rxn_2'][0], 0)
+        self.assertAlmostEqual(fluxes['rxn_2'][1], 0)
 
-        self.assertEqual(fluxes['rxn_5'][0], 0)
-        self.assertEqual(fluxes['rxn_5'][1], 100)
+        self.assertAlmostEqual(fluxes['rxn_5'][0], 0)
+        self.assertAlmostEqual(fluxes['rxn_5'][1], 100)
 
-        self.assertEqual(fluxes['rxn_6'][0], 200)
+        self.assertAlmostEqual(fluxes['rxn_6'][0], 200)
 
         self.assertGreater(fluxes['rxn_7'][1], 0)
         self.assertGreater(fluxes['rxn_8'][1], 0)
@@ -145,18 +178,18 @@ class TestFluxVariability(unittest.TestCase):
             self.model, self.model.reactions, {'rxn_6': 200},
             tfba=True, solver=self.solver))
 
-        self.assertEqual(fluxes['rxn_1'][0], 100)
+        self.assertAlmostEqual(fluxes['rxn_1'][0], 100)
 
-        self.assertEqual(fluxes['rxn_2'][0], 0)
-        self.assertEqual(fluxes['rxn_2'][1], 0)
+        self.assertAlmostEqual(fluxes['rxn_2'][0], 0)
+        self.assertAlmostEqual(fluxes['rxn_2'][1], 0)
 
-        self.assertEqual(fluxes['rxn_5'][0], 0)
-        self.assertEqual(fluxes['rxn_5'][1], 100)
+        self.assertAlmostEqual(fluxes['rxn_5'][0], 0)
+        self.assertAlmostEqual(fluxes['rxn_5'][1], 100)
 
-        self.assertEqual(fluxes['rxn_6'][0], 200)
+        self.assertAlmostEqual(fluxes['rxn_6'][0], 200)
 
-        self.assertEqual(fluxes['rxn_7'][1], 0)
-        self.assertEqual(fluxes['rxn_8'][1], 0)
+        self.assertAlmostEqual(fluxes['rxn_7'][1], 0)
+        self.assertAlmostEqual(fluxes['rxn_8'][1], 0)
 
 
 class TestFluxConsistency(unittest.TestCase):
