@@ -83,7 +83,7 @@ class Problem(BaseProblem):
         self._cp.parameters.emphasis.numerical.set(True)
 
         self._variables = {}
-        self._var_names = ('x'+str(i) for i in count(1))
+        self._var_names = (i for i in count(0))
         self._constr_names = ('c'+str(i) for i in count(1))
 
         self._result = None
@@ -126,7 +126,7 @@ class Problem(BaseProblem):
         vartype = tuple(VariableType.Continuous if value is None else value
                         for value in vartype)
 
-        args = {'names': lp_names, 'lb': tuple(lower), 'ub': tuple(upper)}
+        args = {'lb': tuple(lower), 'ub': tuple(upper)}
         if any(value != VariableType.Continuous for value in vartype):
             # Set types only if some are integer (otherwise Cplex will change
             # the solver to MILP).
