@@ -47,6 +47,10 @@ class RobustnessCommand(SolverCommandMixin, Command):
             action='store_true')
         parser.add_argument(
             '--reaction', help='Reaction to maximize', nargs='?')
+        parser.add_argument(
+            '--all-reaction-fluxes',
+            help='Print reaction flux for all model reactions',
+            action='store_true')
         parser.add_argument('varying', help='Reaction to vary')
         super(RobustnessCommand, cls).init_parser(parser)
 
@@ -114,10 +118,14 @@ class RobustnessCommand(SolverCommandMixin, Command):
                     p.max_min_l1(reaction)
                 else:
                     p.maximize(reaction)
-                for other_reaction in self._mm.reactions:
-                    print('{}\t{}\t{}'.format(
-                        other_reaction, fixed_flux,
-                        p.get_flux(other_reaction)))
+
+                if not self._args.all_reaction_fluxes:
+                    print('{}\t{}'.format(fixed_flux, p.get_flux(reaction)))
+                else:
+                    for other_reaction in self._mm.reactions:
+                        print('{}\t{}\t{}'.format(
+                            other_reaction, fixed_flux,
+                            p.get_flux(other_reaction)))
             except fluxanalysis.FluxBalanceError:
                 pass
             finally:
