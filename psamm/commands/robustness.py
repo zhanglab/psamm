@@ -103,6 +103,8 @@ class RobustnessCommand(SolverCommandMixin, Command):
         del self._mm.limits[varying_reaction].bounds
 
         p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+        if not self._args.no_tfba:
+            p.add_thermodynamic()
 
         for i in range(steps):
             fixed_flux = flux_min + i*(flux_max - flux_min)/float(steps-1)
