@@ -176,9 +176,9 @@ class FluxBalanceProblem(object):
 
         self._add_minimization_vars()
 
-        objective = sum(
-            self._prob.var(('z', reaction_id)) * -weights.get(reaction_id, 1)
-            for reaction_id in self._model.reactions)
+        objective = self._prob.expr({
+            ('z', reaction_id): -weights.get(reaction_id, 1)
+            for reaction_id in self._model.reactions})
         self._prob.set_linear_objective(objective)
 
         self._solve()
