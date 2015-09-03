@@ -86,25 +86,26 @@ class RobustnessCommand(SolverCommandMixin, Command):
         if steps <= 0:
             raise CommandError('Invalid number of steps: {}\n'.format(steps))
 
+        p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+        if not self._args.no_tfba:
+            p.add_thermodynamic()
+
         # Run FBA on model at different fixed flux values
-        flux_min = self._mm.limits[varying_reaction].lower
-        flux_max = self._mm.limits[varying_reaction].upper
-        if self._args.minimum is not None:
-            flux_min = self._args.minimum
-        if self._args.maximum is not None:
+        if self._args.maximum is None:
+            p.maximize(varying_reaction)
+            flux_max = p.get_flux(varying_reaction)
+        else:
             flux_max = self._args.maximum
+
+        if self._args.minimum is None:
+            p.maximize({varying_reaction: -1})
+            flux_min = p.get_flux(varying_reaction)
+        else:
+            flux_min = self._args.minimum
 
         if flux_min > flux_max:
             raise CommandError('Invalid flux range: {}, {}\n'.format(
                 flux_min, flux_max))
-
-        # Remove the limits on the varying reaction. We will instead fix this
-        # reaction explicitly in the following loop.
-        del self._mm.limits[varying_reaction].bounds
-
-        p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
-        if not self._args.no_tfba:
-            p.add_thermodynamic()
 
         for i in range(steps):
             fixed_flux = flux_min + i*(flux_max - flux_min)/float(steps-1)
