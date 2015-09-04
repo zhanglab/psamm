@@ -135,9 +135,13 @@ class Problem(BaseProblem):
         self._variables.update(zip(names, lp_names))
         self._cp.variables.add(**args)
 
+    def has_variable(self, name):
+        """Check whether variable is defined in the model."""
+        return name in self._variables
+
     def var(self, name):
         """Return the variable as an expression."""
-        if name not in self._variables:
+        if not self.has_variable(name):
             raise ValueError('Undefined variable: {}'.format(name))
         return Expression({name: 1})
 
@@ -145,18 +149,18 @@ class Problem(BaseProblem):
         """Return the given values as an expression."""
         if isinstance(values, dict):
             for name in values:
-                if name not in self._variables:
+                if not self.has_variable(name):
                     raise ValueError('Undefined variable: {}'.format(name))
             return Expression(values, offset=offset)
 
-        if values not in self._variables:
+        if not self.has_variable(values):
             raise ValueError('Undefined variable: {}'.format(values))
         return Expression({values: 1}, offset=offset)
 
     def set(self, names):
         """Return the set of variables as an expression"""
         names = tuple(names)
-        if any(name not in self._variables for name in names):
+        if any(not self.has_variable(name) for name in names):
             raise ValueError('Undefined variables: {}'.format(
                 set(names) - set(self._variables)))
         return Expression({VariableSet(names): 1})

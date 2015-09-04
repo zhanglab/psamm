@@ -324,6 +324,10 @@ class Problem(object):
         """Define a variable in the problem"""
 
     @abc.abstractmethod
+    def has_variable(self, name):
+        """Check whether a variable is defined in the problem."""
+
+    @abc.abstractmethod
     def var(self, name):
         """Return variable as an :class:`.Expression`"""
 
