@@ -327,17 +327,35 @@ class Problem(object):
     def has_variable(self, name):
         """Check whether a variable is defined in the problem."""
 
-    @abc.abstractmethod
     def var(self, name):
-        """Return variable as an :class:`.Expression`"""
+        """Return variable as an :class:`.Expression`."""
+        if not self.has_variable(name):
+            raise ValueError('Undefined variable: {}'.format(name))
+        return Expression({name: 1})
 
-    @abc.abstractmethod
+    def expr(self, values, offset=0):
+        """Return the given dictionary of values as an :class:`.Expression`."""
+        if isinstance(values, dict):
+            for name in values:
+                if not self.has_variable(name):
+                    raise ValueError('Undefined variable: {}'.format(name))
+            return Expression(values, offset=offset)
+
+        if not self.has_variable(values):
+            raise ValueError('Undefined variable: {}'.format(values))
+        return Expression({values: 1}, offset=offset)
+
     def set(self, names):
-        """Return variables as a set expression
+        """Return variables as a set expression.
 
         This returns an :class:`.Expression` containing a
         :class:`.VariableSet`.
         """
+        names = tuple(names)
+        if any(not self.has_variable(name) for name in names):
+            raise ValueError('Undefined variables: {}'.format(
+                set(names) - set(self._variables)))
+        return Expression({VariableSet(names): 1})
 
     @abc.abstractmethod
     def add_linear_constraints(self, *relations):
