@@ -140,14 +140,7 @@ class FluxBalanceProblem(object):
         have zero weight).
         """
 
-        if isinstance(reaction, dict):
-            objective = sum(v * self.get_flux_var(r)
-                            for r, v in iteritems(reaction))
-        else:
-            objective = self.get_flux_var(reaction)
-
-        self._prob.set_linear_objective(objective)
-
+        self._prob.set_linear_objective(self.flux_expr(reaction))
         self._solve()
 
     def _add_minimization_vars(self):
@@ -176,9 +169,9 @@ class FluxBalanceProblem(object):
 
         self._add_minimization_vars()
 
-        objective = sum(
-            self._prob.var(('z', reaction_id)) * -weights.get(reaction_id, 1)
-            for reaction_id in self._model.reactions)
+        objective = self._prob.expr({
+            ('z', reaction_id): -weights.get(reaction_id, 1)
+            for reaction_id in self._model.reactions})
         self._prob.set_linear_objective(objective)
 
         self._solve()
@@ -217,6 +210,13 @@ class FluxBalanceProblem(object):
     def get_flux_var(self, reaction):
         """Get LP variable representing the reaction flux."""
         return self._prob.var(('v', reaction))
+
+    def flux_expr(self, reaction):
+        """Get LP expression representing the reaction flux."""
+        if isinstance(reaction, dict):
+            return self._prob.expr(
+                {('v', r): v for r, v in iteritems(reaction)})
+        return self._prob.expr(('v', reaction))
 
     def get_flux(self, reaction):
         """Get resulting flux value for reaction."""

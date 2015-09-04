@@ -59,8 +59,8 @@ def is_consistent(database, solver, exchange=set(), zeromass=set()):
         else:
             prob.define(('m', compound), lower=0, upper=0)
 
-    prob.set_linear_objective(
-        sum(prob.var(('m', compound)) for compound in compound_set))
+    prob.set_linear_objective(prob.expr(
+        {('m', compound): 1 for compound in compound_set}))
 
     # Define constraints
     massbalance_lhs = {reaction: 0 for reaction in database.reactions}
@@ -107,8 +107,9 @@ def check_reaction_consistency(database, solver, exchange=set(),
                 lower=0)
     prob.define(*(('r', reaction_id) for reaction_id in database.reactions))
 
-    objective = sum(prob.var(('z', reaction_id)) * weights.get(reaction_id, 1)
-                    for reaction_id in database.reactions)
+    objective = prob.expr(
+        {('z', reaction_id): weights.get(reaction_id, 1)
+         for reaction_id in database.reactions})
     prob.set_linear_objective(objective)
 
     r = prob.set(('r', reaction_id) for reaction_id in database.reactions)
@@ -173,8 +174,8 @@ def check_compound_consistency(database, solver, exchange=set(),
     # Define z variables
     prob.define(*(('z', compound) for compound in compound_set),
                 lower=0, upper=1)
-    prob.set_linear_objective(sum(prob.var(('z', compound))
-                              for compound in compound_set))
+    prob.set_linear_objective(prob.expr(
+        {('z', compound): 1 for compound in compound_set}))
 
     z = prob.set(('z', compound) for compound in compound_set)
     m = prob.set(('m', compound) for compound in compound_set)

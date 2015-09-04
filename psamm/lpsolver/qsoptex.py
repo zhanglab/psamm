@@ -103,6 +103,18 @@ class Problem(BaseProblem):
             raise ValueError('Undefined variable: {}'.format(name))
         return Expression({name: 1})
 
+    def expr(self, values, offset=0):
+        """Return the given values as an expression."""
+        if isinstance(values, dict):
+            for name in values:
+                if name not in self._variables:
+                    raise ValueError('Undefined variable: {}'.format(name))
+            return Expression(values, offset=offset)
+
+        if values not in self._variables:
+            raise ValueError('Undefined variable: {}'.format(values))
+        return Expression({values: 1}, offset=offset)
+
     def set(self, names):
         """Return the set of variables as an expression"""
         names = tuple(names)
