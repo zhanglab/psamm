@@ -17,8 +17,6 @@
 
 import logging
 
-from six import iteritems
-
 from ..command import SolverCommandMixin, Command, CommandError
 from .. import fluxanalysis
 
@@ -31,8 +29,8 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--no-tfba', help='Disable thermodynamic constraints on FBA',
-            action='store_true')
+            '--loop-removal', help='Select type of loop removal constraints',
+            choices=['none', 'tfba', 'l1min'], default='none')
         parser.add_argument(
             '--epsilon', type=float, help='Threshold for flux minimization',
             default=1e-5)
@@ -61,22 +59,39 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
             raise CommandError('Specified reaction is not in model: {}'.format(
                 reaction))
 
-        if self._args.no_tfba:
+        loop_removal = self._args.loop_removal
+        if loop_removal == 'none':
+            logger.info('Loop removal disabled; spurious loops are allowed')
+            result = self.run_fba(reaction)
+        elif loop_removal == 'l1min':
+            logger.info('Loop removal using L1 minimization')
             result = self.run_fba_minimized(reaction)
-        else:
+        elif loop_removal == 'tfba':
+            logger.info('Loop removal using thermodynamic constraints')
             result = self.run_tfba(reaction)
+        else:
+            raise CommandError('Invalid loop constraint mode: {}'.format(
+                loop_removal))
 
         optimum = None
-        for reaction_id, fba_flux, flux in sorted(result):
+        for reaction_id, flux in sorted(result):
             rx = self._mm.get_reaction(reaction_id)
-            print('{}\t{}\t{}\t{}'.format(
-                reaction_id, fba_flux, flux,
+            print('{}\t{}\t{}'.format(
+                reaction_id, flux,
                 rx.translated_compounds(lambda x: compound_name.get(x, x))))
             # Remember flux of requested reaction
             if reaction_id == reaction:
                 optimum = flux
 
         logger.info('Maximum flux: {}'.format(optimum))
+
+    def run_fba(self, reaction):
+        """Run standard FBA on model."""
+        solver = self._get_solver()
+        p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+        p.maximize(reaction)
+        for reaction_id in self._mm.reactions:
+            yield reaction_id, p.get_flux(reaction_id)
 
     def run_fba_minimized(self, reaction):
         """Run normal FBA and flux minimization on model."""
@@ -99,7 +114,7 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
             flux = p.get_flux(reaction_id)
             if abs(flux - fluxes[reaction_id]) > epsilon:
                 count += 1
-            yield reaction_id, fluxes[reaction_id], flux
+            yield reaction_id, flux
         logger.info('Minimized reactions: {}'.format(count))
 
     def run_tfba(self, reaction):
@@ -107,13 +122,8 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
 
         solver = self._get_solver(integer=True)
         p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
-
-        p.maximize(reaction)
-        fba_fluxes = {r: p.get_flux(r) for r in self._mm.reactions}
-
         p.add_thermodynamic()
         p.maximize(reaction)
-        fluxes = {r: p.get_flux(r) for r in self._mm.reactions}
 
-        for reaction_id, flux in iteritems(fluxes):
-            yield reaction_id, fba_fluxes[reaction_id], flux
+        for reaction_id in self._mm.reactions:
+            yield reaction_id, p.get_flux(reaction_id)
