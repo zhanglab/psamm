@@ -30,8 +30,8 @@ from .lp import Solver as BaseSolver
 from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
-from .lp import (VariableSet, Expression, Relation,
-                 ObjectiveSense, VariableType, InvalidResultError)
+from .lp import (Expression, Relation, ObjectiveSense, VariableType,
+                 InvalidResultError)
 
 
 class Solver(BaseSolver):
@@ -44,6 +44,12 @@ class Solver(BaseSolver):
 
 class Problem(BaseProblem):
     """Represents an LP-problem of a qsoptex.Solver"""
+
+    CONSTR_SENSE_MAP = {
+        Relation.Equals: qsoptex.ConstraintSense.EQUAL,
+        Relation.Greater: qsoptex.ConstraintSense.GREATER,
+        Relation.Less: qsoptex.ConstraintSense.LESS
+    }
 
     def __init__(self, **kwargs):
         self._p = qsoptex.ExactProblem()
@@ -97,51 +103,24 @@ class Problem(BaseProblem):
                     'Solver does not support non-continuous types')
             self._p.add_variable(0, lower, upper, name)
 
-    def var(self, name):
-        """Return the variable as an expression"""
-        if name not in self._variables:
-            raise ValueError('Undefined variable: {}'.format(name))
-        return Expression({name: 1})
-
-    def expr(self, values, offset=0):
-        """Return the given values as an expression."""
-        if isinstance(values, dict):
-            for name in values:
-                if name not in self._variables:
-                    raise ValueError('Undefined variable: {}'.format(name))
-            return Expression(values, offset=offset)
-
-        if values not in self._variables:
-            raise ValueError('Undefined variable: {}'.format(values))
-        return Expression({values: 1}, offset=offset)
-
-    def set(self, names):
-        """Return the set of variables as an expression"""
-        names = tuple(names)
-        if any(name not in self._variables for name in names):
-            raise ValueError('Undefined variables: {}'.format(
-                set(names) - set(self._variables)))
-        return Expression({VariableSet(names): 1})
+    def has_variable(self, name):
+        """Check whether variable is defined in the model."""
+        return name in self._variables
 
     def _add_constraints(self, relation):
         """Add the given relation as one or more constraints
 
         Return a list of the names of the constraints added.
         """
-        if relation.sense in (
-                Relation.StrictlyGreater, Relation.StrictlyLess):
-            raise ValueError(
-                'Strict relations are invalid in LP-problems: {}'.format(
-                    relation))
-
         expression = relation.expression
         names = []
         for value_set in expression.value_sets():
             values = ((self._variables[variable], value)
                       for variable, value in value_set)
             constr_name = next(self._constr_names)
+            sense = self.CONSTR_SENSE_MAP[relation.sense]
             self._p.add_linear_constraint(
-                sense=relation.sense, values=values, rhs=-expression.offset,
+                sense=sense, values=values, rhs=-expression.offset,
                 name=constr_name)
             names.append(constr_name)
 
@@ -156,13 +135,12 @@ class Problem(BaseProblem):
         constraints = []
 
         for relation in relations:
+            self._check_relation(relation)
             if isinstance(relation, bool):
                 # A bool in place of a relation is accepted to mean
                 # a relation that does not involve any variables and
                 # has therefore been evaluated to a truth-value (e.g
                 # '0 == 0' or '2 >= 3').
-                if not relation:
-                    raise ValueError('Unsatisfiable relation added')
                 constraints.append(Constraint(self, None))
             else:
                 for name in self._add_constraints(relation):

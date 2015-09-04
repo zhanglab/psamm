@@ -227,11 +227,11 @@ class Relation(object):
     side is always zero.
     """
 
-    Equals = 'E'
-    Greater = 'G'
-    Less = 'L'
-    StrictlyGreater = 'SG'
-    StrictlyLess = 'SL'
+    Equals = object()
+    Greater = object()
+    Less = object()
+    StrictlyGreater = object()
+    StrictlyLess = object()
 
     SYMBOL = {
         Equals: '==',
@@ -324,16 +324,55 @@ class Problem(object):
         """Define a variable in the problem"""
 
     @abc.abstractmethod
-    def var(self, name):
-        """Return variable as an :class:`.Expression`"""
+    def has_variable(self, name):
+        """Check whether a variable is defined in the problem."""
 
-    @abc.abstractmethod
+    def var(self, name):
+        """Return variable as an :class:`.Expression`."""
+        if not self.has_variable(name):
+            raise ValueError('Undefined variable: {}'.format(name))
+        return Expression({name: 1})
+
+    def expr(self, values, offset=0):
+        """Return the given dictionary of values as an :class:`.Expression`."""
+        if isinstance(values, dict):
+            for name in values:
+                if not self.has_variable(name):
+                    raise ValueError('Undefined variable: {}'.format(name))
+            return Expression(values, offset=offset)
+
+        if not self.has_variable(values):
+            raise ValueError('Undefined variable: {}'.format(values))
+        return Expression({values: 1}, offset=offset)
+
     def set(self, names):
-        """Return variables as a set expression
+        """Return variables as a set expression.
 
         This returns an :class:`.Expression` containing a
         :class:`.VariableSet`.
         """
+        names = tuple(names)
+        if any(not self.has_variable(name) for name in names):
+            raise ValueError('Undefined variables: {}'.format(
+                set(names) - set(self._variables)))
+        return Expression({VariableSet(names): 1})
+
+    def _check_relation(self, relation):
+        """Check whether the given relation is valid.
+
+        Raises `ValueError` if the relation is invalid. This method also
+        accepts relation given as `bool` and will raise an error if the value
+        is `False`.
+        """
+        if isinstance(relation, bool):
+            if not relation:
+                raise ValueError('Unsatisfiable relation added')
+        else:
+            if relation.sense in (
+                    Relation.StrictlyGreater, Relation.StrictlyLess):
+                raise ValueError(
+                    'Strict relations are invalid in LP-problems:'
+                    ' {}'.format(relation))
 
     @abc.abstractmethod
     def add_linear_constraints(self, *relations):
