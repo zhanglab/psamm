@@ -227,11 +227,11 @@ class Relation(object):
     side is always zero.
     """
 
-    Equals = 'E'
-    Greater = 'G'
-    Less = 'L'
-    StrictlyGreater = 'SG'
-    StrictlyLess = 'SL'
+    Equals = object()
+    Greater = object()
+    Less = object()
+    StrictlyGreater = object()
+    StrictlyLess = object()
 
     SYMBOL = {
         Equals: '==',

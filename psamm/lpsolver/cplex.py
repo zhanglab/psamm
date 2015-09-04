@@ -56,6 +56,12 @@ class Problem(BaseProblem):
         VariableType.Integer: 'I'
     }
 
+    CONSTR_SENSE_MAP = {
+        Relation.Equals: 'E',
+        Relation.Greater: 'G',
+        Relation.Less: 'L'
+    }
+
     def __init__(self, **kwargs):
         self._cp = cp.Cplex()
 
@@ -158,9 +164,10 @@ class Problem(BaseProblem):
 
         names = [next(self._constr_names) for _ in pairs]
 
+        sense = self.CONSTR_SENSE_MAP[relation.sense]
         self._cp.linear_constraints.add(
             names=names, lin_expr=pairs,
-            senses=tuple(repeat(relation.sense, len(pairs))),
+            senses=tuple(repeat(sense, len(pairs))),
             rhs=tuple(repeat(float(-expression.offset), len(pairs))))
 
         return names

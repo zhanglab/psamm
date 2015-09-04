@@ -45,6 +45,12 @@ class Solver(BaseSolver):
 class Problem(BaseProblem):
     """Represents an LP-problem of a qsoptex.Solver"""
 
+    CONSTR_SENSE_MAP = {
+        Relation.Equals: qsoptex.ConstraintSense.EQUAL,
+        Relation.Greater: qsoptex.ConstraintSense.GREATER,
+        Relation.Less: qsoptex.ConstraintSense.LESS
+    }
+
     def __init__(self, **kwargs):
         self._p = qsoptex.ExactProblem()
         self._p.set_param(qsoptex.Parameter.SIMPLEX_DISPLAY, 1)
@@ -118,8 +124,9 @@ class Problem(BaseProblem):
             values = ((self._variables[variable], value)
                       for variable, value in value_set)
             constr_name = next(self._constr_names)
+            sense = self.CONSTR_SENSE_MAP[relation.sense]
             self._p.add_linear_constraint(
-                sense=relation.sense, values=values, rhs=-expression.offset,
+                sense=sense, values=values, rhs=-expression.offset,
                 name=constr_name)
             names.append(constr_name)
 
