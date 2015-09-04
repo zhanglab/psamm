@@ -149,12 +149,6 @@ class Problem(BaseProblem):
 
         Return a list of the names of the constraints added.
         """
-        if relation.sense in (
-                Relation.StrictlyGreater, Relation.StrictlyLess):
-            raise ValueError(
-                'Strict relations are invalid in LP-problems:'
-                ' {}'.format(relation))
-
         expression = relation.expression
         pairs = []
         for value_set in expression.value_sets():
@@ -181,13 +175,12 @@ class Problem(BaseProblem):
         constraints = []
 
         for relation in relations:
+            self._check_relation(relation)
             if isinstance(relation, bool):
                 # A bool in place of a relation is accepted to mean
                 # a relation that does not involve any variables and
                 # has therefore been evaluated to a truth-value (e.g
                 # '0 == 0' or '2 >= 3').
-                if not relation:
-                    raise ValueError('Unsatisfiable relation added')
                 constraints.append(Constraint(self, None))
             else:
                 for name in self._add_constraints(relation):

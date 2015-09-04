@@ -357,6 +357,23 @@ class Problem(object):
                 set(names) - set(self._variables)))
         return Expression({VariableSet(names): 1})
 
+    def _check_relation(self, relation):
+        """Check whether the given relation is valid.
+
+        Raises `ValueError` if the relation is invalid. This method also
+        accepts relation given as `bool` and will raise an error if the value
+        is `False`.
+        """
+        if isinstance(relation, bool):
+            if not relation:
+                raise ValueError('Unsatisfiable relation added')
+        else:
+            if relation.sense in (
+                    Relation.StrictlyGreater, Relation.StrictlyLess):
+                raise ValueError(
+                    'Strict relations are invalid in LP-problems:'
+                    ' {}'.format(relation))
+
     @abc.abstractmethod
     def add_linear_constraints(self, *relations):
         """Add constraints to the problem.
