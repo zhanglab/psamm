@@ -21,6 +21,7 @@ import logging
 import random
 
 from .lpsolver import lp
+from .reaction import Reaction
 
 from six import iteritems
 
@@ -429,3 +430,113 @@ def consistency_check(model, subset, epsilon, tfba, solver):
 
         yield reaction
         subset.remove(reaction)
+
+
+def check_spurious_production(model, exclude, zeromass, epsilon, solver):
+    """Check whether the model allows spurious production.
+
+    Spurious reaction loops allow the production or consumption of compounds
+    through reactions that are not stoichiometrically balanced. For example,
+    spurious production of compound ``B`` is enabled by the reactions
+    ``A => B + C`` and ``C => A``.
+
+    Args:
+        model: MetabolicModel to check.
+        epsilon: The threshold at which the flux is considered non-zero.
+        solver: LP solver instance to use.
+    """
+
+    model = model.copy()
+
+    for reaction_id in exclude:
+        model.remove_reaction(reaction_id)
+
+    reactions = set(model.reactions)
+
+    # Check for spurious production
+    for reaction_id in model.reactions:
+        if model.is_exchange(reaction_id):
+            upper = max(0, model.limits[reaction_id].upper)
+            model.limits[reaction_id].bounds = 0, upper
+        else:
+            del model.limits[reaction_id].bounds
+
+    for compound in model.compounds:
+        reaction = Reaction(Reaction.Right, [(compound, 1)], [])
+        model.database.set_reaction(('sink', compound), reaction)
+        model.add_reaction(('sink', compound))
+
+    p = FluxBalanceProblem(model, solver)
+    for compound in model.compounds:
+        if compound.name in zeromass:
+            continue
+
+        p.maximize(('sink', compound))
+        flux = p.get_flux(('sink', compound))
+        if flux > epsilon:
+            flux_var = p.get_flux_var(('sink', compound))
+            c, = p.prob.add_linear_constraints(flux_var == flux)
+            try:
+                p.minimize_l1()
+                fluxes = {reaction: p.get_flux(reaction)
+                          for reaction in reactions}
+                logger.info('Using reactions: {}'.format(
+                    {r: v for r, v in iteritems(fluxes) if abs(v) >= epsilon}))
+                yield compound
+            finally:
+                c.delete()
+
+
+def check_spurious_consumption(model, exclude, zeromass, epsilon, solver):
+    """Check whether the model allows spurious consumption.
+
+    Spurious reaction loops allow the production or consumption of compounds
+    through reactions that are not stoichiometrically balanced. For example,
+    spurious consumption of compound ``B`` is enabled by the reactions
+    ``A + B => C`` and ``C => A``.
+
+    Args:
+        model: MetabolicModel to check.
+        epsilon: The threshold at which the flux is considered non-zero.
+        solver: LP solver instance to use.
+    """
+
+    model = model.copy()
+
+    for reaction_id in exclude:
+        model.remove_reaction(reaction_id)
+
+    reactions = set(model.reactions)
+
+    # Check for spurious consumption
+    for reaction_id in model.reactions:
+        if model.is_exchange(reaction_id):
+            lower = min(0, model.limits[reaction_id].lower)
+            model.limits[reaction_id].bounds = lower, 0
+        else:
+            del model.limits[reaction_id].bounds
+
+    for compound in model.compounds:
+        reaction = Reaction(Reaction.Right, [], [(compound, 1)])
+        model.database.set_reaction(('source', compound), reaction)
+        model.add_reaction(('source', compound))
+
+    p = FluxBalanceProblem(model, solver)
+    for compound in model.compounds:
+        if compound.name in zeromass:
+            continue
+
+        p.maximize(('source', compound))
+        flux = p.get_flux(('source', compound))
+        if flux > epsilon:
+            flux_var = p.get_flux_var(('source', compound))
+            c, = p.prob.add_linear_constraints(flux_var == flux)
+            try:
+                p.minimize_l1()
+                fluxes = {reaction: p.get_flux(reaction)
+                          for reaction in reactions}
+                logger.info('Using reactions: {}'.format(
+                    {r: v for r, v in iteritems(fluxes) if abs(v) >= epsilon}))
+                yield compound
+            finally:
+                c.delete()
