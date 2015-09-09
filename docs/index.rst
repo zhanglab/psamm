@@ -8,6 +8,7 @@ Contents:
    :maxdepth: 2
 
    overview
+   tutorial
    install
    file_format
    commands
@@ -15,7 +16,6 @@ Contents:
    faq
    api
    references
-
 
 Indices and tables
 ==================
