@@ -56,6 +56,8 @@ cores on the computer):
 
     $ psamm-model fba --solver threads=4
 
+.. _commands-fba:
+
 Flux balance analysis (``fba``)
 -------------------------------
 
@@ -140,10 +142,9 @@ The output of the command is a list of tab-separated values indicating a
 reaction ID, the flux of the varying reaction, and the flux of the reaction
 with the given ID.
 
-If the parameter ``--no-tfba`` is given, the thermodynamic constraints are not
-applied when considering whether reactions can take a non-zero flux. This is
-generally faster but less accurate as it allows thermodynamically infeasible
-loops to occur.
+If the parameter ``--loop-removal`` is given, additional constraints on the
+model can be imposed that remove internal flux loops. See the section on the
+:ref:`commands-fba` command for more information on this option.
 
 Random sparse network (``randomsparse``)
 ----------------------------------------
