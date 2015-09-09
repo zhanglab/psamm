@@ -25,7 +25,7 @@ class FluxVariabilityCommand(SolverCommandMixin, Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--no-tfba', help='Disable thermodynamic constraints on FVA',
+            '--tfba', help='Enable thermodynamic constraints on FVA',
             action='store_true')
         parser.add_argument('reaction', help='Reaction to maximize', nargs='?')
         super(FluxVariabilityCommand, cls).init_parser(parser)
@@ -52,7 +52,7 @@ class FluxVariabilityCommand(SolverCommandMixin, Command):
             raise CommandError('Specified reaction is not in model: {}'.format(
                 reaction))
 
-        enable_tfba = not self._args.no_tfba
+        enable_tfba = self._args.tfba
         if enable_tfba:
             solver = self._get_solver(integer=True)
         else:
