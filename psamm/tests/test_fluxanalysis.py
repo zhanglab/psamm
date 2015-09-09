@@ -103,6 +103,17 @@ class TestFluxBalance(unittest.TestCase):
         p.maximize('rxn_6')
         self.assertAlmostEqual(p.get_flux('rxn_6'), 20)
 
+    def test_flux_balance_object_max_min_l1_multiple(self):
+        p = fluxanalysis.FluxBalanceProblem(self.model, self.solver)
+        p.max_min_l1({'rxn_3': 1, 'rxn_4': 1, 'rxn_5': 1})
+        self.assertAlmostEqual(p.get_flux('rxn_1'), 500)
+        self.assertAlmostEqual(p.get_flux('rxn_2'), 0)
+        self.assertAlmostEqual(p.get_flux('rxn_3'), 0)
+        self.assertAlmostEqual(p.get_flux('rxn_4'), 1000)
+        self.assertAlmostEqual(p.get_flux('rxn_5'), 1000)
+        self.assertAlmostEqual(p.get_flux('rxn_6'), 1000)
+
+
 class TestFluxBalanceThermodynamic(unittest.TestCase):
     def setUp(self):
         self.database = DictDatabase()
