@@ -201,7 +201,7 @@ class Expression(object):
                 if name is None:
                     terms.append('{}'.format(value))
                 elif abs(value) == 1:
-                    terms.append(name if value > 0 else '-'+name)
+                    terms.append(name if value > 0 else '-{}'.format(name))
                 else:
                     terms.append('{}*{}'.format(value, name))
             else:
