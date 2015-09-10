@@ -28,11 +28,14 @@ logger = logging.getLogger(__name__)
 class RobustnessCommand(SolverCommandMixin, Command):
     """Run robustness analysis on the model.
 
-    Given a reaction to maximize and a reaction to vary,
-    the robustness analysis will run FBA while fixing the
-    reaction to vary at each iteration. The reaction will
-    be fixed at the specified number of steps between the
-    minimum and maximum flux value specified in the model.
+    Given a reaction to maximize and a reaction to vary, the robustness
+    analysis will run FBA while fixing the reaction to vary at each iteration.
+    The reaction will be fixed at the specified number of steps between the
+    minimum and maximum flux value.
+
+    The loop removal option can be used to apply thermodynamic constraints or
+    flux minimization. The fluxes option can be used to select which reaction
+    fluxes are calculated and displayed.
     """
 
     @classmethod
@@ -52,9 +55,8 @@ class RobustnessCommand(SolverCommandMixin, Command):
         parser.add_argument(
             '--reaction', help='Reaction to maximize', nargs='?')
         parser.add_argument(
-            '--all-reaction-fluxes',
-            help='Print reaction flux for all model reactions',
-            action='store_true')
+            '--fluxes', help='Which reaction fluxes to calculate',
+            choices=['objective', 'all', 'range'], default='objective')
         parser.add_argument('varying', help='Reaction to vary')
         super(RobustnessCommand, cls).init_parser(parser)
 
@@ -90,6 +92,21 @@ class RobustnessCommand(SolverCommandMixin, Command):
             raise CommandError('Invalid number of steps: {}\n'.format(steps))
 
         loop_removal = self._args.loop_removal
+
+        # Automatically change loop removal in cases where the choice of
+        # flux output is incompatible.
+        if self._args.fluxes == 'objective' and loop_removal != 'none':
+            logger.warning(
+                'Loop removal has no effect when only the objective is'
+                ' calculated; setting loop removal to "none".')
+            loop_removal = 'none'
+
+        if self._args.fluxes == 'range' and loop_removal == 'l1min':
+            logger.warning(
+                'Flux minimization has no effect when calculating flux ranges;'
+                ' setting loop removal to "none".')
+            loop_removal = 'none'
+
         if loop_removal == 'tfba':
             solver = self._get_solver(integer=True)
         else:
@@ -138,17 +155,54 @@ class RobustnessCommand(SolverCommandMixin, Command):
             c, = p.prob.add_linear_constraints(flux_var == fixed_flux)
 
             try:
-                run_fba(reaction)
-
-                if not self._args.all_reaction_fluxes:
-                    print('{}\t{}'.format(fixed_flux, p.get_flux(reaction)))
+                if self._args.fluxes != 'range':
+                    self._run_flux_iteration(p, run_fba, reaction, fixed_flux)
                 else:
-                    for other_reaction in self._mm.reactions:
-                        print('{}\t{}\t{}'.format(
-                            other_reaction, fixed_flux,
-                            p.get_flux(other_reaction)))
+                    self._run_range_iteration(p, reaction, fixed_flux)
             except fluxanalysis.FluxBalanceError:
                 logger.warning('No solution found for {} at {}'.format(
                     varying_reaction, fixed_flux))
             finally:
                 c.delete()
+
+    def _run_flux_iteration(self, problem, function, reaction, fixed_flux):
+        function(reaction)
+
+        if self._args.fluxes == 'objective':
+            print('{}\t{}'.format(fixed_flux, problem.get_flux(reaction)))
+        else:
+            for other_reaction in self._mm.reactions:
+                print('{}\t{}\t{}'.format(
+                    other_reaction, fixed_flux,
+                    problem.get_flux(other_reaction)))
+
+    def _run_range_iteration(self, problem, reaction, fixed_flux):
+        problem.maximize(reaction)
+        optimum = problem.get_flux(reaction)
+        flux_var = problem.get_flux_var(reaction)
+        c, = problem.prob.add_linear_constraints(flux_var == optimum)
+
+        try:
+            for range_reaction in self._mm.reactions:
+                max_flux = None
+                try:
+                    problem.maximize(range_reaction)
+                    max_flux = problem.get_flux(range_reaction)
+                except fluxanalysis.FluxBalanceError:
+                    logger.warning(
+                        'No solution found when determining maximum flux'
+                        ' for {}'.format(range_reaction))
+
+                min_flux = None
+                try:
+                    problem.maximize({range_reaction: -1})
+                    min_flux = problem.get_flux(range_reaction)
+                except fluxanalysis.FluxBalanceError:
+                    logger.warning(
+                        'No solution found when determining minimum flux'
+                        ' for {}'.format(range_reaction))
+
+                print('{}\t{}\t{}\t{}'.format(
+                    range_reaction, fixed_flux, min_flux, max_flux))
+        finally:
+            c.delete()
