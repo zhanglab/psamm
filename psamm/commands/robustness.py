@@ -15,10 +15,14 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+import logging
+
 from ..command import Command, SolverCommandMixin, CommandError
 from .. import fluxanalysis
 
 from six.moves import range
+
+logger = logging.getLogger(__name__)
 
 
 class RobustnessCommand(SolverCommandMixin, Command):
@@ -43,8 +47,8 @@ class RobustnessCommand(SolverCommandMixin, Command):
             '--maximum', metavar='V', type=float,
             help='Maximum flux value of varying reacton')
         parser.add_argument(
-            '--no-tfba', help='Disable thermodynamic constraints on FBA',
-            action='store_true')
+            '--loop-removal', help='Select type of loop removal constraints',
+            choices=['none', 'tfba', 'l1min'], default='none')
         parser.add_argument(
             '--reaction', help='Reaction to maximize', nargs='?')
         parser.add_argument(
@@ -55,12 +59,7 @@ class RobustnessCommand(SolverCommandMixin, Command):
         super(RobustnessCommand, cls).init_parser(parser)
 
     def run(self):
-        """Run flux analysis command"""
-
-        if self._args.no_tfba:
-            solver = self._get_solver()
-        else:
-            solver = self._get_solver(integer=True)
+        """Run robustness command."""
 
         # Load compound information
         compound_name = {}
@@ -90,11 +89,29 @@ class RobustnessCommand(SolverCommandMixin, Command):
         if steps <= 0:
             raise CommandError('Invalid number of steps: {}\n'.format(steps))
 
-        p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
-        if not self._args.no_tfba:
-            p.add_thermodynamic()
+        loop_removal = self._args.loop_removal
+        if loop_removal == 'tfba':
+            solver = self._get_solver(integer=True)
+        else:
+            solver = self._get_solver()
 
-        # Run FBA on model at different fixed flux values
+        p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+
+        if loop_removal == 'none':
+            logger.info('Loop removal disabled; spurious loops are allowed')
+            run_fba = p.maximize
+        elif loop_removal == 'l1min':
+            logger.info('Loop removal using L1 minimization')
+            run_fba = p.max_min_l1
+        elif loop_removal == 'tfba':
+            logger.info('Loop removal using thermodynamic constraints')
+            p.add_thermodynamic()
+            run_fba = p.maximize
+        else:
+            raise CommandError('Invalid loop constraint mode: {}'.format(
+                loop_removal))
+
+        # Determine minimum and maximum flux for varying reaction
         if self._args.maximum is None:
             p.maximize(varying_reaction)
             flux_max = p.get_flux(varying_reaction)
@@ -111,16 +128,17 @@ class RobustnessCommand(SolverCommandMixin, Command):
             raise CommandError('Invalid flux range: {}, {}\n'.format(
                 flux_min, flux_max))
 
+        logger.info('Varying {} in {} steps between {} and {}'.format(
+            varying_reaction, steps, flux_min, flux_max))
+
+        # Run FBA on model at different fixed flux values
         for i in range(steps):
             fixed_flux = flux_min + i*(flux_max - flux_min)/float(steps-1)
             flux_var = p.get_flux_var(varying_reaction)
             c, = p.prob.add_linear_constraints(flux_var == fixed_flux)
 
             try:
-                if self._args.no_tfba:
-                    p.max_min_l1(reaction)
-                else:
-                    p.maximize(reaction)
+                run_fba(reaction)
 
                 if not self._args.all_reaction_fluxes:
                     print('{}\t{}'.format(fixed_flux, p.get_flux(reaction)))
@@ -130,6 +148,7 @@ class RobustnessCommand(SolverCommandMixin, Command):
                             other_reaction, fixed_flux,
                             p.get_flux(other_reaction)))
             except fluxanalysis.FluxBalanceError:
-                pass
+                logger.warning('No solution found for {} at {}'.format(
+                    varying_reaction, fixed_flux))
             finally:
                 c.delete()

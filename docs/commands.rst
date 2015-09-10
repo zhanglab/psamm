@@ -44,11 +44,7 @@ with the QSopt_ex solver, the option ``--solver name=qsoptex`` can be added:
 
 .. code-block:: shell
 
-    $ psamm-model fba --no-tfba --solver name=qsoptex
-
-Notice that the ``--no-tfba`` option was also added above. This is because the
-normal FBA with thermodynamic constraints (tFBA) uses an integer LP problem
-which QSopt_ex does not support.
+    $ psamm-model fba --solver name=qsoptex
 
 The ``--solver`` option can also be used to specify additional options for the
 solver in use. For example, the Cplex solver recognizes the ``threads``
@@ -60,21 +56,14 @@ cores on the computer):
 
     $ psamm-model fba --solver threads=4
 
+.. _commands-fba:
+
 Flux balance analysis (``fba``)
 -------------------------------
 
-This command will first try to maximize the flux of the biomass reaction
-defined in the model. It is also possible to provide a different reaction on
-the command line to maximize.
-
-By default, this is followed by running the flux balance analysis with
-thermodynamic constraints (tFBA) in order to remove internal flux cycles. The
-result is output as tab-separated values with the reaction ID, the normal FBA
-flux and the thermodynamically constrained flux.
-
-If the parameter ``--no-tfba`` is given, the second column instead represents a
-flux minimization in which the FBA maximum is fixed while the sum of the fluxes
-is minimized. This will often eliminate loops as well.
+This command will try to maximize the flux of the biomass reaction defined in
+the model. It is also possible to provide a different reaction on the command
+line to maximize.
 
 To run FBA use:
 
@@ -87,6 +76,21 @@ or with a specific reaction:
 .. code-block:: shell
 
     $ psamm-model fba ATPM
+
+By default, this performs a standard FBA and the result is output as
+tab-separated values with the reaction ID, the reaction flux and the reaction
+equation. If the parameter ``--loop-removal`` is given, the flux of the
+internal reactions is further constrained to remove internal loops. Loop
+removal is more time-consuming and under normal cicumstances the biomass
+reaction flux will *not* change in response to the loop removal (only internal
+reaction fluxes may change). The ``--loop-removal`` option is followed by
+``none`` (no loop removal), ``tfba`` (removal using thermodynamic constraints),
+or ``l1min`` (L1 minimization of the fluxes). For example, the following
+command performs an FBA with thermodynamic constraints:
+
+.. code-block:: shell
+
+    $ psamm-model fba --loop-removal=tfba
 
 Flux variability analysis (``fva``)
 -----------------------------------
@@ -138,10 +142,9 @@ The output of the command is a list of tab-separated values indicating a
 reaction ID, the flux of the varying reaction, and the flux of the reaction
 with the given ID.
 
-If the parameter ``--no-tfba`` is given, the thermodynamic constraints are not
-applied when considering whether reactions can take a non-zero flux. This is
-generally faster but less accurate as it allows thermodynamically infeasible
-loops to occur.
+If the parameter ``--loop-removal`` is given, additional constraints on the
+model can be imposed that remove internal flux loops. See the section on the
+:ref:`commands-fba` command for more information on this option.
 
 Random sparse network (``randomsparse``)
 ----------------------------------------
