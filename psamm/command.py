@@ -91,6 +91,22 @@ class Command(object):
             logger.warning('Only the first medium will be used')
         medium = media[0] if len(media) > 0 else None
 
+        # Warn about undefined compounds
+        compounds = set()
+        for compound in model.parse_compounds():
+            compounds.add(compound.id)
+
+        undefined_compounds = set()
+        for reaction in database.reactions:
+            for compound, _ in database.get_reaction_values(reaction):
+                if compound.name not in compounds:
+                    undefined_compounds.add(compound.name)
+
+        for compound in sorted(undefined_compounds):
+            logger.warning(
+                'The compound {} was not defined in the list'
+                ' of compounds'.format(compound))
+
         self._mm = MetabolicModel.load_model(
             database, model.parse_model(), medium, model.parse_limits(),
             v_max=model.get_default_flux_limit())
