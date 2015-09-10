@@ -180,14 +180,27 @@ class FluxBalanceProblem(object):
         """Maximize flux of reaction then minimize the L1 norm.
 
         During minimization the given reaction will be fixed at the maximum
-        obtained from the first solution.
+        obtained from the first solution. If reaction is a dictionary object,
+        each entry is interpreted as a weight on the objective for that
+        reaction (non-existent reaction will have zero weight).
         """
 
         self.maximize(reaction)
-        flux = self.get_flux(reaction)
-        flux_var = self.get_flux_var(reaction)
-        c, = self._prob.add_linear_constraints(flux_var == flux)
-        self._temp_constr.append(c)
+
+        if isinstance(reaction, dict):
+            reactions = list(reaction)
+        else:
+            reactions = [reaction]
+
+        # Save flux values before modifying the LP problem
+        fluxes = {r: self.get_flux(r) for r in reactions}
+
+        # Add constraints on the maximized reactions
+        for r in reactions:
+            flux_var = self.get_flux_var(r)
+            c, = self._prob.add_linear_constraints(flux_var == fluxes[r])
+            self._temp_constr.append(c)
+
         self.minimize_l1(weights)
 
     def _solve(self):
