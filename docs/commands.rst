@@ -114,8 +114,9 @@ In this example the ``PPCK`` reaction has a minimum flux of zero and maximum
 flux of 135.3 units. The ``PTAr`` reaction has a minimum flux of 62.3 and a
 maximum of 1000 units.
 
-If the parameter ``--no-tfba`` is given, the thermodynamic constraints will not
-be included when evaluating model fluxes.
+If the parameter ``--tfba`` is given, additonal thermodynamic constraints will
+be imposed when evaluating model fluxes. This automatically removes internal
+flux loops but is much more time-consuming.
 
 Robustness (``robustness``)
 ---------------------------
@@ -287,10 +288,9 @@ reaction is part of a pathway that is incompletely modeled.
 
     $ psamm-model fluxcheck
 
-If the parameter ``--no-tfba`` is given, the thermodynamic constraints are not
-applied when considering whether reactions can take a non-zero flux. This is
-generally faster but less accurate as it allows thermodynamically infeasible
-loops to occur.
+If the parameter ``--tfba`` is given, additional thermodynamic constraints are
+imposed when considering whether reactions can take a non-zero flux. This
+automatically removes internal flux loops but is also much more time-consuming.
 
 GapFind/GapFill (``gapfill``)
 -----------------------------

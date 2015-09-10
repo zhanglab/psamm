@@ -38,8 +38,8 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
             '--fastcore', help='Enable use of Fastcore algorithm',
             action='store_true')
         parser.add_argument(
-            '--no-tfba',
-            help='Disable thermodynamic constraints on flux check',
+            '--tfba',
+            help='Enable thermodynamic constraints on flux check',
             action='store_true')
         parser.add_argument(
             '--epsilon', type=float, help='Flux threshold',
@@ -74,7 +74,7 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
             inconsistent = set(fastcore.fastcc(
                 self._mm, epsilon, solver=solver))
         else:
-            enable_tfba = not self._args.no_tfba
+            enable_tfba = self._args.tfba
             if enable_tfba:
                 solver = self._get_solver(integer=True)
             else:
