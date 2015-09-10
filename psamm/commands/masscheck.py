@@ -89,10 +89,6 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
                 lambda x: compound_name.get(x, x)), mass))
         logger.info('Consistent compounds: {}/{}'.format(good, total))
 
-        logger.info('Is consistent? {}'.format(
-            massconsistency.is_consistent(
-                self._mm, solver, known_inconsistent, zeromass)))
-
         good = 0
         total = 0
         reaction_iter, compound_iter = (
