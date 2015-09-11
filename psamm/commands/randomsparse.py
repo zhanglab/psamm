@@ -43,8 +43,7 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
         parser.add_argument(
             '--tfba', help='Enable thermodynamic constraints on FBA',
             action='store_true', default=False)
-        parser.add_argument(
-            '--reaction', help='Reaction to maximize')
+        parser.add_argument('--objective', help='Reaction flux to maximize')
         parser.add_argument(
             'threshold', help='Threshold of max reaction flux',
             type=util.MaybeRelative)
@@ -54,8 +53,8 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
         super(RandomSparseNetworkCommand, cls).init_parser(parser)
 
     def run(self):
-        if self._args.reaction is not None:
-            reaction = self._args.reaction
+        if self._args.objective is not None:
+            reaction = self._args.objective
         else:
             reaction = self._model.get_biomass_reaction()
             if reaction is None:
