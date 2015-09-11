@@ -49,8 +49,7 @@ class RobustnessCommand(SolverCommandMixin, Command):
         parser.add_argument(
             '--loop-removal', help='Select type of loop removal constraints',
             choices=['none', 'tfba', 'l1min'], default='none')
-        parser.add_argument(
-            '--reaction', help='Reaction to maximize', nargs='?')
+        parser.add_argument('--objective', help='Reaction to maximize')
         parser.add_argument(
             '--all-reaction-fluxes',
             help='Print reaction flux for all model reactions',
@@ -69,8 +68,8 @@ class RobustnessCommand(SolverCommandMixin, Command):
             elif compound.id not in compound_name:
                 compound_name[compound.id] = compound.id
 
-        if self._args.reaction is not None:
-            reaction = self._args.reaction
+        if self._args.objective is not None:
+            reaction = self._args.objective
         else:
             reaction = self._model.get_biomass_reaction()
             if reaction is None:
