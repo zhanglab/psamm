@@ -620,14 +620,17 @@ def parse_limits_table_file(f):
         # A line can specify lower limit only (useful for
         # exchange reactions), or both lower and upper limit.
         fields = line.split(None)
-        if len(fields) == 2:
-            reaction_id, lower = fields
-            yield reaction_id, float(lower), None
-        elif len(fields) == 3:
-            reaction_id, lower, upper = fields
-            yield reaction_id, float(lower), float(upper)
-        else:
+        if len(fields) < 1 or len(fields) > 3:
             raise ParseError('Malformed reaction limit: {}'.format(fields))
+
+        # Extend to three values and unpack
+        fields.extend(['-']*(3-len(fields)))
+        reaction_id, lower, upper = fields
+
+        lower = float(lower) if lower != '-' else None
+        upper = float(upper) if upper != '-' else None
+
+        yield reaction_id, lower, upper
 
 
 def parse_limits_yaml_file(path, f):
