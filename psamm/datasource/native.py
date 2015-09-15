@@ -540,7 +540,7 @@ def parse_medium_table_file(f):
         lower = float(lower) if lower != '-' else None
         upper = float(upper) if upper != '-' else None
 
-        yield compound, lower, upper
+        yield compound, None, lower, upper
 
 
 def parse_medium_file(path):
