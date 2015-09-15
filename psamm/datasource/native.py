@@ -216,20 +216,20 @@ class NativeModel(object):
                     self._context, self._model['limits']):
                 yield limit
 
-    def parse_media(self):
-        """Yield each medium defined in the model
+    def parse_medium(self):
+        """Yield tuples of medium compounds.
 
-        A medium is a generator of tuples of compound, reaction ID, lower, and
-        upper bound flux limits.
+        Each medium compound is a tuple of compound, reaction ID, lower and
+        upper flux limits.
         """
 
         if 'media' in self._model:
             if not isinstance(self._model['media'], list):
                 raise ParseError('Expected media to be a list')
 
-            for medium in parse_medium_list(
+            for medium_compound in parse_medium_list(
                     self._context, self._model['media']):
-                yield medium
+                yield medium_compound
 
     def parse_compounds(self):
         """Yield CompoundEntries for defined compounds"""
@@ -486,21 +486,23 @@ def parse_medium(medium_def):
         yield compound, reaction, lower, upper
 
 
-def parse_medium_list(path, media):
-    """Parse a structured list of media as obtained from a YAML file
+def parse_medium_list(path, medium):
+    """Parse a structured medium list as obtained from a YAML file.
 
-    Yields tuples of compound, lower and upper flux bounds. Path can be given
-    as a string or a context.
+    Yields tuples of compound, reaction ID, lower and upper flux bounds. Path
+    can be given as a string or a context.
     """
 
     context = FilePathContext(path)
 
-    for medium_def in media:
+    for medium_def in medium:
         if 'include' in medium_def:
             include_context = context.resolve(medium_def['include'])
-            yield parse_medium_file(include_context)
+            for medium_compound in parse_medium_file(include_context):
+                yield medium_compound
         else:
-            yield parse_medium(medium_def)
+            for medium_compound in parse_medium(medium_def):
+                yield medium_compound
 
 
 def parse_medium_yaml_file(path, f):
