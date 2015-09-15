@@ -209,6 +209,10 @@ class NativeModel(object):
         """Return the extracellular comparment specified by the model."""
         return self._model.get('extracellular', 'e')
 
+    def get_default_compartment(self):
+        """Return the compartment to use when unspecified."""
+        return self._model.get('default_compartment', 'c')
+
     def get_default_flux_limit(self):
         """Return the default flux limit specified by the model"""
         return self._model.get('default_flux_limit', None)
@@ -275,11 +279,30 @@ class NativeModel(object):
     def create_metabolic_model(self):
         """Create a :class:`psamm.metabolicmodel.MetabolicModel`."""
 
+        def _translate_compartments(reaction, compartment):
+            """Translate compound with missing compartments.
+
+            These compounds will have the specified compartment in the output.
+            """
+            left = (((c.in_compartment(compartment), v)
+                     if c.compartment is None else (c, v))
+                    for c, v in reaction.left)
+            right = (((c.in_compartment(compartment), v)
+                      if c.compartment is None else (c, v))
+                     for c, v in reaction.right)
+            return Reaction(reaction.direction, left, right)
+
+        default_compartment = self.get_default_compartment()
+
         # Create metabolic model
         database = DictDatabase()
         for reaction in self.parse_reactions():
             if reaction.equation is not None:
-                database.set_reaction(reaction.id, reaction.equation)
+                # Translate unset compartments to default value
+                eq = _translate_compartments(
+                    reaction.equation, default_compartment)
+
+                database.set_reaction(reaction.id, eq)
 
         # Warn about undefined compounds
         compounds = set()
