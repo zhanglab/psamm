@@ -6,3 +6,13 @@ env:
     - TOXENV=py34-nosolver
     - TOXENV=docs
     - TOXENV=flake
+
+deploy:
+    provider: pypi
+    user: jonls
+    password:
+        secure: OCaX6DEf0D4Ky9TsF/j/y54niViXnJEu5k4ufnBx0GXzSma7FXr8hIRcsV/5qx1YKo0PyQUKB5Ym7nkD+U3OTW+KwYfUp3jaKrrcIt875qeY/Y3tm+W/HkCi/5BOHoxHY3CVtU89nKfsD8QGbWUdppX/keHhqY0vDglyojEI1X/7dGAz97arBnW6WGCtMTyAseQPhEohvXuPFCfnFbSbvztfTpkzQuTzJE68uaigItJf3Nq/KAXV3XstCUePouM4ULVqPH+GFpz8drG2leot6DH38Sthsq1fOU0rpy8EoQ1HCDkvQ2B6OlovLsoZaWInI2wkfqh4uWMPxah+Okk9DysnXcoNan/eoGLGyeTk/v8UPzc+tS6D4NXFXieGfMI8h6g0BeuUI9SIoN5okr38+Uk8sAdzzqj/3poCVxh3wuY2bKIQaDRg4oirfFJ1Z3rThwDD5FwjWemNPBsVppH7eJQDzg/X76e1DXvEoQQPtB3RhqX6oY4tF2gw5K38QfsV1izboL7HxJeJ+aBR92jZHXlQNG6VmpXeYiGXu6xeKuxFlLKtqJ5+ltXGfC0W34wQ6oyPXoq/Ns24FLCOepeRW4l3USYf3TscJ7vyPDfkefFl8UbZTzAzDqnaUYQ7Lj7Y63pb6+EZkApk+elh0kfygwl0k0t+pifgTKh9gsm3CMY=
+    on:
+        tags: true
+        repo: zhanglab/psamm
+    distributions: "sdist bdist_wheel"
