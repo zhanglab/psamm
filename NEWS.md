@@ -1,4 +1,42 @@
 
+v0.13 (2015-09-16)
+------------------
+
+- Change parsing of medium definitions to combine all parts of the medium into
+  one final medium used for simulations. Previously, the entries in the
+  `media` key would be considered as separate media and only the first entry
+  would be used.
+- Fix parsing of limits table format to make it consistent with the medium
+  table format.
+- Change the name of option `--reaction` to `--objective` for commands that
+  take an optional reaction flux to maximize.
+- Change the default of commands that use thermodynamic constraints on FBA
+  problems to _not_ apply the additional constraints by default. The commands
+  have an option to enable thermodynamic constraints.
+- Change the `--no-tfba` option of the commands `fba` to `robustness` to
+  `--loop-removal`. The loop removal option allows the L1 minimization method
+  to be selected as a loop removal method in addition to the thermodynamic
+  constraints.
+- Add option to `robustness` command to print all fluxes. By default only the
+  objective is shown.
+- In `robustness`, obtain the lower and upper bounds of the varying reaction
+  by minimizing and maximizing the reaction flux. This avoids trying to solve
+  many LP problems that are infeasible and instead provides more samples from
+  the flux range that is known to be feasible.
+- Fix a bug in `robustness` that caused thermodynamic constraints to never be
+  enabled properly.
+- Fix bug where parsing medium from table would fail.
+- Produce a warning when a compound is referenced from a reaction but not
+  defined in the list of compounds.
+- During SBML import produce a warning when `_b`-suffix compounds are
+  converted to boundary compounds in non-strict mode.
+- Improve the efficiency of creating long linear expressions for the LP
+  solver interface. This should speed up certain procedures that use long
+  expression as objectives or constraints.
+- Improve the efficiency of resolving variable names in Cplex LP problems by
+  using column indices directly. This significantly speeds up procedures using
+  many variables when using Cplex as the solver.
+
 v0.12.1 (2015-09-01)
 --------------------
 
