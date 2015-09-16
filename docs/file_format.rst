@@ -173,6 +173,9 @@ or specified as ``-`` to use the default flux bounds::
     # CO2 exchange with production limit of 50 and default uptake limit
     co2     e       -       50
 
+Multiple medium files can be included from the main ``model.yaml`` file, and
+these will be combined to form the final medium used for the simulations.
+
 Reaction flux limits
 --------------------
 
