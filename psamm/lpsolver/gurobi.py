@@ -31,8 +31,7 @@ from .lp import Solver as BaseSolver
 from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
-from .lp import (VariableSet, Expression, Relation,
-                 ObjectiveSense, VariableType,
+from .lp import (Expression, Relation, ObjectiveSense, VariableType,
                  InvalidResultError)
 
 # Module-level logging
@@ -133,19 +132,9 @@ class Problem(BaseProblem):
 
         self._p.update()
 
-    def var(self, name):
-        """Return the variable as an expression."""
-        if name not in self._variables:
-            raise ValueError('Undefined variable: {}'.format(name))
-        return Expression({name: 1})
-
-    def set(self, names):
-        """Return the set of variables as an expression."""
-        names = tuple(names)
-        if any(name not in self._variables for name in names):
-            raise ValueError('Undefined variables: {}'.format(
-                set(names) - set(self._variables)))
-        return Expression({VariableSet(names): 1})
+    def has_variable(self, name):
+        """Check whether variable is defined in the model."""
+        return name in self._variables
 
     def _grb_expr_from_value_set(self, value_set):
         return gurobipy.LinExpr(
@@ -157,12 +146,6 @@ class Problem(BaseProblem):
 
         Return a list of the names of the constraints added.
         """
-        if relation.sense in (
-                Relation.StrictlyGreater, Relation.StrictlyLess):
-            raise ValueError(
-                'Strict relations are invalid in LP-problems:'
-                ' {}'.format(relation))
-
         names = []
         expression = relation.expression
         for value_set in expression.value_sets():
@@ -186,13 +169,12 @@ class Problem(BaseProblem):
         constraints = []
 
         for relation in relations:
+            self._check_relation(relation)
             if isinstance(relation, bool):
                 # A bool in place of a relation is accepted to mean
                 # a relation that does not involve any variables and
                 # has therefore been evaluated to a truth-value (e.g
                 # '0 == 0' or '2 >= 3').
-                if not relation:
-                    raise ValueError('Unsatisfiable relation added')
                 constraints.append(Constraint(self, None))
             else:
                 for name in self._add_constraints(relation):

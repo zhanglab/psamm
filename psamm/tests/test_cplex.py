@@ -33,6 +33,18 @@ class TestCplexProblem(unittest.TestCase):
     def setUp(self):
         self.solver = cplex.Solver()
 
+    def test_expression_to_string(self):
+        prob = self.solver.create_problem()
+        prob.define('x', 'y', lower=0, upper=10)
+        expr = -3 * prob.var('x') + prob.var('y')
+        self.assertEqual(str(expr), '-3*x + y')
+
+    def test_expression_of_tuple_to_string(self):
+        prob = self.solver.create_problem()
+        prob.define(('x', 1), ('x', 2), lower=0, upper=10)
+        expr = -prob.var(('x', 1)) + 2 * prob.var(('x', 2))
+        self.assertEqual(str(expr), "-('x', 1) + 2*('x', 2)")
+
     def test_objective_reset_on_set_linear_objective(self):
         prob = self.solver.create_problem()
         prob.define('x', 'y', lower=0, upper=10)

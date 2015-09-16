@@ -21,6 +21,8 @@ import unittest
 from psamm.datasource import native
 from psamm.reaction import Reaction, Compound
 
+from six import StringIO
+
 
 class TestYAMLDataSource(unittest.TestCase):
     def test_parse_reaction_list(self):
@@ -58,6 +60,40 @@ class TestYAMLDataSource(unittest.TestCase):
                     }
                 }
             ]))
+
+    def test_parse_medium_table(self):
+        table = '''
+ac      e
+glcD    e       -10
+co2     e       -       50
+'''
+
+        medium = list(native.parse_medium_table_file(StringIO(table.strip())))
+        self.assertEqual(len(medium), 3)
+        self.assertEqual(medium[0], (Compound('ac', 'e'), None, None, None))
+        self.assertEqual(medium[1], (Compound('glcD', 'e'), None, -10, None))
+        self.assertEqual(medium[2], (Compound('co2', 'e'), None, None, 50))
+
+    def test_parse_medium(self):
+        medium = list(native.parse_medium({
+            'compartment': 'e',
+            'compounds': [
+                {'id': 'ac'},
+                {'id': 'glcD', 'lower': -10},
+                {'id': 'co2', 'upper': 50},
+                {'id': 'compound_x', 'compartment': 'c'},
+                {'id': 'compound_y', 'reaction': 'EX_cpdy'}
+            ]
+        }))
+
+        self.assertEqual(len(medium), 5)
+        self.assertEqual(medium[0], (Compound('ac', 'e'), None, None, None))
+        self.assertEqual(medium[1], (Compound('glcD', 'e'), None, -10, None))
+        self.assertEqual(medium[2], (Compound('co2', 'e'), None, None, 50))
+        self.assertEqual(
+            medium[3], (Compound('compound_x', 'c'), None, None, None))
+        self.assertEqual(
+            medium[4], (Compound('compound_y', 'e'), 'EX_cpdy', None, None))
 
 
 if __name__ == '__main__':

@@ -104,6 +104,8 @@ class SpeciesEntry(_SBMLEntry):
         # In non-strict mode the species that ends with _b are considered
         # boundary conditions.
         if not self._reader._strict and self._id.endswith('_b'):
+            logger.warning('Species {} was converted to boundary condition'
+                           ' because of "_b" suffix'.format(self.id))
             self._boundary = True
 
     @property

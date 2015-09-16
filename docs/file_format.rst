@@ -148,7 +148,7 @@ the ``medium.yaml`` file:
       - id: ac      # Acetate
       - id: co2
       - id: o2
-      - id: glcC    # D-Glucose with uptake limit of 10
+      - id: glcD    # D-Glucose with uptake limit of 10
         lower: -10
       - id: compound_x
         compartment: c
@@ -160,6 +160,21 @@ automatically added. For example, if the compounds ``o2`` in compartment ``e``
 is in the medium, the exchange reaction ``EX_o2_e`` is added to the model. The
 desired ID for the exchange reaction can be set explicitly using the
 ``reaction`` attribute.
+
+The medium can also be specified using a TSV-file as the following fragment
+shows. The second column specifies the compartment while third and fourth
+columns specify the lower and upper bounds, respectively. Both can be omitted
+or specified as ``-`` to use the default flux bounds::
+
+    # Acetate exchange with default lower and upper bounds
+    ac      e
+    # D-Glucose with uptake limit of 10
+    glcD    e       -10
+    # CO2 exchange with production limit of 50 and default uptake limit
+    co2     e       -       50
+
+Multiple medium files can be included from the main ``model.yaml`` file, and
+these will be combined to form the final medium used for the simulations.
 
 Reaction flux limits
 --------------------

@@ -84,8 +84,8 @@ def lp7(model, reaction_subset, epsilon, solver):
     # Define z variables
     prob.define(*(('z', rxnid) for rxnid in reaction_subset),
                 lower=0, upper=epsilon)
-    prob.set_linear_objective(sum(prob.var(('z', rxnid))
-                                  for rxnid in reaction_subset))
+    prob.set_linear_objective(prob.expr(
+        {('z', rxnid): 1 for rxnid in reaction_subset}))
     v = prob.set(('v', rxnid) for rxnid in reaction_subset)
     z = prob.set(('z', rxnid) for rxnid in reaction_subset)
     prob.add_linear_constraints(v >= z)
@@ -129,9 +129,8 @@ def lp10(model, subset_k, subset_p, epsilon, scaling, solver, weights={}):
 
     # Define z variables
     prob.define(*(('z', rxnid) for rxnid in subset_p), lower=0)
-    prob.set_linear_objective(
-        sum(prob.var(('z', rxnid)) * weights.get(rxnid, 1)
-            for rxnid in subset_p))
+    prob.set_linear_objective(prob.expr(
+        {('z', rxnid): weights.get(rxnid, 1) for rxnid in subset_p}))
 
     z = prob.set(('z', rxnid) for rxnid in subset_p)
     v = prob.set(('v', rxnid) for rxnid in subset_p)

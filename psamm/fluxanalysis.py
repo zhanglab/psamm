@@ -140,14 +140,7 @@ class FluxBalanceProblem(object):
         have zero weight).
         """
 
-        if isinstance(reaction, dict):
-            objective = sum(v * self.get_flux_var(r)
-                            for r, v in iteritems(reaction))
-        else:
-            objective = self.get_flux_var(reaction)
-
-        self._prob.set_linear_objective(objective)
-
+        self._prob.set_linear_objective(self.flux_expr(reaction))
         self._solve()
 
     def _add_minimization_vars(self):
@@ -176,9 +169,9 @@ class FluxBalanceProblem(object):
 
         self._add_minimization_vars()
 
-        objective = sum(
-            self._prob.var(('z', reaction_id)) * -weights.get(reaction_id, 1)
-            for reaction_id in self._model.reactions)
+        objective = self._prob.expr({
+            ('z', reaction_id): -weights.get(reaction_id, 1)
+            for reaction_id in self._model.reactions})
         self._prob.set_linear_objective(objective)
 
         self._solve()
@@ -187,14 +180,27 @@ class FluxBalanceProblem(object):
         """Maximize flux of reaction then minimize the L1 norm.
 
         During minimization the given reaction will be fixed at the maximum
-        obtained from the first solution.
+        obtained from the first solution. If reaction is a dictionary object,
+        each entry is interpreted as a weight on the objective for that
+        reaction (non-existent reaction will have zero weight).
         """
 
         self.maximize(reaction)
-        flux = self.get_flux(reaction)
-        flux_var = self.get_flux_var(reaction)
-        c, = self._prob.add_linear_constraints(flux_var == flux)
-        self._temp_constr.append(c)
+
+        if isinstance(reaction, dict):
+            reactions = list(reaction)
+        else:
+            reactions = [reaction]
+
+        # Save flux values before modifying the LP problem
+        fluxes = {r: self.get_flux(r) for r in reactions}
+
+        # Add constraints on the maximized reactions
+        for r in reactions:
+            flux_var = self.get_flux_var(r)
+            c, = self._prob.add_linear_constraints(flux_var == fluxes[r])
+            self._temp_constr.append(c)
+
         self.minimize_l1(weights)
 
     def _solve(self):
@@ -217,6 +223,13 @@ class FluxBalanceProblem(object):
     def get_flux_var(self, reaction):
         """Get LP variable representing the reaction flux."""
         return self._prob.var(('v', reaction))
+
+    def flux_expr(self, reaction):
+        """Get LP expression representing the reaction flux."""
+        if isinstance(reaction, dict):
+            return self._prob.expr(
+                {('v', r): v for r, v in iteritems(reaction)})
+        return self._prob.expr(('v', reaction))
 
     def get_flux(self, reaction):
         """Get resulting flux value for reaction."""
