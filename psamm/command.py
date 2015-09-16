@@ -86,11 +86,6 @@ class Command(object):
             if reaction.equation is not None:
                 database.set_reaction(reaction.id, reaction.equation)
 
-        media = list(model.parse_media())
-        if len(media) > 1:
-            logger.warning('Only the first medium will be used')
-        medium = media[0] if len(media) > 0 else None
-
         # Warn about undefined compounds
         compounds = set()
         for compound in model.parse_compounds():
@@ -108,8 +103,8 @@ class Command(object):
                 ' of compounds'.format(compound))
 
         self._mm = MetabolicModel.load_model(
-            database, model.parse_model(), medium, model.parse_limits(),
-            v_max=model.get_default_flux_limit())
+            database, model.parse_model(), model.parse_medium(),
+            model.parse_limits(), v_max=model.get_default_flux_limit())
 
     @classmethod
     def init_parser(cls, parser):
