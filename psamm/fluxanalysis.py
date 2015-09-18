@@ -92,34 +92,50 @@ class FluxBalanceProblem(object):
         """
         return self._prob
 
-    def add_thermodynamic(self, epsilon=1e-5, em=1e5):
+    def add_thermodynamic(self, em=1000):
         """Apply thermodynamic constraints to the model.
 
         Adding these constraints restricts the solution space to only
         contain solutions that have no internal loops. This is solved as a
-        MILP problem as described in [Muller13]_.
+        MILP problem as described in [Muller13]_. The time to solve a problem
+        with thermodynamic constraints is usually much longer than a normal
+        FBA problem.
+
+        The ``em`` parameter is the upper bound on the delta mu reaction
+        variables. This parameter has to be balanced based on the model size
+        since setting the value too low can result in the correct solutions
+        being infeasible and setting the value too high can result in
+        numerical instability which again makes the correct solutions
+        infeasible. The default value should work in all cases as long as the
+        model is not unusually large.
         """
 
         p = self._prob
         for reaction_id in self._model.reactions:
-            # Constrain internal reactions to a direction determined
-            # by alpha.
             if not self._model.is_exchange(reaction_id):
+                # Indicator variable
                 p.define(('alpha', reaction_id), types=lp.VariableType.Binary)
-                p.define(('dmu', reaction_id))  # Delta mu
+
+                # Delta mu is the stoichiometrically weighted sum of the
+                # compound mus.
+                p.define(('dmu', reaction_id))
 
                 flux = self.get_flux_var(reaction_id)
                 alpha = p.var(('alpha', reaction_id))
                 dmu = p.var(('dmu', reaction_id))
 
                 lower, upper = self._model.limits[reaction_id]
-                p.add_linear_constraints(flux >= lower*(1 - alpha),
-                                         flux <= upper*alpha,
-                                         dmu >= -em*alpha + epsilon,
-                                         dmu <= em*(1 - alpha) - epsilon)
+
+                # Constrain the reaction to a direction determined by alpha
+                # and contrain the delta mu to a value in [-em; -1] if
+                # alpha is one, otherwise in [1; em].
+                p.add_linear_constraints(
+                    flux >= lower * (1 - alpha),
+                    flux <= upper * alpha,
+                    dmu >= -em * alpha + (1 - alpha),
+                    dmu <= em * (1 - alpha) - alpha)
 
         # Define mu variables
-        p = self._prob
         p.define(*(('mu', compound) for compound in self._model.compounds))
 
         tdbalance_lhs = {reaction_id: 0
