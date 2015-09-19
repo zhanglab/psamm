@@ -1,9 +1,10 @@
 language: python
-install: pip install tox
+install: pip install tox python-coveralls
 script: tox -v
+after_success: coveralls
 env:
-    - TOXENV=py27-nosolver
-    - TOXENV=py34-nosolver
+    - TOXENV=py27-nosolver,coverage
+    - TOXENV=py34-nosolver,coverage
     - TOXENV=docs
     - TOXENV=flake
 
