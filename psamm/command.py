@@ -57,9 +57,10 @@ class CommandError(Exception):
 class Command(object):
     """Represents a command in the interface, operating on a model.
 
-    Subclasses must define name and title as class attributes. The constructor
-    will be given the NativeModel and the command line namespace. The subclass
-    must implement :meth:`run` to handle command execution.
+    The constructor will be given the NativeModel and the command line
+    namespace. The subclass must implement :meth:`run` to handle command
+    execution. The doc string will be used as documentation for the command
+    in the command line interface.
 
     In addition, :meth:`init_parser` can be implemented as a classmethod which
     will allow the command to initialize an instance of
@@ -129,6 +130,7 @@ class SolverCommandMixin(object):
         parser.add_argument(
             '--solver', action='append', type=str,
             help='Specify solver requirements (e.g. "rational=yes")')
+        super(SolverCommandMixin, cls).init_parser(parser)
 
     def __init__(self, *args, **kwargs):
         super(SolverCommandMixin, self).__init__(*args, **kwargs)
