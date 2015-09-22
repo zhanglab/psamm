@@ -130,6 +130,7 @@ class SolverCommandMixin(object):
         parser.add_argument(
             '--solver', action='append', type=str,
             help='Specify solver requirements (e.g. "rational=yes")')
+        super(SolverCommandMixin, cls).init_parser(parser)
 
     def __init__(self, *args, **kwargs):
         super(SolverCommandMixin, self).__init__(*args, **kwargs)
