@@ -162,9 +162,9 @@ class TestFluxVariability(unittest.TestCase):
         self.model.limits['rxn_5'].upper = 100
 
         try:
-            self.solver = generic.Solver(integer=True)
+            self.solver = generic.Solver()
         except generic.RequirementsError:
-            self.skipTest('Unable to find an MILP solver for tests')
+            self.skipTest('Unable to find an LP solver for tests')
 
     def test_flux_variability(self):
         fluxes = dict(fluxanalysis.flux_variability(
@@ -183,6 +183,28 @@ class TestFluxVariability(unittest.TestCase):
 
         self.assertGreater(fluxes['rxn_7'][1], 0)
         self.assertGreater(fluxes['rxn_8'][1], 0)
+
+
+class TestFluxVariabilityThermodynamic(unittest.TestCase):
+    def setUp(self):
+        self.database = DictDatabase()
+        self.database.set_reaction('rxn_1', parse_reaction('=> (2) |A|'))
+        self.database.set_reaction('rxn_2', parse_reaction('|A| <=> |B|'))
+        self.database.set_reaction('rxn_3', parse_reaction('|A| => |D|'))
+        self.database.set_reaction('rxn_4', parse_reaction('|A| => |C|'))
+        self.database.set_reaction('rxn_5', parse_reaction('|C| => |D|'))
+        self.database.set_reaction('rxn_6', parse_reaction('|D| =>'))
+        self.database.set_reaction('rxn_7', parse_reaction('|E| => |F|'))
+        self.database.set_reaction('rxn_8', parse_reaction('|F| => |E|'))
+
+        self.model = MetabolicModel.load_model(
+            self.database, self.database.reactions)
+        self.model.limits['rxn_5'].upper = 100
+
+        try:
+            self.solver = generic.Solver(integer=True)
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an MILP solver for tests')
 
     def test_flux_variability_thermodynamic(self):
         fluxes = dict(fluxanalysis.flux_variability(
@@ -218,9 +240,9 @@ class TestFluxConsistency(unittest.TestCase):
             self.database, self.database.reactions)
 
         try:
-            self.solver = generic.Solver(integer=True)
+            self.solver = generic.Solver()
         except generic.RequirementsError:
-            self.skipTest('Unable to find an MILP solver for tests')
+            self.skipTest('Unable to find an LP solver for tests')
 
     def test_check_on_consistent(self):
         self.model.remove_reaction('rxn_2')
@@ -234,6 +256,26 @@ class TestFluxConsistency(unittest.TestCase):
         inconsistent = set(fluxanalysis.consistency_check(
             self.model, core, epsilon=0.001, tfba=False, solver=self.solver))
         self.assertEqual(inconsistent, {'rxn_2'})
+
+
+class TestFluxConsistencyThermodynamic(unittest.TestCase):
+    def setUp(self):
+        self.database = DictDatabase()
+        self.database.set_reaction('rxn_1', parse_reaction('=> (2) |A|'))
+        self.database.set_reaction('rxn_2', parse_reaction('|A| <=> |B|'))
+        self.database.set_reaction('rxn_3', parse_reaction('|A| => |D|'))
+        self.database.set_reaction('rxn_4', parse_reaction('|A| => |C|'))
+        self.database.set_reaction('rxn_5', parse_reaction('|C| => |D|'))
+        self.database.set_reaction('rxn_6', parse_reaction('|D| =>'))
+        self.database.set_reaction('rxn_7', parse_reaction('|E| => |F|'))
+        self.database.set_reaction('rxn_8', parse_reaction('|F| => |E|'))
+        self.model = MetabolicModel.load_model(
+            self.database, self.database.reactions)
+
+        try:
+            self.solver = generic.Solver(integer=True)
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an MILP solver for tests')
 
     def test_check_on_inconsistent_with_thermodynamic_constraints(self):
         self.model.remove_reaction('rxn_2')
