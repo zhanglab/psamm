@@ -94,5 +94,30 @@ class TestFluxCouplingBurgardModel(unittest.TestCase):
                 self.assertLess(couplings['rxn_7', r][0], 0.0)
 
 
+class TestFluxCouplingClass(unittest.TestCase):
+    def test_uncoupled(self):
+        cc = fluxcoupling.classify_coupling((None, None))
+        self.assertEqual(cc, fluxcoupling.CouplingClass.Uncoupled)
+
+    def test_directional_reverse(self):
+        cc = fluxcoupling.classify_coupling((None, 1000))
+        self.assertEqual(cc, fluxcoupling.CouplingClass.DirectionalReverse)
+
+        cc = fluxcoupling.classify_coupling((-1000, None))
+        self.assertEqual(cc, fluxcoupling.CouplingClass.DirectionalReverse)
+
+    def test_inconsistent(self):
+        cc = fluxcoupling.classify_coupling((0.0, 0.0))
+        self.assertEqual(cc, fluxcoupling.CouplingClass.Inconsistent)
+
+    def test_directional_forward(self):
+        cc = fluxcoupling.classify_coupling((-1000, 100.0))
+        self.assertEqual(cc, fluxcoupling.CouplingClass.DirectionalForward)
+
+    def test_full(self):
+        cc = fluxcoupling.classify_coupling((-1000, -1000.0))
+        self.assertEqual(cc, fluxcoupling.CouplingClass.Full)
+
+
 if __name__ == '__main__':
     unittest.main()
