@@ -295,5 +295,39 @@ class TestFluxConsistencyThermodynamic(unittest.TestCase):
         self.assertEqual(inconsistent, {'rxn_7', 'rxn_8'})
 
 
+class TestFluxRandomization(unittest.TestCase):
+    def setUp(self):
+        self.database = DictDatabase()
+        self.database.set_reaction('rxn_1', parse_reaction('=> (2) |A|'))
+        self.database.set_reaction('rxn_2', parse_reaction('|A| <=> |B|'))
+        self.database.set_reaction('rxn_3', parse_reaction('|A| => |D|'))
+        self.database.set_reaction('rxn_4', parse_reaction('|A| => |C|'))
+        self.database.set_reaction('rxn_5', parse_reaction('|C| => |D|'))
+        self.database.set_reaction('rxn_6', parse_reaction('|D| =>'))
+        self.database.set_reaction('rxn_7', parse_reaction('|E| => |F|'))
+        self.database.set_reaction('rxn_8', parse_reaction('|F| => |E|'))
+        self.model = MetabolicModel.load_model(
+            self.database, self.database.reactions)
+
+        try:
+            self.solver = generic.Solver()
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an LP solver for tests')
+
+    def test_flux_randomization(self):
+        fluxes = dict(fluxanalysis.flux_randomization(
+            self.model, {'rxn_6': 1000}, False, self.solver))
+        self.assertAlmostEqual(fluxes['rxn_1'], 500)
+        self.assertAlmostEqual(fluxes['rxn_2'], 0)
+        self.assertAlmostEqual(fluxes['rxn_3'] + fluxes['rxn_4'], 1000)
+        self.assertAlmostEqual(fluxes['rxn_6'], 1000)
+
+        # Cycle
+        self.assertGreaterEqual(fluxes['rxn_7'], 0)
+        self.assertGreaterEqual(fluxes['rxn_8'], 0)
+        self.assertLessEqual(fluxes['rxn_7'], 1000)
+        self.assertLessEqual(fluxes['rxn_8'], 1000)
+
+
 if __name__ == '__main__':
     unittest.main()
