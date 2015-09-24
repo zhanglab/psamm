@@ -16,6 +16,9 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+import os
+import shutil
+import tempfile
 import unittest
 
 from psamm.datasource import native
@@ -94,6 +97,50 @@ co2     e       -       50
             medium[3], (Compound('compound_x', 'c'), None, None, None))
         self.assertEqual(
             medium[4], (Compound('compound_y', 'e'), 'EX_cpdy', None, None))
+
+
+class TestYAMLFileSystemData(unittest.TestCase):
+    """Test loading files from file system."""
+
+    def setUp(self):
+        self._model_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self._model_dir)
+
+    def write_model_file(self, filename, contents):
+        path = os.path.join(self._model_dir, filename)
+        with open(path, 'w') as f:
+            f.write(contents)
+        return path
+
+    def test_parse_model_table_file(self):
+        path = self.write_model_file('model_1.tsv', '\n'.join([
+            '# comment',
+            'rxn_1',
+            'rxn_2',
+            'rxn_3',
+            'rxn_4  # line comment']))
+
+        reactions = list(native.parse_model_file(path))
+        self.assertEqual(reactions, ['rxn_1', 'rxn_2', 'rxn_3', 'rxn_4'])
+
+    def test_parse_model_yaml_file(self):
+        path = self.write_model_file('model_1.yaml', '''---
+            - include: model_2.yaml
+            - reactions:
+              - rxn_3
+              - rxn_4''')
+
+        self.write_model_file('model_2.yaml', '''---
+            - groups:
+              - name: First group
+                reactions: [rxn_1]
+              - name: Second group
+                reactions: [rxn_2]''')
+
+        reactions = list(native.parse_model_file(path))
+        self.assertEqual(reactions, ['rxn_1', 'rxn_2', 'rxn_3', 'rxn_4'])
 
 
 if __name__ == '__main__':
