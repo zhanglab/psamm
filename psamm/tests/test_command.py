@@ -78,6 +78,16 @@ class TestCommandMain(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self._model_dir)
 
+    def test_invoke_version(self):
+        _stdout = sys.stdout
+        try:
+            sys.stdout = StringIO()
+            with self.assertRaises(SystemExit) as context:
+                main(args=['--version'])
+            self.assertEqual(context.exception.code, 0)
+        finally:
+            sys.stdout = _stdout
+
     def test_command_main(self):
         main(MockCommand, args=[
             '--model', self._model_dir, '--test-argument'])
