@@ -87,6 +87,16 @@ class TestFluxBalance(unittest.TestCase):
         self.assertAlmostEqual(p.get_flux('rxn_5'), 0)
         self.assertAlmostEqual(p.get_flux('rxn_6'), 1000)
 
+    def test_flux_balance_object_minimize_l1_function(self):
+        fluxes = dict(fluxanalysis.flux_minimization(
+            self.model, {'rxn_6': 1000}, self.solver))
+        self.assertAlmostEqual(fluxes['rxn_1'], 500)
+        self.assertAlmostEqual(fluxes['rxn_2'], 0)
+        self.assertAlmostEqual(fluxes['rxn_3'], 1000)
+        self.assertAlmostEqual(fluxes['rxn_4'], 0)
+        self.assertAlmostEqual(fluxes['rxn_5'], 0)
+        self.assertAlmostEqual(fluxes['rxn_6'], 1000)
+
     def test_flux_balance_object_max_min_l1(self):
         p = fluxanalysis.FluxBalanceProblem(self.model, self.solver)
         p.max_min_l1('rxn_6')
