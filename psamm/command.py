@@ -165,7 +165,7 @@ def main(command_class=None):
 
     title = 'Metabolic modeling tools'
     if command_class is not None:
-        title = command_class.title
+        title, _, _ = command_class.__doc__.partition('\n\n')
 
     parser = argparse.ArgumentParser(description=title)
     parser.add_argument('--model', metavar='file', default='.',
