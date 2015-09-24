@@ -147,11 +147,13 @@ class SolverCommandMixin(object):
         return generic.Solver(**solver_args)
 
 
-def main(command_class=None):
+def main(command_class=None, args=None):
     """Run the command line interface with the given :class:`Command`.
 
     If no command class is specified the user will be able to select a specific
-    command through the first command line argument.
+    command through the first command line argument. If the ``args`` are
+    provided, these should be a list of strings that will be used instead of
+    ``sys.argv[1]``. This is mostly useful for testing.
     """
 
     # Set up logging for the command line interface
@@ -200,13 +202,13 @@ def main(command_class=None):
             subparser.set_defaults(command=command_class)
             command_class.init_parser(subparser)
 
-    args = parser.parse_args()
+    parsed_args = parser.parse_args(args)
 
     # Load model definition
-    model = NativeModel(args.model)
+    model = NativeModel(parsed_args.model)
 
     # Instantiate command with model and run
-    command = args.command(model, args)
+    command = parsed_args.command(model, parsed_args)
     try:
         command.run()
     except CommandError as e:
