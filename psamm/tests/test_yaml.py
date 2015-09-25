@@ -114,6 +114,72 @@ class TestYAMLFileSystemData(unittest.TestCase):
             f.write(contents)
         return path
 
+    def test_parse_medium_table_file(self):
+        path = self.write_model_file('medium.tsv', '\n'.join([
+            '',
+            '# comment',
+            'cpd_A\tc',
+            'cpd_B\te\t-1000',
+            'cpd_C\te\t-\t20  # line comment',
+            'cpd_D\te\t-100\t-10'
+        ]))
+
+        medium = list(native.parse_medium_file(path))
+        self.assertEqual(medium, [
+            (Compound('cpd_A', 'c'), None, None, None),
+            (Compound('cpd_B', 'e'), None, -1000, None),
+            (Compound('cpd_C', 'e'), None, None, 20),
+            (Compound('cpd_D', 'e'), None, -100, -10)
+        ])
+
+    def test_parse_medium_yaml_file(self):
+        path = self.write_model_file('medium.yaml', '\n'.join([
+            'compartment: e',
+            'compounds:',
+            '  - id: cpd_A',
+            '    reaction: EX_A',
+            '    lower: -40',
+            '  - id: cpd_B',
+            '    upper: 100',
+            '  - id: cpd_C',
+            '    lower: -100.0',
+            '    upper: 500.0',
+            '  - id: cpd_D',
+            '    compartment: c'
+        ]))
+
+        medium = list(native.parse_medium_file(path))
+        self.assertEqual(medium, [
+            (Compound('cpd_A', 'e'), 'EX_A', -40, None),
+            (Compound('cpd_B', 'e'), None, None, 100),
+            (Compound('cpd_C', 'e'), None, -100, 500),
+            (Compound('cpd_D', 'c'), None, None, None)
+        ])
+
+    def test_parse_medium_yaml_list(self):
+        self.write_model_file('medium.yaml', '\n'.join([
+            'compartment: e',
+            'compounds:',
+            '  - id: cpd_A',
+            '    lower: -42'
+        ]))
+
+        path = os.path.join(self._model_dir, 'fake.yaml')
+        medium = list(native.parse_medium_list(path, [
+            {'include': 'medium.yaml'},
+            {
+                'compartment': 'e',
+                'compounds': [
+                    {'id': 'cpd_B', 'upper': 767}
+                ]
+            }
+        ]))
+
+        self.assertEqual(medium, [
+            (Compound('cpd_A', 'e'), None, -42, None),
+            (Compound('cpd_B', 'e'), None, None, 767)
+        ])
+
     def test_parse_limits_table_file(self):
         path = self.write_model_file('limits_1.tsv', '\n'.join([
             '# comment',
