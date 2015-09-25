@@ -114,6 +114,54 @@ class TestYAMLFileSystemData(unittest.TestCase):
             f.write(contents)
         return path
 
+    def test_parse_reaction_table_file(self):
+        path = self.write_model_file('reactions.tsv', '\n'.join([
+            'id\tname\tequation',
+            'rxn_1\tReaction 1\t|A| => (2) |B|',
+            'rxn_2\tSecond reaction\t<=> |C|'
+        ]))
+
+        reactions = list(native.parse_reaction_file(path))
+        self.assertEqual(len(reactions), 2)
+
+        self.assertEqual(reactions[0].id, 'rxn_1')
+        self.assertEqual(reactions[0].name, 'Reaction 1')
+        self.assertEqual(reactions[0].properties['name'], 'Reaction 1')
+        self.assertEqual(reactions[0].equation, Reaction(
+            Reaction.Right, [(Compound('A'), 1)], [(Compound('B'), 2)]))
+        self.assertEqual(reactions[0].ec, None)
+        self.assertEqual(reactions[0].genes, None)
+        self.assertEqual(reactions[0].filemark.filecontext.filepath, path)
+        self.assertEqual(reactions[0].filemark.line, 2)
+
+        self.assertEqual(reactions[1].id, 'rxn_2')
+        self.assertEqual(reactions[1].name, 'Second reaction')
+        self.assertEqual(reactions[1].equation, Reaction(
+            Reaction.Bidir, [], [(Compound('C'), 1)]))
+        self.assertEqual(reactions[1].filemark.filecontext.filepath, path)
+        self.assertEqual(reactions[1].filemark.line, 3)
+
+    def test_parse_reaction_yaml_file(self):
+        path = self.write_model_file('reaction.yaml', '\n'.join([
+            '- id: rxn_1',
+            '  equation: "|A| => |B|"',
+            '- id: rxn_2',
+            '  equation:',
+            '    reversible: no',
+            '    left:',
+            '      - id: B',
+            '        value: 1',
+            '    right:',
+            '      - id: A',
+            '        value: 1'
+        ]))
+
+        reactions = list(native.parse_reaction_file(path))
+        self.assertEqual(len(reactions), 2)
+
+        self.assertEqual(reactions[0].id, 'rxn_1')
+        self.assertEqual(reactions[1].id, 'rxn_2')
+
     def test_parse_medium_table_file(self):
         path = self.write_model_file('medium.tsv', '\n'.join([
             '',
