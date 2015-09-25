@@ -114,6 +114,54 @@ class TestYAMLFileSystemData(unittest.TestCase):
             f.write(contents)
         return path
 
+    def test_parse_limits_table_file(self):
+        path = self.write_model_file('limits_1.tsv', '\n'.join([
+            '# comment',
+            '',
+            'rxn_1',
+            'rxn_2\t-100',
+            'rxn_3\t-\t3e-1',
+            'rxn_4\t-1000\t-100  # line comment'
+        ]))
+
+        limits = list(native.parse_limits_file(path))
+        self.assertEqual(limits[0], ('rxn_1', None, None))
+        self.assertEqual(limits[1], ('rxn_2', -100, None))
+        self.assertEqual(limits[2][0], 'rxn_3')
+        self.assertEqual(limits[2][1], None)
+        self.assertAlmostEqual(limits[2][2], 3e-1)
+        self.assertEqual(limits[3], ('rxn_4', -1000, -100))
+
+    def test_parse_limits_table_file_too_many_fields(self):
+        path = self.write_model_file('limits.tsv', '\n'.join([
+            'rxn_1\t-\t100\ttext']))
+        with self.assertRaises(native.ParseError):
+            list(native.parse_limits_file(path))
+
+    def test_parse_limits_yaml_file(self):
+        path = self.write_model_file('limits_1.yaml', '\n'.join([
+            '- include: limits_2.yml',
+            '- reaction: rxn_3',
+            '  lower: -1000',
+            '- reaction: rxn_4',
+            '  upper: 0'
+        ]))
+
+        self.write_model_file('limits_2.yml', '\n'.join([
+            '- reaction: rxn_1',
+            '  lower: -1',
+            '  upper: 25.5',
+            '- reaction: rxn_2'
+        ]))
+
+        limits = list(native.parse_limits_file(path))
+        self.assertEqual(limits, [
+            ('rxn_1', -1, 25.5),
+            ('rxn_2', None, None),
+            ('rxn_3', -1000, None),
+            ('rxn_4', None, 0)
+        ])
+
     def test_parse_model_table_file(self):
         path = self.write_model_file('model_1.tsv', '\n'.join([
             '# comment',
