@@ -45,7 +45,7 @@ class FastGapFillCommand(SolverCommandMixin, Command):
             '--epsilon', type=float, help='Threshold for Fastcore',
             default=1e-5)
         parser.add_argument(
-            '--no-tfba', help='Disable thermodynamic constraints on FBA',
+            '--tfba', help='Enable thermodynamic constraints on FBA',
             action='store_true')
         parser.add_argument(
             'reaction', help='Reaction to maximize', nargs='?')
@@ -55,7 +55,7 @@ class FastGapFillCommand(SolverCommandMixin, Command):
         """Run FastGapFill command"""
 
         # Create solver
-        enable_tfba = not self._args.no_tfba
+        enable_tfba = self._args.tfba
         if enable_tfba:
             solver = self._get_solver(integer=True)
         else:
