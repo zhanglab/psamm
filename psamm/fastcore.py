@@ -102,7 +102,7 @@ def lp7(model, reaction_subset, epsilon, solver):
     if not result:
         raise FastcoreError('Non-optimal solution: {}'.format(result.status))
 
-    for rxnid in sorted(model.reactions):
+    for rxnid in model.reactions:
         yield rxnid, result.get_value(('v', rxnid))
 
 
