@@ -114,6 +114,39 @@ class TestYAMLFileSystemData(unittest.TestCase):
             f.write(contents)
         return path
 
+    def test_parse_compound_tsv_file(self):
+        path = self.write_model_file('compounds.tsv', '\n'.join([
+            'id\tname\tformula\tcharge\tkegg\tcas',
+            'h2o\tWater\tH2O\t0\tC00001\t7732-18-5'
+        ]))
+
+        compounds = list(native.parse_compound_file(path, 'tsv'))
+        self.assertEqual(len(compounds), 1)
+
+        self.assertEqual(compounds[0].id, 'h2o')
+        self.assertEqual(compounds[0].name, 'Water')
+        self.assertEqual(compounds[0].properties['name'], 'Water')
+        self.assertEqual(compounds[0].formula, 'H2O')
+        self.assertEqual(compounds[0].charge, 0)
+        self.assertEqual(compounds[0].kegg, 'C00001')
+        self.assertEqual(compounds[0].cas, '7732-18-5')
+
+    def test_parse_compound_yaml_file(self):
+        path = self.write_model_file('compounds.yaml', '\n'.join([
+            '- id: h2o',
+            '  name: Water',
+            '  formula: H2O',
+            '  user_annotation: ABC'
+        ]))
+
+        compounds = list(native.parse_compound_file(path, 'yaml'))
+        self.assertEqual(len(compounds), 1)
+
+        self.assertEqual(compounds[0].id, 'h2o')
+        self.assertEqual(compounds[0].name, 'Water')
+        self.assertEqual(compounds[0].formula, 'H2O')
+        self.assertEqual(compounds[0].properties['user_annotation'], 'ABC')
+
     def test_parse_reaction_table_file(self):
         path = self.write_model_file('reactions.tsv', '\n'.join([
             'id\tname\tequation',
