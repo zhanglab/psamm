@@ -78,6 +78,13 @@ class FastGapFillCommand(SolverCommandMixin, Command):
         ex_added = model_complete.add_all_exchange_reactions()
         tp_added = model_complete.add_all_transport_reactions()
 
+        # TODO: The exchange and transport reactions have tuple names. This
+        # means that in Python 3 the reactions can no longer be directly
+        # compared (e.g. while sorting) so define this helper function as a
+        # workaround.
+        def reaction_key(r):
+            return r if isinstance(r, tuple) else (r,)
+
         # Add penalty weights on reactions
         weights = {}
         if self._args.db_weight is not None:
@@ -126,7 +133,7 @@ class FastGapFillCommand(SolverCommandMixin, Command):
             model_induced.add_reaction(rxnid)
         for rxnid, flux in sorted(fluxanalysis.flux_balance(
                 model_induced, maximized_reaction, tfba=enable_tfba,
-                solver=solver)):
+                solver=solver), key=lambda x: (reaction_key(x[0]), x[1])):
             reaction_class = 'Dbase'
             weight = weights.get(rxnid, 1)
             if self._mm.has_reaction(rxnid):
