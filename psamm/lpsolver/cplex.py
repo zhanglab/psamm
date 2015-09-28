@@ -215,6 +215,10 @@ class Problem(BaseProblem):
             self.set_objective_sense(sense)
         self._cp.solve()
 
+        if (self._cp.solution.get_status() ==
+                self._cp.solution.status.abort_user):
+            raise KeyboardInterrupt()
+
         self._result = Result(self)
         return self._result
 
