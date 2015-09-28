@@ -59,6 +59,8 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
             raise CommandError('Specified reaction is not in model: {}'.format(
                 reaction))
 
+        logger.info('Using {} as objective'.format(reaction))
+
         loop_removal = self._args.loop_removal
         if loop_removal == 'none':
             logger.info('Loop removal disabled; spurious loops are allowed')
@@ -83,7 +85,7 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
             if reaction_id == reaction:
                 optimum = flux
 
-        logger.info('Maximum flux: {}'.format(optimum))
+        logger.info('Objective flux: {}'.format(optimum))
 
     def run_fba(self, reaction):
         """Run standard FBA on model."""
