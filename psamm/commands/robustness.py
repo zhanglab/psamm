@@ -15,6 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+import time
 import logging
 
 from ..command import Command, SolverCommandMixin, CommandError
@@ -130,6 +131,8 @@ class RobustnessCommand(SolverCommandMixin, Command):
         logger.info('Varying {} in {} steps between {} and {}'.format(
             varying_reaction, steps, flux_min, flux_max))
 
+        start_time = time.time()
+
         # Run FBA on model at different fixed flux values
         for i in range(steps):
             fixed_flux = flux_min + i*(flux_max - flux_min)/float(steps-1)
@@ -151,3 +154,6 @@ class RobustnessCommand(SolverCommandMixin, Command):
                     varying_reaction, fixed_flux))
             finally:
                 c.delete()
+
+        logger.info('Solving took {:.2f} seconds'.format(
+            time.time() - start_time))
