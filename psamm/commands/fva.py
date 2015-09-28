@@ -15,8 +15,13 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+import time
+import logging
+
 from ..command import Command, SolverCommandMixin, CommandError
 from .. import fluxanalysis
+
+logger = logging.getLogger(__name__)
 
 
 class FluxVariabilityCommand(SolverCommandMixin, Command):
@@ -58,6 +63,8 @@ class FluxVariabilityCommand(SolverCommandMixin, Command):
         else:
             solver = self._get_solver()
 
+        start_time = time.time()
+
         fba_fluxes = dict(fluxanalysis.flux_balance(
             self._mm, reaction, tfba=False, solver=solver))
         optimum = fba_fluxes[reaction]
@@ -70,3 +77,6 @@ class FluxVariabilityCommand(SolverCommandMixin, Command):
             rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
             print('{}\t{}\t{}\t{}'.format(
                 reaction_id, bounds[0], bounds[1], rxt))
+
+        logger.info('Solving took {:.2f} seconds'.format(
+            time.time() - start_time))
