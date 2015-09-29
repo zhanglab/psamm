@@ -411,23 +411,21 @@ def consistency_check(model, subset, epsilon, tfba, solver):
     while len(subset) > 0:
         reaction = next(iter(subset))
 
-        logger.debug('{} left, checking {}...'.format(len(subset), reaction))
+        logger.info('{} left, checking {}...'.format(len(subset), reaction))
 
         fba.maximize(reaction)
-        support = set(rxnid for rxnid in model.reactions
-                      if abs(fba.get_flux(rxnid)) >= epsilon)
-        subset -= support
-        if reaction in support:
+        subset = set(reaction_id for reaction_id in subset
+                     if abs(fba.get_flux(reaction_id)) <= epsilon)
+        if reaction not in subset:
             continue
         elif model.is_reversible(reaction):
             fba.maximize({reaction: -1})
-            support = set(rxnid for rxnid in model.reactions
-                          if abs(fba.get_flux(rxnid)) >= epsilon)
-            subset -= support
-            if reaction in support:
+            subset = set(reaction_id for reaction_id in subset
+                         if abs(fba.get_flux(reaction_id)) <= epsilon)
+            if reaction not in subset:
                 continue
 
-        logger.debug('{} not consistent!'.format(reaction))
+        logger.info('{} not consistent!'.format(reaction))
 
         yield reaction
         subset.remove(reaction)
