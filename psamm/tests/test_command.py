@@ -148,6 +148,21 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command([
             '--model', self._model_dir, 'fluxcheck'], {})
 
+    def test_run_fluxcheck_with_fastcore(self):
+        self.run_solver_command([
+            '--model', self._model_dir, 'fluxcheck', '--fastcore'], {})
+
+    def test_run_fluxcheck_with_tfba(self):
+        self.run_solver_command([
+            '--model', self._model_dir, 'fluxcheck', '--tfba'],
+            {'integer': True})
+
+    def test_run_fluxcheck_with_both_tfba_and_fastcore(self):
+        with self.assertRaises(SystemExit):
+            self.run_solver_command([
+                '--model', self._model_dir, 'fluxcheck',
+                '--tfba', '--fastcore'], {})
+
     def test_run_fluxcoupling(self):
         self.run_solver_command([
             '--model', self._model_dir, 'fluxcoupling'], {})

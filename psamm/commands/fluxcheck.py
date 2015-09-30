@@ -17,7 +17,7 @@
 
 import logging
 
-from ..command import Command, SolverCommandMixin
+from ..command import Command, SolverCommandMixin, CommandError
 from .. import fluxanalysis, fastcore
 
 logger = logging.getLogger(__name__)
@@ -69,12 +69,19 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
                 if self._mm.is_exchange(reaction):
                     del self._mm.limits[reaction].bounds
 
-        if self._args.fastcore:
+        enable_tfba = self._args.tfba
+        enable_fastcore = self._args.fastcore
+
+        if enable_tfba and enable_fastcore:
+            raise CommandError(
+                'Using Fastcore with thermodynamic constraints'
+                ' is not supported!')
+
+        if enable_fastcore:
             solver = self._get_solver()
             inconsistent = set(fastcore.fastcc(
                 self._mm, epsilon, solver=solver))
         else:
-            enable_tfba = self._args.tfba
             if enable_tfba:
                 solver = self._get_solver(integer=True)
             else:
