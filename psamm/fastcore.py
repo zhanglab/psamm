@@ -22,11 +22,7 @@ This is an implementation of the algorithms described in [Vlassis14]_.
 
 import logging
 
-from .lpsolver import lp
-from .fluxanalysis import flux_balance
-from .metabolicmodel import FlipableModelView
-
-from six import iteritems
+from .fluxanalysis import FluxBalanceProblem
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -64,92 +60,118 @@ class FastcoreError(Exception):
     """Indicates an error while running Fastcore"""
 
 
-def lp7(model, reaction_subset, epsilon, solver):
-    """Approximately maximize the number of reaction with flux above epsilon
+class FastcoreProblem(FluxBalanceProblem):
+    def __init__(self, *args, **kwargs):
+        self._epsilon = kwargs.pop('epsilon', 1e-5)
+        super(FastcoreProblem, self).__init__(*args, **kwargs)
+        self._has_maximization_vars = False
+        self._flipped = set()
 
-    This is similar to FBA but approximately maximizing the number of reactions
-    in subset with flux > epsilon, instead of just maximizing the flux of one
-    particular reaction. LP7 prefers "flux splitting" over
-    "flux concentrating".
-    """
+    def _add_maximization_vars(self):
+        if self._has_maximization_vars:
+            return
 
-    # Create LP-7 problem of Fastcore
-    prob = solver.create_problem()
+        # Define maximization variables
+        self._prob.define(*(('zl', rxnid) for rxnid in self._model.reactions),
+                          lower=0, upper=self._epsilon)
 
-    # Define flux variables
-    for rxnid in model.reactions:
-        lower, upper = model.limits[rxnid]
-        prob.define(('v', rxnid), lower=lower, upper=upper)
+        self._has_maximization_vars = True
 
-    # Define z variables
-    prob.define(*(('z', rxnid) for rxnid in reaction_subset),
-                lower=0, upper=epsilon)
-    prob.set_linear_objective(prob.expr(
-        {('z', rxnid): 1 for rxnid in reaction_subset}))
-    v = prob.set(('v', rxnid) for rxnid in reaction_subset)
-    z = prob.set(('z', rxnid) for rxnid in reaction_subset)
-    prob.add_linear_constraints(v >= z)
+    def lp7(self, reaction_subset):
+        """Approximately maximize the number of reaction with flux.
 
-    massbalance_lhs = {compound: 0 for compound in model.compounds}
-    for spec, value in iteritems(model.matrix):
-        compound, rxnid = spec
-        massbalance_lhs[compound] += prob.var(('v', rxnid)) * value
-    prob.add_linear_constraints(
-        *(lhs == 0 for compound, lhs in iteritems(massbalance_lhs)))
+        This is similar to FBA but approximately maximizing the number of
+        reactions in subset with flux > epsilon, instead of just maximizing the
+        flux of one particular reaction. LP7 prefers "flux splitting" over
+        "flux concentrating".
+        """
 
-    # Solve
-    result = prob.solve(lp.ObjectiveSense.Maximize)
-    if not result:
-        raise FastcoreError('Non-optimal solution: {}'.format(result.status))
+        self._add_maximization_vars()
 
-    for rxnid in model.reactions:
-        yield rxnid, result.get_value(('v', rxnid))
+        positive = set(reaction_subset) - self._flipped
+        negative = set(reaction_subset) & self._flipped
 
+        v = self._prob.set(('v', rxnid) for rxnid in positive)
+        zl = self._prob.set(('zl', rxnid) for rxnid in positive)
+        cs = self._prob.add_linear_constraints(v >= zl)
+        self._temp_constr.extend(cs)
 
-def lp10(model, subset_k, subset_p, epsilon, scaling, solver, weights={}):
-    """Force reactions in K above epsilon while minimizing support of P
+        v = self._prob.set(('v', rxnid) for rxnid in negative)
+        zl = self._prob.set(('zl', rxnid) for rxnid in negative)
+        cs = self._prob.add_linear_constraints(v <= -zl)
+        self._temp_constr.extend(cs)
 
-    This program forces reactions in subset K to attain flux > epsilon
-    while minimizing the sum of absolute flux values for reactions
-    in subset P (L1-regularization).
-    """
+        self._prob.set_linear_objective(self._prob.expr(
+            {('zl', rxnid): 1 for rxnid in reaction_subset}))
 
-    if len(subset_k) == 0:
-        return
+        self._solve()
 
-    # Create LP-10 problem of Fastcore
-    prob = solver.create_problem()
+    def lp10(self, subset_k, subset_p, weights={}):
+        """Force reactions in K above epsilon while minimizing support of P.
 
-    # Define flux variables
-    for rxnid in model.reactions:
-        lower, upper = model.limits[rxnid]
-        if rxnid in subset_k:
-            lower = max(lower, epsilon)
-        prob.define(('v', rxnid), lower=lower*scaling, upper=upper*scaling)
+        This program forces reactions in subset K to attain flux > epsilon
+        while minimizing the sum of absolute flux values for reactions
+        in subset P (L1-regularization).
+        """
 
-    # Define z variables
-    prob.define(*(('z', rxnid) for rxnid in subset_p), lower=0)
-    prob.set_linear_objective(prob.expr(
-        {('z', rxnid): weights.get(rxnid, 1) for rxnid in subset_p}))
+        self._add_minimization_vars()
 
-    z = prob.set(('z', rxnid) for rxnid in subset_p)
-    v = prob.set(('v', rxnid) for rxnid in subset_p)
-    prob.add_linear_constraints(z >= v, v >= -z)
+        positive = set(subset_k) - self._flipped
+        negative = set(subset_k) & self._flipped
 
-    massbalance_lhs = {compound: 0 for compound in model.compounds}
-    for spec, value in iteritems(model.matrix):
-        compound, rxnid = spec
-        massbalance_lhs[compound] += prob.var(('v', rxnid)) * value
-    prob.add_linear_constraints(
-        *(lhs == 0 for compound, lhs in iteritems(massbalance_lhs)))
+        v = self._prob.set(('v', rxnid) for rxnid in positive)
+        cs = self._prob.add_linear_constraints(v >= self._epsilon)
+        self._temp_constr.extend(cs)
 
-    # Solve
-    result = prob.solve(lp.ObjectiveSense.Minimize)
-    if not result:
-        raise FastcoreError('Non-optimal solution: {}'.format(result.status))
+        v = self._prob.set(('v', rxnid) for rxnid in negative)
+        cs = self._prob.add_linear_constraints(v <= -self._epsilon)
+        self._temp_constr.extend(cs)
 
-    for reaction_id in model.reactions:
-        yield reaction_id, result.get_value(('v', reaction_id))
+        self._prob.set_linear_objective(self._prob.expr(
+            {('z', rxnid): -weights.get(rxnid, 1) for rxnid in subset_p}))
+
+        self._solve()
+
+    def find_sparse_mode(self, core, additional, scaling, weights={}):
+        """Find a sparse mode containing reactions of the core subset.
+
+        Return an iterator of the support of a sparse mode that contains as
+        many reactions from core as possible, and as few reactions from
+        additional as possible (approximately). A dictionary of weights can be
+        supplied which gives further penalties for including specific
+        additional reactions.
+        """
+
+        if len(core) == 0:
+            return
+
+        self.lp7(core)
+        k = set()
+        for reaction_id in core:
+            flux = self.get_flux(reaction_id)
+            if self.is_flipped(reaction_id):
+                flux *= -1
+            if flux >= self._epsilon:
+                k.add(reaction_id)
+
+        if len(k) == 0:
+            return
+
+        self.lp10(k, additional, weights)
+        for reaction_id in self._model.reactions:
+            flux = self.get_flux(reaction_id)
+            if abs(flux) >= self._epsilon / scaling:
+                yield reaction_id
+
+    def flip(self, reactions):
+        for reaction in reactions:
+            if reaction in self._flipped:
+                self._flipped.remove(reaction)
+            else:
+                self._flipped.add(reaction)
+
+    def is_flipped(self, reaction):
+        return reaction in self._flipped
 
 
 def fastcc(model, epsilon, solver):
@@ -160,12 +182,18 @@ def fastcc(model, epsilon, solver):
     """
 
     reaction_set = set(model.reactions)
-    subset = reaction_set.difference(model.reversible)
+    subset = set(reaction_id for reaction_id in reaction_set
+                 if model.limits[reaction_id].lower >= 0)
 
+    logger.info('Checking {} irreversible reactions...'.format(len(subset)))
     logger.debug('|J| = {}, J = {}'.format(len(subset), subset))
 
+    p = FastcoreProblem(model, solver, epsilon=epsilon)
+    p.lp7(subset)
+
     consistent_subset = set(
-        support(lp7(model, subset, epsilon, solver), epsilon))
+        reaction_id for reaction_id in model.reactions
+        if abs(p.get_flux(reaction_id)) >= 0.999 * epsilon)
 
     logger.debug('|A| = {}, A = {}'.format(
         len(consistent_subset), consistent_subset))
@@ -177,27 +205,29 @@ def fastcc(model, epsilon, solver):
     # Check remaining reactions
     subset = (reaction_set - subset) - consistent_subset
 
+    logger.info('Checking reversible reactions...')
     logger.debug('|J| = {}, J = {}'.format(len(subset), subset))
-
-    # Wrap model in flipable proxy so reactions can be flipped
-    model = FlipableModelView(model)
 
     flipped = False
     singleton = False
     while len(subset) > 0:
+        logger.info('{} reversible reactions left to check...'.format(
+            len(subset)))
         if singleton:
             reaction = next(iter(subset))
             subset_i = {reaction}
 
             logger.debug('LP3 on {}'.format(subset_i))
-            supp = support(flux_balance(
-                model, reaction, tfba=False, solver=solver), epsilon)
+            p.maximize({reaction: -1 if p.is_flipped(reaction) else 1})
         else:
             subset_i = subset
 
             logger.debug('LP7 on {}'.format(subset_i))
-            supp = support(lp7(model, subset_i, epsilon, solver), epsilon)
-        consistent_subset.update(supp)
+            p.lp7(subset_i)
+
+        consistent_subset.update(
+            reaction_id for reaction_id in subset
+            if abs(p.get_flux(reaction_id) >= 0.999 * epsilon))
 
         logger.debug('|A| = {}, A = {}'.format(
             len(consistent_subset), consistent_subset))
@@ -215,13 +245,14 @@ def fastcc(model, epsilon, solver):
                 if singleton:
                     subset -= subset_rev_i
                     for reaction in subset_rev_i:
+                        logger.info('Inconsistent: {}'.format(reaction))
                         yield reaction
                 else:
                     singleton = True
             else:
-                model.flip(subset_rev_i)
+                p.flip(subset_rev_i)
                 flipped = True
-                logger.debug('Flip')
+                logger.info('Flipped {} reactions'.format(len(subset_rev_i)))
 
 
 def fastcc_is_consistent(model, epsilon, solver):
@@ -248,29 +279,7 @@ def fastcc_consistent_subset(model, epsilon, solver):
     return reaction_set.difference(fastcc(model, epsilon, solver))
 
 
-def find_sparse_mode(model, core, additional, epsilon, scaling, solver,
-                     weights={}):
-    """Find a sparse mode containing reactions of the core subset
-
-    Return an iterator of the support of a sparse mode that contains as many
-    reactions from core as possible, and as few reactions from additional as
-    possible (approximately). A dictionary of weights can be supplied which
-    gives further penalties for including specific additional reactions.
-    """
-
-    if len(core) == 0:
-        return iter(())
-
-    supp = support_positive(lp7(model, core, epsilon, solver), epsilon)
-    k = core.intersection(supp)
-    if len(k) == 0:
-        return iter(())
-
-    return support(lp10(model, k, additional, epsilon, solver=solver,
-                        scaling=scaling, weights=weights), epsilon)
-
-
-def fastcore(model, core, epsilon, solver, scaling=1e8, weights={}):
+def fastcore(model, core, epsilon, solver, scaling=1e5, weights={}):
     """Find a flux consistent subnetwork containing the core subset
 
     The result will contain the core subset and as few of the additional
@@ -286,9 +295,8 @@ def fastcore(model, core, epsilon, solver, scaling=1e8, weights={}):
     penalty_set = reaction_set - core
     logger.debug('|P| = {}, P = {}'.format(len(penalty_set), penalty_set))
 
-    mode = set(find_sparse_mode(
-        model, subset, penalty_set, epsilon, solver=solver, scaling=scaling,
-        weights=weights))
+    p = FastcoreProblem(model, solver, epsilon=epsilon)
+    mode = set(p.find_sparse_mode(subset, penalty_set, scaling, weights))
     if not subset.issubset(mode):
         raise FastcoreError('Inconsistent irreversible core reactions:'
                             ' {}'.format(subset - mode))
@@ -300,9 +308,6 @@ def fastcore(model, core, epsilon, solver, scaling=1e8, weights={}):
     subset = core - mode
     logger.debug('|J| = {}, J = {}'.format(len(subset), subset))
 
-    # Wrap model in flipable proxy so reactions can be flipped
-    model = FlipableModelView(model)
-
     flipped = False
     singleton = False
     while len(subset) > 0:
@@ -312,9 +317,7 @@ def fastcore(model, core, epsilon, solver, scaling=1e8, weights={}):
         else:
             subset_i = subset
 
-        mode = find_sparse_mode(
-            model, subset_i, penalty_set, epsilon, scaling=scaling,
-            solver=solver, weights=weights)
+        mode = set(p.find_sparse_mode(subset_i, penalty_set, scaling, weights))
         consistent_subset.update(mode)
         logger.debug('|A| = {}, A = {}'.format(
             len(consistent_subset), consistent_subset))
@@ -337,9 +340,9 @@ def fastcore(model, core, epsilon, solver, scaling=1e8, weights={}):
                 singleton = True
                 flipped = False
             else:
-                model.flip(subset_rev_i)
+                p.flip(subset_rev_i)
                 flipped = True
-                logger.debug('Going to flipped state... {}'.format(
-                    subset_rev_i))
+                logger.debug('Flipped {} reactions'.format(
+                    len(subset_rev_i)))
 
     return consistent_subset

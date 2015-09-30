@@ -46,95 +46,94 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
             self.skipTest('Unable to find an LP solver for tests')
 
     def test_lp10(self):
-        result = fastcore.lp10(self.model, { 'rxn_6' },
-                               { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5' },
-                               solver=self.solver, epsilon=0.001, scaling=1e3)
-        supp = set(fastcore.support(result, 0.999*0.001))
+        p = fastcore.FastcoreProblem(self.model, self.solver, epsilon=0.001)
+        scaling = 1000
+        p.lp10({'rxn_6'}, {'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5'})
+        supp = set(reaction_id for reaction_id in self.model.reactions
+                   if abs(p.get_flux(reaction_id)) >= 0.999 * 0.001 / scaling)
         self.assertEqual(supp, { 'rxn_1', 'rxn_3', 'rxn_6' })
 
     def test_lp10_weighted(self):
-        weights = { 'rxn_3': 1 }
-        result = fastcore.lp10(self.model, { 'rxn_6' },
-                               { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5' },
-                               solver=self.solver, epsilon=0.001, scaling=1e3,
-                               weights=weights)
-        supp = set(fastcore.support(result, 0.999*0.001))
-        self.assertEqual(supp, { 'rxn_1', 'rxn_3', 'rxn_6' })
+        p = fastcore.FastcoreProblem(self.model, self.solver, epsilon=0.001)
+        scaling = 1000
+        weights = {'rxn_3': 1}
+        p.lp10({'rxn_6'}, {'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5'},
+               weights=weights)
+        supp = set(reaction_id for reaction_id in self.model.reactions
+                   if abs(p.get_flux(reaction_id)) >= 0.999 * 0.001 / scaling)
+        self.assertEqual(supp, {'rxn_1', 'rxn_3', 'rxn_6'})
 
-        weights = { 'rxn_3': 3 }
-        result = fastcore.lp10(self.model, { 'rxn_6' },
-                               { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5' },
-                               solver=self.solver, epsilon=0.001, scaling=1e3,
-                               weights=weights)
-        supp = set(fastcore.support(result, 0.999*0.001))
-        self.assertEqual(supp, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
+        weights = {'rxn_3': 3}
+        p.lp10({'rxn_6'}, {'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5'},
+               weights=weights)
+        supp = set(reaction_id for reaction_id in self.model.reactions
+                   if abs(p.get_flux(reaction_id)) >= 0.999 * 0.001 / scaling)
+        self.assertEqual(supp, {'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6'})
 
     def test_lp7(self):
-        result = fastcore.lp7(self.model, set(self.model.reactions), 0.001,
-                              solver=self.solver)
-        supp = set(fastcore.support_positive(result, 0.001*0.999))
-        self.assertEqual(supp, { 'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
+        p = fastcore.FastcoreProblem(self.model, self.solver, epsilon=0.001)
+        p.lp7(set(self.model.reactions))
+        supp = set(reaction_id for reaction_id in self.model.reactions
+                   if p.get_flux(reaction_id) >= 0.001*0.999)
+        self.assertEqual(supp, {'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6'})
 
-        result = fastcore.lp7(self.model, {'rxn_5'}, 0.001, solver=self.solver)
-        supp = set(fastcore.support_positive(result, 0.001*0.999))
+        p.lp7({'rxn_5'})
+        supp = set(reaction_id for reaction_id in self.model.reactions
+                   if p.get_flux(reaction_id) >= 0.001*0.999)
         # Test that the support contains at least the given reactions
         self.assertLessEqual({'rxn_4', 'rxn_5', 'rxn_6'}, supp)
 
     def test_find_sparse_mode_singleton(self):
-        core = { 'rxn_1' }
-        mode = set(fastcore.find_sparse_mode(
-            self.model, core, set(self.model.reactions) - core,
-            solver=self.solver, epsilon=0.001, scaling=1e3))
-        self.assertEqual(mode, { 'rxn_1', 'rxn_3', 'rxn_6' })
+        p = fastcore.FastcoreProblem(self.model, self.solver, epsilon=0.001)
+        core = {'rxn_1'}
+        mode = set(p.find_sparse_mode(
+            core, set(self.model.reactions) - core, scaling=1e3))
+        self.assertEqual(mode, {'rxn_1', 'rxn_3', 'rxn_6'})
 
-        core = { 'rxn_2' }
-        mode = set(fastcore.find_sparse_mode(
-            self.model, core, set(self.model.reactions) - core,
-            solver=self.solver, epsilon=0.001, scaling=1e3))
+        core = {'rxn_2'}
+        mode = set(p.find_sparse_mode(
+            core, set(self.model.reactions) - core, scaling=1e3))
         self.assertEqual(mode, set())
 
-        core = { 'rxn_3' }
-        mode = set(fastcore.find_sparse_mode(
-            self.model, core, set(self.model.reactions) - core,
-            solver=self.solver, epsilon=0.001, scaling=1e3))
-        self.assertEqual(mode, { 'rxn_1', 'rxn_3', 'rxn_6' })
+        core = {'rxn_3'}
+        mode = set(p.find_sparse_mode(
+            core, set(self.model.reactions) - core, scaling=1e3))
+        self.assertEqual(mode, {'rxn_1', 'rxn_3', 'rxn_6'})
 
-        core = { 'rxn_4' }
-        mode = set(fastcore.find_sparse_mode(
-            self.model, core, set(self.model.reactions) - core,
-            solver=self.solver, epsilon=0.001, scaling=1e3))
-        self.assertEqual(mode, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
+        core = {'rxn_4'}
+        mode = set(p.find_sparse_mode(
+            core, set(self.model.reactions) - core, scaling=1e3))
+        self.assertEqual(mode, {'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6'})
 
-        core = { 'rxn_5' }
-        mode = set(fastcore.find_sparse_mode(
-            self.model, core, set(self.model.reactions) - core,
-            solver=self.solver, epsilon=0.001, scaling=1e3))
-        self.assertEqual(mode, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
+        core = {'rxn_5'}
+        mode = set(p.find_sparse_mode(
+            core, set(self.model.reactions) - core, scaling=1e3))
+        self.assertEqual(mode, {'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6'})
 
-        core = { 'rxn_6' }
-        mode = set(fastcore.find_sparse_mode(
-            self.model, core, set(self.model.reactions) - core,
-            solver=self.solver, epsilon=0.001, scaling=1e3))
-        self.assertEqual(mode, { 'rxn_1', 'rxn_3', 'rxn_6' })
+        core = {'rxn_6'}
+        mode = set(p.find_sparse_mode(
+            core, set(self.model.reactions) - core, scaling=1e3))
+        self.assertEqual(mode, {'rxn_1', 'rxn_3', 'rxn_6'})
 
     def test_find_sparse_mode_weighted(self):
-        core = { 'rxn_1' }
-        weights = { 'rxn_3': 1 }
-        mode = set(fastcore.find_sparse_mode(
-            self.model, core, set(self.model.reactions) - core,
-            solver=self.solver, epsilon=0.001, scaling=1e3, weights=weights))
-        self.assertEqual(mode, { 'rxn_1', 'rxn_3', 'rxn_6' })
+        p = fastcore.FastcoreProblem(self.model, self.solver, epsilon=0.001)
+        core = {'rxn_1'}
+        weights = {'rxn_3': 1}
+        mode = set(p.find_sparse_mode(
+            core, set(self.model.reactions) - core,
+            scaling=1e3, weights=weights))
+        self.assertEqual(mode, {'rxn_1', 'rxn_3', 'rxn_6'})
 
-        weights = { 'rxn_3': 3 }
-        mode = set(fastcore.find_sparse_mode(
-            self.model, core, set(self.model.reactions) - core,
-            solver=self.solver, epsilon=0.001, scaling=1e3, weights=weights))
-        self.assertEqual(mode, { 'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6' })
+        weights = {'rxn_3': 3}
+        mode = set(p.find_sparse_mode(
+            core, set(self.model.reactions) - core,
+            scaling=1e3, weights=weights))
+        self.assertEqual(mode, {'rxn_1', 'rxn_4', 'rxn_5', 'rxn_6'})
 
     def test_fastcc_inconsistent(self):
         self.assertEqual(
             set(fastcore.fastcc(self.model, 0.001, solver=self.solver)),
-            { 'rxn_2' })
+            {'rxn_2'})
 
     def test_fastcc_is_consistent_on_inconsistent(self):
         self.assertFalse(fastcore.fastcc_is_consistent(
@@ -154,7 +153,7 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
         self.database.set_reaction('rxn_7', parse_reaction('|E| <=>'))
         self.model.add_reaction('rxn_7')
         with self.assertRaises(fastcore.FastcoreError):
-            fastcore.fastcore(self.model, { 'rxn_7' }, 0.001,
+            fastcore.fastcore(self.model, {'rxn_7'}, 0.001,
                               solver=self.solver)
 
 
@@ -198,13 +197,17 @@ class TestFastcoreTinyBiomassModel(unittest.TestCase):
 
     def test_fastcore_induced_model(self):
         core = {'rxn_2'}
-        self.assertEqual(set(fastcore.fastcore(
-            self.model, core, 0.0001, solver=self.solver)), {'rxn_1', 'rxn_2'})
+        self.assertEqual(
+            set(fastcore.fastcore(
+                self.model, core, 0.0001, scaling=1e7, solver=self.solver)),
+            {'rxn_1', 'rxn_2'})
 
     def test_fastcore_induced_model_high_epsilon(self):
         core = {'rxn_2'}
-        self.assertEqual(set(fastcore.fastcore(
-            self.model, core, 0.1, solver=self.solver)), {'rxn_1', 'rxn_2'})
+        self.assertEqual(
+            set(fastcore.fastcore(
+                self.model, core, 0.1, scaling=1e7, solver=self.solver)),
+            {'rxn_1', 'rxn_2'})
 
 
 class TestFlippingModel(unittest.TestCase):
@@ -226,10 +229,10 @@ class TestFlippingModel(unittest.TestCase):
             self.skipTest('Unable to find an LP solver for tests')
 
     def test_fastcore_induced_model(self):
-        core = { 'rxn_2', 'rxn_3' }
-        self.assertEquals(set(
+        core = {'rxn_2', 'rxn_3'}
+        self.assertEqual(set(
             fastcore.fastcore(self.model, core, 0.001, solver=self.solver)),
-            { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4' })
+            {'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4'})
 
 
 if __name__ == '__main__':
