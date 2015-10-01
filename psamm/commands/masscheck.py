@@ -17,7 +17,7 @@
 
 import logging
 
-from ..command import Command, SolverCommandMixin
+from ..command import Command, CommandError, SolverCommandMixin
 from .. import massconsistency
 
 logger = logging.getLogger(__name__)
@@ -37,6 +37,9 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
         parser.add_argument(
             '--checked', metavar='reaction', action='append', type=str,
             default=[], help='Mark reaction as already checked (no residual)')
+        parser.add_argument(
+            '--type', choices=['compound', 'reaction'],
+            default='compound', help='Type of check to perform')
         super(MassConsistencyCommand, cls).init_parser(parser)
 
     def run(self):
@@ -70,8 +73,13 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
 
         known_inconsistent = exclude | exchange
 
-        self._check_compounds(known_inconsistent, zeromass, solver)
-        self._check_reactions(known_inconsistent, zeromass, solver)
+        if self._args.type == 'compound':
+            self._check_compounds(known_inconsistent, zeromass, solver)
+        elif self._args.type == 'reaction':
+            self._check_reactions(known_inconsistent, zeromass, solver)
+        else:
+            raise CommandError('Invalid type of check: {}'.format(
+                self._args.type))
 
     def _check_compounds(self, known_inconsistent, zeromass, solver):
         logger.info('Checking stoichiometric consistency of compounds...')
