@@ -15,7 +15,10 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+import time
 import logging
+
+from six import iteritems
 
 from ..command import Command, CommandError, SolverCommandMixin
 from .. import massconsistency
@@ -85,13 +88,19 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
         logger.info('Checking stoichiometric consistency of compounds...')
 
         epsilon = self._args.epsilon
-        compound_iter = massconsistency.check_compound_consistency(
-            self._mm, solver, known_inconsistent, zeromass)
+
+        start_time = time.time()
+
+        masses = dict(massconsistency.check_compound_consistency(
+            self._mm, solver, known_inconsistent, zeromass))
+
+        logger.info('Solving took {:.2f} seconds'.format(
+            time.time() - start_time))
 
         good = 0
         total = 0
-        for compound, mass in sorted(compound_iter, key=lambda x: (x[1], x[0]),
-                                     reverse=True):
+        for compound, mass in sorted(
+                iteritems(masses), key=lambda x: (x[1], x[0]), reverse=True):
             if mass >= 1-epsilon or compound.name in zeromass:
                 good += 1
             total += 1
@@ -108,12 +117,18 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
 
         epsilon = self._args.epsilon
 
-        good = 0
-        total = 0
+        start_time = time.time()
+
         reaction_iter, compound_iter = (
             massconsistency.check_reaction_consistency(
                 self._mm, solver=solver, exchange=known_inconsistent,
                 checked=checked, zeromass=zeromass))
+
+        logger.info('Solving took {:.2f} seconds'.format(
+            time.time() - start_time))
+
+        good = 0
+        total = 0
         for reaction_id, residual in sorted(
                 reaction_iter, key=lambda x: abs(x[1]), reverse=True):
             total += 1
