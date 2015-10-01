@@ -77,7 +77,7 @@ class Problem(BaseProblem):
 
         # Set feasibility tolerance. By default, we decrease it to 1e-9.
         feasibility_tolerance = kwargs.get('feasibility_tolerance', 1e-9)
-        logger.info('Setting feasibility tolearance to {!r}'.format(
+        logger.info('Setting feasibility tolerance to {!r}'.format(
             feasibility_tolerance))
         self._cp.parameters.simplex.tolerances.feasibility.set(
             feasibility_tolerance)
