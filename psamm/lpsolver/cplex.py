@@ -75,8 +75,10 @@ class Problem(BaseProblem):
         self._cp.set_warning_stream(warning_stream)
         self._cp.set_error_stream(error_stream)
 
-        # Increase feasibility tolerance from default
+        # Set feasibility tolerance. By default, we decrease it to 1e-9.
         feasibility_tolerance = kwargs.get('feasibility_tolerance', 1e-9)
+        logger.info('Setting feasibility tolearance to {!r}'.format(
+            feasibility_tolerance))
         self._cp.parameters.simplex.tolerances.feasibility.set(
             feasibility_tolerance)
 
