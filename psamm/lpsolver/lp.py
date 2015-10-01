@@ -102,6 +102,9 @@ class Expression(object):
         for i in range(count):
             yield value_set(i)
 
+    def __contains__(self, variable):
+        return variable in self._variables
+
     def __add__(self, other):
         """Add expression with a number or another expression"""
 
