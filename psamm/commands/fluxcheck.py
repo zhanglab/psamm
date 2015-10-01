@@ -102,8 +102,6 @@ class FluxConsistencyCommand(SolverCommandMixin, Command):
                 for reaction_id, (lo, hi) in fluxanalysis.flux_variability(
                         self._mm, sorted(self._mm.reactions), {},
                         tfba=enable_tfba, solver=solver):
-                    logger.info('Reaction {} is {}, {}'.format(
-                        reaction_id, lo, hi))
                     if abs(lo) < epsilon and abs(hi) < epsilon:
                         inconsistent.add(reaction_id)
 
