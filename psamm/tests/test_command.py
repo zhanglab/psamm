@@ -183,9 +183,13 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command([
             '--model', self._model_dir, 'gapfill'], {'integer': True})
 
-    def test_run_masscheck(self):
+    def test_run_masscheck_compounds(self):
         self.run_solver_command([
-            '--model', self._model_dir, 'masscheck'], {})
+            '--model', self._model_dir, 'masscheck', '--type', 'compound'], {})
+
+    def test_run_masscheck_reactions(self):
+        self.run_solver_command([
+            '--model', self._model_dir, 'masscheck', '--type', 'reaction'], {})
 
     def test_run_randomsparse(self):
         self.run_solver_command([

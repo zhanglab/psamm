@@ -17,7 +17,7 @@
 
 import logging
 
-from ..command import Command, SolverCommandMixin
+from ..command import Command, CommandError, SolverCommandMixin
 from .. import massconsistency
 
 logger = logging.getLogger(__name__)
@@ -37,17 +37,20 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
         parser.add_argument(
             '--checked', metavar='reaction', action='append', type=str,
             default=[], help='Mark reaction as already checked (no residual)')
+        parser.add_argument(
+            '--type', choices=['compound', 'reaction'],
+            default='compound', help='Type of check to perform')
         super(MassConsistencyCommand, cls).init_parser(parser)
 
     def run(self):
         # Load compound information
-        compound_name = {}
+        self._compound_name = {}
         zeromass = set()
         for compound in self._model.parse_compounds():
             if 'name' in compound.properties:
-                compound_name[compound.id] = compound.properties['name']
-            elif compound.id not in compound_name:
-                compound_name[compound.id] = compound.id
+                self._compound_name[compound.id] = compound.properties['name']
+            elif compound.id not in self._compound_name:
+                self._compound_name[compound.id] = compound.id
 
             if compound.properties.get('zeromass', False):
                 zeromass.add(compound.id)
@@ -66,14 +69,21 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
         if biomass_reaction is not None:
             exclude.add(biomass_reaction)
 
-        # Create set of checked reactions
-        checked = set(self._args.checked)
-
         solver = self._get_solver()
 
         known_inconsistent = exclude | exchange
 
-        logger.info('Mass consistency on database')
+        if self._args.type == 'compound':
+            self._check_compounds(known_inconsistent, zeromass, solver)
+        elif self._args.type == 'reaction':
+            self._check_reactions(known_inconsistent, zeromass, solver)
+        else:
+            raise CommandError('Invalid type of check: {}'.format(
+                self._args.type))
+
+    def _check_compounds(self, known_inconsistent, zeromass, solver):
+        logger.info('Checking stoichiometric consistency of compounds...')
+
         epsilon = self._args.epsilon
         compound_iter = massconsistency.check_compound_consistency(
             self._mm, solver, known_inconsistent, zeromass)
@@ -85,9 +95,18 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
             if mass >= 1-epsilon or compound.name in zeromass:
                 good += 1
             total += 1
-            print('{}: {}'.format(compound.translate(
-                lambda x: compound_name.get(x, x)), mass))
+            print('{}\t{}\t{}'.format(
+                compound, mass, compound.translate(
+                    lambda x: self._compound_name.get(x, x))))
         logger.info('Consistent compounds: {}/{}'.format(good, total))
+
+    def _check_reactions(self, known_inconsistent, zeromass, solver):
+        logger.info('Checking stoichiometric consistency of reactions...')
+
+        # Create set of checked reactions
+        checked = set(self._args.checked)
+
+        epsilon = self._args.epsilon
 
         good = 0
         total = 0
@@ -101,7 +120,7 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
             if abs(residual) >= epsilon:
                 reaction = self._mm.get_reaction(reaction_id)
                 rxt = reaction.translated_compounds(
-                    lambda x: compound_name.get(x, x))
+                    lambda x: self._compound_name.get(x, x))
                 print('{}\t{}\t{}'.format(reaction_id, residual, rxt))
             else:
                 good += 1
