@@ -95,8 +95,9 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
             if mass >= 1-epsilon or compound.name in zeromass:
                 good += 1
             total += 1
-            print('{}: {}'.format(compound.translate(
-                lambda x: self._compound_name.get(x, x)), mass))
+            print('{}\t{}\t{}'.format(
+                compound, mass, compound.translate(
+                    lambda x: self._compound_name.get(x, x))))
         logger.info('Consistent compounds: {}/{}'.format(good, total))
 
     def _check_reactions(self, known_inconsistent, zeromass, solver):
