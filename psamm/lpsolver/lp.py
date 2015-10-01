@@ -73,7 +73,7 @@ class Expression(object):
 
     def variables(self):
         """Iterator of variables in expression"""
-        return self._variables.iterkeys()
+        return iter(self._variables)
 
     def values(self):
         """Iterator of (variable, value)-pairs in expression"""
