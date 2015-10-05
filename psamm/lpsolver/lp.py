@@ -73,7 +73,7 @@ class Expression(object):
 
     def variables(self):
         """Iterator of variables in expression"""
-        return self._variables.iterkeys()
+        return iter(self._variables)
 
     def values(self):
         """Iterator of (variable, value)-pairs in expression"""
@@ -101,6 +101,9 @@ class Expression(object):
                     yield variable, value
         for i in range(count):
             yield value_set(i)
+
+    def __contains__(self, variable):
+        return variable in self._variables
 
     def __add__(self, other):
         """Add expression with a number or another expression"""

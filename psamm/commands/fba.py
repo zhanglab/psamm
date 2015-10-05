@@ -15,6 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+import time
 import logging
 
 from ..command import SolverCommandMixin, Command, CommandError
@@ -59,6 +60,8 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
             raise CommandError('Specified reaction is not in model: {}'.format(
                 reaction))
 
+        logger.info('Using {} as objective'.format(reaction))
+
         loop_removal = self._args.loop_removal
         if loop_removal == 'none':
             logger.info('Loop removal disabled; spurious loops are allowed')
@@ -83,13 +86,20 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
             if reaction_id == reaction:
                 optimum = flux
 
-        logger.info('Maximum flux: {}'.format(optimum))
+        logger.info('Objective flux: {}'.format(optimum))
 
     def run_fba(self, reaction):
         """Run standard FBA on model."""
         solver = self._get_solver()
         p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+
+        start_time = time.time()
+
         p.maximize(reaction)
+
+        logger.info('Solving took {:.2f} seconds'.format(
+            time.time() - start_time))
+
         for reaction_id in self._mm.reactions:
             yield reaction_id, p.get_flux(reaction_id)
 
@@ -97,9 +107,11 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
         """Run normal FBA and flux minimization on model."""
 
         epsilon = self._args.epsilon
-
         solver = self._get_solver()
+
         p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+
+        start_time = time.time()
 
         # Maximize reaction flux
         p.maximize(reaction)
@@ -109,6 +121,10 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
         flux_var = p.get_flux_var(reaction)
         p.prob.add_linear_constraints(flux_var == p.get_flux(reaction))
         p.minimize_l1()
+
+        logger.info('Solving took {:.2f} seconds'.format(
+            time.time() - start_time))
+
         count = 0
         for reaction_id in self._mm.reactions:
             flux = p.get_flux(reaction_id)
@@ -122,8 +138,14 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
 
         solver = self._get_solver(integer=True)
         p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+
+        start_time = time.time()
+
         p.add_thermodynamic()
         p.maximize(reaction)
+
+        logger.info('Solving took {:.2f} seconds'.format(
+            time.time() - start_time))
 
         for reaction_id in self._mm.reactions:
             yield reaction_id, p.get_flux(reaction_id)

@@ -1,9 +1,36 @@
 language: python
-install: pip install tox
+cache:
+    directories:
+        - $HOME/.cache/pip
+        - $HOME/qsopt_ex-2.5.10.3
+addons:
+    apt:
+        packages:
+            - libgmp-dev
+            - libgmp10
+
+install:
+    # Install QSopt_ex library
+    - if echo "$TOXENV" | grep -q "qsoptex"; then
+        if [ ! -f "$HOME/qsopt_ex-2.5.10.3/bin/esolver" ]; then
+          ( mkdir src && cd src/;
+            curl -LO https://github.com/jonls/qsopt-ex/releases/download/v2.5.10.3/qsopt_ex-2.5.10.3.tar.xz;
+            tar -xvaf qsopt_ex-2.5.10.3.tar.xz;
+            cd qsopt_ex-2.5.10.3/;
+            ./configure --prefix="$HOME/qsopt_ex-2.5.10.3" && make install );
+        fi;
+        export CPATH="$HOME/qsopt_ex-2.5.10.3/include:$CPATH";
+        export LIBRARY_PATH="$HOME/qsopt_ex-2.5.10.3/lib:$LIBRARY_PATH";
+        export LD_LIBRARY_PATH="$HOME/qsopt_ex-2.5.10.3/lib:$LD_LIBRARY_PATH";
+      fi
+
+    - pip install tox 'python-coveralls==2.5.0'
+
 script: tox -v
+after_success: coveralls
 env:
-    - TOXENV=py27-nosolver
-    - TOXENV=py34-nosolver
+    - TOXENV=py27-nosolver,py34-nosolver,coverage
+    - TOXENV=py27-qsoptex,py34-qsoptex,coverage
     - TOXENV=docs
     - TOXENV=flake
 

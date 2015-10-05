@@ -23,7 +23,6 @@ import logging
 from itertools import repeat, count
 import numbers
 
-from six import iteritems
 from six.moves import zip
 import cplex as cp
 
@@ -75,8 +74,10 @@ class Problem(BaseProblem):
         self._cp.set_warning_stream(warning_stream)
         self._cp.set_error_stream(error_stream)
 
-        # Increase feasibility tolerance from default
+        # Set feasibility tolerance. By default, we decrease it to 1e-9.
         feasibility_tolerance = kwargs.get('feasibility_tolerance', 1e-9)
+        logger.info('Setting feasibility tolerance to {!r}'.format(
+            feasibility_tolerance))
         self._cp.parameters.simplex.tolerances.feasibility.set(
             feasibility_tolerance)
 
@@ -90,6 +91,9 @@ class Problem(BaseProblem):
         self._variables = {}
         self._var_names = (i for i in count(0))
         self._constr_names = ('c'+str(i) for i in count(1))
+
+        # Keep track of the objective variables that are non-zero
+        self._non_zero_objective = set()
 
         self._result = None
 
@@ -196,9 +200,23 @@ class Problem(BaseProblem):
             # represented as a number
             expression = Expression()
 
+        # Reset previous objective. We have to build the set of variables to
+        # update so that we can avoid calling set_linear if the set is empty.
+        # This is due to set_linear failing if the input is an empty
+        # iterable.
+        reset_vars = set(
+            self._variables[var] for var in self._non_zero_objective
+            if var not in expression)
+        if len(reset_vars) > 0:
+            self._cp.objective.set_linear((var, 0) for var in reset_vars)
+
+        # Set actual objective values
         self._cp.objective.set_linear(
-            (lp_name, expression.value(var))
-            for var, lp_name in iteritems(self._variables))
+            (self._variables[var], value)
+            for var, value in expression.values())
+
+        # Keep track of new non-zeros
+        self._non_zero_objective = set(expression.variables())
 
     def set_objective_sense(self, sense):
         """Set type of problem (maximize or minimize)"""
@@ -214,6 +232,10 @@ class Problem(BaseProblem):
         if sense is not None:
             self.set_objective_sense(sense)
         self._cp.solve()
+
+        if (self._cp.solution.get_status() ==
+                self._cp.solution.status.abort_user):
+            raise KeyboardInterrupt()
 
         self._result = Result(self)
         return self._result

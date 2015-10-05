@@ -195,6 +195,8 @@ def list_solvers():
     solvers = sorted(solvers, key=lambda s: priority.get(s['name'], 0),
                      reverse=True)
 
+    status = 0
+
     if len(solvers) > 0:
         print('Prioritized solvers:')
         for solver in solvers:
@@ -206,6 +208,7 @@ def list_solvers():
             print('Class: {}'.format(solver['class']))
             print()
     else:
+        status = 1
         print('No solvers fullfil the requirements!')
         print()
 
@@ -219,3 +222,6 @@ def list_solvers():
 
         for solver, error in iteritems(_solver_import_errors):
             print('{}: Error loading solver: {}'.format(solver, error))
+
+    if status != 0:
+        parser.exit(status)

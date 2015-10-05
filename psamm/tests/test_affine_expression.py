@@ -316,6 +316,14 @@ class TestExpression(unittest.TestCase):
         e = Expression('x + 4200y')
         self.assertEqual(e, Expression({ Variable('x'): 1, Variable('y'): 4200 }))
 
+    def test_expression_to_str(self):
+        e = Expression({
+            Variable('x1'): -2,
+            Variable('pi'): 5,
+            Variable('x2'): -3
+        })
+        self.assertEqual(str(e), '5pi - 2x1 - 3x2')
+
 
 if __name__ == '__main__':
     unittest.main()

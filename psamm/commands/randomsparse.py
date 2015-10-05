@@ -16,6 +16,7 @@
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
+import time
 import random
 import logging
 
@@ -96,6 +97,8 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
 
         test_set = reactions - essential
 
+        start_time = time.time()
+
         while len(test_set) > 0:
             testing_reaction = random.sample(test_set, 1)[0]
             test_set.remove(testing_reaction)
@@ -127,6 +130,9 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             else:
                 deleted.add(testing_reaction)
                 logger.info('Reaction {} was deleted'.format(testing_reaction))
+
+        logger.info('Solving took {:.2f} seconds'.format(
+            time.time() - start_time))
 
         for reaction_id in sorted(reactions):
             value = 0 if reaction_id in deleted else 1

@@ -289,7 +289,7 @@ def parse_compound_table_file(path, f):
             raise ParseError('Expected `id` column in table')
 
         props = {key: value for key, value in iteritems(row) if value != ''}
-        mark = FileMark(context, i, None)
+        mark = FileMark(context, i + 2, None)
         yield CompoundEntry(row['id'], props, mark)
 
 
@@ -440,7 +440,7 @@ def parse_reaction_table_file(path, f):
         if 'equation' in props:
             props['equation'] = modelseed.parse_reaction(props['equation'])
 
-        mark = FileMark(context, lineno, 0)
+        mark = FileMark(context, lineno + 2, 0)
         yield ReactionEntry(row['id'], props, mark)
 
 
