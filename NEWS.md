@@ -1,4 +1,35 @@
 
+v0.14 (2015-10-05)
+------------------
+
+- Split the `masscheck` command into two parts. The compound check is run be
+  default or when `--type compound` is specified. The reaction check is run
+  when `--type reaction` is specified. This also changes the output of the
+  compound list to be TSV formatted.
+- Change the default method of finding flux inconsistent reactions to simply
+  use FVA without constraints to determine whether reactions can take a
+  non-zero flux. This requires more LP optimizations to run but it turns out
+  to be faster in practice. To enable the old behavior where the number of LP
+  problems to solve is reduced, use `--reduce-lp`.
+- Disable tFBA by default in the FBA performed as part of running
+  `fastgapfill`.
+- Return non-zero from the `psamm-list-lpsolvers` when no solver is available.
+- Report time to solve most commands excluding the time it takes to load the
+  model.
+- Improve stability when using thermodynamic constraints. This means that
+  commands using thermodynamic constraints that previously failed with some
+  models will now work.
+- Speed up changing the objective when using Cplex. This significantly speeds
+  up commands that reuse LP problem instances with different objectives (e.g.
+  `fva` and `fluxcheck`).
+- Speed up fastcore algorithms (i.e. `fluxcheck --fastcore` and `fastgapfill`)
+  by reusing the LP problem instances.
+- Propagate user aborts from Cplex to Python by raising `KeyboardInterrupt`
+  when a user abort is detected. This fixes a problem where a user abort would
+  result in a `FluxBalanceError`.
+- Improve unit tests of commands, the `native` datasource module,
+  `fluxanalysis`, and various other parts of the software.
+
 v0.13 (2015-09-16)
 ------------------
 
