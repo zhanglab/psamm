@@ -31,6 +31,13 @@ class ChargeBalanceCommand(Command):
     Reactions that are not balanced will be printed out.
     """
 
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            '--exclude', metavar='reaction', action='append', type=str,
+            default=[], help='Exclude reaction from balance check')
+        super(ChargeBalanceCommand, cls).init_parser(parser)
+
     def run(self):
         """Run charge balance command"""
 
@@ -49,6 +56,9 @@ class ChargeBalanceCommand(Command):
             if self._mm.is_exchange(reaction_id):
                 exchange.add(reaction_id)
 
+        # Create a set of excluded reactions
+        exclude = set(self._args.exclude)
+
         def reaction_charges(reaction_id):
             for compound, value in self._mm.get_reaction_values(reaction_id):
                 charge = compound_charge.get(compound.name, float('nan'))
@@ -62,6 +72,10 @@ class ChargeBalanceCommand(Command):
                 continue
 
             count += 1
+
+            if reaction in exclude:
+                continue
+
             charge = sum(reaction_charges(reaction))
             if math.isnan(charge):
                 logger.debug('Not checking reaction {};'
@@ -77,3 +91,5 @@ class ChargeBalanceCommand(Command):
         logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))
         logger.info('Unchecked reactions due to missing charge: {}/{}'.format(
             unchecked, count))
+        logger.info('Reactions excluded from check: {}/{}'.format(
+            len(exclude), count))
