@@ -32,6 +32,13 @@ class FormulaBalanceCommand(Command):
     Reactions that are not balanced will be printed out.
     """
 
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            '--exclude', metavar='reaction', action='append', type=str,
+            default=[], help='Exclude reaction from balance check')
+        super(FormulaBalanceCommand, cls).init_parser(parser)
+
     def run(self):
         """Run formula balance command"""
 
@@ -56,6 +63,9 @@ class FormulaBalanceCommand(Command):
             if self._mm.is_exchange(reaction_id):
                 exchange.add(reaction_id)
 
+        # Exclude reactions from check
+        exclude = set(self._args.exclude)
+
         def multiply_formula(compound_list):
             for compound, count in compound_list:
                 yield count * compound_formula.get(compound.name, Formula())
@@ -69,6 +79,9 @@ class FormulaBalanceCommand(Command):
 
             count += 1
             rx = self._mm.get_reaction(reaction)
+
+            if reaction in exclude:
+                continue
 
             # Skip reaction if any compounds have undefined formula
             for compound, _ in rx.compounds:
@@ -93,3 +106,5 @@ class FormulaBalanceCommand(Command):
         logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))
         logger.info('Unchecked reactions due to missing formula: {}/{}'.format(
             unchecked, count))
+        logger.info('Reactions excluded from check: {}/{}'.format(
+            len(exclude), count))
