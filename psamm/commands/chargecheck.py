@@ -18,7 +18,7 @@
 import math
 import logging
 
-from ..command import Command
+from ..command import Command, FilePrefixAppendAction
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +34,8 @@ class ChargeBalanceCommand(Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--exclude', metavar='reaction', action='append', type=str,
-            default=[], help='Exclude reaction from balance check')
+            '--exclude', metavar='reaction', action=FilePrefixAppendAction,
+            type=str, default=[], help='Exclude reaction from balance check')
         super(ChargeBalanceCommand, cls).init_parser(parser)
 
     def run(self):
