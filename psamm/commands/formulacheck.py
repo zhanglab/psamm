@@ -18,7 +18,7 @@
 import operator
 import logging
 
-from ..command import Command
+from ..command import Command, FilePrefixAppendAction
 from ..formula import Formula
 
 logger = logging.getLogger(__name__)
@@ -35,8 +35,8 @@ class FormulaBalanceCommand(Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--exclude', metavar='reaction', action='append', type=str,
-            default=[], help='Exclude reaction from balance check')
+            '--exclude', metavar='reaction', action=FilePrefixAppendAction,
+            type=str, default=[], help='Exclude reaction from balance check')
         super(FormulaBalanceCommand, cls).init_parser(parser)
 
     def run(self):
@@ -63,7 +63,7 @@ class FormulaBalanceCommand(Command):
             if self._mm.is_exchange(reaction_id):
                 exchange.add(reaction_id)
 
-        # Exclude reactions from check
+        # Create a set of excluded reactions
         exclude = set(self._args.exclude)
 
         def multiply_formula(compound_list):
