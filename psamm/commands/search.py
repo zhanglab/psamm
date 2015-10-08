@@ -19,7 +19,7 @@ from __future__ import print_function
 
 import re
 
-from ..command import Command
+from ..command import Command, FilePrefixAppendAction
 from ..reaction import Compound
 
 
@@ -36,22 +36,25 @@ class SearchCommand(Command):
             'compound', help='Search in compounds')
         parser_compound.set_defaults(which='compound')
         parser_compound.add_argument(
-            '--id', '-i', dest='id', metavar='id', type=str,
-            default=[], action='append', help='Compound ID')
+            '--id', '-i', dest='id', metavar='id',
+            action=FilePrefixAppendAction, type=str, default=[],
+            help='Compound ID')
         parser_compound.add_argument(
-            '--name', '-n', dest='name', metavar='name', type=str,
-            default=[], action='append', help='Name of compound')
+            '--name', '-n', dest='name', metavar='name',
+            action=FilePrefixAppendAction, type=str, default=[],
+            help='Name of compound')
 
         # Reaction subcommand
         parser_reaction = subparsers.add_parser(
             'reaction', help='Search in reactions')
         parser_reaction.set_defaults(which='reaction')
         parser_reaction.add_argument(
-            '--id', '-i', dest='id', metavar='id', type=str,
-            default=[], action='append', help='Reaction ID')
+            '--id', '-i', dest='id', metavar='id',
+            action=FilePrefixAppendAction, type=str, default=[],
+            help='Reaction ID')
         parser_reaction.add_argument(
-            '--compound', '-c', dest='compound', metavar='compound', type=str,
-            default=[], action='append',
+            '--compound', '-c', dest='compound', metavar='compound',
+            action=FilePrefixAppendAction, type=str, default=[],
             help='Comma-separated list of compound IDs')
 
     def run(self):
