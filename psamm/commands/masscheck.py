@@ -20,7 +20,8 @@ import logging
 
 from six import iteritems
 
-from ..command import Command, CommandError, SolverCommandMixin
+from ..command import (Command, CommandError, SolverCommandMixin,
+                       FilePrefixAppendAction)
 from .. import massconsistency
 
 logger = logging.getLogger(__name__)
@@ -32,14 +33,16 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--exclude', metavar='reaction', action='append', type=str,
-            default=[], help='Exclude reaction from mass consistency')
+            '--exclude', metavar='reaction', action=FilePrefixAppendAction,
+            type=str, default=[],
+            help='Exclude reaction from mass consistency')
         parser.add_argument(
             '--epsilon', type=float, help='Mass threshold',
             default=1e-5)
         parser.add_argument(
-            '--checked', metavar='reaction', action='append', type=str,
-            default=[], help='Mark reaction as already checked (no residual)')
+            '--checked', metavar='reaction', action=FilePrefixAppendAction,
+            type=str, default=[],
+            help='Mark reaction as already checked (no residual)')
         parser.add_argument(
             '--type', choices=['compound', 'reaction'],
             default='compound', help='Type of check to perform')
@@ -64,7 +67,7 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
             if self._mm.is_exchange(reaction_id):
                 exchange.add(reaction_id)
 
-        # Other reactions to exclude from consistency check
+        # Create a set of excluded reactions
         exclude = set(self._args.exclude)
 
         # Add biomass reaction to be excluded
@@ -112,7 +115,7 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
     def _check_reactions(self, known_inconsistent, zeromass, solver):
         logger.info('Checking stoichiometric consistency of reactions...')
 
-        # Create set of checked reactions
+        # Create a set of checked reactions
         checked = set(self._args.checked)
 
         epsilon = self._args.epsilon
