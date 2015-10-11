@@ -191,6 +191,10 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command([
             '--model', self._model_dir, 'masscheck', '--type', 'reaction'], {})
 
+    def test_run_masscheck_loops(self):
+        self.run_solver_command([
+            '--model', self._model_dir, 'masscheck', '--type=loop'], {})
+
     def test_run_randomsparse(self):
         self.run_solver_command([
             '--model', self._model_dir, 'randomsparse', '50%'], {})
