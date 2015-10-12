@@ -131,6 +131,13 @@ class TestCommandMain(unittest.TestCase):
         with redirected_stdout():
             main(args=['--model', self._model_dir, 'chargecheck'])
 
+    def test_run_excelexport(self):
+        dest_path = os.path.join(self._model_dir, 'model.xlsx')
+        with redirected_stdout():
+            main(args=['--model', self._model_dir, 'excelexport', dest_path])
+
+        self.assertTrue(os.path.isfile(dest_path))
+
     def test_run_fastgapfill(self):
         self.run_solver_command([
             '--model', self._model_dir, 'fastgapfill'], {})
