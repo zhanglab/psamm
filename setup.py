@@ -61,7 +61,8 @@ setup(
             'randomsparse = psamm.commands.randomsparse:RandomSparseNetworkCommand',
             'robustness = psamm.commands.robustness:RobustnessCommand',
             'sbmlexport = psamm.commands.sbmlexport:SBMLExport',
-            'search = psamm.commands.search:SearchCommand'
+            'search = psamm.commands.search:SearchCommand',
+            'tableexport = psamm.commands.tableexport:ExportTableCommand',
         ]
     },
 
