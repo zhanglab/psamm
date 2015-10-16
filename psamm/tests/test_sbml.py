@@ -129,6 +129,11 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
         self.assertEqual(notes_tags[0].tag, '{http://www.w3.org/1999/xhtml}p')
         self.assertEqual(notes_tags[0].text, 'Glucose 6-phosphatase')
 
+    def test_objective_not_present(self):
+        objectives = list(self.reader.objectives)
+        self.assertEqual(len(objectives), 0)
+        self.assertIsNone(self.reader.get_active_objective())
+
 
 class TestSBMLDatabaseL2V5(unittest.TestCase):
     """Test parsing of a simple level 2 version 5 SBML file"""
@@ -234,6 +239,11 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         self.assertEqual(notes_tags[0].tag, '{http://www.w3.org/1999/xhtml}p')
         self.assertEqual(notes_tags[0].text, 'Glucose 6-phosphatase')
 
+    def test_objective_not_present(self):
+        objectives = list(self.reader.objectives)
+        self.assertEqual(len(objectives), 0)
+        self.assertIsNone(self.reader.get_active_objective())
+
 
 class TestSBMLDatabaseL3V1(unittest.TestCase):
     """Test parsing of a simple level 3 version 1 SBML file"""
@@ -338,6 +348,11 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         self.assertEqual(len(notes_tags), 1)
         self.assertEqual(notes_tags[0].tag, '{http://www.w3.org/1999/xhtml}p')
         self.assertEqual(notes_tags[0].text, 'Glucose 6-phosphatase')
+
+    def test_objective_not_present(self):
+        objectives = list(self.reader.objectives)
+        self.assertEqual(len(objectives), 0)
+        self.assertIsNone(self.reader.get_active_objective())
 
 
 class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
@@ -449,6 +464,20 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
                                      Decimal('0.56'))],
                                    [(Compound('M_Biomass', 'C_c'), 1)])
         self.assertEqual(reaction.equation, actual_equation)
+
+    def test_objective_exists(self):
+        objectives = {entry.id: entry for entry in self.reader.objectives}
+        self.assertEqual(len(objectives), 1)
+
+        objective = objectives['obj1']
+        self.assertEqual(objective.name, 'Objective 1')
+        self.assertEqual(objective.type, 'maximize')
+        self.assertEqual(dict(objective.reactions), {'R_Biomass': 1})
+
+    def test_active_objective(self):
+        objectives = {entry.id: entry for entry in self.reader.objectives}
+        self.assertEqual(self.reader.get_active_objective(),
+                         objectives['obj1'])
 
 
 if __name__ == '__main__':

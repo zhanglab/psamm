@@ -313,6 +313,56 @@ class ReactionEntry(_SBMLEntry):
         return properties
 
 
+class ObjectiveEntry(object):
+    """Flux objective defined with FBC"""
+
+    def __init__(self, reader, namespace, root):
+        self._reader = reader
+        self._root = root
+        self._namespace = namespace
+
+        self._id = self._root.get(_tag('id', self._namespace))
+        if self._id is None:
+            raise ParseError('Objective has no "id" attribute')
+
+        self._name = self._root.get(_tag('name', self._namespace))
+        self._type = self._root.get(_tag('type', self._namespace))
+
+        if self._type is None:
+            raise ParseError('Missing "type" attribute on objective: {}'.formt(
+                self.id))
+
+        # Find flux objectives
+        self._reactions = {}
+        for fo in self._root.iterfind('./{}/{}'.format(
+                _tag('listOfFluxObjectives', self._namespace),
+                _tag('fluxObjective', self._namespace))):
+            reaction = fo.get(_tag('reaction', self._namespace))
+            coefficient = float(fo.get(_tag('coefficient', self._namespace)))
+            if reaction is None or coefficient is None:
+                raise ParseError(
+                    'Missing attributes on flux objective: {}'.format(self.id))
+
+            if coefficient != 0:
+                self._reactions[reaction] = coefficient
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def type(self):
+        return self._type
+
+    @property
+    def reactions(self):
+        return iteritems(self._reactions)
+
+
 class SBMLReader(object):
     """Reader of SBML model files
 
@@ -394,6 +444,29 @@ class SBMLReader(object):
             entry = ReactionEntry(self, reaction)
             self._model_reactions[entry.id] = entry
 
+        # Objectives
+        self._model_objectives = {}
+        self._active_objective = None
+        if self._level == 3:
+            objectives = None
+            for fbc_ns in (FBC_V2, FBC_V1):
+                objectives = self._model.find(_tag('listOfObjectives', fbc_ns))
+                if objectives is not None:
+                    break
+
+            if objectives is not None:
+                for objective in objectives.iterfind(
+                        _tag('objective', fbc_ns)):
+                    entry = ObjectiveEntry(self, fbc_ns, objective)
+                    self._model_objectives[entry.id] = entry
+
+                active = objectives.get(_tag('activeObjective', fbc_ns))
+                if active is None or active not in self._model_objectives:
+                    raise ParseError('Active objective is invalid: {}'.format(
+                        active))
+
+                self._active_objective = self._model_objectives[active]
+
     def get_reaction(self, reaction_id):
         """Return :class:`.ReactionEntry` corresponding to reaction_id"""
         return self._model_reactions[reaction_id]
@@ -401,6 +474,13 @@ class SBMLReader(object):
     def get_species(self, species_id):
         """Return :class:`.SpeciesEntry` corresponding to species_id"""
         return self._model_species[species_id]
+
+    def get_objective(self, objective_id):
+        """Return :class:`.ObjectiveEntry` corresponding to objective_id"""
+        return self._model_objectives[objective_id]
+
+    def get_active_objective(self):
+        return self._active_objective
 
     @property
     def reactions(self):
@@ -415,6 +495,11 @@ class SBMLReader(object):
         """
         return (c for c in itervalues(self._model_species)
                 if not self._ignore_boundary or not c.boundary)
+
+    @property
+    def objectives(self):
+        """Iterator over :class:`.ObjectiveEntry`"""
+        return itervalues(self._model_objectives)
 
     @property
     def id(self):
