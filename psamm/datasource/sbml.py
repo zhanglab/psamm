@@ -212,9 +212,41 @@ class ReactionEntry(_SBMLEntry):
                 compound = Compound(species_id, compartment=species_comp)
                 side.append((compound, value))
 
-        # Add reaction to database
         direction = Reaction.Bidir if self._rev else Reaction.Right
         self._equation = Reaction(direction, left, right)
+
+        # Parse flux bounds of reaction
+        self._lower_flux = None
+        self._upper_flux = None
+
+        if reader._level == 3:
+            lower = self._root.get(_tag('lowerFluxBound', FBC_V2))
+            if lower is not None:
+                if lower not in reader._model_constants:
+                    raise ParseError(
+                        'Lower flux parameter of {} is not defined in'
+                        ' model parameter constants'.format(self.id))
+                self._lower_flux = reader._model_constants[lower]
+
+            upper = self._root.get(_tag('upperFluxBound', FBC_V2))
+            if upper is not None:
+                if upper not in reader._model_constants:
+                    raise ParseError(
+                        'Upper flux parameter of {} is not defined in'
+                        ' model parameter constants'.format(self.id))
+                self._upper_flux = reader._model_constants[upper]
+
+            if (lower is None and upper is None and
+                    self.id in reader._reaction_flux_bounds):
+                # Parse bounds from listOfFluxBounds in FBCv1
+                for bound in reader._reaction_flux_bounds[self.id]:
+                    if bound.operation == 'equal':
+                        self._lower_flux = bound.value
+                        self._upper_flux = bound.value
+                    elif bound.operation == 'lessEqual':
+                        self._upper_flux = bound.value
+                    elif bound.operation == 'greaterEqual':
+                        self._lower_flux = bound.value
 
     def _parse_species_references(self, name):
         """Yield species id and parsed value for a speciesReference list"""
@@ -309,6 +341,10 @@ class ReactionEntry(_SBMLEntry):
                       'equation': self._equation}
         if 'name' in self._root.attrib:
             properties['name'] = self._root.get('name')
+        if self._lower_flux is not None:
+            properties['lower_flux'] = self._lower_flux
+        if self._upper_flux is not None:
+            properties['upper_flux'] = self._upper_flux
 
         return properties
 

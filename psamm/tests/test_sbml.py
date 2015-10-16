@@ -472,6 +472,9 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
                                     (Compound('M_Glucose_6_P', 'C_c'), 2)])
         self.assertEqual(reaction.equation, actual_equation)
 
+        self.assertEqual(reaction.properties['lower_flux'], -10)
+        self.assertEqual(reaction.properties['upper_flux'], 1000)
+
     def test_biomass_reaction_exists(self):
         reaction = self.reader.get_reaction('R_Biomass')
         self.assertFalse(reaction.reversible)
@@ -482,6 +485,9 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
                                      Decimal('0.56'))],
                                    [(Compound('M_Biomass', 'C_c'), 1)])
         self.assertEqual(reaction.equation, actual_equation)
+
+        self.assertEqual(reaction.properties['lower_flux'], 0)
+        self.assertEqual(reaction.properties['upper_flux'], 1000)
 
     def test_objective_exists(self):
         objectives = {entry.id: entry for entry in self.reader.objectives}
