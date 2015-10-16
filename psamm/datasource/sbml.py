@@ -47,6 +47,10 @@ SBML_NS_L3_V1_CORE = 'http://www.sbml.org/sbml/level3/version1/core'
 
 MATHML_NS = 'http://www.w3.org/1998/Math/MathML'
 
+# FBC namespaces
+FBC_V1 = 'http://www.sbml.org/sbml/level3/version1/fbc/version1'
+FBC_V2 = 'http://www.sbml.org/sbml/level3/version1/fbc/version2'
+
 
 def _tag(tag, namespace=None):
     """Prepend namespace to tag name"""
@@ -118,12 +122,41 @@ class SpeciesEntry(_SBMLEntry):
         """Species compartment"""
         return self._comp
 
+    def _parse_charge_string(self, s):
+        try:
+            return int(s)
+        except ValueError:
+            if self._reader._strict:
+                raise ParseError('Invalid charge for species {}'.format(
+                    self.id))
+            else:
+                return None
+
     @property
     def charge(self):
         """Species charge"""
-        charge = self._root.get('charge')
-        if charge is not None and charge != '':
-            return int(charge)
+        if self._reader._level == 3:
+            # Look for FBC charge
+            for ns in (FBC_V2, FBC_V1):
+                charge = self._root.get(_tag('charge', ns))
+                if charge is not None:
+                    return self._parse_charge_string(charge)
+        else:
+            charge = self._root.get('charge')
+            if charge is not None:
+                return self._parse_charge_string(charge)
+
+        return None
+
+    @property
+    def formula(self):
+        """Species formula"""
+        if self._reader._level == 3:
+            for ns in (FBC_V2, FBC_V1):
+                formula = self._root.get(_tag('chemicalFormula', ns))
+                if formula is not None:
+                    return formula
+
         return None
 
     @property
