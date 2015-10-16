@@ -481,6 +481,16 @@ class SBMLReader(object):
 
         self._model = root.find(self._sbml_tag('model'))
 
+        # Parameters
+        self._model_constants = {}
+        params = self._model.find(self._sbml_tag('listOfParameters'))
+        if params is not None:
+            for param in params.iterfind(self._sbml_tag('parameter')):
+                if param.get('constant') == 'true':
+                    param_id = param.get('id')
+                    value = float(param.get('value'))
+                    self._model_constants[param_id] = value
+
         # Flux bounds
         self._flux_bounds = []
         self._reaction_flux_bounds = {}
