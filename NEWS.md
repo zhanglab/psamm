@@ -1,4 +1,20 @@
 
+v0.15 (2015-10-16)
+------------------
+
+- Add support for reading flux bounds and objectives from SBML files that are
+  using the FBC extension.
+- Add a tutorial to the documentation at <https://psamm.rtfd.org/>.
+- Add command `tableexport` to export various parts of the model as a TSV file.
+- Add command `excelexport` to export all parts of the model as an Excel file.
+- Allow various parameters that take a reaction as an argument to also be able
+  to take a list of reactions from a file, using the `@` prefix. For example,
+  given a file `r.txt` with each reaction ID on a separate line, the reactions
+  can be excluded from the `masscheck` command by specifying
+  `--exclude @r.txt`.
+- Allow reactions to be excluded from the `formulacheck` and `chargecheck`
+  commands.
+
 v0.14 (2015-10-05)
 ------------------
 
