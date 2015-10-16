@@ -522,5 +522,145 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
             ('lessEqual', 1000)})
 
 
+class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
+    """Test parsing of a level 3 version 1 SBML file with FBC version 2"""
+
+    def setUp(self):
+        s = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
+<sbml xmlns="http://www.sbml.org/sbml/level3/version1/core"
+      xmlns:fbc="http://www.sbml.org/sbml/level3/version1/fbc/version2"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      level="3" version="1"
+      fbc:required="false">
+ <model id="test_model" name="Test model">
+  <listOfCompartments>
+   <compartment id="C_c" name="cell" constant="true"/>
+  </listOfCompartments>
+  <listOfSpecies>
+   <species id="M_Glucose" name="Glucose" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="C6H12O6"/>
+   <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="C6H11O9P"/>
+   <species id="M_H2O" name="H2O" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="H2O"/>
+   <species id="M_Phosphate" name="Phosphate" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="HO4P"/>
+   <species id="M_Biomass" name="Biomass" compartment="C_c" constant="false" boundaryCondition="true" hasOnlySubstanceUnits="false"/>
+  </listOfSpecies>
+  <listOfParameters>
+   <parameter constant="true" id="P_lower_G6Pase" value="-10"/>
+   <parameter constant="true" id="P_lower_zero" value="0"/>
+   <parameter constant="true" id="P_upper_default" value="1000"/>
+  </listOfParameters>
+  <listOfReactions>
+   <reaction id="R_G6Pase" reversible="true" fast="false" fbc:lowerFluxBound="P_lower_G6Pase" fbc:upperFluxBound="P_upper_default">
+    <listOfReactants>
+     <speciesReference species="M_Glucose" stoichiometry="2" constant="true"/>
+     <speciesReference species="M_Phosphate" stoichiometry="2" constant="true"/>
+    </listOfReactants>
+    <listOfProducts>
+     <speciesReference species="M_H2O" stoichiometry="2" constant="true"/>
+     <speciesReference species="M_Glucose_6_P" stoichiometry="2" constant="true"/>
+    </listOfProducts>
+   </reaction>
+   <reaction id="R_Biomass" reversible="false" fast="false" fbc:lowerFluxBound="P_lower_zero" fbc:upperFluxBound="P_upper_default">
+    <listOfReactants>
+     <speciesReference species="M_Glucose_6_P" stoichiometry="0.56" constant="true"/>
+    </listOfReactants>
+    <listOfProducts>
+     <speciesReference species="M_Biomass" stoichiometry="1" constant="true"/>
+    </listOfProducts>
+   </reaction>
+  </listOfReactions>
+  <fbc:listOfObjectives fbc:activeObjective="obj1">
+   <fbc:objective fbc:id="obj1" fbc:name="Objective 1" fbc:type="maximize">
+    <fbc:listOfFluxObjectives>
+     <fbc:fluxObjective fbc:reaction="R_Biomass" fbc:coefficient="1"/>
+    </fbc:listOfFluxObjectives>
+   </fbc:objective>
+  </fbc:listOfObjectives>
+ </model>
+</sbml>''')
+        self.reader = sbml.SBMLReader(s)
+
+    def test_model_name(self):
+        self.assertEqual(self.reader.id, 'test_model')
+        self.assertEqual(self.reader.name, 'Test model')
+
+    def test_compounds_exist(self):
+        species = {entry.id: entry for entry in self.reader.species}
+        self.assertEqual(len(species), 5)
+
+        self.assertEqual(species['M_Glucose'].id, 'M_Glucose')
+        self.assertEqual(species['M_Glucose'].name, 'Glucose')
+        self.assertEqual(species['M_Glucose'].compartment, 'C_c')
+        self.assertFalse(species['M_Glucose'].boundary)
+        self.assertEqual(species['M_Glucose'].formula, 'C6H12O6')
+        self.assertEqual(species['M_Glucose'].charge, 0)
+
+        self.assertEqual(species['M_Glucose_6_P'].id, 'M_Glucose_6_P')
+        self.assertEqual(species['M_Glucose_6_P'].name, 'Glucose-6-P')
+        self.assertEqual(species['M_Glucose_6_P'].compartment, 'C_c')
+        self.assertFalse(species['M_Glucose_6_P'].boundary)
+        self.assertEqual(species['M_Glucose_6_P'].formula, 'C6H11O9P')
+        self.assertEqual(species['M_Glucose_6_P'].charge, -2)
+
+        self.assertEqual(species['M_H2O'].id, 'M_H2O')
+        self.assertEqual(species['M_H2O'].name, 'H2O')
+        self.assertEqual(species['M_H2O'].compartment, 'C_c')
+        self.assertFalse(species['M_H2O'].boundary)
+        self.assertEqual(species['M_H2O'].formula, 'H2O')
+        self.assertEqual(species['M_H2O'].charge, 0)
+
+        self.assertFalse(species['M_Phosphate'].boundary)
+        self.assertTrue(species['M_Biomass'].boundary)
+
+        self.assertIsNone(species['M_Biomass'].formula)
+        self.assertIsNone(species['M_Biomass'].charge)
+
+    def test_g6pase_reaction_exists(self):
+        reaction = self.reader.get_reaction('R_G6Pase')
+        self.assertTrue(reaction.reversible)
+
+        # Compare equation of reaction
+        actual_equation = Reaction(Reaction.Bidir,
+                                   [(Compound('M_Glucose', 'C_c'), 2),
+                                    (Compound('M_Phosphate', 'C_c'), 2)],
+                                   [(Compound('M_H2O', 'C_c'), 2),
+                                    (Compound('M_Glucose_6_P', 'C_c'), 2)])
+        self.assertEqual(reaction.equation, actual_equation)
+
+        self.assertEqual(reaction.properties['lower_flux'], -10)
+        self.assertEqual(reaction.properties['upper_flux'], 1000)
+
+    def test_biomass_reaction_exists(self):
+        reaction = self.reader.get_reaction('R_Biomass')
+        self.assertFalse(reaction.reversible)
+
+        # Compare equation of reaction
+        actual_equation = Reaction(Reaction.Right,
+                                   [(Compound('M_Glucose_6_P', 'C_c'),
+                                     Decimal('0.56'))],
+                                   [(Compound('M_Biomass', 'C_c'), 1)])
+        self.assertEqual(reaction.equation, actual_equation)
+
+        self.assertEqual(reaction.properties['lower_flux'], 0)
+        self.assertEqual(reaction.properties['upper_flux'], 1000)
+
+    def test_objective_exists(self):
+        objectives = {entry.id: entry for entry in self.reader.objectives}
+        self.assertEqual(len(objectives), 1)
+
+        objective = objectives['obj1']
+        self.assertEqual(objective.name, 'Objective 1')
+        self.assertEqual(objective.type, 'maximize')
+        self.assertEqual(dict(objective.reactions), {'R_Biomass': 1})
+
+    def test_active_objective(self):
+        objectives = {entry.id: entry for entry in self.reader.objectives}
+        self.assertEqual(self.reader.get_active_objective(),
+                         objectives['obj1'])
+
+    def test_flux_bounds_not_present(self):
+        flux_bounds = list(self.reader.flux_bounds)
+        self.assertEqual(len(flux_bounds), 0)
+
+
 if __name__ == '__main__':
     unittest.main()
