@@ -134,6 +134,10 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
         self.assertEqual(len(objectives), 0)
         self.assertIsNone(self.reader.get_active_objective())
 
+    def test_flux_bounds_not_present(self):
+        flux_bounds = list(self.reader.flux_bounds)
+        self.assertEqual(len(flux_bounds), 0)
+
 
 class TestSBMLDatabaseL2V5(unittest.TestCase):
     """Test parsing of a simple level 2 version 5 SBML file"""
@@ -243,6 +247,10 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         objectives = list(self.reader.objectives)
         self.assertEqual(len(objectives), 0)
         self.assertIsNone(self.reader.get_active_objective())
+
+    def test_flux_bounds_not_present(self):
+        flux_bounds = list(self.reader.flux_bounds)
+        self.assertEqual(len(flux_bounds), 0)
 
 
 class TestSBMLDatabaseL3V1(unittest.TestCase):
@@ -354,6 +362,10 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         self.assertEqual(len(objectives), 0)
         self.assertIsNone(self.reader.get_active_objective())
 
+    def test_flux_bounds_not_present(self):
+        flux_bounds = list(self.reader.flux_bounds)
+        self.assertEqual(len(flux_bounds), 0)
+
 
 class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
     """Test parsing of a level 3 version 1 SBML file with FBC version 1"""
@@ -403,6 +415,12 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
     </fbc:listOfFluxObjectives>
    </fbc:objective>
   </fbc:listOfObjectives>
+  <fbc:listOfFluxBounds>
+   <fbc:fluxBound fbc:reaction="R_G6Pase" fbc:operation="greaterEqual" fbc:value="-10"/>
+   <fbc:fluxBound fbc:reaction="R_G6Pase" fbc:operation="lessEqual" fbc:value="1000"/>
+   <fbc:fluxBound fbc:reaction="R_Biomass" fbc:operation="greaterEqual" fbc:value="0"/>
+   <fbc:fluxBound fbc:reaction="R_Biomass" fbc:operation="lessEqual" fbc:value="1000"/>
+  </fbc:listOfFluxBounds>
  </model>
 </sbml>''')
         self.reader = sbml.SBMLReader(s)
@@ -478,6 +496,24 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
         objectives = {entry.id: entry for entry in self.reader.objectives}
         self.assertEqual(self.reader.get_active_objective(),
                          objectives['obj1'])
+
+    def test_flux_bounds_exists(self):
+        flux_bounds = list(self.reader.flux_bounds)
+        self.assertEqual(len(flux_bounds), 4)
+
+        biomass_bounds = set(
+            (b.operation, b.value) for b in flux_bounds
+            if b.reaction == 'R_Biomass')
+        self.assertEqual(biomass_bounds, {
+            ('greaterEqual', 0),
+            ('lessEqual', 1000)})
+
+        g6pase_bounds = set(
+            (b.operation, b.value) for b in flux_bounds
+            if b.reaction == 'R_G6Pase')
+        self.assertEqual(g6pase_bounds, {
+            ('greaterEqual', -10),
+            ('lessEqual', 1000)})
 
 
 if __name__ == '__main__':

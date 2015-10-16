@@ -363,6 +363,57 @@ class ObjectiveEntry(object):
         return iteritems(self._reactions)
 
 
+class FluxBoundEntry(object):
+    """Flux bound defined with FBC"""
+
+    def __init__(self, reader, namespace, root):
+        self._reader = reader
+        self._root = root
+        self._namespace = namespace
+
+        self._id = self._root.get(_tag('id', self._namespace))
+        self._name = self._root.get(_tag('name', self._namespace))
+
+        self._reaction = self._root.get(_tag('reaction', self._namespace))
+        if self._reaction is None:
+            raise ParseError('Flux bound is missing "reaction" attribute')
+
+        self._operation = self._root.get(_tag('operation', self._namespace))
+        if self._operation is None:
+            raise ParseError('Flux bound is missing "operation" attribute')
+        elif self._operation not in ('lessEqual', 'greaterEqual', 'equal'):
+            raise ParseError('Invalid flux bound operation: {}'.format(
+                self._operation))
+
+        value = self._root.get(_tag('value', self._namespace))
+        if value is None:
+            raise ParseError('Flux bound is missing "value" attribute')
+        try:
+            self._value = float(value)
+        except ValueError:
+            raise ParseError('Unable to parse flux bound value')
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def reaction(self):
+        return self._reaction
+
+    @property
+    def operation(self):
+        return self._operation
+
+    @property
+    def value(self):
+        return self._value
+
+
 class SBMLReader(object):
     """Reader of SBML model files
 
@@ -429,6 +480,23 @@ class SBMLReader(object):
             self._sbml_tag = partial(_tag, namespace=SBML_NS_L1)
 
         self._model = root.find(self._sbml_tag('model'))
+
+        # Flux bounds
+        self._flux_bounds = []
+        self._reaction_flux_bounds = {}
+        if self._level == 3:
+            # Only suported in FBC V1
+            flux_bounds = self._model.find(_tag('listOfFluxBounds', FBC_V1))
+            if flux_bounds is not None:
+                for flux_bound in flux_bounds.iterfind(
+                        _tag('fluxBound', FBC_V1)):
+                    entry = FluxBoundEntry(self, FBC_V1, flux_bound)
+                    self._flux_bounds.append(entry)
+
+                    # Create reference from reaction to flux bound
+                    entries = self._reaction_flux_bounds.setdefault(
+                        entry.reaction, [])
+                    entries.append(entry)
 
         # Species
         self._model_species = {}
@@ -500,6 +568,11 @@ class SBMLReader(object):
     def objectives(self):
         """Iterator over :class:`.ObjectiveEntry`"""
         return itervalues(self._model_objectives)
+
+    @property
+    def flux_bounds(self):
+        """Iterator over :class:`.FluxBoundEntry`"""
+        return iter(self._flux_bounds)
 
     @property
     def id(self):
