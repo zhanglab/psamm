@@ -147,6 +147,41 @@ class SolverCommandMixin(object):
         return generic.Solver(**solver_args)
 
 
+class FilePrefixAppendAction(argparse.Action):
+    """Action that appends one argument or multiple from a file.
+
+    If the argument starts with a character in ``fromfile_prefix_chars``
+    the remaining part of the argument is taken to be a file path. The file
+    is read and every line is appended. Otherwise, the argument is simply
+    appended.
+    """
+    def __init__(self, option_strings, dest, nargs=None,
+                 fromfile_prefix_chars='@', **kwargs):
+        if nargs is not None:
+            raise ValueError('nargs not allowed')
+        self.fromfile_prefix_chars = fromfile_prefix_chars
+        super(FilePrefixAppendAction, self).__init__(
+            option_strings, dest, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        arguments = getattr(namespace, self.dest)
+        if arguments is None:
+            arguments = []
+            setattr(namespace, self.dest, arguments)
+
+        if len(values) > 0 and values[0] in self.fromfile_prefix_chars:
+            filepath = values[1:]
+            try:
+                with open(filepath, 'r') as f:
+                    for line in f:
+                        arguments.append(line.strip())
+            except IOError:
+                parser.error('Unable to read arguments from file: {}'.format(
+                    filepath))
+        else:
+            arguments.append(values)
+
+
 def main(command_class=None, args=None):
     """Run the command line interface with the given :class:`Command`.
 

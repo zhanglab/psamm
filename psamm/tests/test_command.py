@@ -95,6 +95,9 @@ class TestCommandMain(unittest.TestCase):
                     compounds:
                       - id: A
                       - id: C
+                limits:
+                  - reaction: rxn_2
+                    upper: 100
                 ''')
 
     def tearDown(self):
@@ -127,6 +130,13 @@ class TestCommandMain(unittest.TestCase):
     def test_run_chargecheck(self):
         with redirected_stdout():
             main(args=['--model', self._model_dir, 'chargecheck'])
+
+    def test_run_excelexport(self):
+        dest_path = os.path.join(self._model_dir, 'model.xlsx')
+        with redirected_stdout():
+            main(args=['--model', self._model_dir, 'excelexport', dest_path])
+
+        self.assertTrue(os.path.isfile(dest_path))
 
     def test_run_fastgapfill(self):
         self.run_solver_command([
@@ -213,6 +223,62 @@ class TestCommandMain(unittest.TestCase):
             main(args=[
                 '--model', self._model_dir, 'search', 'reaction',
                 '--id', 'rxn_1'])
+
+    def test_run_tableexport_reactions(self):
+        with redirected_stdout() as f:
+            main(args=[
+                '--model', self._model_dir, 'tableexport', 'reactions'])
+
+        self.assertEqual(f.getvalue(), '\n'.join([
+            'id\tequation',
+            'rxn_1\t|A[e]| => |B[c]|',
+            'rxn_2\t|B[c]| => |C[e]|',
+            ''
+        ]))
+
+    def test_run_tableexport_compounds(self):
+        with redirected_stdout() as f:
+            main(args=[
+                '--model', self._model_dir, 'tableexport', 'compounds'])
+
+        self.assertEqual(f.getvalue(), '\n'.join([
+            'id', 'A', 'B', 'C', ''
+        ]))
+
+    def test_run_tableexport_medium(self):
+        with redirected_stdout() as f:
+            main(args=[
+                '--model', self._model_dir, 'tableexport', 'medium'])
+
+        self.assertEqual(f.getvalue(), '\n'.join([
+            'Compound ID\tReaction ID\tLower Limit\tUpper Limit',
+            'A[e]\tNone\t-1000\t1000',
+            'C[e]\tNone\t-1000\t1000',
+            ''
+        ]))
+
+    def test_run_tableexport_limits(self):
+        with redirected_stdout() as f:
+            main(args=[
+                '--model', self._model_dir, 'tableexport', 'limits'])
+
+        self.assertEqual(f.getvalue(), '\n'.join([
+            'Reaction ID\tLower Limits\tUpper Limits',
+            'rxn_2\tNone\t100',
+            ''
+        ]))
+
+    def test_run_tableexport_metadata(self):
+        with redirected_stdout() as f:
+            main(args=[
+                '--model', self._model_dir, 'tableexport', 'metadata'])
+
+        self.assertEqual(f.getvalue(), '\n'.join([
+            'Model Name: Test model',
+            'Biomass Reaction: rxn_1',
+            'Default Flux Limits: None',
+            ''
+        ]))
 
     def test_command_main(self):
         main(MockCommand, args=[

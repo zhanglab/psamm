@@ -24,7 +24,7 @@ with open('README.rst') as f:
 
 setup(
     name='psamm',
-    version='0.14',
+    version='0.15',
     description='PSAMM metabolic modeling tools',
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
@@ -50,6 +50,7 @@ setup(
         'psamm.commands': [
             'chargecheck = psamm.commands.chargecheck:ChargeBalanceCommand',
             'console = psamm.commands.console:ConsoleCommand',
+            'excelexport = psamm.commands.excelexport:ExcelExportCommand',
             'fastgapfill = psamm.commands.fastgapfill:FastGapFillCommand',
             'fba = psamm.commands.fba:FluxBalanceCommand',
             'fluxcheck = psamm.commands.fluxcheck:FluxConsistencyCommand',
@@ -61,7 +62,8 @@ setup(
             'randomsparse = psamm.commands.randomsparse:RandomSparseNetworkCommand',
             'robustness = psamm.commands.robustness:RobustnessCommand',
             'sbmlexport = psamm.commands.sbmlexport:SBMLExport',
-            'search = psamm.commands.search:SearchCommand'
+            'search = psamm.commands.search:SearchCommand',
+            'tableexport = psamm.commands.tableexport:ExportTableCommand',
         ]
     },
 

@@ -208,33 +208,46 @@ module. The mass consistency check can be run using
 This will first try to assign a positive mass to as many compounds as possible.
 This will indicate whether or not the model is consistent but in case it is
 *not* consistent it is often hard to figure out how to fix the model from this
-list of masses.
-
-Afterwards a different check is run where the residual mass is minimized for
-all reactions in the model. This will often give a better idea of which
-reactions need fixing. For example the following output might be shown::
+list of masses::
 
     [...]
-    INFO:psamm.command:Is consistent? False
-    INFO:psamm.command:Reaction consistency
+    INFO: Checking stoichiometric consistency of reactions...
+    C0223	1.0	Dihydrobiopterin
+    C9779	1.0	2-hydroxy-Octadec-ACP(n-C18:1)
+    EC0065	0.0	H+[e]
+    C0065	0.0	H+
+    INFO: Consistent compounds: 832/834
+
+In this case the `H+` compounds were inconsistent because they were not
+assigned a non-zero mass. A different check can be run where the residual mass
+is minimized for all reactions in the model. This will often give a better idea
+of which reactions need fixing::
+
+.. code-block:: shell
+
+    $ psamm-model masscheck --type=reaction
+
+The following output might be generated from this command::
+
+    [...]
+    INFO: Checking stoichiometric consistency of reactions...
     IR01815	7.0     (6) |H+[c]| + |Uroporphyrinogen III[c]| [...]
     IR00307	1.0     |H+[c]| + |L-Arginine[c]| => [...]
     IR00146	0.5     |UTP[c]| + |D-Glucose 1-phosphate[c]| => [...]
+    [...]
+    INFO: Consistent reactions: 946/959
 
-The first part of the output (not shown above) is the mass assigment for every
-compound. This can be used to identify the problematic compounds since those
-will have a mass assignment of zero.
-
-The next part is the list of reactions and reaction mass residuals. In the
-example above the three reactions that are shown have been assigned a non-zero
-residual. This means that there is an issue either with this reaction itself or
-a closely related one. In this example the first two reactions were missing a
-number of `H+` compounds for the reaction to balance.
+This is a list of reactions with non-zero residuals and their residual values.
+In the example above the three reactions that are shown have been assigned a
+non-zero residual (7, 1 and 0.5, respectively). This means that there is an
+issue either with this reaction itself or a closely related one. In this
+example the first two reactions were missing a number of `H+` compounds for
+the reaction to balance.
 
 Now the mass check can be run again marking the reactions above as checked::
 
-    $ psamm-model masscheck --checked IR01815 --checked IR00307 \
-        --checked IR00146
+    $ psamm-model masscheck --type=reaction --checked IR01815 \
+        --checked IR00307 --checked IR00146
     [...]
     IR00149 0.5     |ATP[c]| + |D-Glucose[c]| => [...]
 
@@ -242,12 +255,14 @@ The output has now changed and the remaining residual has been shifted to
 another reaction. This iterative procedure can be continued until all
 stoichiometric inconsistencies have been corrected. In this example the
 `IR00149` reaction also had a missing `H+` for the reaction to balance. After
-fixing this error the model is consistent::
+fixing this error the model is consistent and the `H+` compounds can be
+assigned a non-zero mass::
 
     $ psamm-model masscheck
     [...]
-    INFO:psamm.command:Consistent compounds: 834/834
-    INFO:psamm.command:Is consistent? True
+    EC0065	1.0	H+[e]
+    C0065	1.0	H+
+    INFO: Consistent compounds: 834/834
 
 Formula consistency check (``formulacheck``)
 --------------------------------------------
