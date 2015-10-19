@@ -1,0 +1,8 @@
+root = true
+
+[*]
+indent_size = 2
+indent_style = space
+
+[*.scss]
+indent_style = 4
