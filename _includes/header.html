@@ -3,7 +3,13 @@
     <h1>{{ site.title }}</h1>
     <p>{{ site.subtitle }}</p>
     <p>
-      <a href="https://github.com/zhanglab/psamm" class="btn btn-primary">
+      {% assign last_release = site.github.releases | sort: 'created_at' | last %}
+      <strong>Latest release:</strong>
+      <a href="{{ last_release.html_url }}">{{ last_release.name }}</a>
+      ({{ last_release.created_at | date: '%B %d, %Y'}})
+    </p>
+    <p>
+      <a href="{{ site.github.repository_url }}" class="btn btn-primary">
         <span class="fa fa-github"></span> View on GitHub
       </a>
     </p>

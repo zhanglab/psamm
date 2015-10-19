@@ -9,6 +9,9 @@ description: >
 baseurl: "/psamm"
 url: "https://zhanglab.github.io"
 github_username: zhanglab
+repository: zhanglab/psamm
+
+gems: ['jekyll-github-metadata']
 
 # Build settings
 markdown: kramdown
