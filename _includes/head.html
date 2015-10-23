@@ -21,6 +21,25 @@
     ga('create', '{{ site.google_analytics }}', 'auto');
     ga('send', 'pageview');
 
+    document.addEventListener('DOMContentLoaded', function (ev) {
+      var anchors = document.getElementsByTagName('a');
+      var base = '{{ site.url }}{{ site.baseurl }}';
+      for (var i = 0; i < anchors.length; i++) {
+        if (anchors[i].href.slice(0, base.length) != base) {
+          anchors[i].addEventListener('click', function (ev) {
+            ev.preventDefault();
+            var url = this.href;
+            var proceed = function() {
+              document.location = url;
+            }
+            setTimeout(proceed, 1000);
+            ga('send', 'event', 'outbound', 'click', this.href, {
+              'hitCallback': proceed
+            });
+          });
+        }
+      }
+    });
   </script>
   {% endif %}
 </head>
