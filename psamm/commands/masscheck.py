@@ -22,7 +22,7 @@ from six import iteritems
 
 from ..command import (Command, CommandError, SolverCommandMixin,
                        FilePrefixAppendAction)
-from .. import massconsistency
+from .. import massconsistency, fluxanalysis
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
             type=str, default=[],
             help='Mark reaction as already checked (no residual)')
         parser.add_argument(
-            '--type', choices=['compound', 'reaction'],
+            '--type', choices=['compound', 'reaction', 'loop'],
             default='compound', help='Type of check to perform')
         super(MassConsistencyCommand, cls).init_parser(parser)
 
@@ -83,6 +83,8 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
             self._check_compounds(known_inconsistent, zeromass, solver)
         elif self._args.type == 'reaction':
             self._check_reactions(known_inconsistent, zeromass, solver)
+        elif self._args.type == 'loop':
+            self._check_loops(exclude, zeromass, solver)
         else:
             raise CommandError('Invalid type of check: {}'.format(
                 self._args.type))
@@ -143,3 +145,32 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
             else:
                 good += 1
         logger.info('Consistent reactions: {}/{}'.format(good, total))
+
+    def _check_loops(self, exclude, zeromass, solver):
+        logger.info('Checking for spurious production of compounds...')
+
+        epsilon = self._args.epsilon
+        production, consumption = 0, 0
+
+        compounds = fluxanalysis.check_spurious_production(
+            self._mm, exclude, zeromass, epsilon, solver)
+        for compound in compounds:
+            print('{}\tproduction\t{}'.format(
+                compound,
+                self._compound_name.get(compound.name, compound.name)))
+            production += 1
+
+        logger.info('Checking for spurious consumption of compounds...')
+
+        compounds = fluxanalysis.check_spurious_consumption(
+            self._mm, exclude, zeromass, epsilon, solver)
+        for compound in compounds:
+            print('{}\tconsumption\t{}'.format(
+                compound,
+                self._compound_name.get(compound.name, compound.name)))
+            consumption += 1
+
+        logger.info('Spurious production of {} compounds detected'.format(
+            production))
+        logger.info('Spurious consumption of {} compounds detected'.format(
+            consumption))
