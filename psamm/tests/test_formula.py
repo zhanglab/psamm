@@ -130,6 +130,11 @@ class TestFormula(unittest.TestCase):
             Atom('O'): 6
         })
 
+    def test_formula_contains(self):
+        f = Formula({Atom('H'): 12, Atom('C'): 6, Atom('O'): 6})
+        self.assertIn(Atom('C'), f)
+        self.assertNotIn(Atom('Ag'), f)
+
     def test_formula_to_string(self):
         f = Formula({Atom('H'): 12, Atom('C'): 6, Atom('O'): 6})
         self.assertEqual(str(f), 'C6H12O6')

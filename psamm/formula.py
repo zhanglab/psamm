@@ -223,6 +223,9 @@ class Formula(FormulaElement):
     def is_variable(self):
         return len(self._variables) > 0
 
+    def __contains__(self, element):
+        return element in self._values
+
     def __str__(self):
         """Return formula represented using Hill notation system
 
