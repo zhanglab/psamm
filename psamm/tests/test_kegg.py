@@ -22,8 +22,107 @@ from psamm.datasource import kegg
 from psamm.reaction import Reaction, Compound
 from psamm.expression.affine import Expression
 
+from six import StringIO
 
-class TestKEGG(unittest.TestCase):
+
+class MockEntryClass(object):
+    def __init__(self, props, filemark=None):
+        self.props = props
+        self.filemark = filemark
+
+
+class TestKEGGEntryParser(unittest.TestCase):
+    def setUp(self):
+        self.f = StringIO('\n'.join([
+            'ENTRY     ID001',
+            'NAME      Test entry',
+            'PROPERTY  This is a multi-line',
+            '          property!',
+            '///',
+            'ENTRY     ID002',
+            'NAME      Another entry',
+            'PROPERTY  Single line property',
+            'REFS      ref1: abcdef',
+            '          ref2: defghi',
+            '///'
+        ]))
+
+    def test_parse_entries(self):
+        entries = list(kegg._parse_kegg_entries(self.f, MockEntryClass))
+        self.assertEqual(len(entries), 2)
+
+        self.assertEqual(entries[0].props, {
+            'entry': ['ID001'],
+            'name': ['Test entry'],
+            'property': ['This is a multi-line', 'property!']
+        })
+
+        self.assertEqual(entries[1].props, {
+            'entry': ['ID002'],
+            'name': ['Another entry'],
+            'property': ['Single line property'],
+            'refs': [
+                'ref1: abcdef',
+                'ref2: defghi'
+            ]
+        })
+
+
+class TestKEGGCompoundEntry(unittest.TestCase):
+    def test_minimal_compound_entry(self):
+        c = kegg.CompoundEntry({
+            'entry': ['C00001        Compound']
+        })
+
+        self.assertEqual(c.id, 'C00001')
+        self.assertIsNone(c.name)
+        self.assertEqual(list(c.names), [])
+        self.assertIsNone(c.formula)
+        self.assertIsNone(c.exact_mass)
+        self.assertIsNone(c.mol_weight)
+        self.assertIsNone(c.comment)
+        self.assertIsNone(c.filemark)
+
+    def test_complete_compound_entry(self):
+        c = kegg.CompoundEntry({
+            'entry': ['C00001        Compound'],
+            'name': ['H2O;', 'Water'],
+            'reaction': ['R00001 R00002', 'R00003'],
+            'enzyme': ['1.2.3.4 2.3.4.5', '7.6.50.4 2.1.-,-'],
+            'formula': ['H2O'],
+            'exact_mass': ['18.01'],
+            'mol_weight': ['18.01'],
+            'pathway': [
+                'map00001  First pathway',
+                'map00002  Second pathway'
+            ],
+            'dblinks': [
+                'CAS: 12345',
+                'ChEBI: B2345'
+            ],
+            'comment': ['This information is purely for testing!']
+        })
+
+        self.assertEqual(c.id, 'C00001')
+        self.assertEqual(c.name, 'H2O')
+        self.assertEqual(list(c.names), ['H2O', 'Water'])
+        self.assertEqual(list(c.reactions), ['R00001', 'R00002', 'R00003'])
+        self.assertEqual(list(c.enzymes), [
+            '1.2.3.4', '2.3.4.5', '7.6.50.4', '2.1.-,-'])
+        self.assertEqual(c.formula, 'H2O')
+        self.assertAlmostEqual(c.exact_mass, 18.01)
+        self.assertAlmostEqual(c.mol_weight, 18.01)
+        self.assertEqual(list(c.pathways), [
+            ('map00001', 'First pathway'),
+            ('map00002', 'Second pathway')
+        ])
+        self.assertEqual(list(c.dblinks), [
+            ('CAS', '12345'), ('ChEBI', 'B2345')
+        ])
+        self.assertEqual(c.comment, 'This information is purely for testing!')
+
+
+class TestKEGGReactionParser(unittest.TestCase):
     def test_kegg_parse(self):
         r = kegg.parse_reaction('C00013 + C00001 <=> 2 C00009')
         self.assertEqual(r, Reaction(Reaction.Bidir, [(Compound('C00013'), 1), (Compound('C00001'), 1)],
