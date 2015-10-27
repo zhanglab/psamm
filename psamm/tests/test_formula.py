@@ -18,7 +18,66 @@
 
 import unittest
 
-from psamm.formula import Formula, Atom, Radical
+from psamm.formula import Formula, FormulaElement, Atom, Radical
+
+
+class TestFormulaElement(unittest.TestCase):
+    def test_add_formula_elements(self):
+        e1 = FormulaElement()
+        e2 = FormulaElement()
+        self.assertEqual(e1 + e2, Formula({e1: 1, e2: 1}))
+
+    def test_add_formula_element_to_self(self):
+        e1 = FormulaElement()
+        self.assertEqual(e1 + e1, Formula({e1: 2}))
+
+    def test_add_formula_element_and_number(self):
+        with self.assertRaises(TypeError):
+            f = FormulaElement() + 42
+
+    def test_merge_formula_elements(self):
+        e1 = FormulaElement()
+        e2 = FormulaElement()
+        self.assertEqual(e1 | e2, Formula({e1: 1, e2: 1}))
+
+    def test_merge_formula_element_to_self(self):
+        e1 = FormulaElement()
+        self.assertEqual(e1 | e1, Formula({e1: 2}))
+
+    def test_substitute_into_formula_element(self):
+        e1 = FormulaElement()
+        self.assertEqual(e1.substitute(x=40), e1)
+
+
+class TestAtom(unittest.TestCase):
+    def test_atom_symbol(self):
+        a = Atom('H')
+        self.assertEqual(a.symbol, 'H')
+
+    def test_atom_symbol_wide(self):
+        a = Atom('Zn')
+        self.assertEqual(a.symbol, 'Zn')
+
+    def test_atom_to_string(self):
+        a = Atom('C')
+        self.assertEqual(str(a), 'C')
+
+    def test_atom_repr(self):
+        a = Atom('Si')
+        self.assertEqual(repr(a), "Atom('Si')")
+
+    def test_atom_equals(self):
+        a1 = Atom('H')
+        a2 = Atom('Zn')
+        self.assertEqual(a1, a1)
+        self.assertNotEqual(a1, a2)
+
+    def test_atom_ordered(self):
+        a1 = Atom('H')
+        a2 = Atom('C')
+        a3 = Atom('Zn')
+        self.assertGreater(a1, a2)
+        self.assertLess(a1, a3)
 
 
 class TestFormula(unittest.TestCase):
