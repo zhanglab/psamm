@@ -121,6 +121,48 @@ class TestFormula(unittest.TestCase):
         f = Formula({Atom('Au'): 1})
         self.assertNotEqual(f, Formula({Atom('Au'): 2}))
 
+    def test_formula_items(self):
+        f = Formula({Atom('H'): 12, Atom('C'): 6, Atom('O'): 6})
+        self.assertEqual(dict(f.items()), {
+            Atom('C'): 6,
+            Atom('H'): 12,
+            Atom('O'): 6
+        })
+
+    def test_formula_to_string(self):
+        f = Formula({Atom('H'): 12, Atom('C'): 6, Atom('O'): 6})
+        self.assertEqual(str(f), 'C6H12O6')
+
+    def test_formula_to_string_with_group(self):
+        f = Formula({
+            Atom('C'): 1,
+            Atom('H'): 3,
+            Formula({Atom('C'): 1, Atom('H'): 2}): 14,
+            Formula({
+                Atom('C'): 1, Atom('O'): 1,
+                Formula({Atom('H'): 1, Atom('O'): 1}): 1
+            }): 1
+        })
+        # Ideally: self.assertEqual(str(f), 'CH3(CH2)14COOH')
+        # The two subgroups are unordered so we cannot assert a specfic string
+        # at this point.
+
+    def test_formula_flattened(self):
+        f = Formula({
+            Atom('C'): 1,
+            Atom('H'): 3,
+            Formula({Atom('C'): 1, Atom('H'): 2}): 14,
+            Formula({
+                Atom('C'): 1, Atom('O'): 1,
+                Formula({Atom('H'): 1, Atom('O'): 1}): 1
+            }): 1
+        })
+        self.assertEqual(f.flattened(), Formula({
+            Atom('C'): 16,
+            Atom('H'): 32,
+            Atom('O'): 2
+        }))
+
     def test_formula_is_not_variable(self):
         f = Formula.parse('C6H12O6')
         self.assertFalse(f.is_variable())
