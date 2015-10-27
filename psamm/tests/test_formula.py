@@ -62,6 +62,31 @@ class TestFormula(unittest.TestCase):
         f = Formula({Atom('Au'): 1})
         self.assertNotEqual(f, Formula({Atom('Au'): 2}))
 
+    def test_formula_is_not_variable(self):
+        f = Formula.parse('C6H12O6')
+        self.assertFalse(f.is_variable())
+
+    def test_formula_is_variable(self):
+        f = Formula.parse('C2H4NO2R(C2H2NOR)n')
+        self.assertTrue(f.is_variable())
+
+    def test_formula_balance_missing_on_one_side(self):
+        f1, f2 = Formula.balance(Formula.parse('H2O'), Formula.parse('OH'))
+        self.assertEqual(f1, Formula())
+        self.assertEqual(f2, Formula({Atom('H'): 1}))
+
+    def test_formula_balance_missing_on_both_sides(self):
+        f1, f2 = Formula.balance(Formula.parse('C3H6OH'), Formula.parse('CH6O2'))
+        self.assertEqual(f1, Formula({Atom('O'): 1}))
+        self.assertEqual(f2, Formula({Atom('C'): 2, Atom('H'): 1}))
+
+    def test_formula_balance_subgroups_cancel_out(self):
+        f1, f2 = Formula.balance(Formula.parse('H2(CH2)n'), Formula.parse('CH3O(CH2)n'))
+        self.assertEqual(f1, Formula({Atom('C'): 1, Atom('H'): 1, Atom('O'): 1}))
+        self.assertEqual(f2, Formula())
+
+
+class TestFormulaParser(unittest.TestCase):
     def test_formula_parse_with_final_digit(self):
         f = Formula.parse('H2O2')
         self.assertEqual(f, Formula({Atom('H'): 2, Atom('O'): 2}))
@@ -117,29 +142,6 @@ class TestFormula(unittest.TestCase):
         f = Formula.parse('C2H4NO2(R1)')
         self.assertEqual(f, Formula({Atom('C'): 2, Atom('H'): 4, Atom('N'): 1,
                                         Atom('O'): 2, Radical('R1'): 1}))
-
-    def test_formula_is_not_variable(self):
-        f = Formula.parse('C6H12O6')
-        self.assertFalse(f.is_variable())
-
-    def test_formula_is_variable(self):
-        f = Formula.parse('C2H4NO2R(C2H2NOR)n')
-        self.assertTrue(f.is_variable())
-
-    def test_formula_balance_missing_on_one_side(self):
-        f1, f2 = Formula.balance(Formula.parse('H2O'), Formula.parse('OH'))
-        self.assertEqual(f1, Formula())
-        self.assertEqual(f2, Formula({Atom('H'): 1}))
-
-    def test_formula_balance_missing_on_both_sides(self):
-        f1, f2 = Formula.balance(Formula.parse('C3H6OH'), Formula.parse('CH6O2'))
-        self.assertEqual(f1, Formula({Atom('O'): 1}))
-        self.assertEqual(f2, Formula({Atom('C'): 2, Atom('H'): 1}))
-
-    def test_formula_balance_subgroups_cancel_out(self):
-        f1, f2 = Formula.balance(Formula.parse('H2(CH2)n'), Formula.parse('CH3O(CH2)n'))
-        self.assertEqual(f1, Formula({Atom('C'): 1, Atom('H'): 1, Atom('O'): 1}))
-        self.assertEqual(f2, Formula())
 
 
 if __name__ == '__main__':
