@@ -71,7 +71,7 @@ class FormulaElement(object):
         """Iterator over variables in formula element"""
         return iter([])
 
-    def substitute(self, **kwargs):
+    def substitute(self, mapping):
         """Return formula element with substitutions performed"""
         return self
 
@@ -180,15 +180,16 @@ class Formula(FormulaElement):
             for var in element.variables():
                 self._variables.add(var)
 
-    def substitute(self, **kwargs):
+    def substitute(self, mapping):
         result = self.__class__()
         for element, value in iteritems(self._values):
             if callable(getattr(value, 'substitute', None)):
-                value = value.substitute(**kwargs)
+                value = value.substitute(mapping)
                 if isinstance(value, int) and value <= 0:
                     raise ValueError(
                         'Expression evaluated to non-positive number')
-            result += value * element.substitute(**kwargs)
+            # TODO does not merge correctly with subformulas
+            result += value * element.substitute(mapping)
         return result
 
     def flattened(self):

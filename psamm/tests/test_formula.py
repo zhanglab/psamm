@@ -46,7 +46,8 @@ class TestFormulaElement(unittest.TestCase):
 
     def test_substitute_into_formula_element(self):
         e1 = FormulaElement()
-        self.assertEqual(e1.substitute(x=40), e1)
+        self.assertEqual(
+            e1.substitute(lambda v: {'x': 42}.get(v.symbol, v)), e1)
 
 
 class TestAtom(unittest.TestCase):
@@ -162,6 +163,15 @@ class TestFormula(unittest.TestCase):
             Atom('H'): 32,
             Atom('O'): 2
         }))
+
+    def test_formula_substitute_non_positive(self):
+        f = Formula.parse('CH3(CH2)nCOOH')
+
+        with self.assertRaises(ValueError):
+            f.substitute(lambda v: {'n': -5}.get(v.symbol, v))
+
+        with self.assertRaises(ValueError):
+            f.substitute(lambda v: {'n': 0}.get(v.symbol, v))
 
     def test_formula_is_not_variable(self):
         f = Formula.parse('C6H12O6')
