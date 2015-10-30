@@ -151,7 +151,7 @@ def parse_solver_setting(s):
     return key, value
 
 
-def list_solvers():
+def list_solvers(args=None):
     """Entry point for listing available solvers."""
     parser = argparse.ArgumentParser(
         description='''List LP solver available in PSAMM. This will produce a
@@ -165,10 +165,10 @@ def list_solvers():
     parser.add_argument(
         'requirement', nargs='*', type=str,
         help='Additional requirements on the selected solvers')
-    args = parser.parse_args()
+    parsed_args = parser.parse_args(args)
 
     requirements = {}
-    for arg in args.requirement:
+    for arg in parsed_args.requirement:
         try:
             key, value = parse_solver_setting(arg)
         except ValueError as e:
