@@ -37,6 +37,8 @@ from ..util import LoggerFile
 # Module-level logging
 logger = logging.getLogger(__name__)
 
+_INF = float('inf')
+
 
 class Solver(BaseSolver):
     """Represents an LP-solver using Cplex"""
@@ -130,8 +132,10 @@ class Problem(BaseProblem):
         lp_names = tuple(next(self._var_names) for name in names)
 
         # Assign default values
-        lower = (-cp.infinity if value is None else value for value in lower)
-        upper = (cp.infinity if value is None else value for value in upper)
+        lower = (-cp.infinity if value is None or value == -_INF
+                 else value for value in lower)
+        upper = (cp.infinity if value is None or value == _INF
+                 else value for value in upper)
         vartype = tuple(VariableType.Continuous if value is None else value
                         for value in vartype)
 
