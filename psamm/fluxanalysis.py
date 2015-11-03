@@ -27,6 +27,8 @@ from six import iteritems
 # Module-level logging
 logger = logging.getLogger(__name__)
 
+_INF = float('inf')
+
 
 def _get_fba_problem(model, tfba, solver):
     """Convenience function for returning the right FBA problem instance"""
@@ -314,7 +316,12 @@ def flux_variability(model, reactions, fixed, tfba, solver):
 
     def min_max_solve(reaction_id):
         for direction in (-1, 1):
-            fba.maximize({reaction_id: direction})
+            try:
+                fba.maximize({reaction_id: direction})
+            except FluxBalanceError as e:
+                if not e.result.unbounded:
+                    raise
+                yield direction * _INF
             yield fba.get_flux(reaction_id)
 
     # Solve for each reaction
