@@ -29,6 +29,7 @@ single variable. This allows many similar expressions to be represented by one
 constructed faster.
 """
 
+import math
 import numbers
 from collections import Counter
 import abc
@@ -109,8 +110,12 @@ class Expression(object):
         """Add expression with a number or another expression"""
 
         if isinstance(other, numbers.Number):
+            if math.isinf(self.offset) or math.isinf(other):
+                return self.__class__(offset=self._offset + other)
             return self.__class__(self._variables, self._offset + other)
         elif isinstance(other, self.__class__):
+            if math.isinf(self.offset) or math.isinf(other.offset):
+                return self.__class__(offset=self._offset + other._offset)
             variables = Counter(self._variables)
             variables.update(other._variables)
             return self.__class__(variables, self._offset + other._offset)
@@ -126,6 +131,9 @@ class Expression(object):
         return -self + other
 
     def __mul__(self, other):
+        if math.isinf(other):
+            return self.__class__(offset=other)
+
         return self.__class__(
             {var: value*other for var, value in iteritems(self._variables)},
             self._offset*other)
