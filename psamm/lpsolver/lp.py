@@ -37,6 +37,8 @@ import abc
 from six import add_metaclass, iteritems
 from six.moves import range
 
+_INF = float('inf')
+
 
 class VariableSet(tuple):
     """A tuple used to represent sets of variables"""
@@ -373,19 +375,35 @@ class Problem(object):
     def _check_relation(self, relation):
         """Check whether the given relation is valid.
 
-        Raises `ValueError` if the relation is invalid. This method also
-        accepts relation given as `bool` and will raise an error if the value
-        is `False`.
+        Return false normally, or true if the relation is determined to be
+        tautologically true. Raises ``ValueError`` if the relation is
+        tautologically false. This includes relations given as a ``False`` bool
+        value or certain types of relations that have an infinity offset.
         """
         if isinstance(relation, bool):
             if not relation:
                 raise ValueError('Unsatisfiable relation added')
-        else:
-            if relation.sense in (
-                    Relation.StrictlyGreater, Relation.StrictlyLess):
-                raise ValueError(
-                    'Strict relations are invalid in LP-problems:'
-                    ' {}'.format(relation))
+            return True
+
+        if relation.sense in (Relation.StrictlyGreater, Relation.StrictlyLess):
+            raise ValueError(
+                'Strict relations are invalid in LP-problems:'
+                ' {}'.format(relation))
+
+        if relation.expression.offset == -_INF:
+            if relation.sense == Relation.Less:
+                return True
+            else:
+                raise ValueError('Unsatisfiable relation added: {}'.format(
+                    relation))
+        elif relation.expression.offset == _INF:
+            if relation.sense == Relation.Greater:
+                return True
+            else:
+                raise ValueError('Unsatisfiable relation added: {}'.format(
+                    relation))
+
+        return False
 
     @abc.abstractmethod
     def add_linear_constraints(self, *relations):

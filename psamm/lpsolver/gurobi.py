@@ -169,12 +169,7 @@ class Problem(BaseProblem):
         constraints = []
 
         for relation in relations:
-            self._check_relation(relation)
-            if isinstance(relation, bool):
-                # A bool in place of a relation is accepted to mean
-                # a relation that does not involve any variables and
-                # has therefore been evaluated to a truth-value (e.g
-                # '0 == 0' or '2 >= 3').
+            if self._check_relation(relation):
                 constraints.append(Constraint(self, None))
             else:
                 for name in self._add_constraints(relation):
