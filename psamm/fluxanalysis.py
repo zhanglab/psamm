@@ -37,7 +37,15 @@ def _get_fba_problem(model, tfba, solver):
 
 
 class FluxBalanceError(Exception):
-    """Error indicating that a flux balance cannot be solved"""
+    """Error indicating that a flux balance cannot be solved."""
+
+    def __init__(self, *args, **kwargs):
+        self._result = kwargs.pop('result')
+        super(FluxBalanceError, self).__init__(*args, **kwargs)
+
+    @property
+    def result(self):
+        return self._result
 
 
 class FluxBalanceProblem(object):
@@ -230,7 +238,7 @@ class FluxBalanceProblem(object):
             result = self._prob.solve(lp.ObjectiveSense.Maximize)
             if not result:
                 raise FluxBalanceError('Non-optimal solution: {}'.format(
-                    result.status))
+                    result.status), result=result)
         finally:
             # Set temporary constraints to be removed on next solve call
             self._remove_constr = self._temp_constr
