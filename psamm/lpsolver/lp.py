@@ -437,6 +437,10 @@ class Result(object):
     def status(self):
         """String indicating the status of the problem result"""
 
+    @abc.abstractproperty
+    def unbounded(self):
+        """Whether solution is unbounded"""
+
     @abc.abstractmethod
     def get_value(self, expression):
         """Get value of variable or expression in result

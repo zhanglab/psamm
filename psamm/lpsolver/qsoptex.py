@@ -218,7 +218,14 @@ class Result(BaseResult):
     def success(self):
         """Return boolean indicating whether a solution was found"""
         self._check_valid()
-        return self._problem._p.get_status() == 1
+        return self._problem._p.get_status() == qsoptex.SolutionStatus.OPTIMAL
+
+    @property
+    def unbounded(self):
+        """Whether the solution is unbounded"""
+        self._check_valid()
+        return (self._problem._p.get_status() ==
+                qsoptex.SolutionStatus.UNBOUNDED)
 
     @property
     def status(self):
