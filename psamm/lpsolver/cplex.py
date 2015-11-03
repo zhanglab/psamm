@@ -291,6 +291,13 @@ class Result(BaseResult):
         self._check_valid()
         return self._problem._cp.solution.get_status_string()
 
+    @property
+    def unbounded(self):
+        """Whether solution is unbounded"""
+        self._check_valid()
+        return (self._problem._cp.solution.get_status() ==
+                self._problem._cp.solution.status.unbounded)
+
     def get_value(self, expression):
         """Return value of expression"""
 

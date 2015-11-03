@@ -253,6 +253,12 @@ class Result(BaseResult):
         return self._problem._p.Status == gurobipy.GRB.OPTIMAL
 
     @property
+    def unbounded(self):
+        """Whether solution is unbounded"""
+        self._check_valid()
+        return self._problem._p.Status == gurobipy.GRB.UNBOUNDED
+
+    @property
     def status(self):
         """Return string indicating the error encountered on failure."""
         self._check_valid()
