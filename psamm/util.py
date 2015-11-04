@@ -68,7 +68,7 @@ class MaybeRelative(object):
             self._relative = False
         except ValueError:
             self._value = self._parse_percentage(s)
-            self._relative = True
+            self._relative = self._value != 0.0
 
         self._reference = None
 
