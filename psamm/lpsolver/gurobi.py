@@ -256,7 +256,19 @@ class Result(BaseResult):
     def unbounded(self):
         """Whether solution is unbounded"""
         self._check_valid()
-        return self._problem._p.Status == gurobipy.GRB.UNBOUNDED
+
+        status = self._problem._p.Status
+        if (status == gurobipy.GRB.INF_OR_UNBD and
+                self._problem._p.params.DualReductions):
+            # Disable dual reductions to obtain a definitve answer
+            self._problem._p.params.DualReductions = 0
+            try:
+                self._problem._p.optimize()
+            finally:
+                self._problem._p.params.DualReductions = 1
+
+            status = self._problem._p.Status
+        return status == gurobipy.GRB.UNBOUNDED
 
     @property
     def status(self):

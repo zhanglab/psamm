@@ -227,17 +227,20 @@ class Problem(BaseProblem):
         else:
             raise ValueError('Invalid objective sense')
 
-    def solve(self, sense=None):
-        """Solve problem"""
-        if sense is not None:
-            self.set_objective_sense(sense)
+    def _solve(self):
         self._cp.solve()
-
         if (self._cp.solution.get_status() ==
                 self._cp.solution.status.abort_user):
             raise KeyboardInterrupt()
 
+    def solve(self, sense=None):
+        """Solve problem"""
+        if sense is not None:
+            self.set_objective_sense(sense)
+
+        self._solve()
         self._result = Result(self)
+
         return self._result
 
     @property
@@ -295,8 +298,24 @@ class Result(BaseResult):
     def unbounded(self):
         """Whether solution is unbounded"""
         self._check_valid()
-        return (self._problem._cp.solution.get_status() ==
-                self._problem._cp.solution.status.unbounded)
+
+        cp = self._problem._cp
+        status = cp.solution.get_status()
+        presolve = cp.parameters.preprocessing.presolve.get()
+        if (status == cp.solution.status.infeasible_or_unbounded and
+                presolve):
+            # Disable presolve to obtain a definitive answer
+            logger.info('Disabling presolver and solving again to determine'
+                        ' whether objective is unbounded.')
+            cp.parameters.preprocessing.presolve.set(False)
+            try:
+                self._problem._solve()
+            finally:
+                cp.parameters.preprocessing.presolve.set(True)
+
+            status = cp.solution.get_status()
+
+        return status == cp.solution.status.unbounded
 
     def get_value(self, expression):
         """Return value of expression"""
