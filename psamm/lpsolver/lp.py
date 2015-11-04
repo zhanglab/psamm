@@ -273,8 +273,10 @@ class Relation(object):
 
     def __str__(self):
         """Convert relation to string representation"""
-        return '{} {} 0'.format(
-            str(self._expression), Relation.SYMBOL[self._sense])
+        var_expr = Expression(dict(self._expression.values()))
+        return '{} {} {}'.format(
+            str(var_expr), Relation.SYMBOL[self._sense],
+            -self._expression.offset)
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, repr(str(self)))
