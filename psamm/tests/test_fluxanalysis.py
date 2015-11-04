@@ -123,6 +123,37 @@ class TestFluxBalance(unittest.TestCase):
         self.assertAlmostEqual(p.get_flux('rxn_5'), 1000)
         self.assertAlmostEqual(p.get_flux('rxn_6'), 1000)
 
+    def test_flux_balance_infeasible(self):
+        self.model.limits['rxn_6'].lower = 500
+        self.model.limits['rxn_1'].upper = 10
+        p = fluxanalysis.FluxBalanceProblem(self.model, self.solver)
+
+        try:
+            p.maximize('rxn_6')
+        except fluxanalysis.FluxBalanceError as e:
+            self.assertFalse(e.result.unbounded)
+        else:
+            self.fail('FluxBalanceError was not raised!')
+
+    def test_flux_balance_unbounded(self):
+        unbounded = float('-inf'), float('inf')
+        self.model.limits['rxn_1'].bounds = unbounded
+        self.model.limits['rxn_3'].bounds = unbounded
+        self.model.limits['rxn_6'].bounds = unbounded
+        p = fluxanalysis.FluxBalanceProblem(self.model, self.solver)
+
+        if self.solver.properties['name'] == 'qsoptex':
+            # QSopt_ex returns status code 100 for this example. It seems that
+            # it is unable to determine whether the problem is unbounded.
+            self.skipTest('Skipping because of known issue with QSopt_ex')
+
+        try:
+            p.maximize('rxn_6')
+        except fluxanalysis.FluxBalanceError as e:
+            self.assertTrue(e.result.unbounded)
+        else:
+            self.fail('FluxBalanceError was not raised!')
+
 
 class TestFluxBalanceThermodynamic(unittest.TestCase):
     def setUp(self):
@@ -193,6 +224,27 @@ class TestFluxVariability(unittest.TestCase):
 
         self.assertGreater(fluxes['rxn_7'][1], 0)
         self.assertGreater(fluxes['rxn_8'][1], 0)
+
+    def test_flux_variability_unbounded(self):
+        self.model.limits['rxn_7'].upper = float('inf')
+        self.model.limits['rxn_8'].upper = float('inf')
+
+        if self.solver.properties['name'] == 'qsoptex':
+            # QSopt_ex returns status code 100 for this example. It seems that
+            # it is unable to determine whether the problem is unbounded.
+            self.skipTest('Skipping because of known issue with QSopt_ex')
+
+        fluxes = dict(fluxanalysis.flux_variability(
+            self.model, self.model.reactions, {'rxn_6': 200},
+            tfba=False, solver=self.solver))
+
+        self.assertAlmostEqual(fluxes['rxn_6'][0], 200)
+
+        self.assertAlmostEqual(fluxes['rxn_7'][0], 0)
+        self.assertEqual(fluxes['rxn_7'][1], float('inf'))
+
+        self.assertAlmostEqual(fluxes['rxn_8'][0], 0)
+        self.assertEqual(fluxes['rxn_8'][1], float('inf'))
 
 
 class TestFluxVariabilityThermodynamic(unittest.TestCase):
