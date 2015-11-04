@@ -104,13 +104,16 @@ class MaybeRelative(object):
         else:
             return self._value
 
-    def __repr__(self):
+    def __str__(self):
         if self._relative:
-            return '<{}, {:.1%} of {}>'.format(
-                self.__class__.__name__, self._value, self._reference)
+            f = None if self._reference is None else float(self)
+            return '{:.1%} of {} = {}'.format(
+                self._value, self._reference, f)
         else:
-            return '<{}, {}>'.format(
-                self.__class__.__name__, self._value)
+            return str(self._value)
+
+    def __repr__(self):
+        return '<{}, {}>'.format(self.__class__.__name__, str(self))
 
 
 def git_try_describe(repo_path):
