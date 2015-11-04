@@ -29,12 +29,15 @@ single variable. This allows many similar expressions to be represented by one
 constructed faster.
 """
 
+import math
 import numbers
 from collections import Counter
 import abc
 
 from six import add_metaclass, iteritems
 from six.moves import range
+
+_INF = float('inf')
 
 
 class VariableSet(tuple):
@@ -109,8 +112,12 @@ class Expression(object):
         """Add expression with a number or another expression"""
 
         if isinstance(other, numbers.Number):
+            if math.isinf(self.offset) or math.isinf(other):
+                return self.__class__(offset=self._offset + other)
             return self.__class__(self._variables, self._offset + other)
         elif isinstance(other, self.__class__):
+            if math.isinf(self.offset) or math.isinf(other.offset):
+                return self.__class__(offset=self._offset + other._offset)
             variables = Counter(self._variables)
             variables.update(other._variables)
             return self.__class__(variables, self._offset + other._offset)
@@ -126,6 +133,9 @@ class Expression(object):
         return -self + other
 
     def __mul__(self, other):
+        if math.isinf(other):
+            return self.__class__(offset=other)
+
         return self.__class__(
             {var: value*other for var, value in iteritems(self._variables)},
             self._offset*other)
@@ -265,8 +275,10 @@ class Relation(object):
 
     def __str__(self):
         """Convert relation to string representation"""
-        return '{} {} 0'.format(
-            str(self._expression), Relation.SYMBOL[self._sense])
+        var_expr = Expression(dict(self._expression.values()))
+        return '{} {} {}'.format(
+            str(var_expr), Relation.SYMBOL[self._sense],
+            -self._expression.offset)
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, repr(str(self)))
@@ -363,19 +375,35 @@ class Problem(object):
     def _check_relation(self, relation):
         """Check whether the given relation is valid.
 
-        Raises `ValueError` if the relation is invalid. This method also
-        accepts relation given as `bool` and will raise an error if the value
-        is `False`.
+        Return false normally, or true if the relation is determined to be
+        tautologically true. Raises ``ValueError`` if the relation is
+        tautologically false. This includes relations given as a ``False`` bool
+        value or certain types of relations that have an infinity offset.
         """
         if isinstance(relation, bool):
             if not relation:
                 raise ValueError('Unsatisfiable relation added')
-        else:
-            if relation.sense in (
-                    Relation.StrictlyGreater, Relation.StrictlyLess):
-                raise ValueError(
-                    'Strict relations are invalid in LP-problems:'
-                    ' {}'.format(relation))
+            return True
+
+        if relation.sense in (Relation.StrictlyGreater, Relation.StrictlyLess):
+            raise ValueError(
+                'Strict relations are invalid in LP-problems:'
+                ' {}'.format(relation))
+
+        if relation.expression.offset == -_INF:
+            if relation.sense == Relation.Less:
+                return True
+            else:
+                raise ValueError('Unsatisfiable relation added: {}'.format(
+                    relation))
+        elif relation.expression.offset == _INF:
+            if relation.sense == Relation.Greater:
+                return True
+            else:
+                raise ValueError('Unsatisfiable relation added: {}'.format(
+                    relation))
+
+        return False
 
     @abc.abstractmethod
     def add_linear_constraints(self, *relations):

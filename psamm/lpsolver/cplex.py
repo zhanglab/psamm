@@ -37,6 +37,8 @@ from ..util import LoggerFile
 # Module-level logging
 logger = logging.getLogger(__name__)
 
+_INF = float('inf')
+
 
 class Solver(BaseSolver):
     """Represents an LP-solver using Cplex"""
@@ -130,8 +132,10 @@ class Problem(BaseProblem):
         lp_names = tuple(next(self._var_names) for name in names)
 
         # Assign default values
-        lower = (-cp.infinity if value is None else value for value in lower)
-        upper = (cp.infinity if value is None else value for value in upper)
+        lower = (-cp.infinity if value is None or value == -_INF
+                 else value for value in lower)
+        upper = (cp.infinity if value is None or value == _INF
+                 else value for value in upper)
         vartype = tuple(VariableType.Continuous if value is None else value
                         for value in vartype)
 
@@ -179,12 +183,7 @@ class Problem(BaseProblem):
         constraints = []
 
         for relation in relations:
-            self._check_relation(relation)
-            if isinstance(relation, bool):
-                # A bool in place of a relation is accepted to mean
-                # a relation that does not involve any variables and
-                # has therefore been evaluated to a truth-value (e.g
-                # '0 == 0' or '2 >= 3').
+            if self._check_relation(relation):
                 constraints.append(Constraint(self, None))
             else:
                 for name in self._add_constraints(relation):
@@ -227,17 +226,20 @@ class Problem(BaseProblem):
         else:
             raise ValueError('Invalid objective sense')
 
-    def solve(self, sense=None):
-        """Solve problem"""
-        if sense is not None:
-            self.set_objective_sense(sense)
+    def _solve(self):
         self._cp.solve()
-
         if (self._cp.solution.get_status() ==
                 self._cp.solution.status.abort_user):
             raise KeyboardInterrupt()
 
+    def solve(self, sense=None):
+        """Solve problem"""
+        if sense is not None:
+            self.set_objective_sense(sense)
+
+        self._solve()
         self._result = Result(self)
+
         return self._result
 
     @property
@@ -295,8 +297,24 @@ class Result(BaseResult):
     def unbounded(self):
         """Whether solution is unbounded"""
         self._check_valid()
-        return (self._problem._cp.solution.get_status() ==
-                self._problem._cp.solution.status.unbounded)
+
+        cp = self._problem._cp
+        status = cp.solution.get_status()
+        presolve = cp.parameters.preprocessing.presolve.get()
+        if (status == cp.solution.status.infeasible_or_unbounded and
+                presolve):
+            # Disable presolve to obtain a definitive answer
+            logger.info('Disabling presolver and solving again to determine'
+                        ' whether objective is unbounded.')
+            cp.parameters.preprocessing.presolve.set(False)
+            try:
+                self._problem._solve()
+            finally:
+                cp.parameters.preprocessing.presolve.set(True)
+
+            status = cp.solution.get_status()
+
+        return status == cp.solution.status.unbounded
 
     def get_value(self, expression):
         """Return value of expression"""

@@ -169,12 +169,7 @@ class Problem(BaseProblem):
         constraints = []
 
         for relation in relations:
-            self._check_relation(relation)
-            if isinstance(relation, bool):
-                # A bool in place of a relation is accepted to mean
-                # a relation that does not involve any variables and
-                # has therefore been evaluated to a truth-value (e.g
-                # '0 == 0' or '2 >= 3').
+            if self._check_relation(relation):
                 constraints.append(Constraint(self, None))
             else:
                 for name in self._add_constraints(relation):
@@ -256,7 +251,19 @@ class Result(BaseResult):
     def unbounded(self):
         """Whether solution is unbounded"""
         self._check_valid()
-        return self._problem._p.Status == gurobipy.GRB.UNBOUNDED
+
+        status = self._problem._p.Status
+        if (status == gurobipy.GRB.INF_OR_UNBD and
+                self._problem._p.params.DualReductions):
+            # Disable dual reductions to obtain a definitve answer
+            self._problem._p.params.DualReductions = 0
+            try:
+                self._problem._p.optimize()
+            finally:
+                self._problem._p.params.DualReductions = 1
+
+            status = self._problem._p.Status
+        return status == gurobipy.GRB.UNBOUNDED
 
     @property
     def status(self):

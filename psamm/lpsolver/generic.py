@@ -126,7 +126,12 @@ class Solver(BaseSolver):
         solver = max(solvers, key=lambda s: priority.get(s['name'], 0))
         logger.debug('Using solver {}'.format(solver['name']))
 
+        self._properties = solver
         self._solver = solver['class']()
+
+    @property
+    def properties(self):
+        return self._properties
 
     def create_problem(self):
         """Create a :class:`Problem <psamm.lpsolver.lp.Problem>` instance"""
