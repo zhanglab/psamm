@@ -19,6 +19,7 @@ import time
 import logging
 
 from ..command import Command, SolverCommandMixin, CommandError
+from ..util import MaybeRelative
 from .. import fluxanalysis
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,9 @@ class FluxVariabilityCommand(SolverCommandMixin, Command):
 
     @classmethod
     def init_parser(cls, parser):
+        parser.add_argument(
+            '--threshold', help='Threshold of objective reaction flux',
+            type=MaybeRelative, default=MaybeRelative('100%'))
         parser.add_argument(
             '--tfba', help='Enable thermodynamic constraints on FVA',
             action='store_true')
@@ -65,12 +69,17 @@ class FluxVariabilityCommand(SolverCommandMixin, Command):
 
         start_time = time.time()
 
-        fba_fluxes = dict(fluxanalysis.flux_balance(
-            self._mm, reaction, tfba=False, solver=solver))
-        optimum = fba_fluxes[reaction]
+        threshold = self._args.threshold
+        if threshold.relative:
+            fba_fluxes = dict(fluxanalysis.flux_balance(
+                self._mm, reaction, tfba=False, solver=solver))
+            threshold.reference = fba_fluxes[reaction]
+
+        logger.info('Setting objective threshold to {}'.format(
+            threshold))
 
         flux_bounds = fluxanalysis.flux_variability(
-            self._mm, sorted(self._mm.reactions), {reaction: optimum},
+            self._mm, sorted(self._mm.reactions), {reaction: float(threshold)},
             tfba=enable_tfba, solver=solver)
         for reaction_id, bounds in flux_bounds:
             rx = self._mm.get_reaction(reaction_id)
