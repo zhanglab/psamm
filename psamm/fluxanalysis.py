@@ -322,7 +322,8 @@ def flux_variability(model, reactions, fixed, tfba, solver):
                 if not e.result.unbounded:
                     raise
                 yield direction * _INF
-            yield fba.get_flux(reaction_id)
+            else:
+                yield fba.get_flux(reaction_id)
 
     # Solve for each reaction
     for reaction_id in reactions:
