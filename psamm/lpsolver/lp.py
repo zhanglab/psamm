@@ -34,7 +34,7 @@ import numbers
 from collections import Counter
 import abc
 
-from six import add_metaclass, iteritems
+from six import add_metaclass, iteritems, viewkeys, viewitems
 from six.moves import range
 
 _INF = float('inf')
@@ -75,12 +75,12 @@ class Expression(object):
         return self._offset
 
     def variables(self):
-        """Iterator of variables in expression"""
-        return iter(self._variables)
+        """Return immutable view of variables in expression."""
+        return viewkeys(self._variables)
 
     def values(self):
-        """Iterator of (variable, value)-pairs in expression"""
-        return iteritems(self._variables)
+        """Return immutable view of (variable, value)-pairs in expression."""
+        return viewitems(self._variables)
 
     def value(self, variable):
         return self._variables.get(variable, 0)
