@@ -210,9 +210,10 @@ class Problem(BaseProblem):
             self._cp.objective.set_linear((var, 0) for var in reset_vars)
 
         # Set actual objective values
-        self._cp.objective.set_linear(
-            (self._variables[var], value)
-            for var, value in expression.values())
+        if len(expression.values()) > 0:
+            self._cp.objective.set_linear(
+                (self._variables[var], value)
+                for var, value in expression.values())
 
         # Keep track of new non-zeros
         self._non_zero_objective = set(expression.variables())
