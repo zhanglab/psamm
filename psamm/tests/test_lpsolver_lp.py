@@ -82,6 +82,10 @@ class TestExpression(unittest.TestCase):
         e = lp.Expression({'x1': -4, 'x2': 100, 'x3': 1}, 42)
         self.assertEqual(str(e), '-4*x1 + 100*x2 + x3 + 42')
 
+    def test_expression_with_tuple_vars_to_string(self):
+        e = lp.Expression({('v', 1): 1}, -1)
+        self.assertEqual(str(e), "('v', 1) - 1")
+
     def test_expression_contains(self):
         e = lp.Expression({'x1': 10, 'x2': -5})
         self.assertIn('x1', e)

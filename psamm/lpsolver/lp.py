@@ -207,14 +207,14 @@ class Expression(object):
                 yield None, self._offset
 
         terms = []
-        for i, spec in enumerate(all_terms()):
-            name, value = spec
+        for i, (name, value) in enumerate(all_terms()):
             if i == 0:
                 # First term is special
                 if name is None:
                     terms.append('{}'.format(value))
                 elif abs(value) == 1:
-                    terms.append(name if value > 0 else '-{}'.format(name))
+                    terms.append(
+                        str(name) if value > 0 else '-{}'.format(name))
                 else:
                     terms.append('{}*{}'.format(value, name))
             else:
