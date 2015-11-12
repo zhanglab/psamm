@@ -70,21 +70,21 @@ class FluxCouplingProblem(object):
         self._prob.define('t')
         t = self._prob.var('t')
 
-        # Define flux variables
-        for reaction_id in model.reactions:
-            self._prob.define(('vbow', reaction_id))
+        self._vbow = self._prob.namespace(model.reactions)
 
+        # Define flux bounds
+        for reaction_id in model.reactions:
             lower, upper = model.limits[reaction_id]
             if reaction_id in bounded:
                 lower = bounded[reaction_id]
-            flux_bow = self._prob.var(('vbow', reaction_id))
+            flux_bow = self._vbow(reaction_id)
             self._prob.add_linear_constraints(
                 flux_bow >= t * lower, flux_bow <= t * upper)
 
         # Define mass balance constraints
         massbalance_lhs = {compound: 0 for compound in model.compounds}
         for (compound, reaction_id), value in iteritems(model.matrix):
-            flux_bow = self._prob.var(('vbow', reaction_id))
+            flux_bow = self._vbow(reaction_id)
             massbalance_lhs[compound] += flux_bow * value
         for compound, lhs in iteritems(massbalance_lhs):
             self._prob.add_linear_constraints(lhs == 0)
@@ -100,15 +100,14 @@ class FluxCouplingProblem(object):
         in that direction.
         """
         # Update objective for reaction_1
-        self._prob.set_objective(self._prob.var(('vbow', reaction_1)))
+        self._prob.set_objective(self._vbow(reaction_1))
 
         # Update constraint for reaction_2
         if self._reaction_constr is not None:
             self._reaction_constr.delete()
 
-        reaction_2_vbow = self._prob.var(('vbow', reaction_2))
         self._reaction_constr, = self._prob.add_linear_constraints(
-            reaction_2_vbow == 1)
+            self._vbow(reaction_2) == 1)
 
         results = []
         for sense in (lp.ObjectiveSense.Minimize, lp.ObjectiveSense.Maximize):
@@ -116,7 +115,7 @@ class FluxCouplingProblem(object):
             if not result:
                 results.append(None)
             else:
-                results.append(result.get_value(('vbow', reaction_1)))
+                results.append(result.get_value(self._vbow(reaction_1)))
 
         return tuple(results)
 
