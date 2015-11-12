@@ -16,6 +16,7 @@
 #
 # Copyright 2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+import math
 import unittest
 
 from psamm.lpsolver import lp
@@ -76,7 +77,7 @@ class TestExpression(unittest.TestCase):
     def test_multiply_expression_and_infinity(self):
         e = lp.Expression({'x1': -5})
         e1 = float('-inf') * e
-        self.assertEqual(e1.offset, float('-inf'))
+        self.assertTrue(math.isnan(e1.offset))
 
     def test_expression_to_string(self):
         e = lp.Expression({'x1': -4, 'x2': 100, 'x3': 1}, 42)

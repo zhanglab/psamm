@@ -134,7 +134,7 @@ class Expression(object):
 
     def __mul__(self, other):
         if math.isinf(other):
-            return self.__class__(offset=other)
+            return self.__class__(offset=float('nan'))
 
         return self.__class__(
             {var: value*other for var, value in iteritems(self._variables)},
