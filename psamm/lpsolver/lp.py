@@ -112,19 +112,34 @@ class Expression(object):
         """Add expression with a number or another expression"""
 
         if isinstance(other, numbers.Number):
-            if math.isinf(self.offset) or math.isinf(other):
+            if math.isinf(self._offset) or math.isinf(other):
                 return self.__class__(offset=self._offset + other)
             return self.__class__(self._variables, self._offset + other)
         elif isinstance(other, self.__class__):
-            if math.isinf(self.offset) or math.isinf(other.offset):
+            if math.isinf(self._offset) or math.isinf(other._offset):
                 return self.__class__(offset=self._offset + other._offset)
             variables = Counter(self._variables)
             variables.update(other._variables)
             return self.__class__(variables, self._offset + other._offset)
         return NotImplemented
 
-    def __radd__(self, other):
-        return self + other
+    __radd__ = __add__
+
+    def __iadd__(self, other):
+        if isinstance(other, numbers.Number):
+            if math.isinf(self._offset) or math.isinf(other):
+                self._variables = {}
+            self._offset += other
+        elif isinstance(other, self.__class__):
+            self._offset += other._offset
+            if math.isinf(self._offset) or math.isinf(other._offset):
+                self._variables = {}
+            else:
+                self._variables.update(other._variables)
+        else:
+            return NotImplemented
+
+        return self
 
     def __sub__(self, other):
         return self + -other
@@ -132,19 +147,35 @@ class Expression(object):
     def __rsub__(self, other):
         return -self + other
 
+    def __isub__(self, other):
+        self += -other
+        return self
+
     def __mul__(self, other):
         if math.isinf(other):
             return self.__class__(offset=float('nan'))
 
         return self.__class__(
-            {var: value*other for var, value in iteritems(self._variables)},
-            self._offset*other)
+            {var: value * other for var, value in iteritems(self._variables)},
+            self._offset * other)
 
-    def __rmul__(self, other):
-        return self * other
+    __rmul__ = __mul__
+
+    def __imul__(self, other):
+        if math.isinf(other):
+            self._variables = {}
+            self._offset = float('nan')
+        else:
+            for var in self._variables:
+                self._variables[var] *= other
+            self._offset *= other
+
+        return self
 
     def __neg__(self):
-        return self * -1
+        return self.__class__(
+            {var: -value for var, value in iteritems(self._variables)},
+            -self._offset)
 
     def __eq__(self, other):
         """Return equality relation (equation): self == other

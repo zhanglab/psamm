@@ -68,6 +68,34 @@ class TestExpression(unittest.TestCase):
         e1 = e + lp.Expression({'x2': 4}, 100)
         self.assertEqual(e1.offset, float('inf'))
 
+    def test_add_expression_and_number_in_place(self):
+        e = lp.Expression({'x1': -5}, 100)
+        e += 45
+        self.assertEqual(e.offset, 145)
+        self.assertEqual(dict(e.values()), {'x1': -5})
+
+    def test_add_expression_and_expression_in_place(self):
+        e1 = lp.Expression({'x1': -5, 'x2': 42}, -1000)
+        e2 = lp.Expression({'x2': -42, 'x3': -50}, 2)
+        e1 += e2
+
+        self.assertEqual(e1.offset, -998)
+        self.assertEqual(dict(e1.values()), {'x1': -5, 'x2': 0, 'x3': -50})
+
+        self.assertEqual(e2.offset, 2)
+        self.assertEqual(dict(e2.values()), {'x2': -42, 'x3': -50})
+
+    def test_add_expression_and_infinity_in_place(self):
+        e = lp.Expression({'x1': -5}, 100)
+        e += float('inf')
+        self.assertEqual(e.offset, float('inf'))
+
+    def test_subtract_expressions_in_place(self):
+        e = lp.Expression({'x1': 40}, 22)
+        e -= lp.Expression({'x1': 5, 'x2': -20}, -2)
+        self.assertEqual(e.offset, 24)
+        self.assertEqual(dict(e.values()), {'x1': 35, 'x2': 20})
+
     def test_multiply_expression_and_number(self):
         e = lp.Expression({'x1': -5}, 100)
         e1 = 2 * e
@@ -78,6 +106,23 @@ class TestExpression(unittest.TestCase):
         e = lp.Expression({'x1': -5})
         e1 = float('-inf') * e
         self.assertTrue(math.isnan(e1.offset))
+
+    def test_multiply_expression_and_number_in_place(self):
+        e = lp.Expression({'x1': -5}, 100)
+        e *= 2
+        self.assertEqual(e.offset, 200)
+        self.assertEqual(dict(e.values()), {'x1': -10})
+
+    def test_multiply_expression_and_infinity_in_place(self):
+        e = lp.Expression({'x1': -5})
+        e *= float('inf')
+        self.assertTrue(math.isnan(e.offset))
+
+    def test_negate_expression(self):
+        e = lp.Expression({'x1': 52}, -32)
+        e1 = -e
+        self.assertEqual(e1.offset, 32)
+        self.assertEqual(dict(e1.values()), {'x1': -52})
 
     def test_expression_to_string(self):
         e = lp.Expression({'x1': -4, 'x2': 100, 'x3': 1}, 42)
