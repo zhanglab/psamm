@@ -138,7 +138,7 @@ class Problem(BaseProblem):
 
     def _grb_expr_from_value_set(self, value_set):
         return gurobipy.LinExpr(
-            [(val, self._p.getVarByName(self._variables[var]))
+            [(float(val), self._p.getVarByName(self._variables[var]))
              for var, val in value_set])
 
     def _add_constraints(self, relation):
@@ -152,8 +152,8 @@ class Problem(BaseProblem):
             name = next(self._constr_names)
             self._p.addConstr(
                 self._grb_expr_from_value_set(value_set),
-                self.CONSTR_SENSE_MAP[relation.sense], -expression.offset,
-                name)
+                self.CONSTR_SENSE_MAP[relation.sense],
+                -float(expression.offset), name)
             names.append(name)
 
         self._p.update()
