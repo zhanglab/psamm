@@ -95,12 +95,12 @@ class TestMassConsistencyZeroMass(unittest.TestCase):
 
     def test_is_consistent_with_zeromass(self):
         consistent = massconsistency.is_consistent(
-            self.model, solver=self.solver, zeromass={'Z'})
+            self.model, solver=self.solver, zeromass={Compound('Z')})
         self.assertTrue(consistent)
 
     def test_compound_consistency_with_zeromass(self):
         compounds = dict(massconsistency.check_compound_consistency(
-            self.model, solver=self.solver, zeromass={'Z'}))
+            self.model, solver=self.solver, zeromass={Compound('Z')}))
         self.assertEquals(compounds[Compound('Z')], 0)
         for c, value in iteritems(compounds):
             if c.name != 'Z':
@@ -108,11 +108,11 @@ class TestMassConsistencyZeroMass(unittest.TestCase):
 
     def test_reaction_consistency_with_zeromass(self):
         reactions, _ = massconsistency.check_reaction_consistency(
-            self.model, solver=self.solver, zeromass={'Z'})
+            self.model, solver=self.solver, zeromass={Compound('Z')})
         reactions = dict(reactions)
 
         for r, value in iteritems(reactions):
-            self.assertEqual(value, 0)
+            self.assertAlmostEqual(value, 0)
 
 
 if __name__ == '__main__':

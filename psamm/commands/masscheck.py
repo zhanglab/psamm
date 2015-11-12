@@ -23,6 +23,7 @@ from six import iteritems
 from ..command import (Command, CommandError, SolverCommandMixin,
                        FilePrefixAppendAction)
 from .. import massconsistency
+from ..reaction import Compound
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class MassConsistencyCommand(SolverCommandMixin, Command):
                 self._compound_name[compound.id] = compound.id
 
             if compound.properties.get('zeromass', False):
-                zeromass.add(compound.id)
+                zeromass.add(Compound(compound.id))
 
         # Create a set of known mass-inconsistent reactions
         exchange = set()
