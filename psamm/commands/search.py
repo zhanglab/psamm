@@ -100,16 +100,12 @@ class SearchCommand(Command):
 
         # Show results
         for compound in selected_compounds:
-            print('ID: {}'.format(compound.id))
-            if 'name' in compound.properties:
-                print('Name: {}'.format(compound.properties['name']))
-            if 'names' in compound.properties:
-                print('Additional names: {}'.format(
-                    ', '.join(compound.properties['names'])))
-            if 'formula' in compound.properties:
-                print('Formula: {}'.format(compound.properties['formula']))
+            props = set(compound.properties) - {'id'}
+            print('id: {}'.format(compound.id))
+            for prop in sorted(props):
+                print('{}: {}'.format(prop, compound.properties[prop]))
             if compound.filemark is not None:
-                print('Parsed from: {}'.format(compound.filemark))
+                print('Defined in {}'.format(compound.filemark))
             print()
 
     def _search_reaction(self):
@@ -145,13 +141,17 @@ class SearchCommand(Command):
 
         # Show results
         for reaction in selected_reactions:
-            print('ID: {}'.format(reaction.id))
-            print('Reaction (IDs): {}'.format(
+            props = set(reaction.properties) - {'id', 'equation'}
+            print('id: {}'.format(reaction.id))
+            print('equation: {}'.format(
                 reaction.equation))
             translated_equation = reaction.equation.translated_compounds(
                 lambda x: compound_name.get(x, x))
             if reaction.equation != translated_equation:
-                print('Reaction (names): {}'.format(translated_equation))
+                print('equation (compound names): {}'.format(
+                    translated_equation))
+            for prop in sorted(props):
+                print('{}: {}'.format(prop, reaction.properties[prop]))
             if reaction.filemark is not None:
-                print('Parsed from: {}'.format(reaction.filemark))
+                print('Defined in {}'.format(reaction.filemark))
             print()
