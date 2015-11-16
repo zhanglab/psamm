@@ -23,6 +23,18 @@ from ..command import Command, FilePrefixAppendAction
 from ..reaction import Compound
 
 
+def parse_compound(s):
+    """Parse a compound specification with optional compartment"""
+    m = re.match(r'([^\[]+)\[(\w+)\]', s)
+    if m is not None:
+        return Compound(m.group(1), compartment=m.group(2))
+    return Compound(s)
+
+
+def filter_search_term(s):
+    return re.sub(r'[^a-z0-9]+', '', s.lower())
+
+
 class SearchCommand(Command):
     """Search for reactions and compounds in the model."""
 
@@ -60,88 +72,84 @@ class SearchCommand(Command):
     def run(self):
         """Run search command."""
 
-        def parse_compound(s):
-            """Parse a compound specification with optional compartment"""
-            m = re.match(r'([^\[]+)\[(\w+)\]', s)
-            if m is not None:
-                return Compound(m.group(1), compartment=m.group(2))
-            return Compound(s)
-
-        def filter_search_term(s):
-            return re.sub(r'[^a-z0-9]+', '', s.lower())
-
         which_command = self._args.which
         if which_command == 'compound':
-            selected_compounds = set()
-
-            for compound in self._model.parse_compounds():
-                if len(self._args.id) > 0:
-                    if any(c == compound.id for c in self._args.id):
-                        selected_compounds.add(compound)
-                        continue
-
-                if len(self._args.name) > 0:
-                    names = set()
-                    if 'name' in compound.properties:
-                        names.add(compound.properties['name'])
-                    names.update(compound.properties.get('names', []))
-                    names = set(filter_search_term(n) for n in names)
-                    if any(filter_search_term(n) in names
-                            for n in self._args.name):
-                        selected_compounds.add(compound)
-                        continue
-
-            # Show results
-            for compound in selected_compounds:
-                print('ID: {}'.format(compound.id))
-                if 'name' in compound.properties:
-                    print('Name: {}'.format(compound.properties['name']))
-                if 'names' in compound.properties:
-                    print('Additional names: {}'.format(
-                        ', '.join(compound.properties['names'])))
-                if 'formula' in compound.properties:
-                    print('Formula: {}'.format(compound.properties['formula']))
-                if compound.filemark is not None:
-                    print('Parsed from: {}'.format(compound.filemark))
-                print()
+            self._search_compound()
         elif which_command == 'reaction':
-            selected_reactions = set()
+            self._search_reaction()
 
-            # Prepare translation table from compound id to name
-            compound_name = {}
-            for compound in self._model.parse_compounds():
+    def _search_compound(self):
+        selected_compounds = set()
+
+        for compound in self._model.parse_compounds():
+            if len(self._args.id) > 0:
+                if any(c == compound.id for c in self._args.id):
+                    selected_compounds.add(compound)
+                    continue
+
+            if len(self._args.name) > 0:
+                names = set()
                 if 'name' in compound.properties:
-                    compound_name[compound.id] = compound.properties['name']
+                    names.add(compound.properties['name'])
+                names.update(compound.properties.get('names', []))
+                names = set(filter_search_term(n) for n in names)
+                if any(filter_search_term(n) in names
+                       for n in self._args.name):
+                    selected_compounds.add(compound)
+                    continue
 
-            # Prepare sets of matched compounds
-            search_compounds = []
-            for compound_list in self._args.compound:
-                compound_set = set()
-                for compound_spec in compound_list.split(','):
-                    compound_set.add(parse_compound(compound_spec.strip()))
-                search_compounds.append(compound_set)
+        # Show results
+        for compound in selected_compounds:
+            print('ID: {}'.format(compound.id))
+            if 'name' in compound.properties:
+                print('Name: {}'.format(compound.properties['name']))
+            if 'names' in compound.properties:
+                print('Additional names: {}'.format(
+                    ', '.join(compound.properties['names'])))
+            if 'formula' in compound.properties:
+                print('Formula: {}'.format(compound.properties['formula']))
+            if compound.filemark is not None:
+                print('Parsed from: {}'.format(compound.filemark))
+            print()
 
-            for reaction in self._model.parse_reactions():
-                if len(self._args.id) > 0:
-                    if any(r == reaction.id for r in self._args.id):
-                        selected_reactions.add(reaction)
-                        continue
+    def _search_reaction(self):
+        selected_reactions = set()
 
-                if len(search_compounds) > 0:
-                    compounds = set(c for c, _ in reaction.equation.compounds)
-                    if any(c.issubset(compounds) for c in search_compounds):
-                        selected_reactions.add(reaction)
-                        continue
+        # Prepare translation table from compound id to name
+        compound_name = {}
+        for compound in self._model.parse_compounds():
+            if 'name' in compound.properties:
+                compound_name[compound.id] = compound.properties['name']
 
-            # Show results
-            for reaction in selected_reactions:
-                print('ID: {}'.format(reaction.id))
-                print('Reaction (IDs): {}'.format(
-                    reaction.equation))
-                translated_equation = reaction.equation.translated_compounds(
-                    lambda x: compound_name.get(x, x))
-                if reaction.equation != translated_equation:
-                    print('Reaction (names): {}'.format(translated_equation))
-                if reaction.filemark is not None:
-                    print('Parsed from: {}'.format(reaction.filemark))
-                print()
+        # Prepare sets of matched compounds
+        search_compounds = []
+        for compound_list in self._args.compound:
+            compound_set = set()
+            for compound_spec in compound_list.split(','):
+                compound_set.add(parse_compound(compound_spec.strip()))
+            search_compounds.append(compound_set)
+
+        for reaction in self._model.parse_reactions():
+            if len(self._args.id) > 0:
+                if any(r == reaction.id for r in self._args.id):
+                    selected_reactions.add(reaction)
+                    continue
+
+            if len(search_compounds) > 0:
+                compounds = set(c for c, _ in reaction.equation.compounds)
+                if any(c.issubset(compounds) for c in search_compounds):
+                    selected_reactions.add(reaction)
+                    continue
+
+        # Show results
+        for reaction in selected_reactions:
+            print('ID: {}'.format(reaction.id))
+            print('Reaction (IDs): {}'.format(
+                reaction.equation))
+            translated_equation = reaction.equation.translated_compounds(
+                lambda x: compound_name.get(x, x))
+            if reaction.equation != translated_equation:
+                print('Reaction (names): {}'.format(translated_equation))
+            if reaction.filemark is not None:
+                print('Parsed from: {}'.format(reaction.filemark))
+            print()
