@@ -137,6 +137,8 @@ class SearchCommand(Command):
 
             if len(search_compounds) > 0:
                 compounds = set(c for c, _ in reaction.equation.compounds)
+                compounds.update(c.in_compartment(None) for c, _ in
+                                 reaction.equation.compounds)
                 if any(c.issubset(compounds) for c in search_compounds):
                     selected_reactions.add(reaction)
                     continue
