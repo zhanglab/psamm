@@ -205,12 +205,12 @@ def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
 
     def added_iter():
         for reaction_id in database_reactions:
-            if result.get_value(('yd', reaction_id)) > 0:
+            if result.get_value(('yd', reaction_id)) > 0.5:
                 yield reaction_id
 
     def reversed_iter():
         for reaction_id in core:
-            if result.get_value(('ym', reaction_id)) > 0:
+            if result.get_value(('ym', reaction_id)) > 0.5:
                 yield reaction_id
 
     return added_iter(), reversed_iter()
