@@ -173,6 +173,16 @@ def gapfill(model, core, blocked, solver, epsilon=1e-5, v_max=1000):
 
             if reaction_id in model.reversible or value > 0:
                 binary_cons_lhs[compound] += w
+            elif reaction_id in core:
+                # In this case, we need to perform a logical AND on the w and
+                # ym variables. This is done by introducing another helper
+                # variable, yn.
+                prob.define(('yn', reaction_id, compound),
+                    types=lp.VariableType.Binary)
+                yn = prob.var(('yn', reaction_id, compound))
+                prob.add_linear_constraints(
+                    2 * yn <= w + prob.var(('ym', reaction_id)))
+                binary_cons_lhs[compound] += yn
 
     for compound, lhs in iteritems(binary_cons_lhs):
         if compound in blocked:
