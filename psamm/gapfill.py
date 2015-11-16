@@ -147,20 +147,20 @@ def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
             prob.add_linear_constraints(v >= model.limits[reaction_id].lower)
         else:
             ym = prob.var(('ym', reaction_id))
-            prob.add_linear_constraints(v >= -v_max*ym)
+            prob.add_linear_constraints(v >= -v_max * ym)
         prob.add_linear_constraints(v <= model.limits[reaction_id].upper)
 
     # Add constraints on database reactions
     for reaction_id in database_reactions:
         v = prob.var(('v', reaction_id))
         yd = prob.var(('yd', reaction_id))
-        prob.add_linear_constraints(v >= yd * model.limits[reaction_id].lower)
-        prob.add_linear_constraints(v <= yd * model.limits[reaction_id].upper)
+        prob.add_linear_constraints(
+            v >= yd * model.limits[reaction_id].lower,
+            v <= yd * model.limits[reaction_id].upper)
 
     # Define constraints on production of blocked metabolites in reaction
     binary_cons_lhs = {compound: 0 for compound in blocked}
-    for spec, value in iteritems(model.matrix):
-        compound, reaction_id = spec
+    for (compound, reaction_id), value in iteritems(model.matrix):
         if compound in blocked and value != 0:
             prob.define(('w', reaction_id, compound),
                         types=lp.VariableType.Binary)
@@ -168,10 +168,10 @@ def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
             w = prob.var(('w', reaction_id, compound))
             sv = float(value) * prob.var(('v', reaction_id))
 
-            prob.add_linear_constraints(sv >= epsilon-v_max*(1 - w))
-            prob.add_linear_constraints(sv <= v_max*w)
+            prob.add_linear_constraints(sv >= epsilon - v_max * (1 - w))
+            prob.add_linear_constraints(sv <= v_max * w)
 
-            if reaction_id in model.reversible or value > 0:
+            if model.is_reversible(reaction_id) or value > 0:
                 binary_cons_lhs[compound] += w
             elif reaction_id in core:
                 # In this case, we need to perform a logical AND on the w and
