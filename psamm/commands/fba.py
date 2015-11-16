@@ -33,6 +33,9 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
             '--loop-removal', help='Select type of loop removal constraints',
             choices=['none', 'tfba', 'l1min'], default='none')
         parser.add_argument(
+            '--all-reactions', help='Show all reaction fluxes',
+            action='store_true')
+        parser.add_argument(
             '--epsilon', type=float, help='Threshold for flux minimization',
             default=1e-5)
         parser.add_argument('reaction', help='Reaction to maximize', nargs='?')
@@ -77,16 +80,26 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
                 loop_removal))
 
         optimum = None
+        total_reactions = 0
+        nonzero_reactions = 0
         for reaction_id, flux in sorted(result):
-            rx = self._mm.get_reaction(reaction_id)
-            print('{}\t{}\t{}'.format(
-                reaction_id, flux,
-                rx.translated_compounds(lambda x: compound_name.get(x, x))))
+            total_reactions += 1
+            if abs(flux) > self._args.epsilon:
+                nonzero_reactions += 1
+
+            if abs(flux) > self._args.epsilon or self._args.all_reactions:
+                rx = self._mm.get_reaction(reaction_id)
+                rx_trans = rx.translated_compounds(
+                    lambda x: compound_name.get(x, x))
+                print('{}\t{}\t{}'.format(reaction_id, flux, rx_trans))
+
             # Remember flux of requested reaction
             if reaction_id == reaction:
                 optimum = flux
 
         logger.info('Objective flux: {}'.format(optimum))
+        logger.info('Reactions at zero flux: {}/{}'.format(
+            total_reactions - nonzero_reactions, total_reactions))
 
     def run_fba(self, reaction):
         """Run standard FBA on model."""
