@@ -36,6 +36,10 @@ class ChargeBalanceCommand(Command):
         parser.add_argument(
             '--exclude', metavar='reaction', action=FilePrefixAppendAction,
             type=str, default=[], help='Exclude reaction from balance check')
+        parser.add_argument(
+            '--epsilon', metavar='epsilon', type=float, default=1e-6,
+            help='Threshold for charge imbalance to be considered zero'
+        )
         super(ChargeBalanceCommand, cls).init_parser(parser)
 
     def run(self):
@@ -81,7 +85,7 @@ class ChargeBalanceCommand(Command):
                 logger.debug('Not checking reaction {};'
                              ' missing charge'.format(reaction))
                 unchecked += 1
-            elif charge != 0:
+            elif abs(charge) > self._args.epsilon:
                 unbalanced += 1
                 rx = self._mm.get_reaction(reaction)
                 rxt = rx.translated_compounds(
