@@ -29,7 +29,7 @@ class GapFillError(Exception):
     """Indicates an error while running GapFind/GapFill"""
 
 
-def gapfind(model, solver, epsilon=1e-5, v_max=1000):
+def gapfind(model, solver, epsilon=0.001, v_max=1000):
     """Identify compounds in the model that cannot be produced.
 
     Yields all compounds that cannot be produced. This method
@@ -100,7 +100,7 @@ def gapfind(model, solver, epsilon=1e-5, v_max=1000):
             yield compound
 
 
-def gapfill(model, core, blocked, solver, epsilon=1e-5, v_max=1000):
+def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
     """Find a set of reactions to add such that no compounds are blocked.
 
     Returns two iterators: first an iterator of reactions not in
