@@ -178,7 +178,7 @@ def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
                 # ym variables. This is done by introducing another helper
                 # variable, yn.
                 prob.define(('yn', reaction_id, compound),
-                    types=lp.VariableType.Binary)
+                            types=lp.VariableType.Binary)
                 yn = prob.var(('yn', reaction_id, compound))
                 prob.add_linear_constraints(
                     2 * yn <= w + prob.var(('ym', reaction_id)))
