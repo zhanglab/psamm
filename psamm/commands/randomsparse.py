@@ -49,8 +49,9 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             'threshold', help='Threshold of max reaction flux',
             type=util.MaybeRelative)
         parser.add_argument(
-            '--exchange', help='Only analyze the exchange reaction in model',
-            action='store_true')
+            '--type', help='Type of deletion to perform',
+            choices=['reactions', 'exchange'], type=str,
+            required=True)
         super(RandomSparseNetworkCommand, cls).init_parser(parser)
 
     def run(self):
@@ -85,17 +86,19 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
         logger.info('Flux threshold for {} is {}'.format(
             reaction, flux_threshold))
 
-        essential = {reaction}
-        deleted = set()
-        if self._args.exchange:
+        self._delete_reactions(p, reaction, flux_threshold)
+
+    def _delete_reactions(self, prob, obj_reaction, flux_threshold):
+        essential = {obj_reaction}
+        if self._args.type == 'exchange':
             reactions = set()
             for reaction_id in self._mm.reactions:
                 if self._mm.is_exchange(reaction_id):
                     reactions.add(reaction_id)
         else:
             reactions = set(self._mm.reactions)
-
         test_set = reactions - essential
+        deleted = set()
 
         start_time = time.time()
 
@@ -103,14 +106,14 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             testing_reaction = random.sample(test_set, 1)[0]
             test_set.remove(testing_reaction)
 
-            flux_var = p.get_flux_var(testing_reaction)
-            c, = p.prob.add_linear_constraints(flux_var == 0)
+            flux_var = prob.get_flux_var(testing_reaction)
+            c, = prob.prob.add_linear_constraints(flux_var == 0)
 
             logger.info('Trying FBA without reaction {}...'.format(
                 testing_reaction))
 
             try:
-                p.maximize(reaction)
+                prob.maximize(obj_reaction)
             except fluxanalysis.FluxBalanceError:
                 logger.info(
                     'FBA is infeasible, marking {} as essential'.format(
@@ -120,9 +123,9 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
                 continue
 
             logger.debug('Reaction {} has flux {}'.format(
-                reaction, p.get_flux(reaction)))
+                obj_reaction, prob.get_flux(obj_reaction)))
 
-            if p.get_flux(reaction) < flux_threshold:
+            if prob.get_flux(obj_reaction) < flux_threshold:
                 c.delete()
                 essential.add(testing_reaction)
                 logger.info('Reaction {} was essential'.format(

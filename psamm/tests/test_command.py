@@ -201,9 +201,15 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command([
             '--model', self._model_dir, 'masscheck', '--type', 'reaction'], {})
 
-    def test_run_randomsparse(self):
+    def test_run_randomsparse_reactions(self):
         self.run_solver_command([
-            '--model', self._model_dir, 'randomsparse', '50%'], {})
+            '--model', self._model_dir, 'randomsparse', '--type=reactions',
+            '50%'], {})
+
+    def test_run_randomsparse_exchange(self):
+        self.run_solver_command([
+            '--model', self._model_dir, 'randomsparse', '--type=exchange',
+            '50%'], {})
 
     def test_run_robustness(self):
         self.run_solver_command([
