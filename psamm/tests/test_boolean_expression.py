@@ -48,6 +48,10 @@ class TestVariable(unittest.TestCase):
         subst = {'y': True, 'x': False}
         self.assertEqual(Variable('x').substitute(lambda v: subst.get(v.symbol, v)), False)
 
+    def test_variable_iter_variables(self):
+        v = Variable('x')
+        self.assertEqual(list(v.variables()), [v])
+
     def test_variables_equals_true(self):
         self.assertEqual(Variable('x'), Variable('x'))
 
@@ -76,6 +80,13 @@ class TestExpression(unittest.TestCase):
     def test_expression_substitute_unknown_to_expression(self):
         e = Expression('b1 and b2')
         self.assertEqual(e.substitute(lambda v: v), Expression('b1 and b2'))
+
+    def test_expression_iter_variables(self):
+        e = Or(And(Variable('b1'), Variable('b2')),
+               And(Variable('b3'), Variable('b4')))
+        self.assertEqual(set(e.variables()), {
+            Variable('b1'), Variable('b2'), Variable('b3'), Variable('b4')
+        })
 
     def test_expression_parse_and(self):
         e = Expression('b1 and b2')

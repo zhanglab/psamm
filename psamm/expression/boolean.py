@@ -39,6 +39,10 @@ class Variable(object):
         """Substitute variables using mapping function"""
         return mapping(self)
 
+    def variables(self):
+        """Iterate over variables."""
+        yield self
+
     def __repr__(self):
         return 'Variable({})'.format(repr(self._symbol))
 
@@ -71,6 +75,15 @@ class And(object):
     def terms(self):
         """Iterate over terms"""
         return iter(self._terms)
+
+    def variables(self):
+        """Iterate over variables."""
+        for t in self._terms:
+            if isinstance(t, Variable):
+                yield t
+            else:
+                for u in t.variables():
+                    yield u
 
     def substitute(self, mapping):
         """Substitute variables using mapping function"""
@@ -126,6 +139,15 @@ class Or(object):
     def terms(self):
         """Iterate over terms"""
         return iter(self._terms)
+
+    def variables(self):
+        """Iterate over variables."""
+        for t in self._terms:
+            if isinstance(t, Variable):
+                yield t
+            else:
+                for u in t.variables():
+                    yield u
 
     def substitute(self, mapping):
         """Substitute variables using mapping function"""
