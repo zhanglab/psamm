@@ -34,6 +34,11 @@ class TestVariable(unittest.TestCase):
     def test_variable_init_underscore_symbol(self):
         v = Variable('x_y')
 
+    def test_variable_init_from_unicode(self):
+        symbol = u'\u00c6\u00d8\u00c5'
+        v = Variable(symbol)
+        self.assertEqual(v.symbol, symbol)
+
     def test_variable_symbol(self):
         self.assertEqual(Variable('x').symbol, 'x')
 

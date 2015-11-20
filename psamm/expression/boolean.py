@@ -24,12 +24,14 @@ particular variables.
 
 import re
 
+from six import text_type
+
 
 class Variable(object):
     """Represents a variable in a boolean expression"""
 
     def __init__(self, symbol):
-        self._symbol = str(symbol)
+        self._symbol = text_type(symbol)
 
     @property
     def symbol(self):
@@ -47,7 +49,7 @@ class Variable(object):
         return 'Variable({})'.format(repr(self._symbol))
 
     def __str__(self):
-        return str(self._symbol)
+        return self._symbol
 
     def __eq__(self, other):
         return isinstance(other, Variable) and self._symbol == other._symbol
@@ -102,12 +104,12 @@ class And(object):
         return And(*result)
 
     def __repr__(self):
-        return 'Expression({})'.format(repr(str(self)))
+        return 'Expression({})'.format(repr(text_type(self)))
 
     def __str__(self):
         def format_term(t):
             if isinstance(t, Variable):
-                return str(t)
+                return text_type(t)
             return '({})'.format(t)
         return ' and '.join(format_term(t) for t in self._terms)
 
@@ -166,12 +168,12 @@ class Or(object):
         return Or(*result)
 
     def __repr__(self):
-        return 'Expression({})'.format(repr(str(self)))
+        return 'Expression({})'.format(repr(text_type(self)))
 
     def __str__(self):
         def format_term(t):
             if isinstance(t, Variable):
-                return str(t)
+                return text_type(t)
             return '({})'.format(t)
         return ' or '.join(format_term(t) for t in self._terms)
 
@@ -204,7 +206,7 @@ def Expression(s):  # noqa
         ([^\d\W]\w*) |       # variable
         (\Z) |               # end
         (.)                  # error
-    ''', re.DOTALL | re.VERBOSE)
+    ''', re.DOTALL | re.VERBOSE | re.UNICODE)
 
     # Parsed using two states and a stack of open clauses
     # At state 0 (not expect_operator): Expect variable, or parenthesis group
