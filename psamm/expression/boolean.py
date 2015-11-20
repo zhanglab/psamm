@@ -206,7 +206,7 @@ def Expression(s):  # noqa
         ([^\d\W]\w*) |       # variable
         (\Z) |               # end
         (.)                  # error
-    ''', re.DOTALL | re.VERBOSE | re.UNICODE)
+    ''', re.DOTALL | re.VERBOSE | re.UNICODE | re.IGNORECASE)
 
     # Parsed using two states and a stack of open clauses
     # At state 0 (not expect_operator): Expect variable, or parenthesis group
@@ -232,6 +232,7 @@ def Expression(s):  # noqa
         elif space is not None:
             continue
         elif expect_operator and operator is not None:
+            operator = operator.lower()
             if operator == 'and' and clause_operator != 'and':
                 prev_term = current_clause.pop()
                 clause_stack.append((clause_operator, current_clause))
