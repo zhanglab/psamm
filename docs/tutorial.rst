@@ -627,6 +627,36 @@ This line based format can be especially helpful when dealing with larger
 equations like biomass reactions where there can be dozens of components in
 a single reaction.
 
+Gene associations for the reactions in a model can also be included in the
+reaction definitions so that gene essentiality experiments can be performed
+with the model. These genes associations are included by adding the ``genes``
+property to the reaction like follows:
+
+.. code-block:: yaml
+
+    - id: R_ACALDt
+      name: acetaldehyde reversible transport
+      equation: '|M_acald_e[C_e]| <=> |M_acald_c[C_c]|'
+      subsystem: Transport, Extracellular
+      genes: gene_0001
+
+
+More complex gene associations can also be included by using logical and/or
+statements in the genes property. When performing gene essentiallity simulations
+this logic will be taken into account. Some examples of using this logic with
+the genes property can be seen below:
+
+.. code-block:: yaml
+
+    genes: gene_0001 or gene_0002
+
+    genes: gene_0003 and gene_0004
+
+    genes: gene_0003 and gene_0004 or gene_0005 and gene_0006
+
+    genes: gene_0001 and (gene_0002 or gene_0003)
+
+
 Compounds
 ~~~~~~~~~
 
