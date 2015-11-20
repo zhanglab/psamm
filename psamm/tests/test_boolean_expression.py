@@ -69,6 +69,7 @@ class TestVariable(unittest.TestCase):
     def test_variable_hash(self):
         self.assertEqual(hash(Variable('xyz')), hash(Variable('xyz')))
 
+
 class TestExpression(unittest.TestCase):
     def test_expression_substitute_existing(self):
         e = Expression('b1')
@@ -173,6 +174,16 @@ class TestExpression(unittest.TestCase):
     def test_expression_parse_with_extra_space(self):
         e = Expression('b1    and   b2       and b3')
         self.assertEqual(e, And(Variable('b1'), Variable('b2'), Variable('b3')))
+
+    def test_expression_parse_with_square_mixed_groups(self):
+        e = Expression('[(a or b) or (c or d)] or [e or (f and g and h)]')
+        self.assertEqual(e, Or(
+            Variable('a'), Variable('b'), Variable('c'), Variable('d'),
+            Variable('e'), And(Variable('f'), Variable('g'), Variable('h'))))
+
+    def test_expression_parse_with_square_groups_unmatched(self):
+        with self.assertRaises(ValueError):
+            e = Expression('[(a or b) or (c or d])')
 
 
 if __name__ == '__main__':

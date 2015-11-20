@@ -199,9 +199,16 @@ def Expression(s):  # noqa
         None: lambda *args: args[0]
     }
 
+    # Pairing of end group symbols with start group symbols
+    group_pairs = {
+        ')': '(',
+        ']': '['
+    }
+
     scanner = re.compile(r'''
         (\s+) |              # space
-        (\(|\)) |            # group
+        (\(|\[) |            # group_start
+        (\)|\]) |            # group_end
         ((?:or|and)\b) |     # operator
         ([^\d\W]\w*) |       # variable
         (\Z) |               # end
@@ -217,14 +224,16 @@ def Expression(s):  # noqa
     clause_stack = []
     current_clause = []
     clause_operator = None
+    clause_symbol = None
 
     def close():
-        prev_op, prev_clause = clause_stack.pop()
+        prev_op, prev_symbol, prev_clause = clause_stack.pop()
         prev_clause.append(operators[clause_operator](*current_clause))
-        return prev_op, prev_clause
+        return prev_op, prev_symbol, prev_clause
 
     for match in re.finditer(scanner, s):
-        space, group, operator, variable, end, error = match.groups()
+        (space, group_start, group_end, operator, variable, end,
+            error) = match.groups()
 
         if error is not None:
             raise ValueError('Invalid token in expression string: {}'.format(
@@ -235,28 +244,35 @@ def Expression(s):  # noqa
             operator = operator.lower()
             if operator == 'and' and clause_operator != 'and':
                 prev_term = current_clause.pop()
-                clause_stack.append((clause_operator, current_clause))
+                clause_stack.append(
+                    (clause_operator, clause_symbol, current_clause))
                 current_clause = [prev_term]
             elif operator == 'or' and clause_operator == 'and':
-                clause_operator, current_clause = close()
+                clause_operator, clause_symbol, current_clause = close()
             clause_operator = operator
             expect_operator = False
-        elif expect_operator and group is not None and group == ')':
+        elif expect_operator and group_end is not None:
             if clause_operator == 'and':
-                clause_operator, current_clause = close()
+                clause_operator, clause_symbol, current_clause = close()
             if len(clause_stack) == 0:
                 raise ValueError('Unbalanced parenthesis group in expression')
-            clause_operator, current_clause = close()
+            if group_pairs[group_end] != clause_symbol:
+                raise ValueError(
+                    'Group started with {} ended with {}'.format(
+                        clause_symbol, group_end))
+            clause_operator, clause_symbol, current_clause = close()
         elif expect_operator and end is not None:
             if clause_operator == 'and':
-                clause_operator, current_clause = close()
+                clause_operator, clause_symbol, current_clause = close()
         elif not expect_operator and variable is not None:
             current_clause.append(Variable(variable))
             expect_operator = True
-        elif not expect_operator and group is not None and group == '(':
-            clause_stack.append((clause_operator, current_clause))
+        elif not expect_operator and group_start is not None:
+            clause_stack.append(
+                (clause_operator, clause_symbol, current_clause))
             current_clause = []
             clause_operator = None
+            clause_symbol = group_start
         else:
             raise ValueError('Invalid token in expression string: {}'.format(
                 repr(match.group(0))))
