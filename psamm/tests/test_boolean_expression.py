@@ -18,7 +18,7 @@
 
 import unittest
 
-from psamm.expression.boolean import Expression, Variable, And, Or
+from psamm.expression.boolean import Expression, Variable, And, Or, ParseError
 
 
 class TestVariable(unittest.TestCase):
@@ -169,6 +169,14 @@ class TestExpression(unittest.TestCase):
         e = Expression('b12345 and bxyz and testtesttest')
         self.assertEqual(e, And(Variable('b12345'), Variable('bxyz'), Variable('testtesttest')))
 
+    def test_expression_parse_with_missing_variable(self):
+        with self.assertRaises(ParseError):
+            e = Expression('b1 and and b3')
+
+    def test_expression_parse_with_missing_end_parenthesis(self):
+        with self.assertRaises(ParseError):
+            e = Expression('b1 and (b2 or b3')
+
     def test_expression_parse_name_starting_with_or(self):
         e = Expression('b1 and order')
         self.assertEqual(e, And(Variable('b1'), Variable('order')))
@@ -188,7 +196,7 @@ class TestExpression(unittest.TestCase):
             Variable('e'), And(Variable('f'), Variable('g'), Variable('h'))))
 
     def test_expression_parse_with_square_groups_unmatched(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ParseError):
             e = Expression('[(a or b) or (c or d])')
 
 

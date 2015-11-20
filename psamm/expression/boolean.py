@@ -189,6 +189,22 @@ class Or(object):
         return hash('Or') ^ hash(self._terms)
 
 
+class ParseError(Exception):
+    """Signals error parsing boolean expression."""
+
+    def __init__(self, *args, **kwargs):
+        self._span = kwargs.pop('span', None)
+        super(ParseError, self).__init__(*args, **kwargs)
+
+    @property
+    def indicator(self):
+        if self._span is None:
+            return None
+        pre = ' ' * self._span[0]
+        ind = '^' * max(1, self._span[1] - self._span[0])
+        return pre + ind
+
+
 def Expression(s):  # noqa
     """Parse boolean expression containing and/or operators"""
 
@@ -236,8 +252,8 @@ def Expression(s):  # noqa
             error) = match.groups()
 
         if error is not None:
-            raise ValueError('Invalid token in expression string: {}'.format(
-                repr(match.group(0))))
+            raise ParseError('Invalid token in expression string: {}'.format(
+                repr(match.group(0))), span=(match.start(), match.end()))
         elif space is not None:
             continue
         elif expect_operator and operator is not None:
@@ -255,11 +271,14 @@ def Expression(s):  # noqa
             if clause_operator == 'and':
                 clause_operator, clause_symbol, current_clause = close()
             if len(clause_stack) == 0:
-                raise ValueError('Unbalanced parenthesis group in expression')
+                raise ParseError(
+                    'Unbalanced parenthesis group in expression',
+                    span=(match.start(), match.end()))
             if group_pairs[group_end] != clause_symbol:
-                raise ValueError(
+                raise ParseError(
                     'Group started with {} ended with {}'.format(
-                        clause_symbol, group_end))
+                        clause_symbol, group_end),
+                    span=(match.start(), match.end()))
             clause_operator, clause_symbol, current_clause = close()
         elif expect_operator and end is not None:
             if clause_operator == 'and':
@@ -274,11 +293,13 @@ def Expression(s):  # noqa
             clause_operator = None
             clause_symbol = group_start
         else:
-            raise ValueError('Invalid token in expression string: {}'.format(
-                repr(match.group(0))))
+            raise ParseError(
+                'Invalid token in expression string: {!r}'.format(
+                    match.group(0)),
+                span=(match.start(), match.end()))
 
     if len(clause_stack) > 0:
-        raise ValueError('Unbalanced parenthesis group in expression')
+        raise ParseError('Unbalanced parenthesis group in expression')
 
     expr = operators[clause_operator](*current_clause)
     return expr
