@@ -39,6 +39,12 @@ class TestVariable(unittest.TestCase):
         v = Variable(symbol)
         self.assertEqual(v.symbol, symbol)
 
+    def test_variable_init_with_dot_symbol(self):
+        v = Variable('x12345.6')
+
+    def test_variable_init_with_number(self):
+        v = Variable('123')
+
     def test_variable_symbol(self):
         self.assertEqual(Variable('x').symbol, 'x')
 

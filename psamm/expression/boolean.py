@@ -210,7 +210,7 @@ def Expression(s):  # noqa
         (\(|\[) |            # group_start
         (\)|\]) |            # group_end
         ((?:or|and)\b) |     # operator
-        ([^\d\W]\w*) |       # variable
+        ([^\s\(\)\[\]]+) |   # variable
         (\Z) |               # end
         (.)                  # error
     ''', re.DOTALL | re.VERBOSE | re.UNICODE | re.IGNORECASE)
