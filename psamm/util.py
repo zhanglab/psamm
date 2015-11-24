@@ -20,6 +20,7 @@
 import re
 import math
 import subprocess
+import collections
 
 from six import iteritems
 
@@ -114,6 +115,30 @@ class MaybeRelative(object):
 
     def __repr__(self):
         return '<{}, {}>'.format(self.__class__.__name__, str(self))
+
+
+class FrozenOrderedSet(collections.Set, collections.Hashable):
+    """An immutable set that retains insertion order."""
+
+    def __init__(self, seq=[]):
+        self.__map = collections.OrderedDict()
+        for e in seq:
+            self.__map[e] = None
+
+    def __contains__(self, element):
+        return element in self.__map
+
+    def __iter__(self):
+        return iter(self.__map)
+
+    def __len__(self):
+        return len(self.__map)
+
+    def __hash__(self):
+        h = 0
+        for e in self:
+            h ^= 31 * hash(e)
+        return h
 
 
 def git_try_describe(repo_path):
