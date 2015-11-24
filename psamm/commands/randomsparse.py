@@ -22,6 +22,9 @@ import logging
 
 from ..command import Command, SolverCommandMixin, CommandError
 from .. import fluxanalysis, util
+from ..expression import boolean
+
+from six import string_types
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +53,7 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             type=util.MaybeRelative)
         parser.add_argument(
             '--type', help='Type of deletion to perform',
-            choices=['reactions', 'exchange'], type=str,
+            choices=['reactions', 'exchange', 'genes'], type=str,
             required=True)
         super(RandomSparseNetworkCommand, cls).init_parser(parser)
 
@@ -86,7 +89,10 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
         logger.info('Flux threshold for {} is {}'.format(
             reaction, flux_threshold))
 
-        self._delete_reactions(p, reaction, flux_threshold)
+        if self._args.type in ('reactions', 'exchange'):
+            self._delete_reactions(p, reaction, flux_threshold)
+        elif self._args.type == 'genes':
+            self._delete_genes(p, reaction, flux_threshold)
 
     def _delete_reactions(self, prob, obj_reaction, flux_threshold):
         essential = {obj_reaction}
@@ -140,3 +146,106 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
         for reaction_id in sorted(reactions):
             value = 0 if reaction_id in deleted else 1
             print('{}\t{}'.format(reaction_id, value))
+
+    def _delete_genes(self, prob, obj_reaction, flux_threshold):
+        genes = set()
+        gene_assoc = {}
+        for reaction in self._model.parse_reactions():
+            assoc = None
+            if reaction.genes is None:
+                continue
+            elif isinstance(reaction.genes, string_types):
+                assoc = boolean.Expression(reaction.genes)
+            else:
+                variables = [boolean.Variable(g) for g in reaction.genes]
+                assoc = boolean.Expression(boolean.And(*variables))
+            genes.update(v.symbol for v in assoc.variables())
+            gene_assoc[reaction.id] = assoc
+
+        essential = set()
+        deleted = set()
+        test_set = set(genes)
+        gene_state = {g: True for g in genes}
+        reactions = set(self._mm.reactions)
+
+        start_time = time.time()
+
+        while len(test_set) > 0:
+            testing_gene = random.sample(test_set, 1)[0]
+            test_set.remove(testing_gene)
+            gene_state[testing_gene] = False
+            deleted_reactions = set()
+
+            logger.info('Trying model without gene {}...'.format(
+                testing_gene))
+
+            for reaction in reactions:
+                if reaction not in gene_assoc:
+                    continue
+                assoc = gene_assoc[reaction]
+                r = assoc.substitute(lambda v: gene_state[v.symbol])
+                if not r.value:
+                    deleted_reactions.add(reaction)
+
+            if obj_reaction in deleted_reactions:
+                logger.info(
+                    'Marking gene {} as essential because the objective'
+                    ' reaction depends on this gene...'.format(testing_gene))
+                essential.add(testing_gene)
+                gene_state[testing_gene] = True
+                continue
+
+            if len(deleted_reactions) == 0:
+                logger.info(
+                    'No reactions were removed when gene {}'
+                    ' was deleted'.format(testing_gene))
+                deleted.add(testing_gene)
+                continue
+
+            logger.info(
+                'Reactions removed when gene {} is deleted: {}'.format(
+                    testing_gene, len(deleted_reactions)))
+            logger.info('Deleted reactions: {}'.format(
+                ', '.join(deleted_reactions)))
+
+            constraints = []
+            for reaction in deleted_reactions:
+                flux_var = prob.get_flux_var(reaction)
+                c, = prob.prob.add_linear_constraints(flux_var == 0)
+                constraints.append(c)
+
+            try:
+                prob.maximize(obj_reaction)
+            except fluxanalysis.FluxBalanceError:
+                logger.info(
+                    'FBA is infeasible, marking {} as essential'.format(
+                        testing_gene))
+                for c in constraints:
+                    c.delete()
+                essential.add(testing_gene)
+                gene_state[testing_gene] = True
+                continue
+
+            logger.debug('Reaction {} has flux {}'.format(
+                obj_reaction, prob.get_flux(obj_reaction)))
+
+            if prob.get_flux(obj_reaction) < flux_threshold:
+                for c in constraints:
+                    c.delete()
+                essential.add(testing_gene)
+                gene_state[testing_gene] = True
+                logger.info('Gene {} was essential'.format(testing_gene))
+            else:
+                deleted.add(testing_gene)
+                reactions.difference_update(deleted_reactions)
+                logger.info('Gene {} was deleted'.format(testing_gene))
+
+        logger.info('Solving took {:.2f} seconds'.format(
+            time.time() - start_time))
+
+        for gene_id in sorted(genes):
+            value = 0 if gene_id in deleted else 1
+            print('{}\t{}'.format(gene_id, value))
+
+        logger.info('Reactions in minimal network: {}'.format(
+            ', '.join(sorted(reactions))))

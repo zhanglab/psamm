@@ -84,8 +84,12 @@ class TestCommandMain(unittest.TestCase):
                 reactions:
                   - id: rxn_1
                     equation: '|A[e]| => |B[c]|'
+                    genes:
+                      - gene_1
+                      - gene_2
                   - id: rxn_2
                     equation: '|B[c]| => |C[e]|'
+                    genes: 'gene_2 or (gene_3 and gene_4)'
                 compounds:
                   - id: A
                   - id: B
@@ -206,6 +210,11 @@ class TestCommandMain(unittest.TestCase):
             '--model', self._model_dir, 'randomsparse', '--type=reactions',
             '50%'], {})
 
+    def test_run_randomsparse_genes(self):
+        self.run_solver_command([
+            '--model', self._model_dir, 'randomsparse', '--type=genes', '50%'],
+            {})
+
     def test_run_randomsparse_exchange(self):
         self.run_solver_command([
             '--model', self._model_dir, 'randomsparse', '--type=exchange',
@@ -236,9 +245,9 @@ class TestCommandMain(unittest.TestCase):
                 '--model', self._model_dir, 'tableexport', 'reactions'])
 
         self.assertEqual(f.getvalue(), '\n'.join([
-            'id\tequation',
-            'rxn_1\t|A[e]| => |B[c]|',
-            'rxn_2\t|B[c]| => |C[e]|',
+            'id\tequation\tgenes',
+            "rxn_1\t|A[e]| => |B[c]|\t['gene_1', 'gene_2']",
+            'rxn_2\t|B[c]| => |C[e]|\tgene_2 or (gene_3 and gene_4)',
             ''
         ]))
 
