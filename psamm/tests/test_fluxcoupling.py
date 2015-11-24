@@ -53,6 +53,9 @@ class TestFluxCouplingBurgardModel(unittest.TestCase):
             self.skipTest('Unable to find an LP solver for tests')
 
     def test_flux_coupling(self):
+        if self.solver.properties['name'] == 'qsoptex':
+            self.skipTest('Flux coupling with QSopt_ex is very slow')
+
         fcp = fluxcoupling.FluxCouplingProblem(self.model, {}, self.solver)
         reactions = sorted(self.model.reactions)
         couplings = {}
