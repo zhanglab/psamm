@@ -89,7 +89,7 @@ class TestCommandMain(unittest.TestCase):
                       - gene_2
                   - id: rxn_2
                     equation: '|B[c]| => |C[e]|'
-                    genes: 'gene_2 or (gene_3 and gene_4)'
+                    genes: 'gene_3 or (gene_4 and gene_5)'
                 compounds:
                   - id: A
                   - id: B
@@ -247,7 +247,7 @@ class TestCommandMain(unittest.TestCase):
         self.assertEqual(f.getvalue(), '\n'.join([
             'id\tequation\tgenes',
             "rxn_1\t|A[e]| => |B[c]|\t['gene_1', 'gene_2']",
-            'rxn_2\t|B[c]| => |C[e]|\tgene_2 or (gene_3 and gene_4)',
+            'rxn_2\t|B[c]| => |C[e]|\tgene_3 or (gene_4 and gene_5)',
             ''
         ]))
 
