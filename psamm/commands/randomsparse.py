@@ -147,6 +147,9 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             value = 0 if reaction_id in deleted else 1
             print('{}\t{}'.format(reaction_id, value))
 
+        logger.info('Essential reactions: {}/{}'.format(
+            len(essential), len(reactions)))
+
     def _delete_genes(self, prob, obj_reaction, flux_threshold):
         genes = set()
         gene_assoc = {}
@@ -246,6 +249,9 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
         for gene_id in sorted(genes):
             value = 0 if gene_id in deleted else 1
             print('{}\t{}'.format(gene_id, value))
+
+        logger.info('Essential genes: {}/{}'.format(
+            len(essential), len(genes)))
 
         logger.info('Reactions in minimal network: {}'.format(
             ', '.join(sorted(reactions))))
