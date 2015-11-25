@@ -103,7 +103,7 @@ class Expression(object):
     >>> e = Expression('a and (b or c)')
     """
 
-    def __init__(self, arg):
+    def __init__(self, arg, _vars=None):
         if isinstance(arg, (_OperatorTerm, Variable, bool)):
             self._root = arg
         elif isinstance(arg, string_types):
@@ -112,15 +112,32 @@ class Expression(object):
             raise TypeError('Unexpected arguments to Expression: {}'.format(
                 repr(arg)))
 
+        # If present use _vars to create the set of variables directly. This
+        # saves a loop over the tree nodes when the variables are already
+        # known.
+        if _vars is None:
+            variables = []
+            if isinstance(self._root, (_OperatorTerm, Variable)):
+                stack = [self._root]
+                while len(stack) > 0:
+                    term = stack.pop()
+                    if isinstance(term, Variable):
+                        variables.append(term)
+                    elif isinstance(term, _OperatorTerm):
+                        stack.extend(reversed(list(term)))
+                    else:
+                        raise ValueError(
+                            'Invalid node in expression tree: {!r}'.format(
+                                term))
+
+            self._variables = FrozenOrderedSet(variables)
+        else:
+            self._variables = FrozenOrderedSet(_vars)
+
+    @property
     def variables(self):
-        """Iterate variables in the expression."""
-        stack = [self._root]
-        while len(stack) > 0:
-            term = stack.pop()
-            if isinstance(term, Variable):
-                yield term
-            elif isinstance(term, _OperatorTerm):
-                stack.extend(reversed(list(term)))
+        """Immutable set of variables in the expression."""
+        return self._variables
 
     def has_value(self):
         """Return True if the expression has no variables."""
@@ -139,6 +156,7 @@ class Expression(object):
         output_stack = []
         current_type = None
         terms = []
+        variables = []
         term = None
 
         while True:
@@ -178,6 +196,10 @@ class Expression(object):
                         'Expected Variable or bool from substitution,'
                         ' got: {!r}'.format(term))
 
+            # Check again after substitution
+            if isinstance(term, Variable):
+                variables.append(term)
+
             # Short circuit with booleans
             while isinstance(term, bool):
                 if current_type == And:
@@ -198,7 +220,7 @@ class Expression(object):
             else:
                 terms.append(term)
 
-        return self.__class__(term)
+        return self.__class__(term, _vars=variables)
 
     def __repr__(self):
         if isinstance(self._root, bool):

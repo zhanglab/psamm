@@ -127,7 +127,7 @@ class TestExpression(unittest.TestCase):
             Or(
                 And(Variable('b1'), Variable('b2')),
                 And(Variable('b3'), Variable('b4'))))
-        self.assertEqual(list(e.variables()), [
+        self.assertEqual(list(e.variables), [
             Variable('b1'), Variable('b2'), Variable('b3'), Variable('b4')
         ])
 

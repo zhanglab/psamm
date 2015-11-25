@@ -162,7 +162,7 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
             else:
                 variables = [boolean.Variable(g) for g in reaction.genes]
                 assoc = boolean.Expression(boolean.And(*variables))
-            genes.update(v.symbol for v in assoc.variables())
+            genes.update(v.symbol for v in assoc.variables)
             gene_assoc[reaction.id] = assoc
 
         essential = set()
