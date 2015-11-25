@@ -168,7 +168,6 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
         essential = set()
         deleted = set()
         test_set = set(genes)
-        gene_state = {g: True for g in genes}
         reactions = set(self._mm.reactions)
 
         start_time = time.time()
@@ -176,7 +175,7 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
         while len(test_set) > 0:
             testing_gene = random.sample(test_set, 1)[0]
             test_set.remove(testing_gene)
-            gene_state[testing_gene] = False
+            new_gene_assoc = {}
             deleted_reactions = set()
 
             logger.info('Trying model without gene {}...'.format(
@@ -186,16 +185,21 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
                 if reaction not in gene_assoc:
                     continue
                 assoc = gene_assoc[reaction]
-                r = assoc.substitute(lambda v: gene_state[v.symbol])
-                if not r.value:
-                    deleted_reactions.add(reaction)
+                if boolean.Variable(testing_gene) in assoc.variables:
+                    new_assoc = assoc.substitute(
+                        lambda v: v if v.symbol != testing_gene else False)
+                    if new_assoc.has_value() and not new_assoc.value:
+                        deleted_reactions.add(reaction)
+                    else:
+                        new_gene_assoc[reaction] = new_assoc
+                else:
+                    new_gene_assoc[reaction] = assoc
 
             if obj_reaction in deleted_reactions:
                 logger.info(
                     'Marking gene {} as essential because the objective'
                     ' reaction depends on this gene...'.format(testing_gene))
                 essential.add(testing_gene)
-                gene_state[testing_gene] = True
                 continue
 
             if len(deleted_reactions) == 0:
@@ -203,6 +207,7 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
                     'No reactions were removed when gene {}'
                     ' was deleted'.format(testing_gene))
                 deleted.add(testing_gene)
+                gene_assoc = new_gene_assoc
                 continue
 
             logger.info(
@@ -226,7 +231,6 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
                 for c in constraints:
                     c.delete()
                 essential.add(testing_gene)
-                gene_state[testing_gene] = True
                 continue
 
             logger.debug('Reaction {} has flux {}'.format(
@@ -236,11 +240,11 @@ class RandomSparseNetworkCommand(SolverCommandMixin, Command):
                 for c in constraints:
                     c.delete()
                 essential.add(testing_gene)
-                gene_state[testing_gene] = True
                 logger.info('Gene {} was essential'.format(testing_gene))
             else:
                 deleted.add(testing_gene)
                 reactions.difference_update(deleted_reactions)
+                gene_assoc = new_gene_assoc
                 logger.info('Gene {} was deleted'.format(testing_gene))
 
         logger.info('Solving took {:.2f} seconds'.format(
