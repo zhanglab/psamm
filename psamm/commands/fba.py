@@ -52,6 +52,12 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
             elif compound.id not in compound_name:
                 compound_name[compound.id] = compound.id
 
+        # Reaction genes information
+        reaction_genes = {}
+        for reaction in self._model.parse_reactions():
+            if 'genes' in reaction.properties:
+                reaction_genes[reaction.id] = reaction.properties['genes']
+
         if self._args.reaction is not None:
             reaction = self._args.reaction
         else:
@@ -91,7 +97,9 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
                 rx = self._mm.get_reaction(reaction_id)
                 rx_trans = rx.translated_compounds(
                     lambda x: compound_name.get(x, x))
-                print('{}\t{}\t{}'.format(reaction_id, flux, rx_trans))
+                genes = reaction_genes.get(reaction_id, '')
+                print('{}\t{}\t{}\t{}'.format(
+                    reaction_id, flux, rx_trans, genes))
 
             # Remember flux of requested reaction
             if reaction_id == reaction:
