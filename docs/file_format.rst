@@ -133,6 +133,16 @@ ec        string           EC number
 genes     string           Gene association rule
 ========  ===============  ==========================================
 
+The ``genes`` property can be used to specifiy which genes enable a reaction.
+Complex gene association rules can be used when a reaction is enabled by a
+group of genes or when multiple genes can independently enable a reaction:
+
+.. code-block:: yaml
+
+    - id: ADK1
+      equation: '|amp| + |atp| <=> (2) |adp|'
+      genes: gene_0001 or (gene_0002 and gene_0003)
+
 Media
 -----
 
