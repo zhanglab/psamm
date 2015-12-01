@@ -20,6 +20,7 @@
 import re
 import math
 import subprocess
+import collections
 
 from six import iteritems
 
@@ -68,7 +69,7 @@ class MaybeRelative(object):
             self._relative = False
         except ValueError:
             self._value = self._parse_percentage(s)
-            self._relative = True
+            self._relative = self._value != 0.0
 
         self._reference = None
 
@@ -104,13 +105,40 @@ class MaybeRelative(object):
         else:
             return self._value
 
-    def __repr__(self):
+    def __str__(self):
         if self._relative:
-            return '<{}, {:.1%} of {}>'.format(
-                self.__class__.__name__, self._value, self._reference)
+            f = None if self._reference is None else float(self)
+            return '{:.1%} of {} = {}'.format(
+                self._value, self._reference, f)
         else:
-            return '<{}, {}>'.format(
-                self.__class__.__name__, self._value)
+            return str(self._value)
+
+    def __repr__(self):
+        return '<{}, {}>'.format(self.__class__.__name__, str(self))
+
+
+class FrozenOrderedSet(collections.Set, collections.Hashable):
+    """An immutable set that retains insertion order."""
+
+    def __init__(self, seq=[]):
+        self.__map = collections.OrderedDict()
+        for e in seq:
+            self.__map[e] = None
+
+    def __contains__(self, element):
+        return element in self.__map
+
+    def __iter__(self):
+        return iter(self.__map)
+
+    def __len__(self):
+        return len(self.__map)
+
+    def __hash__(self):
+        h = 0
+        for e in self:
+            h ^= 31 * hash(e)
+        return h
 
 
 def git_try_describe(repo_path):

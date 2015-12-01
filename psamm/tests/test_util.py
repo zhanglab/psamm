@@ -18,7 +18,7 @@
 
 import unittest
 
-from psamm.util import MaybeRelative
+from psamm.util import MaybeRelative, FrozenOrderedSet
 
 
 class TestMaybeRelative(unittest.TestCase):
@@ -49,6 +49,24 @@ class TestMaybeRelative(unittest.TestCase):
     def test_invalid(self):
         with self.assertRaises(ValueError):
             arg = MaybeRelative('abc')
+
+
+class TestFrozenOrderedSet(unittest.TestCase):
+    def test_init_from_empty(self):
+        s = FrozenOrderedSet()
+        self.assertEqual(list(s), [])
+
+    def test_init_from_sequence(self):
+        s = FrozenOrderedSet([5, 2, 4, 0, 9, 13, 5, 3])
+        self.assertEqual(list(s), [5, 2, 4, 0, 9, 13, 3])
+
+    def test_set_length(self):
+        s = FrozenOrderedSet([1, 2, 3])
+        self.assertEqual(len(s), 3)
+
+    def test_set_is_hashable(self):
+        s = FrozenOrderedSet(['a', 'b', 'c'])
+        hash(s)
 
 
 if __name__ == '__main__':

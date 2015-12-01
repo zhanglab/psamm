@@ -138,7 +138,7 @@ class Problem(BaseProblem):
 
     def _grb_expr_from_value_set(self, value_set):
         return gurobipy.LinExpr(
-            [(val, self._p.getVarByName(self._variables[var]))
+            [(float(val), self._p.getVarByName(self._variables[var]))
              for var, val in value_set])
 
     def _add_constraints(self, relation):
@@ -152,8 +152,8 @@ class Problem(BaseProblem):
             name = next(self._constr_names)
             self._p.addConstr(
                 self._grb_expr_from_value_set(value_set),
-                self.CONSTR_SENSE_MAP[relation.sense], -expression.offset,
-                name)
+                self.CONSTR_SENSE_MAP[relation.sense],
+                -float(expression.offset), name)
             names.append(name)
 
         self._p.update()
@@ -169,12 +169,7 @@ class Problem(BaseProblem):
         constraints = []
 
         for relation in relations:
-            self._check_relation(relation)
-            if isinstance(relation, bool):
-                # A bool in place of a relation is accepted to mean
-                # a relation that does not involve any variables and
-                # has therefore been evaluated to a truth-value (e.g
-                # '0 == 0' or '2 >= 3').
+            if self._check_relation(relation):
                 constraints.append(Constraint(self, None))
             else:
                 for name in self._add_constraints(relation):
@@ -251,6 +246,24 @@ class Result(BaseResult):
         """Return boolean indicating whether a solution was found."""
         self._check_valid()
         return self._problem._p.Status == gurobipy.GRB.OPTIMAL
+
+    @property
+    def unbounded(self):
+        """Whether solution is unbounded"""
+        self._check_valid()
+
+        status = self._problem._p.Status
+        if (status == gurobipy.GRB.INF_OR_UNBD and
+                self._problem._p.params.DualReductions):
+            # Disable dual reductions to obtain a definitve answer
+            self._problem._p.params.DualReductions = 0
+            try:
+                self._problem._p.optimize()
+            finally:
+                self._problem._p.params.DualReductions = 1
+
+            status = self._problem._p.Status
+        return status == gurobipy.GRB.UNBOUNDED
 
     @property
     def status(self):

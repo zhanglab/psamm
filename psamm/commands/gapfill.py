@@ -38,6 +38,7 @@ class GapFillCommand(SolverCommandMixin, Command):
                 compound_name[compound.id] = compound.id
 
         model_compartments = set(self._mm.compartments)
+        core = set(self._mm.reactions)
 
         solver = self._get_solver(integer=True)
 
@@ -60,7 +61,7 @@ class GapFillCommand(SolverCommandMixin, Command):
 
             logger.info('Searching for reactions to fill gaps')
             added_reactions, reversed_reactions = gapfill(
-                model_complete, self._mm.reactions, blocked, solver=solver)
+                model_complete, core, blocked, solver=solver)
 
             for rxnid in added_reactions:
                 rx = model_complete.get_reaction(rxnid)

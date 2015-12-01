@@ -54,7 +54,7 @@ def is_consistent(database, solver, exchange=set(), zeromass=set()):
 
     # Define mass variables
     for compound in compound_set:
-        if compound.name not in zeromass:
+        if compound not in zeromass:
             prob.define(('m', compound), lower=1)
         else:
             prob.define(('m', compound), lower=0, upper=0)
@@ -97,7 +97,7 @@ def check_reaction_consistency(database, solver, exchange=set(),
 
     # Define mass variables
     for compound in compound_set:
-        if compound.name not in zeromass:
+        if compound not in zeromass:
             prob.define(('m', compound), lower=1)
         else:
             prob.define(('m', compound), lower=0, upper=0)
@@ -166,7 +166,7 @@ def check_compound_consistency(database, solver, exchange=set(),
 
     # Define mass variables
     for compound in compound_set:
-        if compound.name not in zeromass:
+        if compound not in zeromass:
             prob.define(('m', compound), lower=0)
         else:
             prob.define(('m', compound), lower=0, upper=0)

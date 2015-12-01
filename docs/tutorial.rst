@@ -627,6 +627,36 @@ This line based format can be especially helpful when dealing with larger
 equations like biomass reactions where there can be dozens of components in
 a single reaction.
 
+Gene associations for the reactions in a model can also be included in the
+reaction definitions so that gene essentiality experiments can be performed
+with the model. These genes associations are included by adding the ``genes``
+property to the reaction like follows:
+
+.. code-block:: yaml
+
+    - id: R_ACALDt
+      name: acetaldehyde reversible transport
+      equation: '|M_acald_e[C_e]| <=> |M_acald_c[C_c]|'
+      subsystem: Transport, Extracellular
+      genes: gene_0001
+
+
+More complex gene associations can also be included by using logical and/or
+statements in the genes property. When performing gene essentiallity simulations
+this logic will be taken into account. Some examples of using this logic with
+the genes property can be seen below:
+
+.. code-block:: yaml
+
+    genes: gene_0001 or gene_0002
+
+    genes: gene_0003 and gene_0004
+
+    genes: gene_0003 and gene_0004 or gene_0005 and gene_0006
+
+    genes: gene_0001 and (gene_0002 or gene_0003)
+
+
 Compounds
 ~~~~~~~~~
 
@@ -1798,7 +1828,7 @@ threshold for the simulation.
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model randomsparse 95%
+    (psamm-env) $ psamm-model randomsparse --type reaction 95%
 
 The output from the randomsparse command could be as follows:
 
@@ -1825,13 +1855,40 @@ should all be essential. If the sample output below is looked at then it can
 be seen that when the other steps going to other direction in the pathway
 are deleted the `MANN1PDEH` reaction becomes essential.
 
-You can also use the ``randomsparse`` command to randomly sample the exchange
-reactions and generate putative minimal exchange reaction sets. This can be
-done by using the ``--exchange`` option with the ``randomsparse`` command:
+In addition to working at the reaction level the ``randomsparse`` command can
+also be used to look at gene essentiality in the network. To use this function
+the model must contain gene associations for the model reactions. This can be
+done using the ``--type genes`` option with the ``randomsparse`` command:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model randomsparse 90% --exchange
+    (psamm-env) $ psamm-model randomsparse --type genes 90%
+
+
+This will produce an output similar to the reaction deletion but instead of
+reaction IDs the gene IDs will be listed with a 1 if the gene was kept in the
+simulation and a 0 if the gene was deleted. Following the list of genes will
+be a list of the reaction IDs that made up the minimal network for that
+simulation. An example output can be seen as follows:
+
+.. code-block:: shell
+
+    Gene_A	0
+    Gene_B	0
+    Gene_C	0
+    Gene_D	1
+    Gene_E	1
+    Gene_F	1
+    Gene_G	0
+    INFO: Reactions in minimal network: EX_cpd_1_e, Objective, R_1, R_2, R_3, R_4, R_5, R_6
+
+You can also use the ``randomsparse`` command to randomly sample the exchange
+reactions and generate putative minimal exchange reaction sets. This can be
+done by using the ``--type exchange`` option with the ``randomsparse`` command:
+
+.. code-block:: shell
+
+    (psamm-env) $ psamm-model randomsparse --type exchange 90%
 
 
 It can be seen that when this is run on this small network the mannitol

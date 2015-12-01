@@ -1,4 +1,21 @@
 
+v0.16 (2015-12-01)
+------------------
+
+- Add an option to `randomsparse` to perform the deletion based on genes
+  instead of reactions. This uses the gene association expression defined in
+  the reaction property `genes`.
+- Add threshold option to `fva` command.
+- Fix bugs in `gapfill` that resulted in the procedure not detecting reactions
+  that could be reversed, and sometimes failing to find a result at all.
+- Add epsilon option to `chargecheck` and ignore charge imbalances below the
+  epsilon value.
+- Allow the `search` command to find reactions containing a specific compound
+  even when the compartment is not specified.
+- Output more information is the result of the `search` command.
+- Improved handling of flux bounds at infinity (e.g. with
+  `default_flux_limit = .inf` in `model.yaml`).
+
 v0.15 (2015-10-16)
 ------------------
 

@@ -93,19 +93,19 @@ of a YAML reaction file:
     # Biomass composition
     - id: Biomass
       equation:
-      reversible: no
-      left:
-        - id: cpd00032 # Oxaloacetate
-          value: 1
-        - id: cpd00022 # Acetyl-CoA
-          value: 1
-        - id: cpd00035 # L-Alanine
-          value: 0.02
-        # ...
-      right:
-        - id: Biomass
-          value: 1
-        # ...
+        reversible: no
+        left:
+          - id: cpd00032 # Oxaloacetate
+            value: 1
+          - id: cpd00022 # Acetyl-CoA
+            value: 1
+          - id: cpd00035 # L-Alanine
+            value: 0.02
+          # ...
+        right:
+          - id: Biomass
+            value: 1
+          # ...
 
 Reactions in YAML files can also be defined using ModelSEED formatted reaction
 equations. The ``|`` is a special character in YAML so the reaction equations
@@ -130,8 +130,18 @@ id        string           Reaction ID (*required*)
 name      string           Name of reaction
 equation  string or dict   Reaction equation formula
 ec        string           EC number
-genes     list of strings  List of genes associated with the reaction
+genes     string           Gene association rule
 ========  ===============  ==========================================
+
+The ``genes`` property can be used to specifiy which genes enable a reaction.
+Complex gene association rules can be used when a reaction is enabled by a
+group of genes or when multiple genes can independently enable a reaction:
+
+.. code-block:: yaml
+
+    - id: ADK1
+      equation: '|amp| + |atp| <=> (2) |adp|'
+      genes: gene_0001 or (gene_0002 and gene_0003)
 
 Media
 -----

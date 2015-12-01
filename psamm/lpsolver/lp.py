@@ -29,12 +29,15 @@ single variable. This allows many similar expressions to be represented by one
 constructed faster.
 """
 
+import math
 import numbers
 from collections import Counter
 import abc
 
-from six import add_metaclass, iteritems
+from six import add_metaclass, iteritems, viewkeys, viewitems
 from six.moves import range
+
+_INF = float('inf')
 
 
 class VariableSet(tuple):
@@ -72,12 +75,12 @@ class Expression(object):
         return self._offset
 
     def variables(self):
-        """Iterator of variables in expression"""
-        return iter(self._variables)
+        """Return immutable view of variables in expression."""
+        return viewkeys(self._variables)
 
     def values(self):
-        """Iterator of (variable, value)-pairs in expression"""
-        return iteritems(self._variables)
+        """Return immutable view of (variable, value)-pairs in expression."""
+        return viewitems(self._variables)
 
     def value(self, variable):
         return self._variables.get(variable, 0)
@@ -109,15 +112,34 @@ class Expression(object):
         """Add expression with a number or another expression"""
 
         if isinstance(other, numbers.Number):
+            if math.isinf(self._offset) or math.isinf(other):
+                return self.__class__(offset=self._offset + other)
             return self.__class__(self._variables, self._offset + other)
         elif isinstance(other, self.__class__):
+            if math.isinf(self._offset) or math.isinf(other._offset):
+                return self.__class__(offset=self._offset + other._offset)
             variables = Counter(self._variables)
             variables.update(other._variables)
             return self.__class__(variables, self._offset + other._offset)
         return NotImplemented
 
-    def __radd__(self, other):
-        return self + other
+    __radd__ = __add__
+
+    def __iadd__(self, other):
+        if isinstance(other, numbers.Number):
+            if math.isinf(self._offset) or math.isinf(other):
+                self._variables = {}
+            self._offset += other
+        elif isinstance(other, self.__class__):
+            self._offset += other._offset
+            if math.isinf(self._offset) or math.isinf(other._offset):
+                self._variables = {}
+            else:
+                self._variables.update(other._variables)
+        else:
+            return NotImplemented
+
+        return self
 
     def __sub__(self, other):
         return self + -other
@@ -125,16 +147,35 @@ class Expression(object):
     def __rsub__(self, other):
         return -self + other
 
-    def __mul__(self, other):
-        return self.__class__(
-            {var: value*other for var, value in iteritems(self._variables)},
-            self._offset*other)
+    def __isub__(self, other):
+        self += -other
+        return self
 
-    def __rmul__(self, other):
-        return self * other
+    def __mul__(self, other):
+        if math.isinf(other):
+            return self.__class__(offset=float('nan'))
+
+        return self.__class__(
+            {var: value * other for var, value in iteritems(self._variables)},
+            self._offset * other)
+
+    __rmul__ = __mul__
+
+    def __imul__(self, other):
+        if math.isinf(other):
+            self._variables = {}
+            self._offset = float('nan')
+        else:
+            for var in self._variables:
+                self._variables[var] *= other
+            self._offset *= other
+
+        return self
 
     def __neg__(self):
-        return self * -1
+        return self.__class__(
+            {var: -value for var, value in iteritems(self._variables)},
+            -self._offset)
 
     def __eq__(self, other):
         """Return equality relation (equation): self == other
@@ -197,14 +238,14 @@ class Expression(object):
                 yield None, self._offset
 
         terms = []
-        for i, spec in enumerate(all_terms()):
-            name, value = spec
+        for i, (name, value) in enumerate(all_terms()):
             if i == 0:
                 # First term is special
                 if name is None:
                     terms.append('{}'.format(value))
                 elif abs(value) == 1:
-                    terms.append(name if value > 0 else '-{}'.format(name))
+                    terms.append(
+                        str(name) if value > 0 else '-{}'.format(name))
                 else:
                     terms.append('{}*{}'.format(value, name))
             else:
@@ -265,8 +306,10 @@ class Relation(object):
 
     def __str__(self):
         """Convert relation to string representation"""
-        return '{} {} 0'.format(
-            str(self._expression), Relation.SYMBOL[self._sense])
+        var_expr = Expression(dict(self._expression.values()))
+        return '{} {} {}'.format(
+            str(var_expr), Relation.SYMBOL[self._sense],
+            -self._expression.offset)
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, repr(str(self)))
@@ -363,19 +406,35 @@ class Problem(object):
     def _check_relation(self, relation):
         """Check whether the given relation is valid.
 
-        Raises `ValueError` if the relation is invalid. This method also
-        accepts relation given as `bool` and will raise an error if the value
-        is `False`.
+        Return false normally, or true if the relation is determined to be
+        tautologically true. Raises ``ValueError`` if the relation is
+        tautologically false. This includes relations given as a ``False`` bool
+        value or certain types of relations that have an infinity offset.
         """
         if isinstance(relation, bool):
             if not relation:
                 raise ValueError('Unsatisfiable relation added')
-        else:
-            if relation.sense in (
-                    Relation.StrictlyGreater, Relation.StrictlyLess):
-                raise ValueError(
-                    'Strict relations are invalid in LP-problems:'
-                    ' {}'.format(relation))
+            return True
+
+        if relation.sense in (Relation.StrictlyGreater, Relation.StrictlyLess):
+            raise ValueError(
+                'Strict relations are invalid in LP-problems:'
+                ' {}'.format(relation))
+
+        if relation.expression.offset == -_INF:
+            if relation.sense == Relation.Less:
+                return True
+            else:
+                raise ValueError('Unsatisfiable relation added: {}'.format(
+                    relation))
+        elif relation.expression.offset == _INF:
+            if relation.sense == Relation.Greater:
+                return True
+            else:
+                raise ValueError('Unsatisfiable relation added: {}'.format(
+                    relation))
+
+        return False
 
     @abc.abstractmethod
     def add_linear_constraints(self, *relations):
@@ -436,6 +495,10 @@ class Result(object):
     @abc.abstractproperty
     def status(self):
         """String indicating the status of the problem result"""
+
+    @abc.abstractproperty
+    def unbounded(self):
+        """Whether solution is unbounded"""
 
     @abc.abstractmethod
     def get_value(self, expression):

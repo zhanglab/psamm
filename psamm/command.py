@@ -198,7 +198,7 @@ def main(command_class=None, args=None):
             logging.basicConfig(level=level)
     else:
         logging.basicConfig(
-            level=logging.INFO, format='%(levelname)s: %(message)s')
+            level=logging.INFO, format=u'%(levelname)s: %(message)s')
 
     title = 'Metabolic modeling tools'
     if command_class is not None:

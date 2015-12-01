@@ -18,7 +18,67 @@
 
 import unittest
 
-from psamm.formula import Formula, Atom, Radical
+from psamm.formula import Formula, FormulaElement, Atom, Radical
+
+
+class TestFormulaElement(unittest.TestCase):
+    def test_add_formula_elements(self):
+        e1 = FormulaElement()
+        e2 = FormulaElement()
+        self.assertEqual(e1 + e2, Formula({e1: 1, e2: 1}))
+
+    def test_add_formula_element_to_self(self):
+        e1 = FormulaElement()
+        self.assertEqual(e1 + e1, Formula({e1: 2}))
+
+    def test_add_formula_element_and_number(self):
+        with self.assertRaises(TypeError):
+            f = FormulaElement() + 42
+
+    def test_merge_formula_elements(self):
+        e1 = FormulaElement()
+        e2 = FormulaElement()
+        self.assertEqual(e1 | e2, Formula({e1: 1, e2: 1}))
+
+    def test_merge_formula_element_to_self(self):
+        e1 = FormulaElement()
+        self.assertEqual(e1 | e1, Formula({e1: 2}))
+
+    def test_substitute_into_formula_element(self):
+        e1 = FormulaElement()
+        self.assertEqual(
+            e1.substitute(lambda v: {'x': 42}.get(v.symbol, v)), e1)
+
+
+class TestAtom(unittest.TestCase):
+    def test_atom_symbol(self):
+        a = Atom('H')
+        self.assertEqual(a.symbol, 'H')
+
+    def test_atom_symbol_wide(self):
+        a = Atom('Zn')
+        self.assertEqual(a.symbol, 'Zn')
+
+    def test_atom_to_string(self):
+        a = Atom('C')
+        self.assertEqual(str(a), 'C')
+
+    def test_atom_repr(self):
+        a = Atom('Si')
+        self.assertEqual(repr(a), "Atom('Si')")
+
+    def test_atom_equals(self):
+        a1 = Atom('H')
+        a2 = Atom('Zn')
+        self.assertEqual(a1, a1)
+        self.assertNotEqual(a1, a2)
+
+    def test_atom_ordered(self):
+        a1 = Atom('H')
+        a2 = Atom('C')
+        a3 = Atom('Zn')
+        self.assertGreater(a1, a2)
+        self.assertLess(a1, a3)
 
 
 class TestFormula(unittest.TestCase):
@@ -62,6 +122,87 @@ class TestFormula(unittest.TestCase):
         f = Formula({Atom('Au'): 1})
         self.assertNotEqual(f, Formula({Atom('Au'): 2}))
 
+    def test_formula_items(self):
+        f = Formula({Atom('H'): 12, Atom('C'): 6, Atom('O'): 6})
+        self.assertEqual(dict(f.items()), {
+            Atom('C'): 6,
+            Atom('H'): 12,
+            Atom('O'): 6
+        })
+
+    def test_formula_contains(self):
+        f = Formula({Atom('H'): 12, Atom('C'): 6, Atom('O'): 6})
+        self.assertIn(Atom('C'), f)
+        self.assertNotIn(Atom('Ag'), f)
+
+    def test_formula_to_string(self):
+        f = Formula({Atom('H'): 12, Atom('C'): 6, Atom('O'): 6})
+        self.assertEqual(str(f), 'C6H12O6')
+
+    def test_formula_to_string_with_group(self):
+        f = Formula({
+            Atom('C'): 1,
+            Atom('H'): 3,
+            Formula({Atom('C'): 1, Atom('H'): 2}): 14,
+            Formula({
+                Atom('C'): 1, Atom('O'): 1,
+                Formula({Atom('H'): 1, Atom('O'): 1}): 1
+            }): 1
+        })
+        # Ideally: self.assertEqual(str(f), 'CH3(CH2)14COOH')
+        # The two subgroups are unordered so we cannot assert a specfic string
+        # at this point.
+
+    def test_formula_flattened(self):
+        f = Formula({
+            Atom('C'): 1,
+            Atom('H'): 3,
+            Formula({Atom('C'): 1, Atom('H'): 2}): 14,
+            Formula({
+                Atom('C'): 1, Atom('O'): 1,
+                Formula({Atom('H'): 1, Atom('O'): 1}): 1
+            }): 1
+        })
+        self.assertEqual(f.flattened(), Formula({
+            Atom('C'): 16,
+            Atom('H'): 32,
+            Atom('O'): 2
+        }))
+
+    def test_formula_substitute_non_positive(self):
+        f = Formula.parse('CH3(CH2)nCOOH')
+
+        with self.assertRaises(ValueError):
+            f.substitute(lambda v: {'n': -5}.get(v.symbol, v))
+
+        with self.assertRaises(ValueError):
+            f.substitute(lambda v: {'n': 0}.get(v.symbol, v))
+
+    def test_formula_is_not_variable(self):
+        f = Formula.parse('C6H12O6')
+        self.assertFalse(f.is_variable())
+
+    def test_formula_is_variable(self):
+        f = Formula.parse('C2H4NO2R(C2H2NOR)n')
+        self.assertTrue(f.is_variable())
+
+    def test_formula_balance_missing_on_one_side(self):
+        f1, f2 = Formula.balance(Formula.parse('H2O'), Formula.parse('OH'))
+        self.assertEqual(f1, Formula())
+        self.assertEqual(f2, Formula({Atom('H'): 1}))
+
+    def test_formula_balance_missing_on_both_sides(self):
+        f1, f2 = Formula.balance(Formula.parse('C3H6OH'), Formula.parse('CH6O2'))
+        self.assertEqual(f1, Formula({Atom('O'): 1}))
+        self.assertEqual(f2, Formula({Atom('C'): 2, Atom('H'): 1}))
+
+    def test_formula_balance_subgroups_cancel_out(self):
+        f1, f2 = Formula.balance(Formula.parse('H2(CH2)n'), Formula.parse('CH3O(CH2)n'))
+        self.assertEqual(f1, Formula({Atom('C'): 1, Atom('H'): 1, Atom('O'): 1}))
+        self.assertEqual(f2, Formula())
+
+
+class TestFormulaParser(unittest.TestCase):
     def test_formula_parse_with_final_digit(self):
         f = Formula.parse('H2O2')
         self.assertEqual(f, Formula({Atom('H'): 2, Atom('O'): 2}))
@@ -117,29 +258,6 @@ class TestFormula(unittest.TestCase):
         f = Formula.parse('C2H4NO2(R1)')
         self.assertEqual(f, Formula({Atom('C'): 2, Atom('H'): 4, Atom('N'): 1,
                                         Atom('O'): 2, Radical('R1'): 1}))
-
-    def test_formula_is_not_variable(self):
-        f = Formula.parse('C6H12O6')
-        self.assertFalse(f.is_variable())
-
-    def test_formula_is_variable(self):
-        f = Formula.parse('C2H4NO2R(C2H2NOR)n')
-        self.assertTrue(f.is_variable())
-
-    def test_formula_balance_missing_on_one_side(self):
-        f1, f2 = Formula.balance(Formula.parse('H2O'), Formula.parse('OH'))
-        self.assertEqual(f1, Formula())
-        self.assertEqual(f2, Formula({Atom('H'): 1}))
-
-    def test_formula_balance_missing_on_both_sides(self):
-        f1, f2 = Formula.balance(Formula.parse('C3H6OH'), Formula.parse('CH6O2'))
-        self.assertEqual(f1, Formula({Atom('O'): 1}))
-        self.assertEqual(f2, Formula({Atom('C'): 2, Atom('H'): 1}))
-
-    def test_formula_balance_subgroups_cancel_out(self):
-        f1, f2 = Formula.balance(Formula.parse('H2(CH2)n'), Formula.parse('CH3O(CH2)n'))
-        self.assertEqual(f1, Formula({Atom('C'): 1, Atom('H'): 1, Atom('O'): 1}))
-        self.assertEqual(f2, Formula())
 
 
 if __name__ == '__main__':

@@ -27,6 +27,8 @@ from six import iteritems
 # Module-level logging
 logger = logging.getLogger(__name__)
 
+_INF = float('inf')
+
 
 def _get_fba_problem(model, tfba, solver):
     """Convenience function for returning the right FBA problem instance"""
@@ -37,7 +39,15 @@ def _get_fba_problem(model, tfba, solver):
 
 
 class FluxBalanceError(Exception):
-    """Error indicating that a flux balance cannot be solved"""
+    """Error indicating that a flux balance cannot be solved."""
+
+    def __init__(self, *args, **kwargs):
+        self._result = kwargs.pop('result')
+        super(FluxBalanceError, self).__init__(*args, **kwargs)
+
+    @property
+    def result(self):
+        return self._result
 
 
 class FluxBalanceProblem(object):
@@ -230,7 +240,7 @@ class FluxBalanceProblem(object):
             result = self._prob.solve(lp.ObjectiveSense.Maximize)
             if not result:
                 raise FluxBalanceError('Non-optimal solution: {}'.format(
-                    result.status))
+                    result.status), result=result)
         finally:
             # Set temporary constraints to be removed on next solve call
             self._remove_constr = self._temp_constr
@@ -306,8 +316,14 @@ def flux_variability(model, reactions, fixed, tfba, solver):
 
     def min_max_solve(reaction_id):
         for direction in (-1, 1):
-            fba.maximize({reaction_id: direction})
-            yield fba.get_flux(reaction_id)
+            try:
+                fba.maximize({reaction_id: direction})
+            except FluxBalanceError as e:
+                if not e.result.unbounded:
+                    raise
+                yield direction * _INF
+            else:
+                yield fba.get_flux(reaction_id)
 
     # Solve for each reaction
     for reaction_id in reactions:
