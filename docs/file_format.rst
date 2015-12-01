@@ -130,7 +130,7 @@ id        string           Reaction ID (*required*)
 name      string           Name of reaction
 equation  string or dict   Reaction equation formula
 ec        string           EC number
-genes     list of strings  List of genes associated with the reaction
+genes     string           Gene association rule
 ========  ===============  ==========================================
 
 Media
