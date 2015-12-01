@@ -93,19 +93,19 @@ of a YAML reaction file:
     # Biomass composition
     - id: Biomass
       equation:
-      reversible: no
-      left:
-        - id: cpd00032 # Oxaloacetate
-          value: 1
-        - id: cpd00022 # Acetyl-CoA
-          value: 1
-        - id: cpd00035 # L-Alanine
-          value: 0.02
-        # ...
-      right:
-        - id: Biomass
-          value: 1
-        # ...
+        reversible: no
+        left:
+          - id: cpd00032 # Oxaloacetate
+            value: 1
+          - id: cpd00022 # Acetyl-CoA
+            value: 1
+          - id: cpd00035 # L-Alanine
+            value: 0.02
+          # ...
+        right:
+          - id: Biomass
+            value: 1
+          # ...
 
 Reactions in YAML files can also be defined using ModelSEED formatted reaction
 equations. The ``|`` is a special character in YAML so the reaction equations
