@@ -18,13 +18,13 @@
 import operator
 import logging
 
-from ..command import Command, MetabolicMixin, FilePrefixAppendAction
+from ..command import Command, FilePrefixAppendAction
 from ..formula import Formula
 
 logger = logging.getLogger(__name__)
 
 
-class FormulaBalanceCommand(MetabolicMixin, Command):
+class FormulaBalanceCommand(Command):
     """Check whether reactions in the model are elementally balanced.
 
     Balanced reactions are those reactions where the number of elements
@@ -45,54 +45,42 @@ class FormulaBalanceCommand(MetabolicMixin, Command):
         # Mapping from compound id to formula
         compound_formula = {}
         for compound in self._model.parse_compounds():
-            # Only cpd11632 (Photon) is allowed to have an empty formula.
-            if compound.formula is None:
-                if compound.id == 'cpd11632':
-                    compound_formula[compound.id] = Formula()
-            else:
+            if compound.formula is not None:
                 try:
                     f = Formula.parse(compound.formula).flattened()
                     compound_formula[compound.id] = f
-                except ValueError as e:
+                except ValueError:
                     logger.warning(
-                        'Error parsing {}: {}'.format(compound.formula, e))
-
-        # Create a set of known mass-inconsistent reactions
-        exchange = set()
-        for reaction_id in self._mm.reactions:
-            if self._mm.is_exchange(reaction_id):
-                exchange.add(reaction_id)
+                        'Error parsing formula for compound {}: {}'.format(
+                            compound.id, compound.formula), exc_info=True)
 
         # Create a set of excluded reactions
         exclude = set(self._args.exclude)
 
         def multiply_formula(compound_list):
             for compound, count in compound_list:
-                yield count * compound_formula.get(compound.name, Formula())
+                yield count * compound_formula[compound.name]
 
         count = 0
         unbalanced = 0
         unchecked = 0
-        for reaction in self._mm.reactions:
-            if reaction in exchange:
-                continue
-
+        for reaction in self._model.parse_reactions():
             count += 1
-            rx = self._mm.get_reaction(reaction)
 
-            if reaction in exclude:
+            if reaction in exclude or reaction.equation is None:
                 continue
 
             # Skip reaction if any compounds have undefined formula
-            for compound, _ in rx.compounds:
+            eq = reaction.equation
+            for compound, _ in eq.compounds:
                 if compound.name not in compound_formula:
                     unchecked += 1
                     break
             else:
                 left_form = reduce(
-                    operator.or_, multiply_formula(rx.left), Formula())
+                    operator.or_, multiply_formula(eq.left), Formula())
                 right_form = reduce(
-                    operator.or_, multiply_formula(rx.right), Formula())
+                    operator.or_, multiply_formula(eq.right), Formula())
 
                 if right_form != left_form:
                     unbalanced += 1
@@ -100,7 +88,7 @@ class FormulaBalanceCommand(MetabolicMixin, Command):
                         right_form, left_form)
 
                     print('{}\t{}\t{}\t{}\t{}'.format(
-                        reaction, left_form, right_form,
+                        reaction.id, left_form, right_form,
                         left_missing, right_missing))
 
         logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))
