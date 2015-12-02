@@ -287,7 +287,7 @@ PSAMM:
 .. code-block:: shell
 
     Generic importers:
-    cobra-json    COBRA JSON
+    json          COBRA JSON
     modelseed     ModelSEED model (Excel format)
     sbml          SBML model (non-strict)
     sbml-strict   SBML model (strict)
@@ -384,7 +384,7 @@ converted with the following command:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-import cobra-json --source e_coli_json/e_coli_core.json --dest converted_json_model/
+    (psamm-env) $ psamm-import json --source e_coli_json/e_coli_core.json --dest converted_json_model/
 
 Alternatively, an extension of the JSON importer has been provided,
 ``psamm-import-bigg``, which can be applied to convert JSON models from `BiGG`_
