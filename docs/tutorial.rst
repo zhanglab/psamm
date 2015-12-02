@@ -344,7 +344,7 @@ give the basic statistics of the model and should look like this:
     - Biomass reaction: R_Biomass_Ecoli_core_w_GAM
     - Compounds: 72
     - Reactions: 95
-    - Genes: 0
+    - Genes: 137
     INFO: Using default flux limit of 1000.0
     INFO: Converting exchange reactions to medium definition
 
@@ -553,10 +553,12 @@ model. A sample of this kind of file can be seen below:
 
     - id: R_ACALDt
       name: acetaldehyde reversible transport
+      genes: s0001
       equation: '|M_acald_e[C_e]| <=> |M_acald_c[C_c]|'
       subsystem: Transport, Extracellular
     - id: R_ACKr
       name: acetate kinase
+      genes: b3115 or b2296 or b1849
       equation: '|M_ac_c[C_c]| + |M_atp_c[C_c]| <=> |M_actp_c[C_c]| + |M_adp_c[C_c]|'
       subsystem: Pyruvate Metabolism
 
