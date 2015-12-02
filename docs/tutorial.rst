@@ -583,9 +583,9 @@ it could be represented as follows:
 
     |Hydr[cytosol]|
 
-These individual compounds can be assigned stoichiometric coeficients by adding
-a number in parentheses before the compound. for example if a reaction contained
-two hydrogens it could appear as follows:
+These individual compounds can be assigned stoichiometric coefficients by
+adding a number in parentheses before the compound. For example if a reaction
+contained two hydrogens it could appear as follows:
 
 .. code-block:: shell
 
@@ -644,7 +644,7 @@ property to the reaction like follows:
 
 
 More complex gene associations can also be included by using logical and/or
-statements in the genes property. When performing gene essentiallity simulations
+statements in the genes property. When performing gene essentiality simulations
 this logic will be taken into account. Some examples of using this logic with
 the genes property can be seen below:
 
