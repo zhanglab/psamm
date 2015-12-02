@@ -20,7 +20,7 @@ import time
 import random
 import logging
 
-from ..command import Command, SolverCommandMixin, CommandError
+from ..command import Command, MetabolicMixin, SolverCommandMixin, CommandError
 from .. import fluxanalysis, util
 from ..expression import boolean
 
@@ -29,7 +29,7 @@ from six import string_types
 logger = logging.getLogger(__name__)
 
 
-class RandomSparseNetworkCommand(SolverCommandMixin, Command):
+class RandomSparseNetworkCommand(MetabolicMixin, SolverCommandMixin, Command):
     """Find a random minimal network of model reactions.
 
     Given a reaction to optimize and a threshold, delete reactions randomly

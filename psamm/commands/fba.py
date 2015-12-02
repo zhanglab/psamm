@@ -18,13 +18,13 @@
 import time
 import logging
 
-from ..command import SolverCommandMixin, Command, CommandError
+from ..command import SolverCommandMixin, MetabolicMixin, Command, CommandError
 from .. import fluxanalysis
 
 logger = logging.getLogger(__name__)
 
 
-class FluxBalanceCommand(SolverCommandMixin, Command):
+class FluxBalanceCommand(MetabolicMixin, SolverCommandMixin, Command):
     """Run flux balance analysis on the model."""
 
     @classmethod

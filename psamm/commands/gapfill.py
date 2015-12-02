@@ -17,13 +17,13 @@
 
 import logging
 
-from ..command import Command, SolverCommandMixin
+from ..command import Command, MetabolicMixin, SolverCommandMixin
 from ..gapfill import gapfind, gapfill
 
 logger = logging.getLogger(__name__)
 
 
-class GapFillCommand(SolverCommandMixin, Command):
+class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
     """Run the GapFind and GapFill algorithms on the model."""
 
     def run(self):

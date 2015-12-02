@@ -18,10 +18,10 @@
 import sys
 
 from ..datasource import sbml
-from ..command import Command
+from ..command import MetabolicMixin, Command
 
 
-class SBMLExport(Command):
+class SBMLExport(MetabolicMixin, Command):
     """Export model as SBML file."""
 
     def run(self):

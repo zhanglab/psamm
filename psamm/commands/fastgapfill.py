@@ -18,13 +18,13 @@
 import argparse
 import logging
 
-from ..command import Command, SolverCommandMixin, CommandError
+from ..command import Command, MetabolicMixin, SolverCommandMixin, CommandError
 from .. import fastcore, fluxanalysis
 
 logger = logging.getLogger(__name__)
 
 
-class FastGapFillCommand(SolverCommandMixin, Command):
+class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
     """Run the FastGapFill gap-filling algorithm on model."""
 
     @classmethod

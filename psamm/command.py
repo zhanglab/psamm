@@ -81,15 +81,30 @@ class Command(object):
         if version is not None:
             logger.info('Model Git version: {}'.format(version))
 
+    @classmethod
+    def init_parser(cls, parser):
+        """Initialize command line parser (:class:`argparse.ArgumentParser`)"""
+
+    @abc.abstractmethod
+    def run(self):
+        """Execute command"""
+
+
+class MetabolicMixin(object):
+    """Mixin for commands that use a metabolic model representation."""
+
+    def __init__(self, *args, **kwargs):
+        super(MetabolicMixin, self).__init__(*args, **kwargs)
+
         # Create metabolic model
         database = DictDatabase()
-        for reaction in model.parse_reactions():
+        for reaction in self._model.parse_reactions():
             if reaction.equation is not None:
                 database.set_reaction(reaction.id, reaction.equation)
 
         # Warn about undefined compounds
         compounds = set()
-        for compound in model.parse_compounds():
+        for compound in self._model.parse_compounds():
             compounds.add(compound.id)
 
         undefined_compounds = set()
@@ -104,16 +119,9 @@ class Command(object):
                 ' of compounds'.format(compound))
 
         self._mm = MetabolicModel.load_model(
-            database, model.parse_model(), model.parse_medium(),
-            model.parse_limits(), v_max=model.get_default_flux_limit())
-
-    @classmethod
-    def init_parser(cls, parser):
-        """Initialize command line parser (:class:`argparse.ArgumentParser`)"""
-
-    @abc.abstractmethod
-    def run(self):
-        """Execute command"""
+            database, self._model.parse_model(), self._model.parse_medium(),
+            self._model.parse_limits(),
+            v_max=self._model.get_default_flux_limit())
 
 
 class SolverCommandMixin(object):

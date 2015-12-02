@@ -17,13 +17,13 @@
 
 import logging
 
-from ..command import Command, SolverCommandMixin, CommandError
+from ..command import Command, SolverCommandMixin, MetabolicMixin, CommandError
 from .. import fluxanalysis, fluxcoupling
 
 logger = logging.getLogger(__name__)
 
 
-class FluxCouplingCommand(SolverCommandMixin, Command):
+class FluxCouplingCommand(MetabolicMixin, SolverCommandMixin, Command):
     """Find flux coupled reactions in the model.
 
     This identifies any reaction pairs where the flux of one reaction

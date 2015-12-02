@@ -18,12 +18,12 @@
 import math
 import logging
 
-from ..command import Command, FilePrefixAppendAction
+from ..command import Command, MetabolicMixin, FilePrefixAppendAction
 
 logger = logging.getLogger(__name__)
 
 
-class ChargeBalanceCommand(Command):
+class ChargeBalanceCommand(MetabolicMixin, Command):
     """Check whether compound charge is balanced.
 
     Balanced reactions are those reactions where the total charge

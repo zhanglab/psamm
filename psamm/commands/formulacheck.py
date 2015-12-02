@@ -18,13 +18,13 @@
 import operator
 import logging
 
-from ..command import Command, FilePrefixAppendAction
+from ..command import Command, MetabolicMixin, FilePrefixAppendAction
 from ..formula import Formula
 
 logger = logging.getLogger(__name__)
 
 
-class FormulaBalanceCommand(Command):
+class FormulaBalanceCommand(MetabolicMixin, Command):
     """Check whether reactions in the model are elementally balanced.
 
     Balanced reactions are those reactions where the number of elements

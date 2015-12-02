@@ -21,14 +21,14 @@ import logging
 from six import iteritems
 
 from ..command import (Command, CommandError, SolverCommandMixin,
-                       FilePrefixAppendAction)
+                       MetabolicMixin, FilePrefixAppendAction)
 from .. import massconsistency
 from ..reaction import Compound
 
 logger = logging.getLogger(__name__)
 
 
-class MassConsistencyCommand(SolverCommandMixin, Command):
+class MassConsistencyCommand(MetabolicMixin, SolverCommandMixin, Command):
     """Check whether the model is mass consistent."""
 
     @classmethod
