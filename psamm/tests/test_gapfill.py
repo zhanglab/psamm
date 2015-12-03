@@ -19,7 +19,7 @@ import unittest
 
 from psamm.database import DictDatabase
 from psamm.metabolicmodel import MetabolicModel
-from psamm.datasource.modelseed import parse_reaction
+from psamm.datasource.reaction import parse_reaction
 from psamm.lpsolver import generic
 from psamm.gapfill import gapfind, gapfill
 from psamm.reaction import Compound

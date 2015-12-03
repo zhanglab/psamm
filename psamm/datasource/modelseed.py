@@ -19,10 +19,9 @@
 
 import csv
 import re
-from decimal import Decimal
 
-from ..reaction import Reaction, Compound
 from .context import FileMark
+from .reaction import parse_reaction as parse_universal_reaction
 
 
 class ParseError(Exception):
@@ -113,167 +112,9 @@ def parse_compound_file(f, context=None):
 
 
 def parse_reaction(s):
-    """Parse a ModelSEED reaction
+    """Parse a ModelSEED reaction.
 
-    This parser is based on the grammer.::
-
-        <reaction>     ::= <comp-list> ' ' <reaction-dir> ' ' <comp-list>
-        <reaction-dir> ::= '<=' | '<=>' | '=>' | '?' | ''
-        <comp-list>    ::= '' | <compound> | <compound> ' + ' <comp-list>
-        <compound>     ::= <comp-count> ' ' <comp-spec> | <comp-spec>
-        <comp-count>   ::= '(' <comp-number> ')' | <comp-number>
-        <comp-number>  ::= <decimal>
-        <comp-spec>    ::= '|' <comp-id> '|' | 'cpd' <cpd-id> | 'cdp' <cpd-id>
-        <comp-id>      ::= <comp-name> '[' <comp-compart> ']' | <comp-name>
-        <comp-compart> ::= <alpha>
-        <comp-name>    ::= <any characters other than "|">
-        <cpd-id>       ::= <five digits>
+    .. deprecated:: 0.18
+       Use :func:`~psamm.datasource.reaction.parse_reaction` instead.
     """
-
-    def tokenize(s):
-        """Return tokens of reaction string"""
-        s = s.lstrip()
-        token = ''
-        barquote = False
-        for c in s:
-            if c.isspace() and not barquote:
-                yield token
-                token = ''
-                continue
-
-            token += c
-
-            if c == '|':
-                barquote = not barquote
-
-        if token != '':
-            yield token
-
-    def parse_compound_number(number):
-        """Parse compound number
-
-        Return plain int if possible, otherwise use Decimal."""
-
-        d = Decimal(number)
-        if d % 1 == 0:
-            return int(d)
-        return d
-
-    def parse_compound_count(count):
-        """Parse compound count"""
-
-        m = re.match(r'^\((.+)\)|(.+)$', count)
-        if not m:
-            raise ParseError(
-                'Unable to parse compound count: {}'.format(count))
-
-        number = m.group(1) if m.group(1) is not None else m.group(2)
-        return parse_compound_number(number)
-
-    def parse_compound_name(name):
-        """Parse compound name"""
-
-        m = re.match(r'^\|(.+)\||(cdp\d+.*)|(cpd\d+.*)$', name)
-        if not m:
-            raise ParseError('Unable to parse compound name: {}'.format(name))
-
-        # Return first matching group
-        for g in m.groups():
-            if g is not None:
-                return g
-
-        return None
-
-    def parse_compound(cmpd):
-        """Parse compound"""
-
-        count = 1
-        if len(cmpd) == 2:
-            count = parse_compound_count(cmpd[0])
-            name = parse_compound_name(cmpd[1])
-        elif len(cmpd) == 1:
-            name = parse_compound_name(cmpd[0])
-        else:
-            raise ParseError(
-                'Unexpected number of tokens in compound: {}'.format(cmpd))
-
-        compartment = None
-        m = re.match(r'^(.+?)\[(.+)\]$', name)
-        if m is not None:
-            name = m.group(1)
-            compartment = m.group(2)
-
-        return Compound(name, compartment=compartment), count
-
-    def parse_compound_list(cmpds):
-        """Parse a list of compounds"""
-
-        if len(cmpds) == 0:
-            return
-
-        cmpd = []
-        for t in cmpds:
-            if t == '+':
-                yield parse_compound(cmpd)
-                cmpd = []
-            else:
-                cmpd.append(t)
-
-        if len(cmpd) == 0:
-            raise ParseError('Expected compound in compound list')
-
-        yield parse_compound(cmpd)
-
-    tokens = list(tokenize(s))
-    direction = None
-    for i, t in enumerate(tokens):
-        if t in ('<=', '<=>', '=>', '?', ''):
-            direction = t
-            left = tokens[:i]
-            right = tokens[i+1:]
-
-    if direction is None:
-        raise ParseError('Failed to parse reaction: {}'.format(tokens))
-
-    if direction in ('', '?'):
-        direction = Reaction.Bidir
-
-    return Reaction(direction, parse_compound_list(left),
-                    parse_compound_list(right))
-
-
-def format_reaction(reaction):
-    """Format reaction as string
-
-    converting parsed reactions
-    back to string represetation using this module only a subset of the grammar
-    is used.::
-
-        <reaction>     ::= <comp-list> ' ' <reaction-dir> ' ' <comp-list>
-        <reaction-dir> ::= '<=>' | '=>' | '?'
-        <comp-list>    ::= '' | <compound> | <compound> ' + ' <comp-list>
-        <compound>     ::= <comp-count> ' ' <comp-spec> | <comp-spec>
-        <comp-count>   ::= '(' <decimal> ')'
-        <comp-spec>    ::= '|' <comp-name> '|' | '|' <comp-name>
-                           '[' <comp-compart> ']' '|'
-        <comp-compart> ::= <alpha>
-        <comp-name>    ::= <any characters other than "|">
-    """
-
-    # Define helper functions
-    def format_compound(compound, count):
-        """Format compound"""
-        cpdspec = str(compound)
-        if count != 1:
-            return '({}) |{}|'.format(count, cpdspec)
-        return '|{}|'.format(cpdspec)
-
-    def format_compound_list(cmpds):
-        """Format compound list"""
-        return ' + '.join(format_compound(compound, count)
-                          for compound, count in cmpds)
-
-    return '{} {} {}'.format(
-        format_compound_list(reaction.left),
-        '?' if reaction.direction == '' else reaction.direction,
-        format_compound_list(reaction.right))
+    return parse_universal_reaction(s)

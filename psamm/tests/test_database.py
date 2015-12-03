@@ -20,7 +20,7 @@ import unittest
 
 from psamm.database import DictDatabase, ChainedDatabase
 from psamm.reaction import Compound, Reaction
-from psamm.datasource.modelseed import parse_reaction
+from psamm.datasource.reaction import parse_reaction
 
 
 class TestMetabolicDatabase(unittest.TestCase):

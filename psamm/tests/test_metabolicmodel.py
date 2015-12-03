@@ -21,7 +21,7 @@ import unittest
 from psamm.metabolicmodel import MetabolicModel, FlipableModelView
 from psamm.database import DictDatabase
 from psamm.reaction import Compound
-from psamm.datasource.modelseed import parse_reaction
+from psamm.datasource.reaction import parse_reaction
 
 
 class TestLoadMetabolicModel(unittest.TestCase):
