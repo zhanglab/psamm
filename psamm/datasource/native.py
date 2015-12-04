@@ -155,7 +155,7 @@ class NativeModel(object):
         if os.path.isfile(path):
             self._context = FilePathContext(path)
             with open(self._context.filepath, 'r') as f:
-                self._model = yaml.load(f)
+                self._model = yaml.safe_load(f)
         else:
             # Try to open the default file
             for filename in DEFAULT_MODEL:
@@ -163,7 +163,7 @@ class NativeModel(object):
                     self._context = FilePathContext(
                         os.path.join(path, filename))
                     with open(self._context.filepath, 'r') as f:
-                        self._model = yaml.load(f)
+                        self._model = yaml.safe_load(f)
                         break
                 except Exception:
                     logger.debug('Failed to load model file', exc_info=True)
@@ -299,7 +299,7 @@ def parse_compound_yaml_file(path, f):
     Path can be given as a string or a context.
     """
 
-    return parse_compound_list(path, yaml.load(f))
+    return parse_compound_list(path, yaml.safe_load(f))
 
 
 def parse_compound_file(path, format):
@@ -419,7 +419,7 @@ def parse_reaction_yaml_file(path, f):
     Path can be given as a string or a context.
     """
 
-    return parse_reaction_list(path, yaml.load(f))
+    return parse_reaction_list(path, yaml.safe_load(f))
 
 
 def parse_reaction_table_file(path, f):
@@ -511,7 +511,7 @@ def parse_medium_yaml_file(path, f):
     Path can be given as a string or a context.
     """
 
-    return parse_medium(yaml.load(f))
+    return parse_medium(yaml.safe_load(f))
 
 
 def parse_medium_table_file(f):
@@ -641,7 +641,7 @@ def parse_limits_yaml_file(path, f):
     Path can be given as a string or a context.
     """
 
-    return parse_limits_list(path, yaml.load(f))
+    return parse_limits_list(path, yaml.safe_load(f))
 
 
 def parse_limits_file(path):
@@ -709,7 +709,7 @@ def parse_model_yaml_file(path, f):
 
     Path can be given as a string or a context.
     """
-    return parse_model_group_list(path, yaml.load(f))
+    return parse_model_group_list(path, yaml.safe_load(f))
 
 
 def parse_model_table_file(path, f):
