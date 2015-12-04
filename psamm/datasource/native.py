@@ -44,6 +44,8 @@ logger = logging.getLogger(__name__)
 # Model files to try to open if a directory was specified
 DEFAULT_MODEL = ('model.yaml', 'model.yml')
 
+_HAS_YAML_LIBRARY = None
+
 
 class ParseError(Exception):
     """Exception used to signal errors while parsing"""
@@ -57,8 +59,19 @@ def whendefined(func, value):
 def yaml_load(stream):
     """Load YAML file using safe loader."""
     # Surprisingly, the CSafeLoader does not seem to be used by default.
-    if hasattr(yaml, 'CSafeLoader'):
+    # Check whether the CSafeLoader is available and provide a log message
+    # if it is not available.
+    global _HAS_YAML_LIBRARY
+
+    if _HAS_YAML_LIBRARY is None:
+        _HAS_YAML_LIBRARY = hasattr(yaml, 'CSafeLoader')
+        if not _HAS_YAML_LIBRARY:
+            logger.warning('libyaml was not found! Please install libyaml to'
+                           ' speed up loading the model files.')
+
+    if _HAS_YAML_LIBRARY:
         return yaml.load(stream, Loader=yaml.CSafeLoader)
+
     return yaml.safe_load(stream)
 
 
@@ -173,7 +186,7 @@ class NativeModel(object):
                     with open(self._context.filepath, 'r') as f:
                         self._model = yaml_load(f)
                         break
-                except Exception:
+                except:
                     logger.debug('Failed to load model file', exc_info=True)
             else:
                 # No model could be loaded
