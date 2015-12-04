@@ -15,6 +15,8 @@
 #
 # Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
+from __future__ import unicode_literals
+
 import logging
 
 from ..command import Command, CommandError

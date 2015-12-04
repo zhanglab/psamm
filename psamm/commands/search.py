@@ -15,7 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 
 import re
 

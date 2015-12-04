@@ -22,14 +22,18 @@ and do manipulation and evaluation with substitutions of
 particular variables.
 """
 
+from __future__ import unicode_literals
+
 import re
 import numbers
 import functools
 from collections import Counter, defaultdict
 
+import six
 from six import string_types, iteritems, iterkeys, itervalues
 
 
+@six.python_2_unicode_compatible
 @functools.total_ordering
 class Variable(object):
     """Represents a variable in an expression
@@ -135,9 +139,10 @@ class Variable(object):
         return self._symbol
 
     def __repr__(self):
-        return 'Variable({})'.format(repr(self._symbol))
+        return str('Variable({})').format(repr(self._symbol))
 
 
+@six.python_2_unicode_compatible
 class Expression(object):
     """Represents an affine expression (e.g. 2x + 3y - z + 5)"""
 
@@ -369,7 +374,7 @@ class Expression(object):
         return ' '.join(terms)
 
     def __repr__(self):
-        return 'Expression({})'.format(repr(str(self)))
+        return str('Expression({})').format(repr(str(self)))
 
 
 if __name__ == '__main__':

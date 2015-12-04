@@ -15,6 +15,8 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+from __future__ import unicode_literals
+
 import logging
 
 from ..command import Command, SolverCommandMixin, MetabolicMixin, CommandError

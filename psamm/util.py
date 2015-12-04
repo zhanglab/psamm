@@ -17,12 +17,15 @@
 
 """Various utilities."""
 
+from __future__ import unicode_literals
+
 import re
 import math
 import subprocess
 import collections
 
-from six import iteritems
+import six
+from six import iteritems, text_type
 
 
 class LoggerFile(object):
@@ -49,6 +52,7 @@ class LoggerFile(object):
         This is a noop."""
 
 
+@six.python_2_unicode_compatible
 class MaybeRelative(object):
     """Helper type for parsing possibly relative parameters.
 
@@ -111,10 +115,10 @@ class MaybeRelative(object):
             return '{:.1%} of {} = {}'.format(
                 self._value, self._reference, f)
         else:
-            return str(self._value)
+            return text_type(self._value)
 
     def __repr__(self):
-        return '<{}, {}>'.format(self.__class__.__name__, str(self))
+        return str('<{}, {}>').format(self.__class__.__name__, str(self))
 
 
 class FrozenOrderedSet(collections.Set, collections.Hashable):

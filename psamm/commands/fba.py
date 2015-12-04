@@ -15,6 +15,8 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+from __future__ import unicode_literals
+
 import time
 import logging
 
@@ -98,6 +100,7 @@ class FluxBalanceCommand(MetabolicMixin, SolverCommandMixin, Command):
                 rx_trans = rx.translated_compounds(
                     lambda x: compound_name.get(x, x))
                 genes = reaction_genes.get(reaction_id, '')
+                print('{}'.format(u'( Cbei_0661\xa0Cbei_2182 )'))
                 print('{}\t{}\t{}\t{}'.format(
                     reaction_id, flux, rx_trans, genes))
 

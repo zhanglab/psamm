@@ -16,6 +16,8 @@
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
+from __future__ import unicode_literals
+
 import time
 import random
 import logging

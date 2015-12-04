@@ -17,12 +17,15 @@
 
 """Utilities for keeping track of parsing context."""
 
+from __future__ import unicode_literals
 
 import os
 
-from six import string_types
+import six
+from six import string_types, text_type
 
 
+@six.python_2_unicode_compatible
 class FilePathContext(object):
     """File context that keeps track of contextual information.
 
@@ -59,6 +62,7 @@ class FilePathContext(object):
         return self._filepath
 
 
+@six.python_2_unicode_compatible
 class FileMark(object):
     """Marks a position in a file.
 
@@ -85,10 +89,11 @@ class FileMark(object):
 
     def __str__(self):
         return '{}:{}:{}'.format(
-            str(self._filecontext), '?' if self._line is None else self._line,
+            text_type(self._filecontext),
+            '?' if self._line is None else self._line,
             '?' if self._column is None else self._column)
 
     def __repr__(self):
-        return '{}({}, {}, {})'.format(
+        return str('{}({}, {}, {})').format(
             self.__class__.__name__, repr(self._filecontext), repr(self._line),
             repr(self._column))
