@@ -17,6 +17,8 @@
 
 """Parser for SBML model files"""
 
+from __future__ import unicode_literals
+
 import xml.etree.ElementTree as ET
 from decimal import Decimal
 from fractions import Fraction
@@ -46,6 +48,7 @@ SBML_NS_L2_V5 = 'http://www.sbml.org/sbml/level2/version5'
 SBML_NS_L3_V1_CORE = 'http://www.sbml.org/sbml/level3/version1/core'
 
 MATHML_NS = 'http://www.w3.org/1998/Math/MathML'
+XHTML_NS = 'http://www.w3.org/1999/xhtml'
 
 # FBC namespaces
 FBC_V1 = 'http://www.sbml.org/sbml/level3/version1/fbc/version1'
@@ -638,16 +641,22 @@ class SBMLWriter(object):
         self._namespace = SBML_NS_L3_V1_CORE
         self._sbml_tag = partial(_tag, namespace=self._namespace)
 
-    def write_model(self, file, model, compounds):
+    def write_model(self, file, model, reactions, compounds):
         """Write a given model to file"""
 
         ET.register_namespace('mathml', MATHML_NS)
+        ET.register_namespace('xhtml', XHTML_NS)
 
         # Load compound information
         compound_name = {}
         for compound in compounds:
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
+
+        reaction_genes = {}
+        for reaction in reactions:
+            if reaction.genes is not None:
+                reaction_genes[reaction.id] = reaction.genes
 
         root = ET.Element(self._sbml_tag('sbml'))
         root.set(self._sbml_tag('level'), '3')
@@ -716,6 +725,13 @@ class SBMLWriter(object):
                 spec_ref.set(
                     self._sbml_tag('species'), model_species[compound])
                 spec_ref.set(self._sbml_tag('stoichiometry'), str(abs(value)))
+
+            notes_tag = ET.SubElement(reaction_tag, self._sbml_tag('notes'))
+            if reaction in reaction_genes:
+                body_tag = ET.SubElement(notes_tag, _tag('body', XHTML_NS))
+                p_tag = ET.SubElement(body_tag, _tag('p', XHTML_NS))
+                p_tag.text = 'GENE_ASSOCIATION: {}'.format(
+                    reaction_genes[reaction])
 
             # Create COBRA-compliant parameter list
             kl_tag = ET.SubElement(reaction_tag, self._sbml_tag('kineticLaw'))
