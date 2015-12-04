@@ -54,6 +54,14 @@ def whendefined(func, value):
     return func(value) if value is not None else None
 
 
+def yaml_load(stream):
+    """Load YAML file using safe loader."""
+    # Surprisingly, the CSafeLoader does not seem to be used by default.
+    if hasattr(yaml, 'CSafeLoader'):
+        return yaml.load(stream, Loader=yaml.CSafeLoader)
+    return yaml.safe_load(stream)
+
+
 class CompoundEntry(object):
     """Representation of a compound entry in a native model"""
 
@@ -155,7 +163,7 @@ class NativeModel(object):
         if os.path.isfile(path):
             self._context = FilePathContext(path)
             with open(self._context.filepath, 'r') as f:
-                self._model = yaml.safe_load(f)
+                self._model = yaml_load(f)
         else:
             # Try to open the default file
             for filename in DEFAULT_MODEL:
@@ -163,7 +171,7 @@ class NativeModel(object):
                     self._context = FilePathContext(
                         os.path.join(path, filename))
                     with open(self._context.filepath, 'r') as f:
-                        self._model = yaml.safe_load(f)
+                        self._model = yaml_load(f)
                         break
                 except Exception:
                     logger.debug('Failed to load model file', exc_info=True)
@@ -299,7 +307,7 @@ def parse_compound_yaml_file(path, f):
     Path can be given as a string or a context.
     """
 
-    return parse_compound_list(path, yaml.safe_load(f))
+    return parse_compound_list(path, yaml_load(f))
 
 
 def parse_compound_file(path, format):
@@ -419,7 +427,7 @@ def parse_reaction_yaml_file(path, f):
     Path can be given as a string or a context.
     """
 
-    return parse_reaction_list(path, yaml.safe_load(f))
+    return parse_reaction_list(path, yaml_load(f))
 
 
 def parse_reaction_table_file(path, f):
@@ -511,7 +519,7 @@ def parse_medium_yaml_file(path, f):
     Path can be given as a string or a context.
     """
 
-    return parse_medium(yaml.safe_load(f))
+    return parse_medium(yaml_load(f))
 
 
 def parse_medium_table_file(f):
@@ -641,7 +649,7 @@ def parse_limits_yaml_file(path, f):
     Path can be given as a string or a context.
     """
 
-    return parse_limits_list(path, yaml.safe_load(f))
+    return parse_limits_list(path, yaml_load(f))
 
 
 def parse_limits_file(path):
@@ -709,7 +717,7 @@ def parse_model_yaml_file(path, f):
 
     Path can be given as a string or a context.
     """
-    return parse_model_group_list(path, yaml.safe_load(f))
+    return parse_model_group_list(path, yaml_load(f))
 
 
 def parse_model_table_file(path, f):
