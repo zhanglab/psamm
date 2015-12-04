@@ -193,17 +193,17 @@ class NativeModel(object):
                     self._context, self._model['reactions']):
                 yield reaction
 
+    def has_model_definition(self):
+        """Return True when the list of model reactions is set in the model."""
+        return 'model' in self._model
+
     def parse_model(self):
         """Yield reaction IDs of model reactions"""
 
-        if 'model' in self._model:
+        if self.has_model_definition():
             for reaction_id in parse_model_group_list(
                     self._context, self._model['model']):
                 yield reaction_id
-        else:
-            reactions = set(reaction.id for reaction in self.parse_reactions())
-            for reaction in reactions:
-                yield reaction
 
     def parse_limits(self):
         """Yield tuples of reaction ID, lower, and upper bound flux limits"""

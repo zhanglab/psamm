@@ -118,8 +118,12 @@ class MetabolicMixin(object):
                 'The compound {} was not defined in the list'
                 ' of compounds'.format(compound))
 
+        model_definition = None
+        if self._model.has_model_definition():
+            model_definition = self._model.parse_model()
+
         self._mm = MetabolicModel.load_model(
-            database, self._model.parse_model(), self._model.parse_medium(),
+            database, model_definition, self._model.parse_medium(),
             self._model.parse_limits(),
             v_max=self._model.get_default_flux_limit())
 
