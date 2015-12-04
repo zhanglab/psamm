@@ -1814,25 +1814,56 @@ with low oxygen uptake.
 Random Minimal Network
 ~~~~~~~~~~~~~~~~~~~~~~
 
-The random minimal network analysis can be used to generate a random
-subset of reactions from the model that will still allow the model to
-maintain an objective function flux above a user-defined threshold. This
-function works by systematically deleting reactions from the network and
-testing the new network to see if the objective function flux is still
-above the threshold that was defined. If the flux falls too low then the
-reaction is marked as essential and kept in the network. If the flux stays
-above the threshold then the reaction will be marked as non-essential and
-removed. The program will randomly do this for all reactions until the only
-ones left are marked as essential. To run random minimal network analysis on the
-model use the randomsparse command. The last modifier for the command
-is a percentage of the maximum objective flux that will be used as the
-threshold for the simulation.
+The ``randomsparse`` command can
+be used to look at gene essentiality in the metabolic network. To use this function
+the model must contain gene associations for the model reactions. This
+function works by systematically deleting genes from the network, then
+evaluating if the associated reaction could would still be available after
+the gene deletion, and finally testing the new network to see if the
+objective function flux is still above the threshold that was defined.
+If the flux falls too low then the
+gene is marked as essential and kept in the network. If the flux stays
+above the threshold then the gene will be marked as non-essential and
+removed. The program will randomly do this for all genes until the only
+ones left are marked as essential. This can be
+done using the ``--type=genes`` option with the ``randomsparse`` command:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model randomsparse --type reaction 95%
+    (psamm-env) $ psamm-model randomsparse --type=genes 90%
 
-The output from the randomsparse command could be as follows:
+
+This will produce an output of the gene IDs with a 1 if the gene was kept in the
+simulation and a 0 if the gene was deleted. Following the list of genes will
+be a list of the reaction IDs that made up the minimal network for that
+simulation. An example output can be seen as follows:
+
+.. code-block:: shell
+
+    Gene_A	0
+    Gene_B	0
+    Gene_C	0
+    Gene_D	1
+    Gene_E	1
+    Gene_F	1
+    Gene_G	0
+    INFO: Reactions in minimal network: EX_cpd_1_e, Objective, R_1, R_2, R_3, R_4, R_5, R_6
+
+The random minimal network analysis can also be used to generate a random
+subset of reactions from the model that will still allow the model to
+maintain an objective function flux above a user-defined threshold. This
+function works on the same principle as the gene deletions but instead of
+removing individual genes, reactions will be removed.
+To run random minimal network analysis on the
+model use the randomsparse command with the ``--type=reaction`` option. The
+last parameter for the command is a percentage of the maximum objective flux
+that will be used as the threshold for the simulation.
+
+.. code-block:: shell
+
+    (psamm-env) $ psamm-model randomsparse --type=reaction 95%
+
+The output from the ``randomsparse`` command could be as follows:
 
 .. code-block:: shell
 
@@ -1853,44 +1884,15 @@ reactions can be established.
 In this case the program deleted the `MANN1PDEH` reaction blocking the
 mannitol 1-phosphate to fructose 6-phosphate conversion. In this case the
 reactions in the other side of the mannitol utilization pathway
-should all be essential. If the sample output below is looked at then it can
-be seen that when the other steps going to other direction in the pathway
-are deleted the `MANN1PDEH` reaction becomes essential.
-
-In addition to working at the reaction level the ``randomsparse`` command can
-also be used to look at gene essentiality in the network. To use this function
-the model must contain gene associations for the model reactions. This can be
-done using the ``--type genes`` option with the ``randomsparse`` command:
-
-.. code-block:: shell
-
-    (psamm-env) $ psamm-model randomsparse --type genes 90%
-
-
-This will produce an output similar to the reaction deletion but instead of
-reaction IDs the gene IDs will be listed with a 1 if the gene was kept in the
-simulation and a 0 if the gene was deleted. Following the list of genes will
-be a list of the reaction IDs that made up the minimal network for that
-simulation. An example output can be seen as follows:
-
-.. code-block:: shell
-
-    Gene_A	0
-    Gene_B	0
-    Gene_C	0
-    Gene_D	1
-    Gene_E	1
-    Gene_F	1
-    Gene_G	0
-    INFO: Reactions in minimal network: EX_cpd_1_e, Objective, R_1, R_2, R_3, R_4, R_5, R_6
+should all be essential.
 
 You can also use the ``randomsparse`` command to randomly sample the exchange
 reactions and generate putative minimal exchange reaction sets. This can be
-done by using the ``--type exchange`` option with the ``randomsparse`` command:
+done by using the ``--type=exchange`` option with the ``randomsparse`` command:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model randomsparse --type exchange 90%
+    (psamm-env) $ psamm-model randomsparse --type=exchange 90%
 
 
 It can be seen that when this is run on this small network the mannitol
