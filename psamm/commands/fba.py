@@ -100,7 +100,6 @@ class FluxBalanceCommand(MetabolicMixin, SolverCommandMixin, Command):
                 rx_trans = rx.translated_compounds(
                     lambda x: compound_name.get(x, x))
                 genes = reaction_genes.get(reaction_id, '')
-                print('{}'.format(u'( Cbei_0661\xa0Cbei_2182 )'))
                 print('{}\t{}\t{}\t{}'.format(
                     reaction_id, flux, rx_trans, genes))
 
