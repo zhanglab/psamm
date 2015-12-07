@@ -230,7 +230,8 @@ class Reaction(object):
 
     def __eq__(self, other):
         """Indicate equality of self and other"""
-        return (self._direction == other._direction and
+        return (isinstance(other, self.__class__) and
+                self._direction == other._direction and
                 self._left == other._left and
                 self._right == other._right)
 
