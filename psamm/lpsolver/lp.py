@@ -29,11 +29,14 @@ single variable. This allows many similar expressions to be represented by one
 constructed faster.
 """
 
+from __future__ import unicode_literals
+
 import math
 import numbers
 from collections import Counter
 import abc
 
+import six
 from six import add_metaclass, iteritems, viewkeys, viewitems
 from six.moves import range
 
@@ -44,6 +47,7 @@ class VariableSet(tuple):
     """A tuple used to represent sets of variables"""
 
 
+@six.python_2_unicode_compatible
 class Expression(object):
     """Represents a linear expression
 
@@ -259,9 +263,10 @@ class Expression(object):
         return ' '.join(terms)
 
     def __repr__(self):
-        return '<{} {}>'.format(self.__class__.__name__, repr(str(self)))
+        return str('<{} {}>').format(self.__class__.__name__, repr(str(self)))
 
 
+@six.python_2_unicode_compatible
 class Relation(object):
     """Represents a binary relation (equation or inequality)
 
@@ -312,7 +317,7 @@ class Relation(object):
             -self._expression.offset)
 
     def __repr__(self):
-        return '<{} {}>'.format(self.__class__.__name__, repr(str(self)))
+        return str('<{} {}>').format(self.__class__.__name__, repr(str(self)))
 
 
 class ObjectiveSense(object):

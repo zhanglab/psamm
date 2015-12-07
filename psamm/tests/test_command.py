@@ -24,7 +24,7 @@ import unittest
 
 from six import StringIO, BytesIO
 
-from psamm.command import main, Command, SolverCommandMixin
+from psamm.command import main, Command, MetabolicMixin, SolverCommandMixin
 from psamm.lpsolver import generic
 
 
@@ -48,7 +48,6 @@ class MockCommand(Command):
     init_parser_called = False
     run_called = False
     has_native_model = False
-    has_metabolic_model = False
 
     @classmethod
     def init_parser(cls, parser):
@@ -62,6 +61,13 @@ class MockCommand(Command):
     def run(self):
         self.__class__.run_called = True
         self.__class__.has_native_model = hasattr(self, '_model')
+
+
+class MockMetabolicCommand(MetabolicMixin, Command):
+    """Test metabolic model command."""
+    has_metabolic_model = False
+
+    def run(self):
         self.__class__.has_metabolic_model = hasattr(self, '_mm')
 
 
@@ -301,10 +307,14 @@ class TestCommandMain(unittest.TestCase):
         self.assertTrue(MockCommand.run_called)
         self.assertTrue(MockCommand.init_parser_called)
         self.assertTrue(MockCommand.has_native_model)
-        self.assertTrue(MockCommand.has_metabolic_model)
 
     def test_solver_command_main(self):
         with self.assertRaises(generic.RequirementsError):
             main(MockSolverCommand, args=[
                 '--model', self._model_dir,
                 '--solver', 'name=not-an-actual-solver'])
+
+    def test_metabolic_command_main(self):
+        main(MockMetabolicCommand, args=[
+            '--model', self._model_dir])
+        self.assertTrue(MockMetabolicCommand.has_metabolic_model)

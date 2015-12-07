@@ -341,7 +341,7 @@ class MetabolicModel(MetabolicDatabase):
         return model
 
     @classmethod
-    def load_model(cls, database, reaction_iter, medium=None, limits=None,
+    def load_model(cls, database, reaction_iter=None, medium=None, limits=None,
                    v_max=None):
         """Get model from reaction name iterator
 
@@ -353,6 +353,8 @@ class MetabolicModel(MetabolicDatabase):
             model_args['v_max'] = v_max
 
         model = cls(database, **model_args)
+        if reaction_iter is None:
+            reaction_iter = iter(database.reactions)
         for reaction_id in reaction_iter:
             model.add_reaction(reaction_id)
 

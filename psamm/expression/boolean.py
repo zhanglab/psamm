@@ -22,13 +22,17 @@ expressions and do evaluation with substitutions of
 particular variables.
 """
 
+from __future__ import unicode_literals
+
 import re
 
+import six
 from six import text_type, string_types
 
 from ..util import FrozenOrderedSet
 
 
+@six.python_2_unicode_compatible
 class Variable(object):
     """Represents a variable in a boolean expression"""
 
@@ -40,7 +44,7 @@ class Variable(object):
         return self._symbol
 
     def __repr__(self):
-        return 'Variable({})'.format(repr(self._symbol))
+        return str('Variable({})').format(repr(self._symbol))
 
     def __str__(self):
         return self._symbol
@@ -94,6 +98,7 @@ class SubstitutionError(Exception):
     """Error substituting into expression."""
 
 
+@six.python_2_unicode_compatible
 class Expression(object):
     """Boolean expression representation.
 
@@ -227,7 +232,7 @@ class Expression(object):
             arg = self._root
         else:
             arg = text_type(self)
-        return '{}({!r})'.format(self.__class__.__name__, arg)
+        return str('{}({!r})').format(self.__class__.__name__, arg)
 
     def __str__(self):
         next_terms = iter([self._root])

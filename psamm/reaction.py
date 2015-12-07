@@ -17,9 +17,15 @@
 
 """Definitions related to reaction equations and parsing of such equations."""
 
+from __future__ import unicode_literals
+
 import functools
 
+import six
+from six import text_type
 
+
+@six.python_2_unicode_compatible
 @functools.total_ordering
 class Compound(object):
     """Represents a compound in a reaction equation
@@ -33,8 +39,10 @@ class Compound(object):
     """
 
     def __init__(self, name, compartment=None, arguments=()):
-        self._name = str(name)
-        self._compartment = None if compartment is None else str(compartment)
+        self._name = text_type(name)
+        self._compartment = None
+        if compartment is not None:
+            self._compartment = text_type(compartment)
         self._arguments = tuple(arguments)
 
     @property
@@ -111,7 +119,7 @@ class Compound(object):
 
     def __repr__(self):
         def str_repr(*args):
-            return 'Compound({})'.format(', '.join(repr(a) for a in args))
+            return str('Compound({})').format(', '.join(repr(a) for a in args))
 
         if len(self._arguments) == 0:
             if self._compartment is None:
@@ -120,6 +128,7 @@ class Compound(object):
         return str_repr(self._name, self._compartment, self._arguments)
 
 
+@six.python_2_unicode_compatible
 class Reaction(object):
     """Reaction equation representation
 
@@ -216,12 +225,13 @@ class Reaction(object):
             format_compound_list(self._right))
 
     def __repr__(self):
-        return 'Reaction({}, {}, {})'.format(
+        return str('Reaction({}, {}, {})').format(
             repr(self._direction), repr(self._left), repr(self._right))
 
     def __eq__(self, other):
         """Indicate equality of self and other"""
-        return (self._direction == other._direction and
+        return (isinstance(other, self.__class__) and
+                self._direction == other._direction and
                 self._left == other._left and
                 self._right == other._right)
 

@@ -15,10 +15,12 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-from ..command import Command
+from __future__ import unicode_literals
+
+from ..command import Command, MetabolicMixin
 
 
-class ConsoleCommand(Command):
+class ConsoleCommand(MetabolicMixin, Command):
     """Start an interactive Python console with the model loaded."""
 
     @classmethod

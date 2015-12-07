@@ -15,16 +15,18 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+from __future__ import unicode_literals
+
 import time
 import logging
 
-from ..command import SolverCommandMixin, Command, CommandError
+from ..command import SolverCommandMixin, MetabolicMixin, Command, CommandError
 from .. import fluxanalysis
 
 logger = logging.getLogger(__name__)
 
 
-class FluxBalanceCommand(SolverCommandMixin, Command):
+class FluxBalanceCommand(MetabolicMixin, SolverCommandMixin, Command):
     """Run flux balance analysis on the model."""
 
     @classmethod
@@ -51,6 +53,12 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
                 compound_name[compound.id] = compound.properties['name']
             elif compound.id not in compound_name:
                 compound_name[compound.id] = compound.id
+
+        # Reaction genes information
+        reaction_genes = {}
+        for reaction in self._model.parse_reactions():
+            if 'genes' in reaction.properties:
+                reaction_genes[reaction.id] = reaction.properties['genes']
 
         if self._args.reaction is not None:
             reaction = self._args.reaction
@@ -91,7 +99,9 @@ class FluxBalanceCommand(SolverCommandMixin, Command):
                 rx = self._mm.get_reaction(reaction_id)
                 rx_trans = rx.translated_compounds(
                     lambda x: compound_name.get(x, x))
-                print('{}\t{}\t{}'.format(reaction_id, flux, rx_trans))
+                genes = reaction_genes.get(reaction_id, '')
+                print('{}\t{}\t{}\t{}'.format(
+                    reaction_id, flux, rx_trans, genes))
 
             # Remember flux of requested reaction
             if reaction_id == reaction:

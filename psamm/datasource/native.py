@@ -44,6 +44,8 @@ logger = logging.getLogger(__name__)
 # Model files to try to open if a directory was specified
 DEFAULT_MODEL = ('model.yaml', 'model.yml')
 
+_HAS_YAML_LIBRARY = None
+
 
 class ParseError(Exception):
     """Exception used to signal errors while parsing"""
@@ -52,6 +54,25 @@ class ParseError(Exception):
 def whendefined(func, value):
     """Apply func to value if value is not None"""
     return func(value) if value is not None else None
+
+
+def yaml_load(stream):
+    """Load YAML file using safe loader."""
+    # Surprisingly, the CSafeLoader does not seem to be used by default.
+    # Check whether the CSafeLoader is available and provide a log message
+    # if it is not available.
+    global _HAS_YAML_LIBRARY
+
+    if _HAS_YAML_LIBRARY is None:
+        _HAS_YAML_LIBRARY = hasattr(yaml, 'CSafeLoader')
+        if not _HAS_YAML_LIBRARY:
+            logger.warning('libyaml was not found! Please install libyaml to'
+                           ' speed up loading the model files.')
+
+    if _HAS_YAML_LIBRARY:
+        return yaml.load(stream, Loader=yaml.CSafeLoader)
+
+    return yaml.safe_load(stream)
 
 
 class CompoundEntry(object):
@@ -155,7 +176,7 @@ class NativeModel(object):
         if os.path.isfile(path):
             self._context = FilePathContext(path)
             with open(self._context.filepath, 'r') as f:
-                self._model = yaml.load(f)
+                self._model = yaml_load(f)
         else:
             # Try to open the default file
             for filename in DEFAULT_MODEL:
@@ -163,9 +184,9 @@ class NativeModel(object):
                     self._context = FilePathContext(
                         os.path.join(path, filename))
                     with open(self._context.filepath, 'r') as f:
-                        self._model = yaml.load(f)
+                        self._model = yaml_load(f)
                         break
-                except Exception:
+                except:
                     logger.debug('Failed to load model file', exc_info=True)
             else:
                 # No model could be loaded
@@ -193,17 +214,17 @@ class NativeModel(object):
                     self._context, self._model['reactions']):
                 yield reaction
 
+    def has_model_definition(self):
+        """Return True when the list of model reactions is set in the model."""
+        return 'model' in self._model
+
     def parse_model(self):
         """Yield reaction IDs of model reactions"""
 
-        if 'model' in self._model:
+        if self.has_model_definition():
             for reaction_id in parse_model_group_list(
                     self._context, self._model['model']):
                 yield reaction_id
-        else:
-            reactions = set(reaction.id for reaction in self.parse_reactions())
-            for reaction in reactions:
-                yield reaction
 
     def parse_limits(self):
         """Yield tuples of reaction ID, lower, and upper bound flux limits"""
@@ -299,7 +320,7 @@ def parse_compound_yaml_file(path, f):
     Path can be given as a string or a context.
     """
 
-    return parse_compound_list(path, yaml.load(f))
+    return parse_compound_list(path, yaml_load(f))
 
 
 def parse_compound_file(path, format):
@@ -419,7 +440,7 @@ def parse_reaction_yaml_file(path, f):
     Path can be given as a string or a context.
     """
 
-    return parse_reaction_list(path, yaml.load(f))
+    return parse_reaction_list(path, yaml_load(f))
 
 
 def parse_reaction_table_file(path, f):
@@ -511,7 +532,7 @@ def parse_medium_yaml_file(path, f):
     Path can be given as a string or a context.
     """
 
-    return parse_medium(yaml.load(f))
+    return parse_medium(yaml_load(f))
 
 
 def parse_medium_table_file(f):
@@ -641,7 +662,7 @@ def parse_limits_yaml_file(path, f):
     Path can be given as a string or a context.
     """
 
-    return parse_limits_list(path, yaml.load(f))
+    return parse_limits_list(path, yaml_load(f))
 
 
 def parse_limits_file(path):
@@ -709,7 +730,7 @@ def parse_model_yaml_file(path, f):
 
     Path can be given as a string or a context.
     """
-    return parse_model_group_list(path, yaml.load(f))
+    return parse_model_group_list(path, yaml_load(f))
 
 
 def parse_model_table_file(path, f):

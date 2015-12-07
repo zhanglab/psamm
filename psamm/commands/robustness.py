@@ -15,10 +15,12 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+from __future__ import unicode_literals
+
 import time
 import logging
 
-from ..command import Command, SolverCommandMixin, CommandError
+from ..command import Command, MetabolicMixin, SolverCommandMixin, CommandError
 from .. import fluxanalysis
 
 from six.moves import range
@@ -26,7 +28,7 @@ from six.moves import range
 logger = logging.getLogger(__name__)
 
 
-class RobustnessCommand(SolverCommandMixin, Command):
+class RobustnessCommand(MetabolicMixin, SolverCommandMixin, Command):
     """Run robustness analysis on the model.
 
     Given a reaction to maximize and a reaction to vary,

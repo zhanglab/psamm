@@ -15,15 +15,17 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+from __future__ import unicode_literals
+
 import logging
 
-from ..command import Command, SolverCommandMixin
+from ..command import Command, MetabolicMixin, SolverCommandMixin
 from ..gapfill import gapfind, gapfill
 
 logger = logging.getLogger(__name__)
 
 
-class GapFillCommand(SolverCommandMixin, Command):
+class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
     """Run the GapFind and GapFill algorithms on the model."""
 
     def run(self):

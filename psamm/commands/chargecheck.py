@@ -15,6 +15,8 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+from __future__ import unicode_literals
+
 import math
 import logging
 
@@ -54,41 +56,31 @@ class ChargeBalanceCommand(Command):
             if hasattr(compound, 'charge') and compound.charge is not None:
                 compound_charge[compound.id] = compound.charge
 
-        # Create a set of known charge-inconsistent reactions
-        exchange = set()
-        for reaction_id in self._mm.reactions:
-            if self._mm.is_exchange(reaction_id):
-                exchange.add(reaction_id)
-
         # Create a set of excluded reactions
         exclude = set(self._args.exclude)
 
-        def reaction_charges(reaction_id):
-            for compound, value in self._mm.get_reaction_values(reaction_id):
+        def reaction_charges(reaction):
+            for compound, value in reaction.compounds:
                 charge = compound_charge.get(compound.name, float('nan'))
                 yield charge * float(value)
 
         count = 0
         unbalanced = 0
         unchecked = 0
-        for reaction in sorted(self._mm.reactions):
-            if reaction in exchange:
-                continue
-
+        for reaction in self._model.parse_reactions():
             count += 1
 
-            if reaction in exclude:
+            if reaction in exclude or reaction.equation is None:
                 continue
 
-            charge = sum(reaction_charges(reaction))
+            charge = sum(reaction_charges(reaction.equation))
             if math.isnan(charge):
                 logger.debug('Not checking reaction {};'
                              ' missing charge'.format(reaction))
                 unchecked += 1
             elif abs(charge) > self._args.epsilon:
                 unbalanced += 1
-                rx = self._mm.get_reaction(reaction)
-                rxt = rx.translated_compounds(
+                rxt = reaction.equation.translated_compounds(
                     lambda x: compound_name.get(x, x))
                 print('{}\t{}\t{}'.format(reaction, charge, rxt))
 

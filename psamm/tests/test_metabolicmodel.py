@@ -24,6 +24,26 @@ from psamm.reaction import Compound
 from psamm.datasource.modelseed import parse_reaction
 
 
+class TestLoadMetabolicModel(unittest.TestCase):
+    def test_load_model_without_reactions(self):
+        database = DictDatabase()
+        database.set_reaction('rxn_1', parse_reaction('|A| => |B|'))
+        database.set_reaction('rxn_2', parse_reaction('|B| => |C|'))
+        database.set_reaction('rxn_3', parse_reaction('|C| => |D|'))
+        model = MetabolicModel.load_model(database)
+
+        self.assertEqual(set(model.reactions), {'rxn_1', 'rxn_2', 'rxn_3'})
+
+    def test_load_model_with_reaction_subset(self):
+        database = DictDatabase()
+        database.set_reaction('rxn_1', parse_reaction('|A| => |B|'))
+        database.set_reaction('rxn_2', parse_reaction('|B| => |C|'))
+        database.set_reaction('rxn_3', parse_reaction('|C| => |D|'))
+        model = MetabolicModel.load_model(database, {'rxn_1'})
+
+        self.assertEqual(set(model.reactions), {'rxn_1'})
+
+
 class TestMetabolicModel(unittest.TestCase):
     def setUp(self):
         # TODO use mock database instead of actual database
@@ -184,6 +204,7 @@ class TestMetabolicModel(unittest.TestCase):
 
     def test_limits_len(self):
         self.assertEqual(len(self.model.limits), 6)
+
 
 class TestMetabolicModelFlipableView(unittest.TestCase):
     def setUp(self):

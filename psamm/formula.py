@@ -23,12 +23,15 @@ Chemical formulas (:class:`.Formula`) are represented as a number of
 subformulas. This allows some simple structure to be represented.
 """
 
+from __future__ import unicode_literals
+
 import re
 from collections import Counter
 import functools
 import operator
 import numbers
 
+import six
 from six import iteritems
 from six.moves import reduce
 
@@ -76,6 +79,7 @@ class FormulaElement(object):
         return self
 
 
+@six.python_2_unicode_compatible
 @functools.total_ordering
 class Atom(FormulaElement):
     """Represent an atom in a chemical formula
@@ -117,9 +121,10 @@ class Atom(FormulaElement):
         return self._symbol
 
     def __repr__(self):
-        return 'Atom({})'.format(repr(self._symbol))
+        return str('Atom({})').format(repr(self._symbol))
 
 
+@six.python_2_unicode_compatible
 class Radical(FormulaElement):
     """Represents a radical or other unknown subformula"""
 
@@ -149,9 +154,10 @@ class Radical(FormulaElement):
         return self._symbol
 
     def __repr__(self):
-        return 'Radical({})'.format(repr(self._symbol))
+        return str('Radical({})').format(repr(self._symbol))
 
 
+@six.python_2_unicode_compatible
 class Formula(FormulaElement):
     """Representation of a chemial formula
 
@@ -276,7 +282,7 @@ class Formula(FormulaElement):
         return s
 
     def __repr__(self):
-        return 'Formula({})'.format(repr(self._values))
+        return str('Formula({})').format(repr(self._values))
 
     def __or__(self, other):
         """Merge formulas into one formula"""

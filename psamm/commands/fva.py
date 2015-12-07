@@ -15,17 +15,19 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+from __future__ import unicode_literals
+
 import time
 import logging
 
-from ..command import Command, SolverCommandMixin, CommandError
+from ..command import Command, SolverCommandMixin, MetabolicMixin, CommandError
 from ..util import MaybeRelative
 from .. import fluxanalysis
 
 logger = logging.getLogger(__name__)
 
 
-class FluxVariabilityCommand(SolverCommandMixin, Command):
+class FluxVariabilityCommand(MetabolicMixin, SolverCommandMixin, Command):
     """Run flux variablity analysis on the model."""
 
     @classmethod

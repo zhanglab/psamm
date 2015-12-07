@@ -15,15 +15,17 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+from __future__ import unicode_literals
+
 import logging
 
-from ..command import Command, SolverCommandMixin, CommandError
+from ..command import Command, MetabolicMixin, SolverCommandMixin, CommandError
 from .. import fluxanalysis, fastcore
 
 logger = logging.getLogger(__name__)
 
 
-class FluxConsistencyCommand(SolverCommandMixin, Command):
+class FluxConsistencyCommand(MetabolicMixin, SolverCommandMixin, Command):
     """Check that reactions are flux consistent in a model.
 
     A reaction is flux consistent if there exists any steady-state flux
