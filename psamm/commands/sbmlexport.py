@@ -27,4 +27,5 @@ class SBMLExport(MetabolicMixin, Command):
     def run(self):
         writer = sbml.SBMLWriter()
         writer.write_model(
-            sys.stdout, self._mm, self._model.parse_compounds())
+            sys.stdout, self._mm, self._model.parse_reactions(),
+            self._model.parse_compounds())
