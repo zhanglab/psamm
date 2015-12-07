@@ -1,4 +1,18 @@
 
+v0.17 (2015-12-07)
+------------------
+
+- When loading native models, PSAMM now uses the PyYAML safe loader and also
+  uses the optimized CSafeLoader if present. This speeds up the start time of
+  commands.
+- Various additional optimizations to model loading have been added. This
+  speeds up the start time of some commands.
+- The `fba` command now shows the genes associated with each reaction for a
+  quick overview of which genes influence the flux solution.
+- The `sbmlexport` command now properly exports gene association information.
+- All commands better handle output that contains unicode characters. In
+  previous versions this would often fail when using Python 2.
+
 v0.16 (2015-12-01)
 ------------------
 
