@@ -1835,19 +1835,27 @@ done using the ``--type=genes`` option with the ``randomsparse`` command:
 
 This will produce an output of the gene IDs with a 1 if the gene was kept in the
 simulation and a 0 if the gene was deleted. Following the list of genes will
-be a list of the reaction IDs that made up the minimal network for that
+be a summary of how many genes were kept out of the total as well as
+list of the reaction IDs that made up the minimal network for that
 simulation. An example output can be seen as follows:
 
 .. code-block:: shell
 
-    Gene_A	0
-    Gene_B	0
-    Gene_C	0
-    Gene_D	1
-    Gene_E	1
-    Gene_F	1
-    Gene_G	0
-    INFO: Reactions in minimal network: EX_cpd_1_e, Objective, R_1, R_2, R_3, R_4, R_5, R_6
+    b4077	0
+    b4090	1
+    b4122	0
+    b4151	0
+    b4152	0
+    b4153	0
+    b4154	0
+    b4232	0
+    b4301	1
+    b4395	0
+    s0001	1
+    INFO: Essential genes: 63/137
+    INFO: Reactions in minimal network: R_ACALDt, R_ACONTa, R_ACONTb, R_ACt2r, R_ATPM, R_ATPS4r,
+    R_Biomass_Ecoli_core_w_GAM, R_CO2t, R_CS, R_CYTBD
+
 
 The random minimal network analysis can also be used to generate a random
 subset of reactions from the model that will still allow the model to
