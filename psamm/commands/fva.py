@@ -19,15 +19,18 @@ from __future__ import unicode_literals
 
 import time
 import logging
+from itertools import product
 
-from ..command import Command, SolverCommandMixin, MetabolicMixin, CommandError
+from ..command import (Command, SolverCommandMixin, MetabolicMixin,
+                       ParallelTaskMixin, CommandError)
 from ..util import MaybeRelative
 from .. import fluxanalysis
 
 logger = logging.getLogger(__name__)
 
 
-class FluxVariabilityCommand(MetabolicMixin, SolverCommandMixin, Command):
+class FluxVariabilityCommand(MetabolicMixin, SolverCommandMixin,
+                             ParallelTaskMixin, Command):
     """Run flux variablity analysis on the model."""
 
     @classmethod
@@ -80,14 +83,47 @@ class FluxVariabilityCommand(MetabolicMixin, SolverCommandMixin, Command):
         logger.info('Setting objective threshold to {}'.format(
             threshold))
 
-        flux_bounds = fluxanalysis.flux_variability(
-            self._mm, sorted(self._mm.reactions), {reaction: float(threshold)},
-            tfba=enable_tfba, solver=solver)
-        for reaction_id, bounds in flux_bounds:
+        handler_args = (
+            self._mm, solver, enable_tfba, float(threshold), reaction)
+        executor = self._create_executor(
+            FVATaskHandler, handler_args, cpus_per_worker=2)
+
+        def iter_results():
+            results = {}
+            with executor:
+                for (reaction_id, direction), value in executor.imap_unordered(
+                        product(self._mm.reactions, (1, -1)), 16):
+                    if reaction_id not in results:
+                        results[reaction_id] = value
+                        continue
+
+                    other_value = results[reaction_id]
+                    if direction == -1:
+                        bounds = value, other_value
+                    else:
+                        bounds = other_value, value
+
+                    yield reaction_id, bounds
+
+            executor.join()
+
+        for reaction_id, (lower, upper) in iter_results():
             rx = self._mm.get_reaction(reaction_id)
             rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
-            print('{}\t{}\t{}\t{}'.format(
-                reaction_id, bounds[0], bounds[1], rxt))
+            print('{}\t{}\t{}\t{}'.format(reaction_id, lower, upper, rxt))
 
         logger.info('Solving took {:.2f} seconds'.format(
             time.time() - start_time))
+
+
+class FVATaskHandler(object):
+    def __init__(self, model, solver, enable_tfba, threshold, reaction):
+        self._problem = fluxanalysis.FluxBalanceProblem(model, solver)
+        if enable_tfba:
+            self._problem.add_thermodynamic()
+
+        self._problem.prob.add_linear_constraints(
+            self._problem.get_flux_var(reaction) >= threshold)
+
+    def handle_task(self, reaction_id, direction):
+        return self._problem.flux_bound(reaction_id, direction)
