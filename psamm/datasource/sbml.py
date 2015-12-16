@@ -106,6 +106,13 @@ class SpeciesEntry(_SBMLEntry):
         self._name = root.get('name')
         self._comp = root.get('compartment')
 
+        if self._comp is None:
+            msg = 'Species {} has no compartment!'.format(self.id)
+            if self._reader._strict:
+                raise ParseError(msg)
+            else:
+                logger.warning(msg)
+
         self._boundary = root.get('boundaryCondition', 'false') == 'true'
 
         # In non-strict mode the species that ends with _b are considered
