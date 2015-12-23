@@ -25,13 +25,17 @@ discovered.
 The :func:`.main` function is the entry point of command line interface.
 """
 
+from __future__ import division
+
 import os
 import argparse
 import logging
 import abc
+from itertools import islice
+import multiprocessing as mp
 
 import pkg_resources
-from six import add_metaclass, iteritems
+from six import add_metaclass, iteritems, itervalues
 
 from . import __version__ as package_version
 from .datasource.native import NativeModel
@@ -159,6 +163,39 @@ class SolverCommandMixin(object):
         return generic.Solver(**solver_args)
 
 
+class ParallelTaskMixin(object):
+    """Mixin for commands that run parallel computation tasks."""
+
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            '--parallel', help='Set number of parallel processes (0=auto)',
+            type=int, default=0)
+        super(ParallelTaskMixin, cls).init_parser(parser)
+
+    def _create_executor(self, handler, args, cpus_per_worker=1):
+        """Return a new :class:`.Executor` instance."""
+        if self._args.parallel > 0:
+            workers = self._args.parallel
+        else:
+            try:
+                workers = mp.cpu_count() // cpus_per_worker
+            except NotImplementedError:
+                workers = 1
+
+        if workers != 1:
+            logger.info('Using {} parallel worker processes...'.format(
+                workers))
+            executor = ProcessPoolExecutor(
+                processes=workers, handler_init=handler, handler_args=args)
+        else:
+            logger.info('Using single worker...')
+            executor = SequentialExecutor(
+                handler_init=handler, handler_args=args)
+
+        return executor
+
+
 class FilePrefixAppendAction(argparse.Action):
     """Action that appends one argument or multiple from a file.
 
@@ -192,6 +229,130 @@ class FilePrefixAppendAction(argparse.Action):
                     filepath))
         else:
             arguments.append(values)
+
+
+class _ErrorMarker(object):
+    """Signals error in the child process."""
+
+
+class ExecutorError(Exception):
+    """Error running tasks on executor."""
+
+
+class _ExecutorProcess(mp.Process):
+    def __init__(self, task_queue, result_queue, handler_init,
+                 handler_args=()):
+        super(_ExecutorProcess, self).__init__()
+        self._task_queue = task_queue
+        self._result_queue = result_queue
+        self._handler_init = handler_init
+        self._handler_args = handler_args
+
+    def run(self):
+        try:
+            handler = self._handler_init(*self._handler_args)
+            for tasks in iter(self._task_queue.get, None):
+                results = {task: handler.handle_task(*task) for task in tasks}
+                self._result_queue.put(results)
+        except BaseException:
+            self._result_queue.put(_ErrorMarker())
+            raise
+
+
+class Executor(object):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
+
+    def close(self):
+        pass
+
+
+class ProcessPoolExecutor(Executor):
+    def __init__(self, handler_init, handler_args=(), processes=None):
+        if processes is None:
+            try:
+                processes = mp.cpu_count()
+            except NotImplementedError:
+                processes = 1
+
+        self._process_count = processes
+        self._processes = []
+        self._task_queue = mp.Queue()
+        self._result_queue = mp.Queue()
+
+        for _ in range(self._process_count):
+            p = _ExecutorProcess(
+                self._task_queue, self._result_queue, handler_init,
+                handler_args)
+            p.start()
+            self._processes.append(p)
+
+    def apply(self, task):
+        self._task_queue.put([task])
+        results = self._result_queue.get()
+        if isinstance(results, _ErrorMarker):
+            raise ExecutorError('Child process failed')
+
+        return next(itervalues(results))
+
+    def imap_unordered(self, iterable, chunksize=1):
+        def iter_chunks():
+            while True:
+                chunk = list(islice(iterable, chunksize))
+                if len(chunk) == 0:
+                    break
+                yield chunk
+
+        it = iter_chunks()
+        workers = 0
+        for i in range(self._process_count):
+            tasks = next(it, None)
+            if tasks is None:
+                break
+
+            self._task_queue.put(tasks)
+            workers += 1
+
+        while workers > 0:
+            results = self._result_queue.get()
+            if isinstance(results, _ErrorMarker):
+                raise ExecutorError('Child process failed')
+
+            tasks = next(it, None)
+            if tasks is None:
+                workers -= 1
+
+            self._task_queue.put(tasks)
+
+            for task, result in iteritems(results):
+                yield task, result
+
+    def close(self):
+        for i in range(self._process_count):
+            self._task_queue.put(None)
+
+    def join(self):
+        for p in self._processes:
+            p.join()
+
+
+class SequentialExecutor(Executor):
+    def __init__(self, handler_init, handler_args=()):
+        self._handler = handler_init(*handler_args)
+
+    def apply(self, task):
+        return self._handler.handle_task(*task)
+
+    def imap_unordered(self, iterable, chunksize):
+        for task in iterable:
+            yield task, self._handler.handle_task(*task)
+
+    def join(self):
+        pass
 
 
 def main(command_class=None, args=None):
