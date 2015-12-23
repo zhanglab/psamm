@@ -169,6 +169,22 @@ class FluxBalanceProblem(object):
         self._prob.set_linear_objective(self.flux_expr(reaction))
         self._solve()
 
+    def flux_bound(self, reaction, direction):
+        """Return the flux bound of the reaction.
+
+        Direction must be a positive number to obtain the upper bound or a
+        negative number to obtain the lower bound. A value of inf or -inf is
+        returned if the problem is unbounded.
+        """
+        try:
+            self.maximize({reaction: direction})
+        except FluxBalanceError as e:
+            if not e.result.unbounded:
+                raise
+            return direction * _INF
+        else:
+            return self.get_flux(reaction)
+
     def _add_minimization_vars(self):
         """Add variables and constraints for L1 norm minimization."""
         if self._has_minimization_vars:
@@ -316,14 +332,7 @@ def flux_variability(model, reactions, fixed, tfba, solver):
 
     def min_max_solve(reaction_id):
         for direction in (-1, 1):
-            try:
-                fba.maximize({reaction_id: direction})
-            except FluxBalanceError as e:
-                if not e.result.unbounded:
-                    raise
-                yield direction * _INF
-            else:
-                yield fba.get_flux(reaction_id)
+            yield fba.flux_bound(reaction_id, direction)
 
     # Solve for each reaction
     for reaction_id in reactions:
