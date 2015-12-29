@@ -20,7 +20,8 @@ from __future__ import unicode_literals
 import time
 import logging
 
-from ..command import Command, MetabolicMixin, SolverCommandMixin, CommandError
+from ..command import (Command, MetabolicMixin, SolverCommandMixin,
+                       ParallelTaskMixin, CommandError)
 from .. import fluxanalysis
 
 from six.moves import range
@@ -28,7 +29,8 @@ from six.moves import range
 logger = logging.getLogger(__name__)
 
 
-class RobustnessCommand(MetabolicMixin, SolverCommandMixin, Command):
+class RobustnessCommand(MetabolicMixin, SolverCommandMixin,
+                        ParallelTaskMixin, Command):
     """Run robustness analysis on the model.
 
     Given a reaction to maximize and a reaction to vary,
@@ -97,21 +99,19 @@ class RobustnessCommand(MetabolicMixin, SolverCommandMixin, Command):
         else:
             solver = self._get_solver()
 
-        p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
-
         if loop_removal == 'none':
             logger.info('Loop removal disabled; spurious loops are allowed')
-            run_fba = p.maximize
         elif loop_removal == 'l1min':
             logger.info('Loop removal using L1 minimization')
-            run_fba = p.max_min_l1
         elif loop_removal == 'tfba':
             logger.info('Loop removal using thermodynamic constraints')
-            p.add_thermodynamic()
-            run_fba = p.maximize
         else:
             raise CommandError('Invalid loop constraint mode: {}'.format(
                 loop_removal))
+
+        p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+        if loop_removal == 'tfba':
+            p.add_thermodynamic()
 
         # Determine minimum and maximum flux for varying reaction
         if self._args.maximum is None:
@@ -135,27 +135,65 @@ class RobustnessCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         start_time = time.time()
 
+        handler_args = (
+            self._mm, solver, loop_removal, self._args.all_reaction_fluxes)
+        executor = self._create_executor(
+            RobustnessTaskHandler, handler_args, cpus_per_worker=2)
+
+        def iter_tasks():
+            for i in range(steps):
+                fixed_flux = flux_min + i*(flux_max - flux_min)/float(steps-1)
+                constraint = varying_reaction, fixed_flux
+                yield constraint, reaction
+
         # Run FBA on model at different fixed flux values
-        for i in range(steps):
-            fixed_flux = flux_min + i*(flux_max - flux_min)/float(steps-1)
-            flux_var = p.get_flux_var(varying_reaction)
-            c, = p.prob.add_linear_constraints(flux_var == fixed_flux)
-
-            try:
-                run_fba(reaction)
-
-                if not self._args.all_reaction_fluxes:
-                    print('{}\t{}'.format(fixed_flux, p.get_flux(reaction)))
-                else:
+        with executor:
+            for task, result in executor.imap_unordered(iter_tasks(), 16):
+                (varying_reaction, fixed_flux), _ = task
+                if result is None:
+                    logger.warning('No solution found for {} at {}'.format(
+                        varying_reaction, fixed_flux))
+                elif self._args.all_reaction_fluxes:
                     for other_reaction in self._mm.reactions:
                         print('{}\t{}\t{}'.format(
                             other_reaction, fixed_flux,
-                            p.get_flux(other_reaction)))
-            except fluxanalysis.FluxBalanceError:
-                logger.warning('No solution found for {} at {}'.format(
-                    varying_reaction, fixed_flux))
-            finally:
-                c.delete()
+                            result[other_reaction]))
+                else:
+                    print('{}\t{}'.format(fixed_flux, result))
+
+        executor.join()
 
         logger.info('Solving took {:.2f} seconds'.format(
             time.time() - start_time))
+
+
+class RobustnessTaskHandler(object):
+    def __init__(self, model, solver, loop_removal, all_reactions):
+        self._problem = fluxanalysis.FluxBalanceProblem(model, solver)
+
+        if loop_removal == 'none':
+            self._run_fba = self._problem.maximize
+        elif loop_removal == 'l1min':
+            self._run_fba = self._problem.max_min_l1
+        elif loop_removal == 'tfba':
+            self._problem.add_thermodynamic()
+            self._run_fba = self._problem.maximize
+
+        self._reactions = list(model.reactions) if all_reactions else None
+
+    def handle_task(self, constraint, reaction):
+        varying_reaction, fixed_flux = constraint
+        flux_var = self._problem.get_flux_var(varying_reaction)
+        c, = self._problem.prob.add_linear_constraints(flux_var == fixed_flux)
+
+        try:
+            self._run_fba(reaction)
+            if self._reactions is not None:
+                return {reaction: self._problem.get_flux(reaction)
+                        for reaction in self._reactions}
+            else:
+                return self._problem.get_flux(reaction)
+        except fluxanalysis.FluxBalanceError:
+            return None
+        finally:
+            c.delete()
