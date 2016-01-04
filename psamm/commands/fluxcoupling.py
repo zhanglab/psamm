@@ -19,13 +19,15 @@ from __future__ import unicode_literals
 
 import logging
 
-from ..command import Command, SolverCommandMixin, MetabolicMixin, CommandError
+from ..command import (Command, SolverCommandMixin, MetabolicMixin,
+                       ParallelTaskMixin, CommandError)
 from .. import fluxanalysis, fluxcoupling
 
 logger = logging.getLogger(__name__)
 
 
-class FluxCouplingCommand(MetabolicMixin, SolverCommandMixin, Command):
+class FluxCouplingCommand(MetabolicMixin, SolverCommandMixin,
+                          ParallelTaskMixin, Command):
     """Find flux coupled reactions in the model.
 
     This identifies any reaction pairs where the flux of one reaction
@@ -47,33 +49,43 @@ class FluxCouplingCommand(MetabolicMixin, SolverCommandMixin, Command):
             self._mm, max_reaction, tfba=False, solver=solver))
         optimum = fba_fluxes[max_reaction]
 
-        self._fcp = fluxcoupling.FluxCouplingProblem(
-            self._mm, {max_reaction: 0.999 * optimum}, solver)
+        handler_args = self._mm, {max_reaction: 0.999 * optimum}, solver
+        executor = self._create_executor(
+            FluxCouplingTaskHandler, handler_args, cpus_per_worker=2)
 
         self._coupled = {}
         self._groups = []
 
-        reactions = sorted(self._mm.reactions)
-        for i, reaction1 in enumerate(reactions):
-            if reaction1 in self._coupled:
-                continue
-
-            for reaction2 in reactions[i+1:]:
-                if (reaction2 in self._coupled and
-                        (self._coupled[reaction2] ==
-                         self._coupled.get(reaction1))):
+        def iter_reaction_pairs():
+            reactions = sorted(self._mm.reactions)
+            for i, reaction1 in enumerate(reactions):
+                if reaction1 in self._coupled:
                     continue
 
-                self._check_reactions(reaction1, reaction2)
+                for reaction2 in reactions[i+1:]:
+                    if (reaction2 in self._coupled and
+                            (self._coupled[reaction2] ==
+                             self._coupled.get(reaction1))):
+                        continue
+
+                    yield reaction1, reaction2
+
+        with executor:
+            for task, bounds in executor.imap_unordered(
+                    iter_reaction_pairs(), 16):
+                reaction1, reaction2 = task
+                self._check_reactions(reaction1, reaction2, bounds)
+
+        executor.join()
 
         logger.info('Coupled groups:')
         for i, group in enumerate(self._groups):
             if group is not None:
                 logger.info('{}: {}'.format(i, ', '.join(sorted(group))))
 
-    def _check_reactions(self, reaction1, reaction2):
-        logger.debug('Solving for {}, {}'.format(reaction1, reaction2))
-        lower, upper = self._fcp.solve(reaction1, reaction2)
+    def _check_reactions(self, reaction1, reaction2, bounds):
+        logger.debug('Solved for {}, {}'.format(reaction1, reaction2))
+        lower, upper = bounds
 
         logger.debug('Result: {}, {}'.format(lower, upper))
 
@@ -135,3 +147,12 @@ class FluxCouplingCommand(MetabolicMixin, SolverCommandMixin, Command):
             self._coupled[reaction1] = group_index
             self._coupled[reaction2] = group_index
             self._groups.append(group)
+
+
+class FluxCouplingTaskHandler(object):
+    def __init__(self, model, thresholds, solver):
+        self._problem = fluxcoupling.FluxCouplingProblem(
+            model, thresholds, solver)
+
+    def handle_task(self, reaction_1, reaction_2):
+        return self._problem.solve(reaction_1, reaction_2)
