@@ -35,8 +35,8 @@ from six import string_types, iteritems
 
 from ..reaction import Reaction, Compound
 from .context import FilePathContext, FileMark
+from .reaction import ReactionParser
 from . import modelseed
-
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -45,6 +45,8 @@ logger = logging.getLogger(__name__)
 DEFAULT_MODEL = ('model.yaml', 'model.yml')
 
 _HAS_YAML_LIBRARY = None
+
+_REACTION_PARSER = ReactionParser()
 
 
 class ParseError(Exception):
@@ -382,7 +384,7 @@ def parse_reaction_equation(equation_def):
             yield compound, value
 
     if isinstance(equation_def, string_types):
-        return modelseed.parse_reaction(equation_def).normalized()
+        return _REACTION_PARSER.parse(equation_def).normalized()
 
     compartment = equation_def.get('compartment', None)
     reversible = bool(equation_def.get('reversible', True))
@@ -459,7 +461,7 @@ def parse_reaction_table_file(path, f):
         props = {key: value for key, value in iteritems(row) if value != ''}
 
         if 'equation' in props:
-            props['equation'] = modelseed.parse_reaction(props['equation'])
+            props['equation'] = _REACTION_PARSER.parse(props['equation'])
 
         mark = FileMark(context, lineno + 2, 0)
         yield ReactionEntry(row['id'], props, mark)

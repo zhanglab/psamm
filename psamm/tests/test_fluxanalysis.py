@@ -21,7 +21,7 @@ import unittest
 from psamm.metabolicmodel import MetabolicModel
 from psamm.database import DictDatabase
 from psamm import fluxanalysis
-from psamm.datasource.modelseed import parse_reaction
+from psamm.datasource.reaction import parse_reaction
 from psamm.lpsolver import generic
 
 from six import itervalues

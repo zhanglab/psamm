@@ -20,15 +20,7 @@ from __future__ import print_function, unicode_literals
 import re
 
 from ..command import Command, FilePrefixAppendAction
-from ..reaction import Compound
-
-
-def parse_compound(s):
-    """Parse a compound specification with optional compartment"""
-    m = re.match(r'([^\[]+)\[(\w+)\]', s)
-    if m is not None:
-        return Compound(m.group(1), compartment=m.group(2))
-    return Compound(s)
+from ..datasource.reaction import parse_compound
 
 
 def filter_search_term(s):
