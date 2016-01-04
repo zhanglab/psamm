@@ -1,4 +1,13 @@
 
+v0.18 (2016-01-04)
+------------------
+
+- Several commands now support parallelization with the `--parallel` option
+  (`fva`, `fluxcheck`, `fluxcoupling`, `robustness`).
+- A more robust reaction parser is now used to parse reaction equations in
+  YAML files. This also means that quoting compound names with pipes (`|`) is
+  now optional.
+
 v0.17 (2015-12-07)
 ------------------
 
