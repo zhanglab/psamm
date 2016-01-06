@@ -91,10 +91,12 @@ class RandomSparseNetworkCommand(MetabolicMixin, SolverCommandMixin, Command):
         logger.info('Flux threshold for {} is {}'.format(
             reaction, flux_threshold))
 
-        if self._args.type in ('reactions', 'exchange'):
+        if self._args.type == 'reactions':
             self._delete_reactions(p, reaction, flux_threshold)
         elif self._args.type == 'genes':
             self._delete_genes(p, reaction, flux_threshold)
+        elif self._args.type == 'exchange':
+            self._delete_exchange(p, reaction, flux_threshold)
 
     def _delete_reactions(self, prob, obj_reaction, flux_threshold):
         essential = {obj_reaction}
@@ -261,3 +263,61 @@ class RandomSparseNetworkCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         logger.info('Reactions in minimal network: {}'.format(
             ', '.join(sorted(reactions))))
+
+    def _delete_exchange(self, prob, obj_reaction, flux_threshold):
+
+        exchange_set = set()
+        for reaction_id in self._mm.reactions:
+            if self._mm.is_exchange(reaction_id):
+                exchange_set.add(reaction_id)
+        essential = set()
+        deleted = set()
+        test_set = exchange_set - essential
+
+        start_time = time.time()
+
+        while len(test_set) > 0:
+
+            for reaction in test_set:
+                del self._mm.limits[reaction].bounds
+            testing_reaction = random.sample(test_set, 1)[0]
+            test_set.remove(testing_reaction)
+
+            flux_var = prob.get_flux_var(testing_reaction)
+            c, = prob.prob.add_linear_constraints(flux_var >= 0)
+
+            logger.info('Trying FBA while limiting reaction {} to be greater than 0...'.format(
+                testing_reaction))
+
+            try:
+                prob.maximize(obj_reaction)
+            except fluxanalysis.FluxBalanceError:
+                logger.info(
+                    'FBA is infeasible, marking {} as essential'.format(
+                        testing_reaction))
+
+                c.delete()
+                essential.add(testing_reaction)
+                continue
+
+            logger.debug('Reaction {} has flux {}'.format(
+                obj_reaction, prob.get_flux(obj_reaction)))
+
+            if prob.get_flux(obj_reaction) < flux_threshold:
+                c.delete()
+                essential.add(testing_reaction)
+                logger.info('Reaction {} was essential'.format(
+                    testing_reaction))
+            else:
+                deleted.add(testing_reaction)
+                logger.info('Reaction {} was deleted'.format(testing_reaction))
+
+        logger.info('Solving took {:.2f} seconds'.format(
+            time.time() - start_time))
+
+        for reaction_id in sorted(exchange_set):
+            value = 0 if reaction_id in deleted else 1
+            print('{}\t{}'.format(reaction_id, value))
+
+        logger.info('Essential reactions: {}/{}'.format(
+            len(essential), len(exchange_set)))
