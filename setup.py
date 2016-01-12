@@ -64,6 +64,7 @@ setup(
             'sbmlexport = psamm.commands.sbmlexport:SBMLExport',
             'search = psamm.commands.search:SearchCommand',
             'tableexport = psamm.commands.tableexport:ExportTableCommand',
+            'genedelete = psamm.commands.genedelete:GeneDeletionCommand'
         ]
     },
 
