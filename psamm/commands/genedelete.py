@@ -19,11 +19,11 @@
 from __future__ import unicode_literals
 
 import time
-import random
 import logging
 
-from ..command import Command, MetabolicMixin, SolverCommandMixin, CommandError, FilePrefixAppendAction
-from .. import fluxanalysis, util
+from ..command import (Command, MetabolicMixin, SolverCommandMixin,
+                       CommandError, FilePrefixAppendAction)
+from .. import fluxanalysis
 from ..expression import boolean
 
 from six import string_types
@@ -71,23 +71,13 @@ class GeneDeletionCommand(MetabolicMixin, SolverCommandMixin, Command):
             genes.update(v.symbol for v in assoc.variables)
             gene_assoc[reaction.id] = assoc
 
-
-        essential = set()
-        deleted = set()
-        test_set = set(genes)
         reactions = set(self._mm.reactions)
-
         start_time = time.time()
-
-
-
-
         testing_genes = set(self._args.gene)
-        new_gene_assoc = {}
         deleted_reactions = set()
 
         logger.info('Trying model without gene {}...'.format(
-        testing_genes))
+                    testing_genes))
 
         for reaction in reactions:
             if reaction not in gene_assoc:
@@ -98,7 +88,6 @@ class GeneDeletionCommand(MetabolicMixin, SolverCommandMixin, Command):
                 if boolean.Variable(gene) in assoc.variables:
                     found = True
                     break
-
             if found:
                 new_assoc = assoc.substitute(
                     lambda v: v if v.symbol not in testing_genes else False)
@@ -106,19 +95,15 @@ class GeneDeletionCommand(MetabolicMixin, SolverCommandMixin, Command):
                     logger.info('Deletion reaction {}...'.format(reaction))
                     deleted_reactions.add(reaction)
 
-
-
         print (deleted_reactions)
-
         solver = self._get_solver()
         prob = fluxanalysis.FluxBalanceProblem(self._mm, solver)
-
         for reaction in deleted_reactions:
             flux_var = prob.get_flux_var(reaction)
             prob.prob.add_linear_constraints(flux_var == 0)
 
-
         prob.maximize(obj_reaction)
-
+        logger.info('Solving took {:.2f} seconds'.format(
+            time.time() - start_time))
         logger.info('Reaction {} has flux {}'.format(
             obj_reaction, prob.get_flux(obj_reaction)))
