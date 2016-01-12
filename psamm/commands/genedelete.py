@@ -40,9 +40,6 @@ class GeneDeletionCommand(MetabolicMixin, SolverCommandMixin, Command):
             '--gene', metavar='genes', action=FilePrefixAppendAction,
             type=str, default=[], help='Delete Multiple Genes From Model')
         parser.add_argument('--objective', help='Reaction flux to maximize')
-        parser.add_argument(
-            '--tfba', help='Enable thermodynamic constraints on FBA',
-            action='store_true', default=False)
         super(GeneDeletionCommand, cls).init_parser(parser)
 
     def run(self):
@@ -52,10 +49,6 @@ class GeneDeletionCommand(MetabolicMixin, SolverCommandMixin, Command):
             obj_reaction = self._model.get_biomass_reaction()
             if obj_reaction is None:
                 raise CommandError('The biomass reaction was not specified')
-        if not self._args.tfba:
-            solver = self._get_solver()
-        else:
-            solver = self._get_solver(integer=True)
         logger.info('Running single gene deletion...')
         genes = set()
         gene_assoc = {}

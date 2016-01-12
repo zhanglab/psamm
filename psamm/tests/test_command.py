@@ -203,6 +203,10 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command([
             '--model', self._model_dir, 'gapfill'], {'integer': True})
 
+    def test_run_genedelete(self):
+        self.run_solver_command([
+            '--model', self._model_dir, 'genedelete', '--gene', 'gene_1'], {})
+
     def test_run_masscheck_compounds(self):
         self.run_solver_command([
             '--model', self._model_dir, 'masscheck', '--type', 'compound'], {})
