@@ -91,12 +91,22 @@ class GeneDeletionCommand(MetabolicMixin, SolverCommandMixin, Command):
         print (deleted_reactions)
         solver = self._get_solver()
         prob = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+
+        flux_var = prob.get_flux_var(reaction)
+        prob.prob.add_linear_constraints(flux_var == 0)
+        prob.maximize(obj_reaction)
+        prob.get_flux(obj_reaction)
+        wild = prob.get_flux(obj_reaction)
+
         for reaction in deleted_reactions:
             flux_var = prob.get_flux_var(reaction)
             prob.prob.add_linear_constraints(flux_var == 0)
-
-        prob.maximize(obj_reaction)
+            prob.maximize(obj_reaction)
+            prob.get_flux(obj_reaction)
+        deleteflux = prob.get_flux(obj_reaction)
         logger.info('Solving took {:.2f} seconds'.format(
             time.time() - start_time))
         logger.info('Reaction {} has flux {}'.format(
             obj_reaction, prob.get_flux(obj_reaction)))
+        logger.info('Reaction {} has {} %  flux of wild type flux'.format(
+            obj_reaction, ((deleteflux / wild) * 100)))
