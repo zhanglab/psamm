@@ -174,6 +174,40 @@ indicating whether the reaction was eliminated (``0`` when eliminated, ``1``
 otherwise). If multiple minimal networks are desired, the command can be run
 again and it will sample another random minimal network.
 
+Gene Deletion (``genedelete``)
+----------------------------------------
+
+Delete single and multiple genes from a model. Once gene(s) are given the
+command will delete reactions from the model requiring the gene(s) specified.
+The reactions deleted will be returned as a set as well as the flux of the
+model with the specified gene(s) removed.
+
+.. code-block:: shell
+
+    $ psamm-model genedelete
+
+To delete genes the option ``--gene`` must be entered followed by the desired
+gene ID specified in the model files. To delete multiple genes, each new gene
+must first be followed by a ``--gene`` option. For example:
+
+.. code-block:: shell
+
+    $ psamm-model genedelete --gene ExGene1 --gene ExGene2
+
+The list of genes to delete can also be specified in a text file. This allows
+to you perform many gene deletions by simply specifying the file name when
+running the ``genedelete`` command. The text file must contain one gene ID per
+line. For example:
+
+.. code-block:: shell
+
+    $ psamm-model genedelete --gene @gene_file.txt
+
+The file gene_file.txt would contain the following lines::
+
+    ExGene1
+    ExGene2
+
 Flux coupling analysis (``fluxcoupling``)
 -----------------------------------------
 
