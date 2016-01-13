@@ -108,5 +108,6 @@ class GeneDeletionCommand(MetabolicMixin, SolverCommandMixin, Command):
             time.time() - start_time))
         logger.info('Reaction {} has flux {}'.format(
             obj_reaction, prob.get_flux(obj_reaction)))
-        logger.info('Reaction {} has {} %  flux of wild type flux'.format(
-            obj_reaction, ((deleteflux / wild) * 100)))
+        if wild != 0:
+            logger.info('Reaction {} has {} %  flux of wild type flux'.format(
+                obj_reaction, ((deleteflux / wild) * 100)))
