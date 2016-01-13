@@ -177,8 +177,8 @@ again and it will sample another random minimal network.
 Gene Deletion (``genedelete``)
 ----------------------------------------
 
-Delete single and multiple genes from a model. Once gene(s) are given the 
-comman will delete reactions from the model requiring the gene(s) specified.
+Delete single and multiple genes from a model. Once gene(s) are given the
+command will delete reactions from the model requiring the gene(s) specified.
 The reactions deleted will be returned as a set as well as the flux of the
 model with the specified gene(s) removed.
 
