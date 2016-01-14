@@ -38,7 +38,7 @@ class GeneDeletionCommand(MetabolicMixin, SolverCommandMixin, Command):
     def init_parser(cls, parser):
         parser.add_argument(
             '--gene', metavar='genes', action=FilePrefixAppendAction,
-            type=str, default=[], help='Delete Multiple Genes From Model')
+            type=str, default=[], help='Delete multiple genes from model')
         parser.add_argument('--objective', help='Reaction flux to maximize')
         super(GeneDeletionCommand, cls).init_parser(parser)
 
@@ -49,7 +49,7 @@ class GeneDeletionCommand(MetabolicMixin, SolverCommandMixin, Command):
             obj_reaction = self._model.get_biomass_reaction()
             if obj_reaction is None:
                 raise CommandError('The biomass reaction was not specified')
-        logger.info('Running single gene deletion...')
+
         genes = set()
         gene_assoc = {}
         for reaction in self._model.parse_reactions():
@@ -69,8 +69,8 @@ class GeneDeletionCommand(MetabolicMixin, SolverCommandMixin, Command):
         testing_genes = set(self._args.gene)
         deleted_reactions = set()
 
-        logger.info('Trying model without gene {}...'.format(
-                    testing_genes))
+        logger.info('Trying model without genes: {}...'.format(
+                    ', '.join(sorted(testing_genes))))
 
         for reaction in reactions:
             if reaction not in gene_assoc:
@@ -88,26 +88,27 @@ class GeneDeletionCommand(MetabolicMixin, SolverCommandMixin, Command):
                     logger.info('Deletion reaction {}...'.format(reaction))
                     deleted_reactions.add(reaction)
 
-        print (deleted_reactions)
         solver = self._get_solver()
         prob = fluxanalysis.FluxBalanceProblem(self._mm, solver)
 
-        flux_var = prob.get_flux_var(reaction)
-        prob.prob.add_linear_constraints(flux_var == 0)
         prob.maximize(obj_reaction)
-        prob.get_flux(obj_reaction)
         wild = prob.get_flux(obj_reaction)
 
         for reaction in deleted_reactions:
             flux_var = prob.get_flux_var(reaction)
             prob.prob.add_linear_constraints(flux_var == 0)
-            prob.maximize(obj_reaction)
-            prob.get_flux(obj_reaction)
+
+        prob.maximize(obj_reaction)
         deleteflux = prob.get_flux(obj_reaction)
-        logger.info('Solving took {:.2f} seconds'.format(
-            time.time() - start_time))
-        logger.info('Reaction {} has flux {}'.format(
-            obj_reaction, prob.get_flux(obj_reaction)))
+
+        logger.info(
+            'Solving took {:.2f} seconds'.format(time.time() - start_time))
+        logger.info(
+            'Using objective reaction {} '.format(obj_reaction))
+        logger.info(
+            'Objective reaction after gene deletion has flux {}'.format(
+                deleteflux))
         if wild != 0:
-            logger.info('Reaction {} has {} %  flux of wild type flux'.format(
-                obj_reaction, ((deleteflux / wild) * 100)))
+            logger.info(
+                'Objective reaction has {} %  flux of wild type flux'.format(
+                    (deleteflux / wild) * 100))
