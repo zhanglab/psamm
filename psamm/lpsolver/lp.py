@@ -33,18 +33,22 @@ from __future__ import unicode_literals
 
 import math
 import numbers
-from collections import Counter
+from collections import Counter, defaultdict
 import abc
 
 import six
-from six import add_metaclass, iteritems, viewkeys, viewitems
+from six import add_metaclass, iteritems, viewkeys, viewitems, text_type
 from six.moves import range
 
 _INF = float('inf')
 
 
 class VariableSet(tuple):
-    """A tuple used to represent sets of variables"""
+    """A tuple used to represent sets of variables."""
+
+
+class Product(tuple):
+    """A tuple used to represent a variable product."""
 
 
 @six.python_2_unicode_compatible
@@ -156,23 +160,65 @@ class Expression(object):
         return self
 
     def __mul__(self, other):
-        if math.isinf(other):
-            return self.__class__(offset=float('nan'))
+        if isinstance(other, numbers.Number):
+            if math.isinf(other):
+                return self.__class__(offset=float('nan'))
 
-        return self.__class__(
-            {var: value * other for var, value in iteritems(self._variables)},
-            self._offset * other)
+            return self.__class__(
+                {var: value * other for var, value in
+                 iteritems(self._variables)}, self._offset * other)
+        elif isinstance(other, self.__class__):
+            variables = defaultdict(int)
+            for v1, value1 in iteritems(self._variables):
+                for v2, value2 in iteritems(other._variables):
+                    p1 = v1 if isinstance(v1, Product) else Product((v1,))
+                    p2 = v2 if isinstance(v2, Product) else Product((v2,))
+                    product = Product(sorted(p1 + p2))
+                    variables[product] += value1 * value2
+
+                if other._offset != 0:
+                    variables[v1] += value1 * other._offset
+
+            if self._offset != 0:
+                for v2, value2 in iteritems(other._variables):
+                    variables[v2] += value2 * self._offset
+
+            offset = self._offset * other._offset
+            return self.__class__(variables, offset=offset)
+        else:
+            return NotImplemented
 
     __rmul__ = __mul__
 
     def __imul__(self, other):
-        if math.isinf(other):
-            self._variables = {}
-            self._offset = float('nan')
-        else:
-            for var in self._variables:
-                self._variables[var] *= other
+        if isinstance(other, numbers.Number):
+            if math.isinf(other):
+                self._variables = {}
+                self._offset = float('nan')
+            else:
+                for var in self._variables:
+                    self._variables[var] *= other
             self._offset *= other
+        elif isinstance(other, self.__class__):
+            variables = defaultdict(int)
+            for v1, value1 in iteritems(self._variables):
+                for v2, value2 in iteritems(other._variables):
+                    p1 = v1 if isinstance(v1, Product) else Product((v1,))
+                    p2 = v2 if isinstance(v2, Product) else Product((v2,))
+                    product = Product(sorted(p1 + p2))
+                    variables[product] += value1 * value2
+
+                if other._offset != 0:
+                    variables[v1] += value1 * other._offset
+
+            if self._offset != 0:
+                for v2, value2 in iteritems(other._variables):
+                    variables[v2] += value2 * self._offset
+
+            self._offset *= other._offset
+            self._variables = dict(variables)
+        else:
+            return NotImplemented
 
         return self
 
@@ -180,6 +226,40 @@ class Expression(object):
         return self.__class__(
             {var: -value for var, value in iteritems(self._variables)},
             -self._offset)
+
+    def __pow__(self, other):
+        if isinstance(other, int):
+            if other < 0:
+                raise ValueError('Exponent must be positive')
+            elif other == 0:
+                return self.__class__(offset=1)
+
+            r = self.__class__(self._variables, self._offset)
+            for i in range(other - 1):
+                r.__imul__(self)
+
+            return r
+        else:
+            return NotImplemented
+
+    def __rpow__(self, other):
+        return pow(other, self)
+
+    def __ipow__(self, other):
+        if isinstance(other, int):
+            if other < 0:
+                raise ValueError('Exponent must be positive')
+            elif other == 0:
+                self._variables = {}
+                self._offset = 1
+            else:
+                tmp = self.__class__(self._variables, self._offset)
+                for i in range(other - 1):
+                    self.__imul__(tmp)
+        else:
+            return NotImplemented
+
+        return self
 
     def __eq__(self, other):
         """Return equality relation (equation): self == other
@@ -231,11 +311,15 @@ class Expression(object):
 
         def all_terms():
             count_vars = 0
-            for name, value in sorted(iteritems(self._variables)):
+            for name, value in sorted(
+                    iteritems(self._variables),
+                    key=lambda p: (isinstance(p[0], Product), p[0])):
                 if value != 0:
                     count_vars += 1
                     if isinstance(name, VariableSet):
                         yield '<set>', value
+                    elif isinstance(name, Product):
+                        yield '*'.join(text_type(n) for n in name), value
                     else:
                         yield name, value
             if self._offset != 0 or count_vars == 0:
@@ -249,7 +333,7 @@ class Expression(object):
                     terms.append('{}'.format(value))
                 elif abs(value) == 1:
                     terms.append(
-                        str(name) if value > 0 else '-{}'.format(name))
+                        text_type(name) if value > 0 else '-{}'.format(name))
                 else:
                     terms.append('{}*{}'.format(value, name))
             else:
@@ -263,7 +347,8 @@ class Expression(object):
         return ' '.join(terms)
 
     def __repr__(self):
-        return str('<{} {}>').format(self.__class__.__name__, repr(str(self)))
+        return str('<{} {}>').format(
+            self.__class__.__name__, repr(str(self)))
 
 
 @six.python_2_unicode_compatible
