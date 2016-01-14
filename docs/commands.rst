@@ -186,13 +186,29 @@ model with the specified gene(s) removed.
 
     $ psamm-model genedelete
 
-To delete genes the command ``--gene`` must be entered followed by the desired
-gene ID specified in the model files. To delte multiple genes, each new gene
+To delete genes the option ``--gene`` must be entered followed by the desired
+gene ID specified in the model files. To delete multiple genes, each new gene
 must first be followed by a ``--gene`` command. For example:
 
 .. code-block:: shell
 
     $ psamm-model genedelete --gene ExGene1 --gene ExGene2
+
+Single and multiple gene deletions can also be added as a text file to the
+directory of the model. This can allow for simple calling of desired gene
+deletions without repeating entries into the command line. In the text file
+containing the desired gene deletion(s) ensure that there is one gene
+ID per line. For example:
+
+.. code-block:: shell
+
+    $ psamm-model genedelete --gene @gene_file.txt
+
+.. code-block:: shell
+
+    gene_file.txt
+    1 ExGene1
+    2 ExGene2
 
 Flux coupling analysis (``fluxcoupling``)
 -----------------------------------------
