@@ -58,7 +58,7 @@ setup(
             'formulacheck = psamm.commands.formulacheck:FormulaBalanceCommand',
             'fva = psamm.commands.fva:FluxVariabilityCommand',
             'gapfill = psamm.commands.gapfill:GapFillCommand',
-            'genedelete = psamm.commands.genedelete:GeneDeletionCommand'
+            'genedelete = psamm.commands.genedelete:GeneDeletionCommand',
             'masscheck = psamm.commands.masscheck:MassConsistencyCommand',
             'randomsparse = psamm.commands.randomsparse:RandomSparseNetworkCommand',
             'robustness = psamm.commands.robustness:RobustnessCommand',
