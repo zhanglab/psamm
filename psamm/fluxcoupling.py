@@ -98,7 +98,7 @@ class FluxCouplingProblem(object):
         in that direction.
         """
         # Update objective for reaction_1
-        self._prob.set_linear_objective(self._prob.var(('vbow', reaction_1)))
+        self._prob.set_objective(self._prob.var(('vbow', reaction_1)))
 
         # Update constraint for reaction_2
         if self._reaction_constr is not None:
