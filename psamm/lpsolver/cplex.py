@@ -30,7 +30,7 @@ from .lp import Solver as BaseSolver
 from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
-from .lp import (Expression, Relation, ObjectiveSense, VariableType,
+from .lp import (Expression, Product, Relation, ObjectiveSense, VariableType,
                  InvalidResultError)
 from ..util import LoggerFile
 
@@ -191,32 +191,60 @@ class Problem(BaseProblem):
 
         return constraints
 
-    def set_linear_objective(self, expression):
-        """Set linear objective of problem"""
+    def set_objective(self, expression):
+        """Set objective expression of the problem."""
 
         if isinstance(expression, numbers.Number):
             # Allow expressions with no variables as objective,
             # represented as a number
-            expression = Expression()
+            expression = Expression(offset=expression)
 
-        # Reset previous objective. We have to build the set of variables to
+        linear = []
+        quad = []
+
+        # Reset previous objective.
+        for var in self._non_zero_objective:
+            if var not in expression:
+                if not isinstance(var, Product):
+                    linear.append((self._variables[var], 0))
+                else:
+                    t = self._variables[var[0]], self._variables[var[1]], 0
+                    quad.append(t)
+
+        self._non_zero_objective.clear()
+
+        # Set actual objective values
+        for var, value in expression.values():
+            if not isinstance(var, Product):
+                self._non_zero_objective.add(var)
+                linear.append((self._variables[var], value))
+            else:
+                if len(var) > 2:
+                    raise ValueError('Invalid objective: {}'.format(var))
+                self._non_zero_objective.add(var)
+                var1 = self._variables[var[0]]
+                var2 = self._variables[var[1]]
+                if var1 == var2:
+                    value *= 2
+                quad.append((var1, var2, value))
+
+        # We have to build the set of variables to
         # update so that we can avoid calling set_linear if the set is empty.
         # This is due to set_linear failing if the input is an empty
         # iterable.
-        reset_vars = set(
-            self._variables[var] for var in self._non_zero_objective
-            if var not in expression)
-        if len(reset_vars) > 0:
-            self._cp.objective.set_linear((var, 0) for var in reset_vars)
+        if len(linear) > 0:
+            self._cp.objective.set_linear(linear)
+        if len(quad) > 0:
+            self._cp.objective.set_quadratic_coefficients(quad)
 
-        # Set actual objective values
-        if len(expression.values()) > 0:
-            self._cp.objective.set_linear(
-                (self._variables[var], value)
-                for var, value in expression.values())
+        self._cp.objective.set_offset(expression.offset)
 
-        # Keep track of new non-zeros
-        self._non_zero_objective = set(expression.variables())
+    set_linear_objective = set_objective
+    """Set objective of the problem.
+
+    .. deprecated:: 0.19
+       Use :meth:`set_objective` instead.
+    """
 
     def set_objective_sense(self, sense):
         """Set type of problem (maximize or minimize)"""
@@ -317,15 +345,26 @@ class Result(BaseResult):
 
         return status == cp.solution.status.unbounded
 
+    def _get_value(self, var):
+        return self._problem._cp.solution.get_values(
+            self._problem._variables[var])
+
     def get_value(self, expression):
         """Return value of expression"""
 
         self._check_valid()
         if isinstance(expression, Expression):
-            return sum(self._problem._cp.solution.get_values(
-                self._problem._variables[var])*value
-                for var, value in expression.values())
+            total = expression.offset
+            for var, value in expression.values():
+                if not isinstance(var, Product):
+                    total += self._get_value(var) * value
+                else:
+                    t = value
+                    for v in var:
+                        t *= self._get_value(v)
+                    total += t
+            return total
         elif expression not in self._problem._variables:
             raise ValueError('Unknown expression: {}'.format(expression))
-        return self._problem._cp.solution.get_values(
-            self._problem._variables[expression])
+
+        return self._get_value(expression)
