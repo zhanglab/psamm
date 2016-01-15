@@ -136,6 +136,25 @@ class MOMAProblem(object):
             raise MOMAError('Unable to solve L1 MOMA: {}'.format(
                 result.status))
 
+    def minimize_l2(self, objective):
+        wt_obj = self._solve_fba(objective)
+
+        obj_expr = 0
+        for reaction in self._adjustment_reactions():
+            v_wt = self._v_wt(reaction)
+            v = self._v(reaction)
+            obj_expr += (v_wt - v)**2
+
+        self._prob.set_objective(obj_expr)
+
+        v_wt_obj = self._v_wt(objective)
+        with self.constraints(v_wt_obj == wt_obj):
+            result = self._solve(lp.ObjectiveSense.Minimize)
+
+        if not result:
+            raise MOMAError('Unable to solve L2 MOMA: {}'.format(
+                result.status))
+
     def get_flux(self, reaction):
         return self._prob.result.get_value(self._v(reaction))
 
