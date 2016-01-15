@@ -39,6 +39,7 @@ try:
         'class': cplex.Solver,
         'name': 'cplex',
         'integer': True,
+        'quadratic': True,
         'rational': False,
         'priority': 10
     })
@@ -52,6 +53,7 @@ try:
         'class': qsoptex.Solver,
         'name': 'qsoptex',
         'integer': False,
+        'quadratic': False,
         'rational': True,
         'priority': 5
     })
@@ -65,6 +67,7 @@ try:
         'class': gurobi.Solver,
         'name': 'gurobi',
         'integer': True,
+        'quadratic': False,
         'rational': False,
         'priority': 9
     })
@@ -80,7 +83,7 @@ def filter_solvers(solvers, requirements):
     """Yield solvers that fullfil the requirements."""
     for solver in solvers:
         for req, value in iteritems(requirements):
-            if (req in ('integer', 'rational', 'name') and
+            if (req in ('integer', 'quadratic', 'rational', 'name') and
                     (req not in solver or solver[req] != value)):
                 break
         else:
@@ -95,6 +98,7 @@ class Solver(BaseSolver):
 
     - `integer`: Use a solver that support integer variables (MILP)
     - `rational`: Use a solver that returns rational results
+    - `quadratic`: Use a solver that supports quadratic objective/constraints
     - `name`: Select a specific solver based on the name
     """
 
@@ -146,7 +150,7 @@ def parse_solver_setting(s):
     except ValueError:
         key, value = s, 'yes'
 
-    if key in ('rational', 'integer'):
+    if key in ('rational', 'integer', 'quadratic'):
         value = value.lower() in ('1', 'yes', 'true', 'on')
     elif key in ('threads',):
         value = int(value)
@@ -209,6 +213,8 @@ def list_solvers(args=None):
             print('Priority: {}'.format(solver['priority']))
             print('MILP (integer) problem support: {}'.format(
                 solver['integer']))
+            print('QP (quadratic) problem support: {}'.format(
+                solver['quadratic']))
             print('Rational solution: {}'.format(solver['rational']))
             print('Class: {}'.format(solver['class']))
             print()
