@@ -536,10 +536,15 @@ class Problem(object):
         """
 
     @abc.abstractmethod
-    def set_linear_objective(self, expression):
-        """Set linear objective of the problem to the given
-        :class:`.Expression`.
-        """
+    def set_objective(self, expression):
+        """Set objective of the problem to the given :class:`.Expression`."""
+
+    set_linear_objective = set_objective
+    """Set objective of the problem.
+
+    .. deprecated:: 0.19
+       Use :meth:`set_objective` instead.
+    """
 
     @abc.abstractmethod
     def set_objective_sense(self, sense):

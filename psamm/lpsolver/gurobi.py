@@ -177,7 +177,7 @@ class Problem(BaseProblem):
 
         return constraints
 
-    def set_linear_objective(self, expression):
+    def set_objective(self, expression):
         """Set linear objective of problem."""
 
         if isinstance(expression, numbers.Number):
@@ -187,6 +187,13 @@ class Problem(BaseProblem):
 
         self._p.setObjective(
             self._grb_expr_from_value_set(expression.values()))
+
+    set_linear_objective = set_objective
+    """Set objective of the problem.
+
+    .. deprecated:: 0.19
+       Use :meth:`set_objective` instead.
+    """
 
     def set_objective_sense(self, sense):
         """Set type of problem (maximize or minimize)."""
