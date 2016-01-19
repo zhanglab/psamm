@@ -47,7 +47,7 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         # Run GapFind on model
         logger.info('Searching for blocked compounds')
         blocked = set(compound for compound in gapfind(self._mm, solver=solver)
-                      if compound.compartment is not 'e')
+                      if compound.compartment != 'e')
         if len(blocked) > 0:
             logger.info('Blocked compounds')
             for compound in blocked:
