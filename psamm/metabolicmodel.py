@@ -216,9 +216,9 @@ class MetabolicModel(MetabolicDatabase):
         return self._database.is_reversible(reaction_id)
 
     def is_exchange(self, reaction_id):
-        """Whether the given reaction is an exchange reaction"""
+        """Whether the given reaction is an exchange reaction."""
         reaction = self.get_reaction(reaction_id)
-        return len(reaction.left) == 0 or len(reaction.right) == 0
+        return (len(reaction.left) == 0) != (len(reaction.right) == 0)
 
     @property
     def limits(self):
