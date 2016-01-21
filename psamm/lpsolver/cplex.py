@@ -267,8 +267,8 @@ class Problem(BaseProblem):
         # can cause problems if we later want to replace the quadratic
         # objective with a linear objective. As a work-around, we reset the
         # problem type after solving.
-        if (self._cp.get_problem_type() == self._cp.problem_type.QP
-                and self._cp.solution.get_status() ==
+        if (self._cp.get_problem_type() == self._cp.problem_type.QP and
+                self._cp.solution.get_status() ==
                 self._cp.solution.status.num_best):
             logger.info('Solving again with new solution target to find'
                         ' global optimum.')
