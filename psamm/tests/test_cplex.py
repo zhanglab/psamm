@@ -45,21 +45,36 @@ class TestCplexProblem(unittest.TestCase):
         expr = -prob.var(('x', 1)) + 2 * prob.var(('x', 2))
         self.assertEqual(str(expr), "-('x', 1) + 2*('x', 2)")
 
-    def test_objective_reset_on_set_linear_objective(self):
+    def test_objective_reset_on_set_objective(self):
         prob = self.solver.create_problem()
         prob.define('x', 'y', lower=0, upper=10)
         prob.add_linear_constraints(prob.var('x') + prob.var('y') <= 12)
         prob.set_objective_sense(lp.ObjectiveSense.Maximize)
 
         # Solve first time, maximize x
-        prob.set_linear_objective(2*prob.var('x'))
+        prob.set_objective(2*prob.var('x'))
         result = prob.solve()
         self.assertAlmostEqual(result.get_value('x'), 10)
 
         # Solve second time, maximize y
         # If the objective is not properly cleared,
         # the second solve will still maximize x.
-        prob.set_linear_objective(prob.var('y'))
+        prob.set_objective(prob.var('y'))
+        result = prob.solve()
+        self.assertAlmostEqual(result.get_value('y'), 10)
+
+    def test_quadratic_objective(self):
+        prob = self.solver.create_problem()
+        prob.define('x', 'y', lower=0, upper=10)
+        prob.add_linear_constraints(prob.var('x') + prob.var('y') <= 12)
+        prob.set_objective_sense(lp.ObjectiveSense.Maximize)
+
+        prob.set_objective(-prob.var('x')**2 + 5*prob.var('x'))
+        result = prob.solve()
+        self.assertAlmostEqual(result.get_value('x'), 2.5)
+
+        # Solve second time, maximize y
+        prob.set_objective(prob.var('y'))
         result = prob.solve()
         self.assertAlmostEqual(result.get_value('y'), 10)
 

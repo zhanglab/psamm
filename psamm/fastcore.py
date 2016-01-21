@@ -73,7 +73,7 @@ class FastcoreProblem(FluxBalanceProblem):
         cs = self._prob.add_linear_constraints(v <= -zl)
         self._temp_constr.extend(cs)
 
-        self._prob.set_linear_objective(self._prob.expr(
+        self._prob.set_objective(self._prob.expr(
             {('zl', rxnid): 1 for rxnid in reaction_subset}))
 
         self._solve()
@@ -99,7 +99,7 @@ class FastcoreProblem(FluxBalanceProblem):
         cs = self._prob.add_linear_constraints(v <= -self._epsilon)
         self._temp_constr.extend(cs)
 
-        self._prob.set_linear_objective(self._prob.expr(
+        self._prob.set_objective(self._prob.expr(
             {('z', rxnid): -weights.get(rxnid, 1) for rxnid in subset_p}))
 
         self._solve()

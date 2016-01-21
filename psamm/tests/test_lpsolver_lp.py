@@ -118,6 +118,98 @@ class TestExpression(unittest.TestCase):
         e *= float('inf')
         self.assertTrue(math.isnan(e.offset))
 
+    def test_multiply_expression_and_simple_expression(self):
+        e1 = lp.Expression({'x1': -5, 'x2': 3}, offset=10)
+        e2 = lp.Expression({'x1': 1})
+        e = e1 * e2
+        self.assertEqual(e.offset, 0)
+        self.assertEqual(dict(e.values()), {
+            lp.Product(['x1', 'x1']): -5,
+            lp.Product(['x1', 'x2']): 3,
+            'x1': 10
+        })
+
+    def test_multiply_expression_and_expression(self):
+        e1 = lp.Expression({'x1': 1, 'x2': 2, 'x3': 3}, offset=4)
+        e2 = lp.Expression({'x2': 4, 'x4': 5}, offset=-5)
+        e = e1 * e2
+        self.assertEqual(e.offset, -20)
+        self.assertEqual(dict(e.values()), {
+            lp.Product(['x1', 'x2']): 4,
+            lp.Product(['x2', 'x2']): 8,
+            lp.Product(['x2', 'x3']): 12,
+            lp.Product(['x1', 'x4']): 5,
+            lp.Product(['x2', 'x4']): 10,
+            lp.Product(['x3', 'x4']): 15,
+            'x1': -5,
+            'x2': 6,
+            'x3': -15,
+            'x4': 20
+        })
+
+    def test_multiply_expression_and_expression_in_place(self):
+        e = lp.Expression({'x1': -5, 'x2': 3}, offset=10)
+        e *= lp.Expression({'x1': 1})
+        self.assertEqual(e.offset, 0)
+        self.assertEqual(dict(e.values()), {
+            lp.Product(['x1', 'x1']): -5,
+            lp.Product(['x1', 'x2']): 3,
+            'x1': 10
+        })
+
+    def test_expression_pow_negative(self):
+        e = lp.Expression({'x1': -5, 'x2': 3}, offset=10)
+        with self.assertRaises(ValueError):
+            e1 = e**-2
+
+    def test_expression_pow_neagtive_in_place(self):
+        e = lp.Expression({'x1': -5, 'x2': 3}, offset=10)
+        with self.assertRaises(ValueError):
+            e **= -2
+
+    def test_expression_pow_zero(self):
+        e = lp.Expression({'x1': -5, 'x2': 3}, offset=10)
+        e1 = e**0
+        self.assertEqual(e1.offset, 1)
+        self.assertEqual(dict(e1.values()), {})
+
+    def test_expression_pow_zero_in_place(self):
+        e = lp.Expression({'x1': -5, 'x2': 3}, offset=10)
+        e **= 0
+        self.assertEqual(e.offset, 1)
+        self.assertEqual(dict(e.values()), {})
+
+    def test_expression_pow_one(self):
+        e = lp.Expression({'x1': -5, 'x2': 3}, offset=10)
+        e1 = e**1
+        self.assertEqual(e1.offset, e.offset)
+        self.assertEqual(dict(e1.values()), dict(e.values()))
+
+    def test_expression_pow_one_in_place(self):
+        e = lp.Expression({'x1': -5, 'x2': 3}, offset=10)
+        e **= 1
+        self.assertEqual(e.offset, 10)
+        self.assertEqual(dict(e.values()), {'x1': -5, 'x2': 3})
+
+    def test_expression_pow_two(self):
+        e = lp.Expression({'x1': -5, 'x2': 3}, offset=10)
+        e1 = e**2
+        e2 = e*e
+        self.assertEqual(e1.offset, e2.offset)
+        self.assertEqual(dict(e1.values()), dict(e2.values()))
+
+    def test_expression_pow_two_in_place(self):
+        e = lp.Expression({'x1': -5, 'x2': 3}, offset=10)
+        e **= 2
+        self.assertEqual(e.offset, 100)
+        self.assertEqual(dict(e.values()), {
+            lp.Product(['x1', 'x1']): 25,
+            lp.Product(['x1', 'x2']): -30,
+            lp.Product(['x2', 'x2']): 9,
+            'x1': -100,
+            'x2': 60
+        })
+
     def test_negate_expression(self):
         e = lp.Expression({'x1': 52}, -32)
         e1 = -e
@@ -128,6 +220,10 @@ class TestExpression(unittest.TestCase):
         e = lp.Expression({'x1': -4, 'x2': 100, 'x3': 1}, 42)
         self.assertEqual(str(e), '-4*x1 + 100*x2 + x3 + 42')
 
+    def test_expression_with_product_to_string(self):
+        e = lp.Expression({'x1': -4, lp.Product(['x1', 'x2']): 2}, 12)
+        self.assertEqual(str(e), '-4*x1 + 2*x1*x2 + 12')
+
     def test_expression_with_tuple_vars_to_string(self):
         e = lp.Expression({('v', 1): 1}, -1)
         self.assertEqual(str(e), "('v', 1) - 1")
@@ -136,6 +232,11 @@ class TestExpression(unittest.TestCase):
         e = lp.Expression({'x1': 10, 'x2': -5})
         self.assertIn('x1', e)
         self.assertNotIn('x3', e)
+
+    def test_expression_contains_product(self):
+        e = lp.Expression({lp.Product(['x1', 'x1']): -1})
+        self.assertIn(lp.Product(['x1', 'x1']), e)
+        self.assertNotIn('x1', e)
 
 
 class TestRelation(unittest.TestCase):
@@ -154,3 +255,52 @@ class TestRelation(unittest.TestCase):
         e = lp.Expression({'x1': 1})
         r = lp.Relation(lp.Relation.Equals, e)
         self.assertEqual(str(r), 'x1 == 0')
+
+
+class MockResult(lp.Result):
+    def __init__(self, values):
+        self._values = dict(values)
+
+    @property
+    def success(self):
+        return True
+
+    @property
+    def status(self):
+        return 'Success'
+
+    @property
+    def unbounded(self):
+        return False
+
+    def _has_variable(self, var):
+        return var in self._values
+
+    def _get_value(self, var):
+        return self._values[var]
+
+
+class TestResult(unittest.TestCase):
+    def test_result_to_bool(self):
+        result = MockResult({'x': 3})
+        self.assertTrue(bool(result))
+
+    def test_result_get_simple_value(self):
+        result = MockResult({'x': 3, 'y': 4})
+        self.assertEqual(result.get_value('x'), 3)
+        self.assertEqual(result.get_value('y'), 4)
+
+    def test_result_get_invalid_value(self):
+        result = MockResult({'x': 3})
+        with self.assertRaises(ValueError):
+            y = result.get_value('y')
+
+    def test_result_get_expression_value(self):
+        result = MockResult({'x': 3, 'y': 4})
+        expr = lp.Expression({'x': 2, 'y': -6}, offset=3)
+        self.assertEqual(result.get_value(expr), -15)
+
+    def test_result_get_expression_product_value(self):
+        result = MockResult({'x1': 2, 'x2': 3, 'x3': 4})
+        expr = lp.Expression({lp.Product(['x1', 'x2']): 3, 'x3': -1}, offset=4)
+        self.assertEqual(result.get_value(expr), 18)
