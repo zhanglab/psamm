@@ -33,12 +33,13 @@ from __future__ import unicode_literals
 
 import math
 import numbers
+import operator
 from collections import Counter, defaultdict
 import abc
 
 import six
 from six import add_metaclass, iteritems, viewkeys, viewitems, text_type
-from six.moves import range
+from six.moves import range, reduce
 
 _INF = float('inf')
 
@@ -596,6 +597,24 @@ class Result(object):
         """Whether solution is unbounded"""
 
     @abc.abstractmethod
+    def _get_value(self, var):
+        """Return the solution value of a single variable."""
+
+    @abc.abstractmethod
+    def _has_variable(self, var):
+        """Return whether variable exists in the solution."""
+
+    def _evaluate_expression(self, expr):
+        """Evaluate an :class:`.Expression` using :meth:`_get_value`."""
+        total = expr.offset
+        for var, value in expr.values():
+            if not isinstance(var, Product):
+                total += self._get_value(var) * value
+            else:
+                total += reduce(
+                    operator.mul, (self._get_value(v) for v in var), value)
+        return total
+
     def get_value(self, expression):
         """Get value of variable or expression in result
 
@@ -604,6 +623,12 @@ class Result(object):
         actual :class:`.Expression` object, it will be evaluated using the
         values from the result.
         """
+        if isinstance(expression, Expression):
+            return self._evaluate_expression(expression)
+        elif not self._has_variable(expression):
+            raise ValueError('Unknown expression: {}'.format(expression))
+
+        return self._get_value(expression)
 
 
 if __name__ == '__main__':

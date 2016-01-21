@@ -346,25 +346,15 @@ class Result(BaseResult):
         return status == cp.solution.status.unbounded
 
     def _get_value(self, var):
+        """Return value of variable in solution."""
         return self._problem._cp.solution.get_values(
             self._problem._variables[var])
 
+    def _has_variable(self, var):
+        """Whether variable exists in the solution."""
+        return self._problem.has_variable(var)
+
     def get_value(self, expression):
-        """Return value of expression"""
-
+        """Return value of expression."""
         self._check_valid()
-        if isinstance(expression, Expression):
-            total = expression.offset
-            for var, value in expression.values():
-                if not isinstance(var, Product):
-                    total += self._get_value(var) * value
-                else:
-                    t = value
-                    for v in var:
-                        t *= self._get_value(v)
-                    total += t
-            return total
-        elif expression not in self._problem._variables:
-            raise ValueError('Unknown expression: {}'.format(expression))
-
-        return self._get_value(expression)
+        return super(Result, self).get_value(expression)

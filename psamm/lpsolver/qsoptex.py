@@ -235,14 +235,16 @@ class Result(BaseResult):
         self._check_valid()
         return 'Status: {}'.format(self._problem._p.get_status())
 
+    def _get_value(self, var):
+        """Return value of variable in solution."""
+        return self._problem._p.get_value(self._problem._variables[var])
+
+    def _has_variable(self, var):
+        """Whether variable exists in the solution."""
+        return self._problem.has_variable(var)
+
     def get_value(self, expression):
         """Return value of expression"""
 
         self._check_valid()
-        if isinstance(expression, Expression):
-            return sum(self._problem._p.get_value(
-                self._problem._variables[var])*value
-                for var, value in expression.values())
-        elif expression not in self._problem._variables:
-            raise ValueError('Unknown expression: {}'.format(expression))
-        return self._problem._p.get_value(self._problem._variables[expression])
+        return super(Result, self).get_value(expression)

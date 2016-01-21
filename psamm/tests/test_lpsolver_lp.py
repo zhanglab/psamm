@@ -255,3 +255,52 @@ class TestRelation(unittest.TestCase):
         e = lp.Expression({'x1': 1})
         r = lp.Relation(lp.Relation.Equals, e)
         self.assertEqual(str(r), 'x1 == 0')
+
+
+class MockResult(lp.Result):
+    def __init__(self, values):
+        self._values = dict(values)
+
+    @property
+    def success(self):
+        return True
+
+    @property
+    def status(self):
+        return 'Success'
+
+    @property
+    def unbounded(self):
+        return False
+
+    def _has_variable(self, var):
+        return var in self._values
+
+    def _get_value(self, var):
+        return self._values[var]
+
+
+class TestResult(unittest.TestCase):
+    def test_result_to_bool(self):
+        result = MockResult({'x': 3})
+        self.assertTrue(bool(result))
+
+    def test_result_get_simple_value(self):
+        result = MockResult({'x': 3, 'y': 4})
+        self.assertEqual(result.get_value('x'), 3)
+        self.assertEqual(result.get_value('y'), 4)
+
+    def test_result_get_invalid_value(self):
+        result = MockResult({'x': 3})
+        with self.assertRaises(ValueError):
+            y = result.get_value('y')
+
+    def test_result_get_expression_value(self):
+        result = MockResult({'x': 3, 'y': 4})
+        expr = lp.Expression({'x': 2, 'y': -6}, offset=3)
+        self.assertEqual(result.get_value(expr), -15)
+
+    def test_result_get_expression_product_value(self):
+        result = MockResult({'x1': 2, 'x2': 3, 'x3': 4})
+        expr = lp.Expression({lp.Product(['x1', 'x2']): 3, 'x3': -1}, offset=4)
+        self.assertEqual(result.get_value(expr), 18)
