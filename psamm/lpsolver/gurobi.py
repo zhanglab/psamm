@@ -31,7 +31,7 @@ from .lp import Solver as BaseSolver
 from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
-from .lp import (Expression, Relation, ObjectiveSense, VariableType,
+from .lp import (Expression, Product, Relation, ObjectiveSense, VariableType,
                  InvalidResultError)
 
 # Module-level logging
@@ -137,9 +137,29 @@ class Problem(BaseProblem):
         return name in self._variables
 
     def _grb_expr_from_value_set(self, value_set):
-        return gurobipy.LinExpr(
-            [(float(val), self._p.getVarByName(self._variables[var]))
-             for var, val in value_set])
+        linear = []
+        quad = []
+
+        for var, val in value_set:
+            if not isinstance(var, Product):
+                linear.append((
+                    float(val), self._p.getVarByName(self._variables[var])))
+            else:
+                if len(var) > 2:
+                    raise ValueError('Invalid objective: {}'.format(var))
+                quad.append((
+                    float(val), self._p.getVarByName(self._variables[var[0]]),
+                    self._p.getVarByName(self._variables[var[1]])))
+
+        if len(quad) > 0:
+            expr = gurobipy.QuadExpr()
+            if len(linear) > 0:
+                expr.addTerms(*zip(*linear))
+            expr.addTerms(*zip(*quad))
+        else:
+            expr = gurobipy.LinExpr(linear)
+
+        return expr
 
     def _add_constraints(self, relation):
         """Add the given relation as one or more constraints.
