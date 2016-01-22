@@ -370,8 +370,14 @@ def main(command_class=None, args=None):
         if level is not None:
             logging.basicConfig(level=level)
     else:
-        logging.basicConfig(
-            level=logging.INFO, format=u'%(levelname)s: %(message)s')
+        logging.basicConfig(level=logging.INFO)
+        base_logger = logging.getLogger('psamm')
+        if len(base_logger.handlers) == 0:
+            handler = logging.StreamHandler()
+            handler.setFormatter(
+                logging.Formatter(u'%(levelname)s: %(message)s'))
+            base_logger.addHandler(handler)
+            base_logger.propagate = False
 
     title = 'Metabolic modeling tools'
     if command_class is not None:
