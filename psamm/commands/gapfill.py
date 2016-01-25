@@ -19,14 +19,24 @@ from __future__ import unicode_literals
 
 import logging
 
-from ..command import Command, MetabolicMixin, SolverCommandMixin
+from ..command import (Command, MetabolicMixin, SolverCommandMixin,
+                       FilePrefixAppendAction)
+
 from ..gapfill import gapfind, gapfill
+
+from psamm.datasource import reaction
 
 logger = logging.getLogger(__name__)
 
 
 class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
     """Run the GapFind and GapFill algorithms on the model."""
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            '--compound', metavar='compound', action=FilePrefixAppendAction,
+            type=str, default=[], help='Select Compounds to GapFill')
+        super(GapFillCommand, cls).init_parser(parser)
 
     def run(self):
         """Run GapFill command"""
@@ -44,14 +54,24 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         solver = self._get_solver(integer=True)
 
-        # Run GapFind on model
-        logger.info('Searching for blocked compounds')
-        blocked = set(compound for compound in gapfind(self._mm, solver=solver)
-                      if compound.compartment != 'e')
-        if len(blocked) > 0:
-            logger.info('Blocked compounds')
-            for compound in blocked:
-                print(compound.translate(lambda x: compound_name.get(x, x)))
+        if len(self._args.compound) == 0:
+            # Run GapFind on model
+            logger.info('Searching for blocked compounds')
+            result = gapfind(self._mm, solver=solver)
+            blocked = set(compound for compound in result
+                          if compound.compartment != 'e')
+            if len(blocked) > 0:
+                logger.info('Blocked compounds')
+                for compound in blocked:
+                    print(compound.translate(
+                          lambda x: compound_name.get(x, x)))
+        else:
+            blocked = set()
+            for c in self._args.compound:
+                cpd_obj = reaction.parse_compound(c)
+                blocked.add(cpd_obj)
+            logger.info('Filling Compounds: {}...'.format(', '.join(str(c)
+                        for c in sorted(blocked))))
 
         if len(blocked) > 0:
             # Add exchange and transport reactions to database
