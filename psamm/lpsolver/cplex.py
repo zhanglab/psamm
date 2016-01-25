@@ -67,9 +67,10 @@ class Problem(BaseProblem):
         self._cp = cp.Cplex()
 
         # Set up output to go to logging streams
-        log_stream = LoggerFile(logger, logging.DEBUG)
-        warning_stream = LoggerFile(logger, logging.WARNING)
-        error_stream = LoggerFile(logger, logging.ERROR)
+        cplex_logger = logging.getLogger('cplex')
+        log_stream = LoggerFile(cplex_logger, logging.DEBUG)
+        warning_stream = LoggerFile(cplex_logger, logging.WARNING)
+        error_stream = LoggerFile(cplex_logger, logging.ERROR)
 
         self._cp.set_log_stream(log_stream)
         self._cp.set_results_stream(log_stream)

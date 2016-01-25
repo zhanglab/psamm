@@ -80,6 +80,11 @@ class Problem(BaseProblem):
         # using the OutputFlag parameter but instead we lose the log file.
         self._p.params.OutputFlag = 0
 
+        # Set number of threads
+        if 'threads' in kwargs:
+            logger.info('Setting threads to {!r}'.format(kwargs['threads']))
+            self._p.params.Threads = kwargs['threads']
+
         self._variables = {}
         self._var_names = ('x'+str(i) for i in count(1))
         self._constr_names = ('c'+str(i) for i in count(1))
