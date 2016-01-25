@@ -256,32 +256,54 @@ class Problem(BaseProblem):
         else:
             raise ValueError('Invalid objective sense')
 
+    def _reset_problem_type(self):
+        """Reset problem type to whatever is appropriate."""
+        integer_count = 0
+        for func in (self._cp.variables.get_num_binary,
+                     self._cp.variables.get_num_integer,
+                     self._cp.variables.get_num_semicontinuous,
+                     self._cp.variables.get_num_semiinteger):
+            integer_count += func()
+
+        integer = integer_count > 0
+        quad_constr = self._cp.quadratic_constraints.get_num() > 0
+        quad_obj = self._cp.objective.get_num_quadratic_variables() > 0
+
+        if not integer:
+            if quad_constr:
+                new_type = self._cp.problem_type.QCP
+            elif quad_obj:
+                new_type = self._cp.problem_type.QP
+            else:
+                new_type = self._cp.problem_type.LP
+        else:
+            if quad_constr:
+                new_type = self._cp.problem_type.MIQCP
+            elif quad_obj:
+                new_type = self._cp.problem_type.MIQP
+            else:
+                new_type = self._cp.problem_type.MILP
+
+        logger.debug('Setting problem type to {}...'.format(
+            self._cp.problem_type[new_type]))
+        self._cp.set_problem_type(new_type)
+
+        # Force QP/MIQP solver to look for global optimum. We set it here only
+        # for QP/MIQP problems to avoid the warnings generated for other
+        # problem types when this parameter is set.
+        if quad_obj:
+            self._cp.parameters.solutiontarget.set(
+                self._cp.parameters.solutiontarget.values.optimal_global)
+        else:
+            self._cp.parameters.solutiontarget.set(
+                self._cp.parameters.solutiontarget.values.auto)
+
     def _solve(self):
+        self._reset_problem_type()
         self._cp.solve()
         if (self._cp.solution.get_status() ==
                 self._cp.solution.status.abort_user):
             raise KeyboardInterrupt()
-
-        # Handle non-optimal solutions in QP problems. In this case we want
-        # to switch to finding the global optimum by setting the solution
-        # target parameter. However, this changes the problem to MIQP which
-        # can cause problems if we later want to replace the quadratic
-        # objective with a linear objective. As a work-around, we reset the
-        # problem type after solving.
-        if (self._cp.get_problem_type() == self._cp.problem_type.QP and
-                self._cp.solution.get_status() ==
-                self._cp.solution.status.num_best):
-            logger.info('Solving again with new solution target to find'
-                        ' global optimum.')
-            solution_target = self._cp.parameters.solutiontarget.get()
-            problem_type = self._cp.get_problem_type()
-            self._cp.parameters.solutiontarget.set(
-                self._cp.parameters.solutiontarget.values.optimal_global)
-            try:
-                self._cp.solve()
-            finally:
-                self._cp.parameters.solutiontarget.set(solution_target)
-                self._cp.set_problem_type(problem_type)
 
     def solve(self, sense=None):
         """Solve problem"""
