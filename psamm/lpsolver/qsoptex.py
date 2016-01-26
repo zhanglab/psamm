@@ -30,7 +30,7 @@ from .lp import Solver as BaseSolver
 from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
-from .lp import (Expression, Relation, ObjectiveSense, VariableType,
+from .lp import (Expression, RelationSense, ObjectiveSense, VariableType,
                  InvalidResultError)
 
 
@@ -46,9 +46,9 @@ class Problem(BaseProblem):
     """Represents an LP-problem of a qsoptex.Solver"""
 
     CONSTR_SENSE_MAP = {
-        Relation.Equals: qsoptex.ConstraintSense.EQUAL,
-        Relation.Greater: qsoptex.ConstraintSense.GREATER,
-        Relation.Less: qsoptex.ConstraintSense.LESS
+        RelationSense.Equals: qsoptex.ConstraintSense.EQUAL,
+        RelationSense.Greater: qsoptex.ConstraintSense.GREATER,
+        RelationSense.Less: qsoptex.ConstraintSense.LESS
     }
 
     def __init__(self, **kwargs):

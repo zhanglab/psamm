@@ -30,8 +30,8 @@ from .lp import Solver as BaseSolver
 from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
-from .lp import (Expression, Product, Relation, ObjectiveSense, VariableType,
-                 InvalidResultError)
+from .lp import (Expression, Product, RelationSense, ObjectiveSense,
+                 VariableType, InvalidResultError)
 from ..util import LoggerFile
 
 # Module-level logging
@@ -58,9 +58,9 @@ class Problem(BaseProblem):
     }
 
     CONSTR_SENSE_MAP = {
-        Relation.Equals: 'E',
-        Relation.Greater: 'G',
-        Relation.Less: 'L'
+        RelationSense.Equals: 'E',
+        RelationSense.Greater: 'G',
+        RelationSense.Less: 'L'
     }
 
     def __init__(self, **kwargs):

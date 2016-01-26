@@ -36,6 +36,7 @@ import numbers
 import operator
 from collections import Counter, defaultdict
 import abc
+import enum
 
 import six
 from six import add_metaclass, iteritems, viewkeys, viewitems, text_type
@@ -269,7 +270,7 @@ class Expression(object):
         formed using a natural syntax.
         """
 
-        return Relation(Relation.Equals, self - other)
+        return Relation(RelationSense.Equals, self - other)
 
     def __ge__(self, other):
         """Return greater-than relation (inequality): self >= other
@@ -278,7 +279,7 @@ class Expression(object):
         formed using a natural syntax.
         """
 
-        return Relation(Relation.Greater, self - other)
+        return Relation(RelationSense.Greater, self - other)
 
     def __le__(self, other):
         """Return less-than relation (inequality): self <= other
@@ -287,7 +288,7 @@ class Expression(object):
         formed using a natural syntax.
         """
 
-        return Relation(Relation.Less, self - other)
+        return Relation(RelationSense.Less, self - other)
 
     def __gt__(self, other):
         """Return strictly greater-than relation (inequality): self > other
@@ -296,7 +297,7 @@ class Expression(object):
         formed using a natural syntax.
         """
 
-        return Relation(Relation.StrictlyGreater, self - other)
+        return Relation(RelationSense.StrictlyGreater, self - other)
 
     def __lt__(self, other):
         """Return strictly less-than relation (inequality): self < other
@@ -305,7 +306,7 @@ class Expression(object):
         formed using a natural syntax.
         """
 
-        return Relation(Relation.StrictlyLess, self - other)
+        return Relation(RelationSense.StrictlyLess, self - other)
 
     def __str__(self):
         """Return string representation of expression"""
@@ -352,6 +353,15 @@ class Expression(object):
             self.__class__.__name__, repr(str(self)))
 
 
+@enum.unique
+class RelationSense(enum.Enum):
+    Equals = '=='
+    Greater = '>='
+    Less = '<='
+    StrictlyGreater = '>'
+    StrictlyLess = '<'
+
+
 @six.python_2_unicode_compatible
 class Relation(object):
     """Represents a binary relation (equation or inequality)
@@ -361,20 +371,6 @@ class Relation(object):
     and the type of relation. In this representation, the right-hand
     side is always zero.
     """
-
-    Equals = object()
-    Greater = object()
-    Less = object()
-    StrictlyGreater = object()
-    StrictlyLess = object()
-
-    SYMBOL = {
-        Equals: '==',
-        Greater: '>=',
-        Less: '<=',
-        StrictlyGreater: '>',
-        StrictlyLess: '<'
-    }
 
     def __init__(self, sense, expression):
         self._sense = sense
@@ -387,7 +383,6 @@ class Relation(object):
         Can be one of Equal, Greater or Less, or one of the
         strict relations, StrictlyGreater or StrictlyLess.
         """
-
         return self._sense
 
     @property
@@ -399,33 +394,34 @@ class Relation(object):
         """Convert relation to string representation"""
         var_expr = Expression(dict(self._expression.values()))
         return '{} {} {}'.format(
-            str(var_expr), Relation.SYMBOL[self._sense],
-            -self._expression.offset)
+            str(var_expr), self._sense.value, -self._expression.offset)
 
     def __repr__(self):
         return str('<{} {}>').format(self.__class__.__name__, repr(str(self)))
 
 
-class ObjectiveSense(object):
+@enum.unique
+class ObjectiveSense(enum.Enum):
     """Enumeration of objective sense values"""
 
-    Minimize = object()
+    Minimize = -1
     """Minimize objective function"""
 
-    Maximize = object()
+    Maximize = 1
     """Maximize objective function"""
 
 
-class VariableType(object):
+@enum.unique
+class VariableType(enum.Enum):
     """Enumeration of variable types"""
 
-    Continuous = object()
+    Continuous = 'C'
     """Continuous variable type"""
 
-    Integer = object()
+    Integer = 'I'
     """Integer variable type"""
 
-    Binary = object()
+    Binary = 'B'
     """Binary variable type (0 or 1)"""
 
 
@@ -507,19 +503,20 @@ class Problem(object):
                 raise ValueError('Unsatisfiable relation added')
             return True
 
-        if relation.sense in (Relation.StrictlyGreater, Relation.StrictlyLess):
+        if relation.sense in (
+                RelationSense.StrictlyGreater, RelationSense.StrictlyLess):
             raise ValueError(
                 'Strict relations are invalid in LP-problems:'
                 ' {}'.format(relation))
 
         if relation.expression.offset == -_INF:
-            if relation.sense == Relation.Less:
+            if relation.sense == RelationSense.Less:
                 return True
             else:
                 raise ValueError('Unsatisfiable relation added: {}'.format(
                     relation))
         elif relation.expression.offset == _INF:
-            if relation.sense == Relation.Greater:
+            if relation.sense == RelationSense.Greater:
                 return True
             else:
                 raise ValueError('Unsatisfiable relation added: {}'.format(
