@@ -74,5 +74,7 @@ setup(
         'six'
     ],
     extras_require={
-        'docs': ['sphinx', 'mock']
+        'docs': ['sphinx', 'mock'],
+        ':python_version=="2.7"': ['enum34'],
+        ':python_version=="3.3"': ['enum34']
     })
