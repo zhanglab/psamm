@@ -20,6 +20,7 @@
 from __future__ import unicode_literals
 
 import functools
+import enum
 
 import six
 from six import text_type
@@ -128,6 +129,37 @@ class Compound(object):
         return str_repr(self._name, self._compartment, self._arguments)
 
 
+class Direction(enum.Enum):
+    """Directionality of reaction equation."""
+    Forward = False, True
+    Reverse = True, False
+    Both = True, True
+
+    Right = False, True
+    Left = True, False
+    Bidir = True, True
+
+    @property
+    def forward(self):
+        """Whether this direction includes forward direction."""
+        return self.value[1]
+
+    @property
+    def reverse(self):
+        """Whether this direction includes reverse direction."""
+        return self.value[0]
+
+    @property
+    def symbol(self):
+        """Return string symbol for direction."""
+        if self == Direction.Forward:
+            return '=>'
+        elif self == Direction.Reverse:
+            return '<='
+        else:
+            return '<=>'
+
+
 @six.python_2_unicode_compatible
 class Reaction(object):
     """Reaction equation representation
@@ -135,12 +167,8 @@ class Reaction(object):
     Each compound is associated with a stoichiometric value.
     """
 
-    Bidir = '<=>'
-    Left = '<='
-    Right = '=>'
-
     def __init__(self, direction, left, right):
-        if direction not in (Reaction.Bidir, Reaction.Left, Reaction.Right):
+        if not isinstance(direction, Direction):
             raise ValueError('Invalid direction: {}'.format(direction))
         self._direction = direction
         self._left = tuple(left)
@@ -173,11 +201,12 @@ class Reaction(object):
     def normalized(self):
         """Return normalized reaction
 
-        The normalized reaction will have direction Bidir or Right.
+        The normalized reaction will be bidirectional or a forward reaction
+        (i.e. reverse reactions are flipped).
         """
 
-        if self._direction == Reaction.Left:
-            direction = Reaction.Right
+        if self._direction == Direction.Reverse:
+            direction = Direction.Forward
             left = self._right
             right = self._left
         else:
@@ -221,7 +250,7 @@ class Reaction(object):
 
         return '{} {} {}'.format(
             format_compound_list(self._left),
-            '?' if self._direction == '' else self._direction,
+            self._direction.symbol,
             format_compound_list(self._right))
 
     def __repr__(self):

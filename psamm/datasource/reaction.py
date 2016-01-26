@@ -23,7 +23,7 @@ import enum
 
 from six import raise_from
 
-from psamm.reaction import Reaction, Compound
+from psamm.reaction import Reaction, Compound, Direction
 from psamm.expression import affine
 
 
@@ -73,9 +73,9 @@ class ReactionParser(object):
     def __init__(self, arrows=None, parse_global=False):
         if arrows is None:
             arrows = (
-                ('<=>', Reaction.Bidir),
-                ('=>', Reaction.Right),
-                ('<=', Reaction.Left)
+                ('<=>', Direction.Both),
+                ('=>', Direction.Forward),
+                ('<=', Direction.Reverse)
             )
 
         arrow_p = '|'.join(re.escape(arrow) for arrow, _ in arrows)

@@ -19,7 +19,7 @@
 import unittest
 
 from psamm.database import DictDatabase, ChainedDatabase
-from psamm.reaction import Compound, Reaction
+from psamm.reaction import Compound, Reaction, Direction
 from psamm.datasource.reaction import parse_reaction
 
 
@@ -74,8 +74,9 @@ class TestMetabolicDatabase(unittest.TestCase):
         self.assertEqual(self.database.get_reaction('rxn_3'), reaction)
 
     def test_set_reaction_with_zero_coefficient(self):
-        reaction = Reaction(Reaction.Bidir, [(Compound('A'), 1), (Compound('B'), 0)],
-                                            [(Compound('C'), 1)])
+        reaction = Reaction(
+            Direction.Both, [(Compound('A'), 1), (Compound('B'), 0)],
+            [(Compound('C'), 1)])
         self.database.set_reaction('rxn_new', reaction)
         self.assertNotIn('rxn_new', self.database.get_compound_reactions(Compound('B')))
 

@@ -33,7 +33,7 @@ import csv
 import yaml
 from six import string_types, iteritems
 
-from ..reaction import Reaction, Compound
+from ..reaction import Reaction, Compound, Direction
 from .context import FilePathContext, FileMark
 from .reaction import ReactionParser
 from . import modelseed
@@ -393,7 +393,7 @@ def parse_reaction_equation(equation_def):
     if len(left) == 0 and len(right) == 0:
         raise ParseError('Reaction values are missing')
 
-    return Reaction(Reaction.Bidir if reversible else Reaction.Right,
+    return Reaction(Direction.Both if reversible else Direction.Forward,
                     parse_compound_list(left), parse_compound_list(right))
 
 

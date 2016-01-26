@@ -20,7 +20,7 @@
 import re
 
 from .context import FileMark
-from ..reaction import Reaction, Compound
+from ..reaction import Reaction, Compound, Direction
 from ..expression.affine import Expression
 
 
@@ -284,4 +284,4 @@ def parse_reaction(s):
     left = parse_compound_list(cpd_left.strip())
     right = parse_compound_list(cpd_right.strip())
 
-    return Reaction('<=>', left, right)
+    return Reaction(Direction.Both, left, right)
