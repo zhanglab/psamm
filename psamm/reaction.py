@@ -150,6 +150,11 @@ class Direction(enum.Enum):
         """Whether this direction includes reverse direction."""
         return self.value[0]
 
+    def flipped(self):
+        """Return the flipped version of this direction."""
+        forward, reverse = self.value
+        return self.__class__((reverse, forward))
+
     @property
     def symbol(self):
         """Return string symbol for direction."""
