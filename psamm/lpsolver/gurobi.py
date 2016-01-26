@@ -31,8 +31,8 @@ from .lp import Solver as BaseSolver
 from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
-from .lp import (Expression, Product, Relation, ObjectiveSense, VariableType,
-                 InvalidResultError)
+from .lp import (Expression, Product, RelationSense, ObjectiveSense,
+                 VariableType, InvalidResultError)
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -56,9 +56,9 @@ class Problem(BaseProblem):
     }
 
     CONSTR_SENSE_MAP = {
-        Relation.Equals: gurobipy.GRB.EQUAL,
-        Relation.Greater: gurobipy.GRB.GREATER_EQUAL,
-        Relation.Less: gurobipy.GRB.LESS_EQUAL
+        RelationSense.Equals: gurobipy.GRB.EQUAL,
+        RelationSense.Greater: gurobipy.GRB.GREATER_EQUAL,
+        RelationSense.Less: gurobipy.GRB.LESS_EQUAL
     }
 
     OBJ_SENSE_MAP = {

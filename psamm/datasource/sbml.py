@@ -28,7 +28,7 @@ import logging
 
 from six import itervalues, iteritems
 
-from ..reaction import Reaction, Compound
+from ..reaction import Reaction, Compound, Direction
 
 
 logger = logging.getLogger(__name__)
@@ -222,7 +222,7 @@ class ReactionEntry(_SBMLEntry):
                 compound = Compound(species_id, compartment=species_comp)
                 side.append((compound, value))
 
-        direction = Reaction.Bidir if self._rev else Reaction.Right
+        direction = Direction.Both if self._rev else Direction.Forward
         self._equation = Reaction(direction, left, right)
 
         # Parse flux bounds of reaction

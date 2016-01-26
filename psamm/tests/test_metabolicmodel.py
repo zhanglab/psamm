@@ -20,7 +20,7 @@ import unittest
 
 from psamm.metabolicmodel import MetabolicModel, FlipableModelView
 from psamm.database import DictDatabase
-from psamm.reaction import Reaction, Compound
+from psamm.reaction import Reaction, Compound, Direction
 from psamm.datasource.reaction import parse_reaction
 
 
@@ -117,7 +117,7 @@ class TestMetabolicModel(unittest.TestCase):
         self.assertFalse(self.model.is_exchange('rxn_5'))
 
     def test_is_exchange_on_empty(self):
-        self.database.set_reaction('rxn_7', Reaction(Reaction.Bidir, [], []))
+        self.database.set_reaction('rxn_7', Reaction(Direction.Both, [], []))
         self.model.add_reaction('rxn_7')
         self.assertFalse(self.model.is_exchange('rxn_7'))
 

@@ -242,18 +242,18 @@ class TestExpression(unittest.TestCase):
 class TestRelation(unittest.TestCase):
     def test_create_relation(self):
         e = lp.Expression({'x1': 4})
-        r = lp.Relation(lp.Relation.Greater, e)
+        r = lp.Relation(lp.RelationSense.Greater, e)
         self.assertEqual(r.expression, e)
-        self.assertEqual(r.sense, lp.Relation.Greater)
+        self.assertEqual(r.sense, lp.RelationSense.Greater)
 
     def test_relation_with_offset_to_string(self):
         e = lp.Expression({'x1': 4}, -20)
-        r = lp.Relation(lp.Relation.Less, e)
+        r = lp.Relation(lp.RelationSense.Less, e)
         self.assertEqual(str(r), '4*x1 <= 20')
 
     def test_relation_without_offset_to_string(self):
         e = lp.Expression({'x1': 1})
-        r = lp.Relation(lp.Relation.Equals, e)
+        r = lp.Relation(lp.RelationSense.Equals, e)
         self.assertEqual(str(r), 'x1 == 0')
 
 

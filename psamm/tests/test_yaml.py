@@ -22,7 +22,7 @@ import tempfile
 import unittest
 
 from psamm.datasource import native
-from psamm.reaction import Reaction, Compound
+from psamm.reaction import Reaction, Compound, Direction
 
 from six import StringIO
 
@@ -46,7 +46,7 @@ class TestYAMLDataSource(unittest.TestCase):
 
         self.assertEqual(len(reactions), 1)
 
-        reaction = Reaction(Reaction.Bidir,
+        reaction = Reaction(Direction.Both,
                             [(Compound('A'), 1), (Compound('B'), 2)],
                             [(Compound('C'), 1)])
         self.assertEqual(reactions[0].equation, reaction)
@@ -161,7 +161,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
         self.assertEqual(reactions[0].name, 'Reaction 1')
         self.assertEqual(reactions[0].properties['name'], 'Reaction 1')
         self.assertEqual(reactions[0].equation, Reaction(
-            Reaction.Right, [(Compound('A'), 1)], [(Compound('B'), 2)]))
+            Direction.Forward, [(Compound('A'), 1)], [(Compound('B'), 2)]))
         self.assertEqual(reactions[0].ec, None)
         self.assertEqual(reactions[0].genes, None)
         self.assertEqual(reactions[0].filemark.filecontext.filepath, path)
@@ -170,7 +170,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
         self.assertEqual(reactions[1].id, 'rxn_2')
         self.assertEqual(reactions[1].name, 'Second reaction')
         self.assertEqual(reactions[1].equation, Reaction(
-            Reaction.Bidir, [], [(Compound('C'), 1)]))
+            Direction.Both, [], [(Compound('C'), 1)]))
         self.assertEqual(reactions[1].filemark.filecontext.filepath, path)
         self.assertEqual(reactions[1].filemark.line, 3)
 
