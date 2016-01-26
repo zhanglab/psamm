@@ -21,9 +21,10 @@ from __future__ import unicode_literals
 
 import functools
 import enum
+import numbers
 
 import six
-from six import text_type
+from six import text_type, iteritems
 
 
 @six.python_2_unicode_compatible
@@ -149,6 +150,11 @@ class Direction(enum.Enum):
         """Whether this direction includes reverse direction."""
         return self.value[0]
 
+    def flipped(self):
+        """Return the flipped version of this direction."""
+        forward, reverse = self.value
+        return self.__class__((reverse, forward))
+
     @property
     def symbol(self):
         """Return string symbol for direction."""
@@ -162,17 +168,97 @@ class Direction(enum.Enum):
 
 @six.python_2_unicode_compatible
 class Reaction(object):
-    """Reaction equation representation
+    """Reaction equation representation.
 
-    Each compound is associated with a stoichiometric value.
+    Each compound is associated with a stoichiometric value and the reaction
+    has a :class:`.Direction`. The reaction is created in one of the three
+    following ways.
+
+    It can be created from a direction and two iterables of compound,
+    value pairs representing the left-hand side and the right-hand side of
+    the reaction:
+
+    >>> r = Reaction(Direction.Both, [(Compound('A'), 1), (Compound('B', 2))],
+                                     [(Compound('C'), 1)])
+    >>> str(r)
+    '|A| + (2) |B| <=> |C|'
+
+    It can also be created from a single dict or iterable of compound, value
+    pairs where the left-hand side compounds have negative values and the
+    right-hand side compounds have positive values:
+
+    >>> r = Reaction(Direction.Forward, {
+            Compound('A'): -1,
+            Compound('B'): -2,
+            Compound('C'): 1
+    })
+    >>> str(r)
+    '|A| + (2) |B| <=> |C|'
+
+    Lastly, the reaction can be created from an existing reaction object,
+    creating a copy of that reaction.
+
+    >>> r = Reaction(Direction.Forward, {Compound('A'): -1, Compound('B'): 1})
+    >>> r2 = Reaction(r)
+    >>> str(r2)
+    '|A| => |B|'
     """
 
-    def __init__(self, direction, left, right):
-        if not isinstance(direction, Direction):
-            raise ValueError('Invalid direction: {}'.format(direction))
-        self._direction = direction
-        self._left = tuple(left)
-        self._right = tuple(right)
+    def __init__(self, *args):
+        if len(args) == 1:
+            # Initialize from Reaction object
+            if not isinstance(args[0], self.__class__):
+                raise TypeError('Single argument must be of type {}'.format(
+                    self.__class__.__name__))
+
+            self._direction = args[0].direction
+            self._left = tuple(args[0].left)
+            self._right = tuple(args[0].right)
+        elif len(args) == 2:
+            # Initialize from direction and dict or single iterable
+            if not isinstance(args[0], Direction):
+                raise TypeError('First argument must be a Direction')
+            self._direction = args[0]
+
+            values = args[1]
+            if isinstance(values, dict):
+                values = iteritems(values)
+
+            left, right = [], []
+            for compound, value in values:
+                if not isinstance(value, numbers.Number):
+                    raise TypeError('Values must be numeric')
+                if value < 0:
+                    left.append((compound, -value))
+                elif value > 0:
+                    right.append((compound, value))
+
+            self._left = tuple(left)
+            self._right = tuple(right)
+        elif len(args) == 3:
+            # Initialize from direction and two iterables
+            if not isinstance(args[0], Direction):
+                raise TypeError('First argument must be a Direction')
+            self._direction = args[0]
+
+            left, right = [], []
+            for compound, value in args[1]:
+                if isinstance(value, numbers.Number) and value < 0:
+                    raise ValueError('Value must not be negative')
+                elif value != 0:
+                    left.append((compound, value))
+
+            for compound, value in args[2]:
+                if isinstance(value, numbers.Number) and value < 0:
+                    raise ValueError('Value must not be negative')
+                elif value != 0:
+                    right.append((compound, value))
+
+            self._left = tuple(left)
+            self._right = tuple(right)
+        else:
+            raise TypeError('Too many arguments (one, two or three'
+                            ' arguments required)')
 
     @property
     def direction(self):
@@ -206,15 +292,10 @@ class Reaction(object):
         """
 
         if self._direction == Direction.Reverse:
-            direction = Direction.Forward
-            left = self._right
-            right = self._left
-        else:
-            direction = self._direction
-            left = self._left
-            right = self._right
+            return self.__class__(
+                self._direction.flipped(), self._right, self._left)
 
-        return Reaction(direction, left, right)
+        return self
 
     def translated_compounds(self, translate):
         """Return reaction where compound names have been translated.
@@ -223,16 +304,9 @@ class Reaction(object):
         name and the returned value is used as the new compound name. A new
         reaction is returned with the substituted compound names.
         """
-        left = ((compound.translate(translate), count)
-                for compound, count in self._left)
-        right = ((compound.translate(translate), count)
-                 for compound, count in self._right)
-
-        return Reaction(self._direction, left, right)
-
-    def copy(self):
-        """Returns a distinct copy as a new Reaction object."""
-        return self.__class__(self._direction, self._left, self._right)
+        compounds = ((compound.translate(translate), value)
+                     for compound, value in self.compounds)
+        return Reaction(self._direction, compounds)
 
     def __str__(self):
         # Use the same format as ModelSEED
