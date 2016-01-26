@@ -154,12 +154,7 @@ class MetabolicDatabase(object):
         if self.is_reversible(reaction_id):
             direction = Direction.Both
 
-        left = ((compound, -value) for compound, value in
-                self.get_reaction_values(reaction_id) if value < 0)
-        right = ((compound, value) for compound, value in
-                 self.get_reaction_values(reaction_id) if value > 0)
-
-        return Reaction(direction, left, right)
+        return Reaction(direction, self.get_reaction_values(reaction_id))
 
 
 class DictDatabase(MetabolicDatabase):

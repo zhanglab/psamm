@@ -292,15 +292,10 @@ class Reaction(object):
         """
 
         if self._direction == Direction.Reverse:
-            direction = Direction.Forward
-            left = self._right
-            right = self._left
-        else:
-            direction = self._direction
-            left = self._left
-            right = self._right
+            return self.__class__(
+                self._direction.flipped(), self._right, self._left)
 
-        return Reaction(direction, left, right)
+        return self
 
     def translated_compounds(self, translate):
         """Return reaction where compound names have been translated.
@@ -309,12 +304,9 @@ class Reaction(object):
         name and the returned value is used as the new compound name. A new
         reaction is returned with the substituted compound names.
         """
-        left = ((compound.translate(translate), count)
-                for compound, count in self._left)
-        right = ((compound.translate(translate), count)
-                 for compound, count in self._right)
-
-        return Reaction(self._direction, left, right)
+        compounds = ((compound.translate(translate), value)
+                     for compound, value in self.compounds)
+        return Reaction(self._direction, compounds)
 
     def __str__(self):
         # Use the same format as ModelSEED
