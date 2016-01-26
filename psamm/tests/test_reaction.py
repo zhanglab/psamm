@@ -126,8 +126,92 @@ class TestReaction(unittest.TestCase):
     def test_reaction_init_empty_right(self):
         r = Reaction(Direction.Forward, [], [])
 
-    def test_reaction_init_empty_invalid_direction(self):
+    def test_reaction_init_from_two_iterables(self):
+        left = [(Compound('A'), 2), (Compound('B'), 3)]
+        right = [(Compound('C'), 1)]
+        r = Reaction(Direction.Forward, iter(left), iter(right))
+        self.assertEqual(list(r.left), left)
+        self.assertEqual(list(r.right), right)
+
+    def test_reaction_init_from_two_iterables_with_negative_lhs(self):
+        left = [(Compound('A'), 2), (Compound('B'), -3)]
+        right = [(Compound('C'), 1)]
         with self.assertRaises(ValueError):
+            r = Reaction(Direction.Forward, iter(left), iter(right))
+
+    def test_reaction_init_from_two_iterables_with_negative_rhs(self):
+        left = [(Compound('A'), 2), (Compound('B'), 3)]
+        right = [(Compound('C'), -1)]
+        with self.assertRaises(ValueError):
+            r = Reaction(Direction.Forward, iter(left), iter(right))
+
+    def test_reaction_init_from_two_iterables_with_zero_lhs(self):
+        left = [(Compound('A'), 2), (Compound('B'), 0)]
+        right = [(Compound('C'), 1)]
+        r = Reaction(Direction.Forward, iter(left), iter(right))
+        self.assertEqual(dict(r.compounds), {
+            Compound('A'): -2,
+            Compound('C'): 1
+        })
+
+    def test_reaction_init_from_two_iterables_with_zero_rhs(self):
+        left = [(Compound('A'), 2), (Compound('B'), 3)]
+        right = [(Compound('C'), 0)]
+        r = Reaction(Direction.Forward, iter(left), iter(right))
+        self.assertEqual(dict(r.compounds), {
+            Compound('A'): -2,
+            Compound('B'): -3
+        })
+
+    def test_reaction_init_from_two_iterables_with_non_numbers(self):
+        left = [(Compound('A'), 'x')]
+        right = [(Compound('B'), 'y')]
+        r = Reaction(Direction.Forward, left, right)
+
+    def test_reaction_init_from_one_iterable(self):
+        compounds = [(Compound('A'), -2), (Compound('B'), -3),
+                     (Compound('C'), 1)]
+        r = Reaction(Direction.Forward, iter(compounds))
+        self.assertEqual(list(r.compounds), compounds)
+
+    def test_reaction_init_from_one_iterable_with_zero(self):
+        compounds = [
+            (Compound('A'), -2),
+            (Compound('B'), 0),
+            (Compound('C'), 1)
+        ]
+        r = Reaction(Direction.Forward, iter(compounds))
+        self.assertEqual(dict(r.compounds), {
+            Compound('A'): -2,
+            Compound('C'): 1
+        })
+
+    def test_reaction_init_from_one_iterable_with_non_numbers(self):
+        compounds = [
+            (Compound('A'), 'x'),
+            (Compound('B'), 3)
+        ]
+        with self.assertRaises(TypeError):
+            r = Reaction(Direction.Forward, iter(compounds))
+
+    def test_reaction_init_from_dict(self):
+        compounds = {
+            Compound('A'): -2,
+            Compound('B'): -3,
+            Compound('C'): 1
+        }
+        r = Reaction(Direction.Forward, compounds)
+        self.assertEqual(dict(r.compounds), compounds)
+
+    def test_reaction_init_from_reaction(self):
+        compounds = {Compound('A'): -1, Compound('B'): 1}
+        r = Reaction(Direction.Forward, compounds)
+        r2 = Reaction(r)
+        self.assertEqual(dict(r2.compounds), compounds)
+        self.assertEqual(r2.direction, Direction.Forward)
+
+    def test_reaction_init_empty_invalid_direction(self):
+        with self.assertRaises(TypeError):
             r = Reaction(None, [], [])
 
     def test_reaction_init_left_empty(self):
@@ -139,6 +223,19 @@ class TestReaction(unittest.TestCase):
     def test_reaction_init_none_empty(self):
         r = Reaction(Direction.Both,
                      [(Compound('A'), 1)], [(Compound('B'), 1)])
+
+    def test_reaction_init_from_nothing(self):
+        with self.assertRaises(TypeError):
+            r = Reaction()
+
+    def test_reaction_init_from_invalid_type(self):
+        with self.assertRaises(TypeError):
+            r = Reaction('abc')
+
+    def test_reaction_init_too_many_variables(self):
+        with self.assertRaises(TypeError):
+            r = Reaction(Direction.Both, [(Compound('A'), 1)],
+                         [(Compound('B'), 1)], [(Compound('C'), 1)])
 
     def test_reaction_direction_property(self):
         r = Reaction(Direction.Both,
