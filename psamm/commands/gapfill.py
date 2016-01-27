@@ -53,13 +53,14 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         core = set(self._mm.reactions)
 
         solver = self._get_solver(integer=True)
+        extracellular_comp = self._model.get_extracellular_compartment()
 
         if len(self._args.compound) == 0:
             # Run GapFind on model
             logger.info('Searching for blocked compounds')
             result = gapfind(self._mm, solver=solver)
             blocked = set(compound for compound in result
-                          if compound.compartment != 'e')
+                          if compound.compartment != extracellular_comp)
             if len(blocked) > 0:
                 logger.info('Blocked compounds')
                 for compound in blocked:
@@ -78,8 +79,8 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             model_complete = self._mm.copy()
             logger.info('Adding database, exchange and transport reactions')
             model_complete.add_all_database_reactions(model_compartments)
-            model_complete.add_all_exchange_reactions()
-            model_complete.add_all_transport_reactions()
+            model_complete.add_all_exchange_reactions(extracellular_comp)
+            model_complete.add_all_transport_reactions(extracellular_comp)
 
             logger.info('Searching for reactions to fill gaps')
             added_reactions, reversed_reactions = gapfill(

@@ -254,7 +254,7 @@ class MetabolicModel(MetabolicDatabase):
                    for other_reaction in reactions):
                 self._compound_set.remove(compound)
 
-    def add_all_database_reactions(self, compartments={None, 'e'}):
+    def add_all_database_reactions(self, compartments):
         """Add all reactions from database that occur in given compartments"""
 
         added = set()
@@ -268,7 +268,7 @@ class MetabolicModel(MetabolicDatabase):
 
         return added
 
-    def add_all_exchange_reactions(self, allow_duplicates=False):
+    def add_all_exchange_reactions(self, compartment, allow_duplicates=False):
         """Add all exchange reactions to database and to model"""
 
         all_reactions = {}
@@ -284,7 +284,7 @@ class MetabolicModel(MetabolicDatabase):
             rxnid_ex = ('rxnex', compound)
             if not self._database.has_reaction(rxnid_ex):
                 reaction_ex = Reaction(Direction.Both, {
-                    compound.in_compartment('e'): -1
+                    compound.in_compartment(compartment): -1
                 })
                 if reaction_ex not in all_reactions:
                     self._database.set_reaction(rxnid_ex, reaction_ex)
@@ -297,7 +297,7 @@ class MetabolicModel(MetabolicDatabase):
 
         return added
 
-    def add_all_transport_reactions(self, allow_duplicates=False):
+    def add_all_transport_reactions(self, compartment, allow_duplicates=False):
         """Add all transport reactions to database and to model"""
 
         all_reactions = {}
@@ -310,14 +310,14 @@ class MetabolicModel(MetabolicDatabase):
 
         added = set()
         for compound in sorted(self.compounds):
-            if compound.compartment == 'e':
+            if compound.compartment == compartment:
                 # A transport reaction with exchange would not be valid
                 continue
 
             rxnid_tp = ('rxntp', compound)
             if not self._database.has_reaction(rxnid_tp):
                 reaction_tp = Reaction(Direction.Both, {
-                    compound.in_compartment('e'): -1,
+                    compound.in_compartment(compartment): -1,
                     compound: 1
                 })
                 if reaction_tp not in all_reactions:
