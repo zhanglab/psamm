@@ -11,6 +11,7 @@ used as a template:
     ---
     name: Escherichia coli test model
     biomass: Biomass
+    extracellular: e
     compounds:
       - include: ../path/to/ModelSEED_cpds.tsv
         format: modelseed
@@ -27,6 +28,13 @@ Biomass
 
 The optional ``biomass`` key specifies the default reaction to use for
 various analyses (e.g. FBA, FVA, etc.)
+
+Extracellular Compartment
+-------------------------
+
+The optional ``extracellular`` key specifies the default string for
+the extracellular compartment on compounds. If this option is not
+specified it will be assumed that the extracellular compartment is called ``e``.
 
 Compounds
 ---------
