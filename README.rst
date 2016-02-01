@@ -52,6 +52,17 @@ The documentation for PSAMM is available at `Read the Docs`_.
 
 .. _Read the Docs: https://psamm.readthedocs.org/
 
+Citing PSAMM
+------------
+
+If you use PSAMM in a publication, please cite:
+
+Steffensen JL, Dufault-Thompson K, Zhang Y. PSAMM: A Portable
+System for the Analysis of Metabolic Models. PLOS Comput Biol. Public
+Library of Science; 2016;12: e1004732. `10.1371/journal.pcbi.1004732`_.
+
+.. _10.1371/journal.pcbi.1004732: https://doi.org/10.1371/journal.pcbi.1004732
+
 Software license
 ----------------
 
