@@ -284,7 +284,8 @@ class MetabolicModel(MetabolicDatabase):
             rxnid_ex = ('rxnex', compound)
             if not self._database.has_reaction(rxnid_ex):
                 reaction_ex = Reaction(
-                    Reaction.Bidir, [(compound.in_compartment(compartment), 1)], [])
+                    Reaction.Bidir, [
+                        (compound.in_compartment(compartment), 1)], [])
                 if reaction_ex not in all_reactions:
                     self._database.set_reaction(rxnid_ex, reaction_ex)
                 else:
