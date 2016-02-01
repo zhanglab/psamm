@@ -20,6 +20,7 @@
 Described in [Burgard04]_.
 """
 
+import enum
 import logging
 
 from six import iteritems
@@ -30,25 +31,26 @@ from psamm.lpsolver import lp
 logger = logging.getLogger(__name__)
 
 
-class CouplingClass(object):
+@enum.unique
+class CouplingClass(enum.Enum):
     """Enumeration of coupling types."""
 
-    Inconsistent = object()
+    Inconsistent = 0
     """Reaction is flux inconsistent (v1 is always zero)."""
 
-    Uncoupled = object()
+    Uncoupled = 1
     """Uncoupled reactions."""
 
-    DirectionalForward = object()  # v1 -> v2
+    DirectionalForward = 2  # v1 -> v2
     """Directionally coupled from reaction 1 to 2."""
 
-    DirectionalReverse = object()  # v2 -> v1
+    DirectionalReverse = 3  # v2 -> v1
     """Directionally coupled from reaction 2 to 1."""
 
-    Partial = object()  # v1 <-> v2
+    Partial = 4  # v1 <-> v2
     """Partially coupled reactions."""
 
-    Full = object()  # v1 <=> v2
+    Full = 5  # v1 <=> v2
     """Fully coupled reactions."""
 
 
@@ -98,7 +100,7 @@ class FluxCouplingProblem(object):
         in that direction.
         """
         # Update objective for reaction_1
-        self._prob.set_linear_objective(self._prob.var(('vbow', reaction_1)))
+        self._prob.set_objective(self._prob.var(('vbow', reaction_1)))
 
         # Update constraint for reaction_2
         if self._reaction_constr is not None:

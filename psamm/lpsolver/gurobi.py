@@ -31,8 +31,8 @@ from .lp import Solver as BaseSolver
 from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
-from .lp import (Expression, Relation, ObjectiveSense, VariableType,
-                 InvalidResultError)
+from .lp import (Expression, Product, RelationSense, ObjectiveSense,
+                 VariableType, InvalidResultError)
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -56,9 +56,9 @@ class Problem(BaseProblem):
     }
 
     CONSTR_SENSE_MAP = {
-        Relation.Equals: gurobipy.GRB.EQUAL,
-        Relation.Greater: gurobipy.GRB.GREATER_EQUAL,
-        Relation.Less: gurobipy.GRB.LESS_EQUAL
+        RelationSense.Equals: gurobipy.GRB.EQUAL,
+        RelationSense.Greater: gurobipy.GRB.GREATER_EQUAL,
+        RelationSense.Less: gurobipy.GRB.LESS_EQUAL
     }
 
     OBJ_SENSE_MAP = {
@@ -79,6 +79,11 @@ class Problem(BaseProblem):
         # changed... We are fortunate enough that this does not happen when
         # using the OutputFlag parameter but instead we lose the log file.
         self._p.params.OutputFlag = 0
+
+        # Set number of threads
+        if 'threads' in kwargs:
+            logger.info('Setting threads to {!r}'.format(kwargs['threads']))
+            self._p.params.Threads = kwargs['threads']
 
         self._variables = {}
         self._var_names = ('x'+str(i) for i in count(1))
@@ -137,9 +142,29 @@ class Problem(BaseProblem):
         return name in self._variables
 
     def _grb_expr_from_value_set(self, value_set):
-        return gurobipy.LinExpr(
-            [(float(val), self._p.getVarByName(self._variables[var]))
-             for var, val in value_set])
+        linear = []
+        quad = []
+
+        for var, val in value_set:
+            if not isinstance(var, Product):
+                linear.append((
+                    float(val), self._p.getVarByName(self._variables[var])))
+            else:
+                if len(var) > 2:
+                    raise ValueError('Invalid objective: {}'.format(var))
+                quad.append((
+                    float(val), self._p.getVarByName(self._variables[var[0]]),
+                    self._p.getVarByName(self._variables[var[1]])))
+
+        if len(quad) > 0:
+            expr = gurobipy.QuadExpr()
+            if len(linear) > 0:
+                expr.addTerms(*zip(*linear))
+            expr.addTerms(*zip(*quad))
+        else:
+            expr = gurobipy.LinExpr(linear)
+
+        return expr
 
     def _add_constraints(self, relation):
         """Add the given relation as one or more constraints.
@@ -177,7 +202,7 @@ class Problem(BaseProblem):
 
         return constraints
 
-    def set_linear_objective(self, expression):
+    def set_objective(self, expression):
         """Set linear objective of problem."""
 
         if isinstance(expression, numbers.Number):
@@ -187,6 +212,13 @@ class Problem(BaseProblem):
 
         self._p.setObjective(
             self._grb_expr_from_value_set(expression.values()))
+
+    set_linear_objective = set_objective
+    """Set objective of the problem.
+
+    .. deprecated:: 0.19
+       Use :meth:`set_objective` instead.
+    """
 
     def set_objective_sense(self, sense):
         """Set type of problem (maximize or minimize)."""
@@ -271,15 +303,16 @@ class Result(BaseResult):
         self._check_valid()
         return str(self._problem._p.Status)
 
+    def _get_value(self, var):
+        """Return value of variable in solution."""
+        return self._problem._p.getVarByName(self._problem._variables[var]).x
+
+    def _has_variable(self, var):
+        """Whether variable exists in the solution."""
+        return self._problem.has_variable(var)
+
     def get_value(self, expression):
         """Return value of expression."""
 
         self._check_valid()
-        if isinstance(expression, Expression):
-            return sum(self._problem._p.getVarByName(
-                self._problem._variables[var]).x * value
-                for var, value in expression.values())
-        elif expression not in self._problem._variables:
-            raise ValueError('Unknown expression: {}'.format(expression))
-        return self._problem._p.getVarByName(
-            self._problem._variables[expression]).x
+        return super(Result, self).get_value(expression)

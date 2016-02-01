@@ -19,7 +19,7 @@
 import unittest
 
 from psamm.datasource import sbml
-from psamm.reaction import Reaction, Compound
+from psamm.reaction import Reaction, Compound, Direction
 
 from decimal import Decimal
 from fractions import Fraction
@@ -102,7 +102,7 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
         self.assertTrue(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Reaction.Bidir,
+        actual_equation = Reaction(Direction.Both,
                                    [(Compound('Glucose', 'cell'), 2),
                                     (Compound('Phosphate', 'cell'), 2)],
                                    [(Compound('H2O', 'cell'), 2),
@@ -114,7 +114,7 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
         self.assertFalse(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Reaction.Right,
+        actual_equation = Reaction(Direction.Forward,
                                    [(Compound('Glucose_6_P', 'cell'),
                                      Fraction(56, 100))],
                                    [(Compound('Biomass', 'cell'), 1)])
@@ -216,7 +216,7 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         self.assertTrue(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Reaction.Bidir,
+        actual_equation = Reaction(Direction.Both,
                                    [(Compound('M_Glucose', 'C_c'), 2),
                                     (Compound('M_Phosphate', 'C_c'), 2)],
                                    [(Compound('M_H2O', 'C_c'), 2),
@@ -228,7 +228,7 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         self.assertFalse(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Reaction.Right,
+        actual_equation = Reaction(Direction.Forward,
                                    [(Compound('M_Glucose_6_P', 'C_c'),
                                      Decimal('0.56'))],
                                    [(Compound('M_Biomass', 'C_c'), 1)])
@@ -330,7 +330,7 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         self.assertTrue(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Reaction.Bidir,
+        actual_equation = Reaction(Direction.Both,
                                    [(Compound('M_Glucose', 'C_c'), 2),
                                     (Compound('M_Phosphate', 'C_c'), 2)],
                                    [(Compound('M_H2O', 'C_c'), 2),
@@ -342,7 +342,7 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         self.assertFalse(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Reaction.Right,
+        actual_equation = Reaction(Direction.Forward,
                                    [(Compound('M_Glucose_6_P', 'C_c'),
                                      Decimal('0.56'))],
                                    [(Compound('M_Biomass', 'C_c'), 1)])
@@ -465,7 +465,7 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
         self.assertTrue(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Reaction.Bidir,
+        actual_equation = Reaction(Direction.Both,
                                    [(Compound('M_Glucose', 'C_c'), 2),
                                     (Compound('M_Phosphate', 'C_c'), 2)],
                                    [(Compound('M_H2O', 'C_c'), 2),
@@ -480,7 +480,7 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
         self.assertFalse(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Reaction.Right,
+        actual_equation = Reaction(Direction.Forward,
                                    [(Compound('M_Glucose_6_P', 'C_c'),
                                      Decimal('0.56'))],
                                    [(Compound('M_Biomass', 'C_c'), 1)])
@@ -619,7 +619,7 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         self.assertTrue(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Reaction.Bidir,
+        actual_equation = Reaction(Direction.Both,
                                    [(Compound('M_Glucose', 'C_c'), 2),
                                     (Compound('M_Phosphate', 'C_c'), 2)],
                                    [(Compound('M_H2O', 'C_c'), 2),
@@ -634,7 +634,7 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         self.assertFalse(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Reaction.Right,
+        actual_equation = Reaction(Direction.Forward,
                                    [(Compound('M_Glucose_6_P', 'C_c'),
                                      Decimal('0.56'))],
                                    [(Compound('M_Biomass', 'C_c'), 1)])

@@ -30,8 +30,8 @@ from .lp import Solver as BaseSolver
 from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
-from .lp import (Expression, Relation, ObjectiveSense, VariableType,
-                 InvalidResultError)
+from .lp import (Expression, Product, RelationSense, ObjectiveSense,
+                 VariableType, InvalidResultError)
 from ..util import LoggerFile
 
 # Module-level logging
@@ -58,18 +58,19 @@ class Problem(BaseProblem):
     }
 
     CONSTR_SENSE_MAP = {
-        Relation.Equals: 'E',
-        Relation.Greater: 'G',
-        Relation.Less: 'L'
+        RelationSense.Equals: 'E',
+        RelationSense.Greater: 'G',
+        RelationSense.Less: 'L'
     }
 
     def __init__(self, **kwargs):
         self._cp = cp.Cplex()
 
         # Set up output to go to logging streams
-        log_stream = LoggerFile(logger, logging.DEBUG)
-        warning_stream = LoggerFile(logger, logging.WARNING)
-        error_stream = LoggerFile(logger, logging.ERROR)
+        cplex_logger = logging.getLogger('cplex')
+        log_stream = LoggerFile(cplex_logger, logging.DEBUG)
+        warning_stream = LoggerFile(cplex_logger, logging.WARNING)
+        error_stream = LoggerFile(cplex_logger, logging.ERROR)
 
         self._cp.set_log_stream(log_stream)
         self._cp.set_results_stream(log_stream)
@@ -191,32 +192,60 @@ class Problem(BaseProblem):
 
         return constraints
 
-    def set_linear_objective(self, expression):
-        """Set linear objective of problem"""
+    def set_objective(self, expression):
+        """Set objective expression of the problem."""
 
         if isinstance(expression, numbers.Number):
             # Allow expressions with no variables as objective,
             # represented as a number
-            expression = Expression()
+            expression = Expression(offset=expression)
 
-        # Reset previous objective. We have to build the set of variables to
+        linear = []
+        quad = []
+
+        # Reset previous objective.
+        for var in self._non_zero_objective:
+            if var not in expression:
+                if not isinstance(var, Product):
+                    linear.append((self._variables[var], 0))
+                else:
+                    t = self._variables[var[0]], self._variables[var[1]], 0
+                    quad.append(t)
+
+        self._non_zero_objective.clear()
+
+        # Set actual objective values
+        for var, value in expression.values():
+            if not isinstance(var, Product):
+                self._non_zero_objective.add(var)
+                linear.append((self._variables[var], value))
+            else:
+                if len(var) > 2:
+                    raise ValueError('Invalid objective: {}'.format(var))
+                self._non_zero_objective.add(var)
+                var1 = self._variables[var[0]]
+                var2 = self._variables[var[1]]
+                if var1 == var2:
+                    value *= 2
+                quad.append((var1, var2, value))
+
+        # We have to build the set of variables to
         # update so that we can avoid calling set_linear if the set is empty.
         # This is due to set_linear failing if the input is an empty
         # iterable.
-        reset_vars = set(
-            self._variables[var] for var in self._non_zero_objective
-            if var not in expression)
-        if len(reset_vars) > 0:
-            self._cp.objective.set_linear((var, 0) for var in reset_vars)
+        if len(linear) > 0:
+            self._cp.objective.set_linear(linear)
+        if len(quad) > 0:
+            self._cp.objective.set_quadratic_coefficients(quad)
 
-        # Set actual objective values
-        if len(expression.values()) > 0:
-            self._cp.objective.set_linear(
-                (self._variables[var], value)
-                for var, value in expression.values())
+        self._cp.objective.set_offset(expression.offset)
 
-        # Keep track of new non-zeros
-        self._non_zero_objective = set(expression.variables())
+    set_linear_objective = set_objective
+    """Set objective of the problem.
+
+    .. deprecated:: 0.19
+       Use :meth:`set_objective` instead.
+    """
 
     def set_objective_sense(self, sense):
         """Set type of problem (maximize or minimize)"""
@@ -227,7 +256,50 @@ class Problem(BaseProblem):
         else:
             raise ValueError('Invalid objective sense')
 
+    def _reset_problem_type(self):
+        """Reset problem type to whatever is appropriate."""
+        integer_count = 0
+        for func in (self._cp.variables.get_num_binary,
+                     self._cp.variables.get_num_integer,
+                     self._cp.variables.get_num_semicontinuous,
+                     self._cp.variables.get_num_semiinteger):
+            integer_count += func()
+
+        integer = integer_count > 0
+        quad_constr = self._cp.quadratic_constraints.get_num() > 0
+        quad_obj = self._cp.objective.get_num_quadratic_variables() > 0
+
+        if not integer:
+            if quad_constr:
+                new_type = self._cp.problem_type.QCP
+            elif quad_obj:
+                new_type = self._cp.problem_type.QP
+            else:
+                new_type = self._cp.problem_type.LP
+        else:
+            if quad_constr:
+                new_type = self._cp.problem_type.MIQCP
+            elif quad_obj:
+                new_type = self._cp.problem_type.MIQP
+            else:
+                new_type = self._cp.problem_type.MILP
+
+        logger.debug('Setting problem type to {}...'.format(
+            self._cp.problem_type[new_type]))
+        self._cp.set_problem_type(new_type)
+
+        # Force QP/MIQP solver to look for global optimum. We set it here only
+        # for QP/MIQP problems to avoid the warnings generated for other
+        # problem types when this parameter is set.
+        if quad_obj:
+            self._cp.parameters.solutiontarget.set(
+                self._cp.parameters.solutiontarget.values.optimal_global)
+        else:
+            self._cp.parameters.solutiontarget.set(
+                self._cp.parameters.solutiontarget.values.auto)
+
     def _solve(self):
+        self._reset_problem_type()
         self._cp.solve()
         if (self._cp.solution.get_status() ==
                 self._cp.solution.status.abort_user):
@@ -317,15 +389,16 @@ class Result(BaseResult):
 
         return status == cp.solution.status.unbounded
 
-    def get_value(self, expression):
-        """Return value of expression"""
-
-        self._check_valid()
-        if isinstance(expression, Expression):
-            return sum(self._problem._cp.solution.get_values(
-                self._problem._variables[var])*value
-                for var, value in expression.values())
-        elif expression not in self._problem._variables:
-            raise ValueError('Unknown expression: {}'.format(expression))
+    def _get_value(self, var):
+        """Return value of variable in solution."""
         return self._problem._cp.solution.get_values(
-            self._problem._variables[expression])
+            self._problem._variables[var])
+
+    def _has_variable(self, var):
+        """Whether variable exists in the solution."""
+        return self._problem.has_variable(var)
+
+    def get_value(self, expression):
+        """Return value of expression."""
+        self._check_valid()
+        return super(Result, self).get_value(expression)

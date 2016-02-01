@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from setuptools import setup, find_packages
 
@@ -24,7 +24,7 @@ with open('README.rst') as f:
 
 setup(
     name='psamm',
-    version='0.18',
+    version='0.19',
     description='PSAMM metabolic modeling tools',
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
@@ -74,5 +74,7 @@ setup(
         'six'
     ],
     extras_require={
-        'docs': ['sphinx', 'mock']
+        'docs': ['sphinx', 'mock'],
+        ':python_version=="2.7"': ['enum34'],
+        ':python_version=="3.3"': ['enum34']
     })

@@ -20,7 +20,7 @@
 from collections import Mapping
 
 from .database import MetabolicDatabase, StoichiometricMatrixView
-from .reaction import Reaction
+from .reaction import Reaction, Direction
 
 
 class FluxBounds(object):
@@ -216,9 +216,9 @@ class MetabolicModel(MetabolicDatabase):
         return self._database.is_reversible(reaction_id)
 
     def is_exchange(self, reaction_id):
-        """Whether the given reaction is an exchange reaction"""
+        """Whether the given reaction is an exchange reaction."""
         reaction = self.get_reaction(reaction_id)
-        return len(reaction.left) == 0 or len(reaction.right) == 0
+        return (len(reaction.left) == 0) != (len(reaction.right) == 0)
 
     @property
     def limits(self):
@@ -283,8 +283,9 @@ class MetabolicModel(MetabolicDatabase):
         for compound in sorted(self.compounds):
             rxnid_ex = ('rxnex', compound)
             if not self._database.has_reaction(rxnid_ex):
-                reaction_ex = Reaction(
-                    Reaction.Bidir, [(compound.in_compartment('e'), 1)], [])
+                reaction_ex = Reaction(Direction.Both, {
+                    compound.in_compartment('e'): -1
+                })
                 if reaction_ex not in all_reactions:
                     self._database.set_reaction(rxnid_ex, reaction_ex)
                 else:
@@ -315,10 +316,10 @@ class MetabolicModel(MetabolicDatabase):
 
             rxnid_tp = ('rxntp', compound)
             if not self._database.has_reaction(rxnid_tp):
-                reaction_tp = Reaction(
-                    Reaction.Bidir,
-                    [(compound.in_compartment('e'), 1)],
-                    [(compound, 1)])
+                reaction_tp = Reaction(Direction.Both, {
+                    compound.in_compartment('e'): -1,
+                    compound: 1
+                })
                 if reaction_tp not in all_reactions:
                     self._database.set_reaction(rxnid_tp, reaction_tp)
                 else:
@@ -377,7 +378,7 @@ class MetabolicModel(MetabolicDatabase):
                     reaction_id = 'EX_{}_{}'.format(
                         compound.name, compound.compartment)
                 model.database.set_reaction(
-                    reaction_id, Reaction(Reaction.Bidir, [(compound, 1)], []))
+                    reaction_id, Reaction(Direction.Both, {compound: -1}))
                 model.add_reaction(reaction_id)
                 if lower is not None:
                     model.limits[reaction_id].lower = lower

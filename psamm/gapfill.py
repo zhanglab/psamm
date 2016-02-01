@@ -75,7 +75,7 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000):
 
     objective = prob.expr(
         {('xp', compound): 1 for compound in model.compounds})
-    prob.set_linear_objective(objective)
+    prob.set_objective(objective)
 
     for compound, lhs in iteritems(binary_cons_lhs):
         prob.add_linear_constraints(lhs >= prob.var(('xp', compound)))
@@ -138,7 +138,7 @@ def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
         {('ym', reaction_id): 1 for reaction_id in core})
     objective += prob.expr(
         {('yd', reaction_id): 1 for reaction_id in database_reactions})
-    prob.set_linear_objective(objective)
+    prob.set_objective(objective)
 
     # Add constraints on core reactions
     for reaction_id in core:

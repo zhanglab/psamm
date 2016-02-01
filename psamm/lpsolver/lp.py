@@ -33,18 +33,24 @@ from __future__ import unicode_literals
 
 import math
 import numbers
-from collections import Counter
+import operator
+from collections import Counter, defaultdict
 import abc
+import enum
 
 import six
-from six import add_metaclass, iteritems, viewkeys, viewitems
-from six.moves import range
+from six import add_metaclass, iteritems, viewkeys, viewitems, text_type
+from six.moves import range, reduce
 
 _INF = float('inf')
 
 
 class VariableSet(tuple):
-    """A tuple used to represent sets of variables"""
+    """A tuple used to represent sets of variables."""
+
+
+class Product(tuple):
+    """A tuple used to represent a variable product."""
 
 
 @six.python_2_unicode_compatible
@@ -156,23 +162,65 @@ class Expression(object):
         return self
 
     def __mul__(self, other):
-        if math.isinf(other):
-            return self.__class__(offset=float('nan'))
+        if isinstance(other, numbers.Number):
+            if math.isinf(other):
+                return self.__class__(offset=float('nan'))
 
-        return self.__class__(
-            {var: value * other for var, value in iteritems(self._variables)},
-            self._offset * other)
+            return self.__class__(
+                {var: value * other for var, value in
+                 iteritems(self._variables)}, self._offset * other)
+        elif isinstance(other, self.__class__):
+            variables = defaultdict(int)
+            for v1, value1 in iteritems(self._variables):
+                for v2, value2 in iteritems(other._variables):
+                    p1 = v1 if isinstance(v1, Product) else Product((v1,))
+                    p2 = v2 if isinstance(v2, Product) else Product((v2,))
+                    product = Product(sorted(p1 + p2))
+                    variables[product] += value1 * value2
+
+                if other._offset != 0:
+                    variables[v1] += value1 * other._offset
+
+            if self._offset != 0:
+                for v2, value2 in iteritems(other._variables):
+                    variables[v2] += value2 * self._offset
+
+            offset = self._offset * other._offset
+            return self.__class__(variables, offset=offset)
+        else:
+            return NotImplemented
 
     __rmul__ = __mul__
 
     def __imul__(self, other):
-        if math.isinf(other):
-            self._variables = {}
-            self._offset = float('nan')
-        else:
-            for var in self._variables:
-                self._variables[var] *= other
+        if isinstance(other, numbers.Number):
+            if math.isinf(other):
+                self._variables = {}
+                self._offset = float('nan')
+            else:
+                for var in self._variables:
+                    self._variables[var] *= other
             self._offset *= other
+        elif isinstance(other, self.__class__):
+            variables = defaultdict(int)
+            for v1, value1 in iteritems(self._variables):
+                for v2, value2 in iteritems(other._variables):
+                    p1 = v1 if isinstance(v1, Product) else Product((v1,))
+                    p2 = v2 if isinstance(v2, Product) else Product((v2,))
+                    product = Product(sorted(p1 + p2))
+                    variables[product] += value1 * value2
+
+                if other._offset != 0:
+                    variables[v1] += value1 * other._offset
+
+            if self._offset != 0:
+                for v2, value2 in iteritems(other._variables):
+                    variables[v2] += value2 * self._offset
+
+            self._offset *= other._offset
+            self._variables = dict(variables)
+        else:
+            return NotImplemented
 
         return self
 
@@ -181,6 +229,40 @@ class Expression(object):
             {var: -value for var, value in iteritems(self._variables)},
             -self._offset)
 
+    def __pow__(self, other):
+        if isinstance(other, int):
+            if other < 0:
+                raise ValueError('Exponent must be positive')
+            elif other == 0:
+                return self.__class__(offset=1)
+
+            r = self.__class__(self._variables, self._offset)
+            for i in range(other - 1):
+                r.__imul__(self)
+
+            return r
+        else:
+            return NotImplemented
+
+    def __rpow__(self, other):
+        return pow(other, self)
+
+    def __ipow__(self, other):
+        if isinstance(other, int):
+            if other < 0:
+                raise ValueError('Exponent must be positive')
+            elif other == 0:
+                self._variables = {}
+                self._offset = 1
+            else:
+                tmp = self.__class__(self._variables, self._offset)
+                for i in range(other - 1):
+                    self.__imul__(tmp)
+        else:
+            return NotImplemented
+
+        return self
+
     def __eq__(self, other):
         """Return equality relation (equation): self == other
 
@@ -188,7 +270,7 @@ class Expression(object):
         formed using a natural syntax.
         """
 
-        return Relation(Relation.Equals, self - other)
+        return Relation(RelationSense.Equals, self - other)
 
     def __ge__(self, other):
         """Return greater-than relation (inequality): self >= other
@@ -197,7 +279,7 @@ class Expression(object):
         formed using a natural syntax.
         """
 
-        return Relation(Relation.Greater, self - other)
+        return Relation(RelationSense.Greater, self - other)
 
     def __le__(self, other):
         """Return less-than relation (inequality): self <= other
@@ -206,7 +288,7 @@ class Expression(object):
         formed using a natural syntax.
         """
 
-        return Relation(Relation.Less, self - other)
+        return Relation(RelationSense.Less, self - other)
 
     def __gt__(self, other):
         """Return strictly greater-than relation (inequality): self > other
@@ -215,7 +297,7 @@ class Expression(object):
         formed using a natural syntax.
         """
 
-        return Relation(Relation.StrictlyGreater, self - other)
+        return Relation(RelationSense.StrictlyGreater, self - other)
 
     def __lt__(self, other):
         """Return strictly less-than relation (inequality): self < other
@@ -224,18 +306,22 @@ class Expression(object):
         formed using a natural syntax.
         """
 
-        return Relation(Relation.StrictlyLess, self - other)
+        return Relation(RelationSense.StrictlyLess, self - other)
 
     def __str__(self):
         """Return string representation of expression"""
 
         def all_terms():
             count_vars = 0
-            for name, value in sorted(iteritems(self._variables)):
+            for name, value in sorted(
+                    iteritems(self._variables),
+                    key=lambda p: (isinstance(p[0], Product), p[0])):
                 if value != 0:
                     count_vars += 1
                     if isinstance(name, VariableSet):
                         yield '<set>', value
+                    elif isinstance(name, Product):
+                        yield '*'.join(text_type(n) for n in name), value
                     else:
                         yield name, value
             if self._offset != 0 or count_vars == 0:
@@ -249,7 +335,7 @@ class Expression(object):
                     terms.append('{}'.format(value))
                 elif abs(value) == 1:
                     terms.append(
-                        str(name) if value > 0 else '-{}'.format(name))
+                        text_type(name) if value > 0 else '-{}'.format(name))
                 else:
                     terms.append('{}*{}'.format(value, name))
             else:
@@ -263,7 +349,17 @@ class Expression(object):
         return ' '.join(terms)
 
     def __repr__(self):
-        return str('<{} {}>').format(self.__class__.__name__, repr(str(self)))
+        return str('<{} {}>').format(
+            self.__class__.__name__, repr(str(self)))
+
+
+@enum.unique
+class RelationSense(enum.Enum):
+    Equals = '=='
+    Greater = '>='
+    Less = '<='
+    StrictlyGreater = '>'
+    StrictlyLess = '<'
 
 
 @six.python_2_unicode_compatible
@@ -276,20 +372,6 @@ class Relation(object):
     side is always zero.
     """
 
-    Equals = object()
-    Greater = object()
-    Less = object()
-    StrictlyGreater = object()
-    StrictlyLess = object()
-
-    SYMBOL = {
-        Equals: '==',
-        Greater: '>=',
-        Less: '<=',
-        StrictlyGreater: '>',
-        StrictlyLess: '<'
-    }
-
     def __init__(self, sense, expression):
         self._sense = sense
         self._expression = expression
@@ -301,7 +383,6 @@ class Relation(object):
         Can be one of Equal, Greater or Less, or one of the
         strict relations, StrictlyGreater or StrictlyLess.
         """
-
         return self._sense
 
     @property
@@ -313,33 +394,34 @@ class Relation(object):
         """Convert relation to string representation"""
         var_expr = Expression(dict(self._expression.values()))
         return '{} {} {}'.format(
-            str(var_expr), Relation.SYMBOL[self._sense],
-            -self._expression.offset)
+            str(var_expr), self._sense.value, -self._expression.offset)
 
     def __repr__(self):
         return str('<{} {}>').format(self.__class__.__name__, repr(str(self)))
 
 
-class ObjectiveSense(object):
+@enum.unique
+class ObjectiveSense(enum.Enum):
     """Enumeration of objective sense values"""
 
-    Minimize = object()
+    Minimize = -1
     """Minimize objective function"""
 
-    Maximize = object()
+    Maximize = 1
     """Maximize objective function"""
 
 
-class VariableType(object):
+@enum.unique
+class VariableType(enum.Enum):
     """Enumeration of variable types"""
 
-    Continuous = object()
+    Continuous = 'C'
     """Continuous variable type"""
 
-    Integer = object()
+    Integer = 'I'
     """Integer variable type"""
 
-    Binary = object()
+    Binary = 'B'
     """Binary variable type (0 or 1)"""
 
 
@@ -421,19 +503,20 @@ class Problem(object):
                 raise ValueError('Unsatisfiable relation added')
             return True
 
-        if relation.sense in (Relation.StrictlyGreater, Relation.StrictlyLess):
+        if relation.sense in (
+                RelationSense.StrictlyGreater, RelationSense.StrictlyLess):
             raise ValueError(
                 'Strict relations are invalid in LP-problems:'
                 ' {}'.format(relation))
 
         if relation.expression.offset == -_INF:
-            if relation.sense == Relation.Less:
+            if relation.sense == RelationSense.Less:
                 return True
             else:
                 raise ValueError('Unsatisfiable relation added: {}'.format(
                     relation))
         elif relation.expression.offset == _INF:
-            if relation.sense == Relation.Greater:
+            if relation.sense == RelationSense.Greater:
                 return True
             else:
                 raise ValueError('Unsatisfiable relation added: {}'.format(
@@ -451,10 +534,15 @@ class Problem(object):
         """
 
     @abc.abstractmethod
-    def set_linear_objective(self, expression):
-        """Set linear objective of the problem to the given
-        :class:`.Expression`.
-        """
+    def set_objective(self, expression):
+        """Set objective of the problem to the given :class:`.Expression`."""
+
+    set_linear_objective = set_objective
+    """Set objective of the problem.
+
+    .. deprecated:: 0.19
+       Use :meth:`set_objective` instead.
+    """
 
     @abc.abstractmethod
     def set_objective_sense(self, sense):
@@ -506,6 +594,24 @@ class Result(object):
         """Whether solution is unbounded"""
 
     @abc.abstractmethod
+    def _get_value(self, var):
+        """Return the solution value of a single variable."""
+
+    @abc.abstractmethod
+    def _has_variable(self, var):
+        """Return whether variable exists in the solution."""
+
+    def _evaluate_expression(self, expr):
+        """Evaluate an :class:`.Expression` using :meth:`_get_value`."""
+        total = expr.offset
+        for var, value in expr.values():
+            if not isinstance(var, Product):
+                total += self._get_value(var) * value
+            else:
+                total += reduce(
+                    operator.mul, (self._get_value(v) for v in var), value)
+        return total
+
     def get_value(self, expression):
         """Get value of variable or expression in result
 
@@ -514,6 +620,12 @@ class Result(object):
         actual :class:`.Expression` object, it will be evaluated using the
         values from the result.
         """
+        if isinstance(expression, Expression):
+            return self._evaluate_expression(expression)
+        elif not self._has_variable(expression):
+            raise ValueError('Unknown expression: {}'.format(expression))
+
+        return self._get_value(expression)
 
 
 if __name__ == '__main__':

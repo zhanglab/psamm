@@ -18,7 +18,7 @@
 """Miscellaneaus data source functions."""
 
 from .reaction import ReactionParser
-from ..reaction import Reaction
+from ..reaction import Direction
 
 
 def parse_sudensimple_reaction(s, arrow_rev='<=>', arrow_irrev='->'):
@@ -29,8 +29,8 @@ def parse_sudensimple_reaction(s, arrow_rev='<=>', arrow_irrev='->'):
     """
 
     arrows = (
-        (arrow_rev, Reaction.Bidir),
-        (arrow_irrev, Reaction.Right)
+        (arrow_rev, Direction.Both),
+        (arrow_irrev, Direction.Forward)
     )
 
     return ReactionParser(arrows=arrows).parse(s)
@@ -44,8 +44,8 @@ def parse_metnet_reaction(s, arrow_rev='<==>', arrow_irrev='-->'):
     """
 
     arrows = (
-        (arrow_irrev, Reaction.Right),
-        (arrow_rev, Reaction.Bidir)
+        (arrow_irrev, Direction.Forward),
+        (arrow_rev, Direction.Both)
     )
 
     return ReactionParser(arrows=arrows, parse_global=True).parse(s)

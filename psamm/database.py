@@ -22,7 +22,7 @@ from collections import defaultdict, Mapping
 
 from six import iteritems, add_metaclass
 
-from .reaction import Reaction
+from .reaction import Reaction, Direction
 
 
 class StoichiometricMatrixView(Mapping):
@@ -150,16 +150,11 @@ class MetabolicDatabase(object):
     def get_reaction(self, reaction_id):
         """Return reaction as a :class:`Reaction <psamm.reaction.Reaction>`."""
 
-        direction = Reaction.Right
+        direction = Direction.Forward
         if self.is_reversible(reaction_id):
-            direction = Reaction.Bidir
+            direction = Direction.Both
 
-        left = ((compound, -value) for compound, value in
-                self.get_reaction_values(reaction_id) if value < 0)
-        right = ((compound, value) for compound, value in
-                 self.get_reaction_values(reaction_id) if value > 0)
-
-        return Reaction(direction, left, right)
+        return Reaction(direction, self.get_reaction_values(reaction_id))
 
 
 class DictDatabase(MetabolicDatabase):
@@ -243,7 +238,7 @@ class DictDatabase(MetabolicDatabase):
             del self._reactions[reaction_id][compound]
             self._compound_reactions[compound].remove(reaction_id)
 
-        if reaction.direction != '=>':
+        if reaction.direction != Direction.Forward:
             self._reversible.add(reaction_id)
 
 

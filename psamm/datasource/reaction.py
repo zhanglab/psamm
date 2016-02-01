@@ -19,10 +19,11 @@
 
 import re
 from decimal import Decimal
+import enum
 
 from six import raise_from
 
-from psamm.reaction import Reaction, Compound
+from psamm.reaction import Reaction, Compound, Direction
 from psamm.expression import affine
 
 
@@ -42,6 +43,17 @@ class ParseError(Exception):
         return pre + ind
 
 
+@enum.unique
+class _ReactionToken(enum.Enum):
+    Space = 0
+    Quoted = 1
+    Group = 2
+    Plus = 3
+    Arrow = 4
+    Other = 5
+    End = 6
+
+
 class ReactionParser(object):
     """Parser of reactions equations.
 
@@ -58,32 +70,24 @@ class ReactionParser(object):
     * Compound counts that are affine expressions.
     """
 
-    SPACE_TOKEN = object()
-    QUOTED_TOKEN = object()
-    GROUP_TOKEN = object()
-    PLUS_TOKEN = object()
-    ARROW_TOKEN = object()
-    OTHER_TOKEN = object()
-    END_TOKEN = object()
-
     def __init__(self, arrows=None, parse_global=False):
         if arrows is None:
             arrows = (
-                ('<=>', Reaction.Bidir),
-                ('=>', Reaction.Right),
-                ('<=', Reaction.Left)
+                ('<=>', Direction.Both),
+                ('=>', Direction.Forward),
+                ('<=', Direction.Reverse)
             )
 
         arrow_p = '|'.join(re.escape(arrow) for arrow, _ in arrows)
         self._arrows = dict(arrows)
         self._tokens = (
-            (r'\s+', ReactionParser.SPACE_TOKEN),
-            (r'\|[^|]+\|', ReactionParser.QUOTED_TOKEN),
-            (r'\([^)]+\)(?=\Z|\s|\|)', ReactionParser.GROUP_TOKEN),
-            (r'\+(?=\s)', ReactionParser.PLUS_TOKEN),
-            (arrow_p + r'(?=\Z|\s)', ReactionParser.ARROW_TOKEN),
-            (r'\S+', ReactionParser.OTHER_TOKEN),
-            (r'\Z', ReactionParser.END_TOKEN),
+            (r'\s+', _ReactionToken.Space),
+            (r'\|[^|]+\|', _ReactionToken.Quoted),
+            (r'\([^)]+\)(?=\Z|\s|\|)', _ReactionToken.Group),
+            (r'\+(?=\s)', _ReactionToken.Plus),
+            (arrow_p + r'(?=\Z|\s)', _ReactionToken.Arrow),
+            (r'\S+', _ReactionToken.Other),
+            (r'\Z', _ReactionToken.End),
             (r'.', None)
         )
 
@@ -127,22 +131,22 @@ class ReactionParser(object):
         for token, value, span in tokenize():
             # Handle partially parsed compound.
             if saved_token is not None and (
-                    token in (ReactionParser.PLUS_TOKEN,
-                              ReactionParser.ARROW_TOKEN,
-                              ReactionParser.END_TOKEN)):
+                    token in (_ReactionToken.Plus,
+                              _ReactionToken.Arrow,
+                              _ReactionToken.End)):
                 compound = parse_compound(saved_token, global_comp)
                 current_side.append((compound, 1))
                 expect_operator = True
                 saved_token = None
 
-            if token == ReactionParser.PLUS_TOKEN:
+            if token == _ReactionToken.Plus:
                 # Compound separator. Expect compound name or compound count
                 # next.
                 if not expect_operator:
                     raise ParseError('Unexpected token: {!r}'.format(value),
                                      span=span)
                 expect_operator = False
-            elif token == ReactionParser.ARROW_TOKEN:
+            elif token == _ReactionToken.Arrow:
                 # Reaction arrow. Expect compound name or compound count next.
                 if direction is not None:
                     raise ParseError(
@@ -156,7 +160,7 @@ class ReactionParser(object):
                 expect_operator = False
                 direction = self._arrows[value]
                 current_side = right
-            elif token == ReactionParser.GROUP_TOKEN:
+            elif token == _ReactionToken.Group:
                 # Compound count. Expect compound name next.
                 if expect_operator:
                     raise ParseError('Expected plus or arrow: {!r}'.format(
@@ -165,7 +169,7 @@ class ReactionParser(object):
                     raise ParseError('Expected compound name: {!r}'.format(
                         value), span=span)
                 saved_token = value
-            elif token == ReactionParser.QUOTED_TOKEN:
+            elif token == _ReactionToken.Quoted:
                 # Compound name. Expect operator next.
                 if expect_operator:
                     raise ParseError('Expected plus or arrow: {!r}'.format(
@@ -184,7 +188,7 @@ class ReactionParser(object):
                 current_side.append((compound, count))
                 expect_operator = True
                 saved_token = None
-            elif token == ReactionParser.OTHER_TOKEN:
+            elif token == _ReactionToken.Other:
                 # Could be count or compound name. Store and expect other,
                 # quoted, operator or end.
                 if expect_operator:

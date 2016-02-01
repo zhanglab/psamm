@@ -166,7 +166,7 @@ class FluxBalanceProblem(object):
         have zero weight).
         """
 
-        self._prob.set_linear_objective(self.flux_expr(reaction))
+        self._prob.set_objective(self.flux_expr(reaction))
         self._solve()
 
     def flux_bound(self, reaction, direction):
@@ -214,7 +214,7 @@ class FluxBalanceProblem(object):
         objective = self._prob.expr({
             ('z', reaction_id): -weights.get(reaction_id, 1)
             for reaction_id in self._model.reactions})
-        self._prob.set_linear_objective(objective)
+        self._prob.set_objective(objective)
 
         self._solve()
 
