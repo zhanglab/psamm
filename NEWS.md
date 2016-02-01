@@ -1,4 +1,20 @@
 
+v0.19 (2016-02-01)
+------------------
+
+- When using Gurobi, the option `--solver threads=X` can now be used to specify
+  the maximum number of threads that Gurobi can use.
+- The log messages from external libraries are more clearly marked as such.
+  In particular, there should now be less confusion about the origin of the
+  log messages from Cplex.
+- Internally, the LP solvers now support quadratic objectives. This will be
+  used for various commands in the future.
+- Fix an error where an empty reaction would internally be detected as an
+  exchange reaction.
+- Fix a bug where the compounds in the extracellular compartment were not
+  correctly detected by `gapfill`.
+- Update documentation with information on how to cite the PSAMM publication.
+
 v0.18 (2016-01-04)
 ------------------
 
