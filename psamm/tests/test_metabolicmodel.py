@@ -118,12 +118,14 @@ class TestMetabolicModel(unittest.TestCase):
 
     def test_add_all_database_reactions(self):
         self.database.set_reaction('rxn_7', parse_reaction('|D| => |E|'))
-        added = self.model.add_all_database_reactions()
+        added = self.model.add_all_database_reactions({None, 'e'})
         self.assertEqual(added, { 'rxn_7' })
-        self.assertEqual(set(self.model.reactions), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6', 'rxn_7' })
+        self.assertEqual(set(self.model.reactions), {
+            'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6', 'rxn_7'
+        })
 
     def test_add_all_database_reactions_none(self):
-        added = self.model.add_all_database_reactions()
+        added = self.model.add_all_database_reactions({None, 'e'})
         self.assertEqual(added, set())
         self.assertEqual(set(self.model.reactions), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
 

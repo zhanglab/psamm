@@ -71,14 +71,15 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         epsilon = self._args.epsilon
         model_compartments = set(self._mm.compartments)
+        extra_comp = self._model.get_extracellular_compartment()
 
         # Add exchange and transport reactions to database
         model_complete = self._mm.copy()
         logger.info('Adding database, exchange and transport reactions')
         db_added = model_complete.add_all_database_reactions(
             model_compartments)
-        ex_added = model_complete.add_all_exchange_reactions()
-        tp_added = model_complete.add_all_transport_reactions()
+        ex_added = model_complete.add_all_exchange_reactions(extra_comp)
+        tp_added = model_complete.add_all_transport_reactions(extra_comp)
 
         # TODO: The exchange and transport reactions have tuple names. This
         # means that in Python 3 the reactions can no longer be directly
