@@ -9,11 +9,19 @@ filling, and model simulations.
 
 PSAMM is developed as an open source project, coordinated through `Github`_.
 The PSAMM software is being developed in the `Zhang Laboratory`_ at the
-University of Rhode Island and is the subject of a research article that has
-been submitted for review. [Steffensen15]_
+University of Rhode Island.
 
 .. _Github: https://github.com/zhanglab/psamm
 .. _Zhang Laboratory: http://zhanglab.uri.edu/
+
+Citing PSAMM
+------------
+
+If you use PSAMM in a publication, please cite:
+
+Steffensen JL, Dufault-Thompson K, Zhang Y. PSAMM: A Portable System for the
+Analysis of Metabolic Models. PLOS Comput Biol. Public Library of Science;
+2016;12: e1004732. :doi:`10.1371/journal.pcbi.1004732`.
 
 Software license
 ----------------
