@@ -994,7 +994,7 @@ following command:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model fba
+    (psamm-env) $ psamm-model fba --all-reactions
 
 
 It can be seen that the newly added reactions are being read into the model
