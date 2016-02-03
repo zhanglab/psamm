@@ -337,8 +337,8 @@ give the basic statistics of the model and should look like this:
 .. code-block:: shell
 
     ...
-    WARNING: Species M_pyr_b was converted to boundary condition because of "_b" suffix
-    WARNING: Species M_succ_b was converted to boundary condition because of "_b" suffix
+    WARNING: Species pyr_b was converted to boundary condition because of "_b" suffix
+    WARNING: Species succ_b was converted to boundary condition because of "_b" suffix
     INFO: Detected biomass reaction: Biomass_Ecoli_core_w_GAM
     Model: Ecoli_core_model
     - Biomass reaction: Biomass_Ecoli_core_w_GAM
@@ -554,12 +554,12 @@ model. A sample of this kind of file can be seen below:
     - id: ACALDt
       name: acetaldehyde reversible transport
       genes: s0001
-      equation: '|M_acald_e[C_e]| <=> |M_acald_c[C_c]|'
+      equation: '|acald_e[C_e]| <=> |acald_c[C_c]|'
       subsystem: Transport, Extracellular
     - id: ACKr
       name: acetate kinase
       genes: b3115 or b2296 or b1849
-      equation: '|M_ac_c[C_c]| + |M_atp_c[C_c]| <=> |M_actp_c[C_c]| + |M_adp_c[C_c]|'
+      equation: '|ac_c[C_c]| + |atp_c[C_c]| <=> |actp_c[C_c]| + |adp_c[C_c]|'
       subsystem: Pyruvate Metabolism
 
 Each reaction entry is designated with the reaction ID first. Then the various
@@ -600,7 +600,7 @@ formatted reaction could be as follows:
 
 .. code-block:: shell
 
-    '|M_ac_c[C_c]| + |M_atp_c[C_c]| <=> |M_actp_c[C_c]| + |M_adp_c[C_c]|'
+    '|ac_c[C_c]| + |atp_c[C_c]| <=> |actp_c[C_c]| + |adp_c[C_c]|'
 
 For longer reactions the YAML format
 provides a way to list each reaction component on a single line. For example a
@@ -614,14 +614,14 @@ reaction could be represented as follows:
         compartment: C_c
         reversible: yes
         left:
-          - id: M_ac_c
+          - id: ac_c
             value: 1
-          - id: M_atp_c
+          - id: atp_c
             value: 1
         right:
-          - id: M_actp_c
+          - id: actp_c
             value: 1
-          - id: M_adp_c
+          - id: adp_c
             value: 1
       subsystem: Pyruvate Metabolism
 
@@ -638,7 +638,7 @@ property to the reaction like follows:
 
     - id: ACALDt
       name: acetaldehyde reversible transport
-      equation: '|M_acald_e[C_e]| <=> |M_acald_c[C_c]|'
+      equation: '|acald_e[C_e]| <=> |acald_c[C_c]|'
       subsystem: Transport, Extracellular
       genes: gene_0001
 
@@ -667,13 +667,13 @@ The ``compounds.yaml`` file is organized in the same way as the
 
 .. code-block:: yaml
 
-    - id: M_13dpg_c
+    - id: 13dpg_c
       name: 3-Phospho-D-glyceroyl-phosphate
       formula: C3H4O10P2
-    - id: M_2pg_c
+    - id: 2pg_c
       name: D-Glycerate-2-phosphate
       formula: C3H4O7P
-    - id: M_3pg_c
+    - id: 3pg_c
       name: 3-Phospho-D-glycerate
       formula: C3H4O7P
 
@@ -723,16 +723,16 @@ below.
     name: Default medium
     compartment: C_e
     compounds:
-    - id: M_ac_e
+    - id: ac_e
       reaction: EX_ac_e
       lower: 0.0
-    - id: M_acald_e
+    - id: acald_e
       reaction: EX_acald_e
       lower: 0.0
-    - id: M_akg_e
+    - id: akg_e
       reaction: EX_akg_e
       lower: 0.0
-    - id: M_co2_e
+    - id: co2_e
       reaction: EX_co2_e
 
 
@@ -1005,11 +1005,11 @@ would provide mannitol.
 
 .. code-block:: shell
 
-    FRUKIN	0.0	|M_fru_c[C_c]| + |ATP[C_c]| => |D-Fructose-6-phosphate[C_c]| + |ADP[C_c]| + |H[C_c]|
-    MANNI1PDEH	0.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |M_manni1p[C_c]| => |D-Fructose-6-phosphate[C_c]| + |H[C_c]| + |Nicotinamide-adenine-dinucleotide-reduced[C_c]|
-    MANNI1PPHOS	0.0	|M_manni1p[C_c]| + |H2O[C_c]| => |M_manni[C_c]| + |Phosphate[C_c]|
-    MANNIDEH	0.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |M_manni[C_c]| => |Nicotinamide-adenine-dinucleotide-reduced[C_c]| + |M_fru_c[C_c]|
-    MANNIPTS	0.0	|M_manni[C_e]| + |Phosphoenolpyruvate[C_c]| => |M_manni1p[C_c]| + |Pyruvate[C_c]|
+    FRUKIN	0.0	|fru_c[C_c]| + |ATP[C_c]| => |D-Fructose-6-phosphate[C_c]| + |ADP[C_c]| + |H[C_c]|
+    MANNI1PDEH	0.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |manni1p[C_c]| => |D-Fructose-6-phosphate[C_c]| + |H[C_c]| + |Nicotinamide-adenine-dinucleotide-reduced[C_c]|
+    MANNI1PPHOS	0.0	|manni1p[C_c]| + |H2O[C_c]| => |manni[C_c]| + |Phosphate[C_c]|
+    MANNIDEH	0.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |manni[C_c]| => |Nicotinamide-adenine-dinucleotide-reduced[C_c]| + |fru_c[C_c]|
+    MANNIPTS	0.0	|manni[C_e]| + |Phosphoenolpyruvate[C_c]| => |manni1p[C_c]| + |Pyruvate[C_c]|
     ...
 
 Changing the Boundary Definitions Through the Medium File
@@ -1045,18 +1045,18 @@ carbon source.
     name: Default medium
     compartment: C_e
     compounds:
-    +- id: M_manni
+    +- id: manni
     +  lower: -10
-     - id: M_ac_e
+     - id: ac_e
        reaction: EX_ac_e
        lower: 0.0
     @@ -26,7 +28,7 @@ compounds:
        lower: 0.0
-     - id: M_glc_D_e
+     - id: glc_D_e
        reaction: EX_glc_e
     -  lower: -10.0
     +  lower: 0.0
-     - id: M_gln_L_e
+     - id: gln_L_e
        reaction: EX_gln_L_e
        lower: 0.0
 
@@ -1083,11 +1083,11 @@ is not being used.
 
 .. code-block:: shell
 
-    FRUKIN	0.0	|M_fru_c[C_c]| + |ATP[C_c]| => |D-Fructose-6-phosphate[C_c]| + |ADP[C_c]| + |H[C_c]|
-    MANNI1PDEH	10.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |M_manni1p[C_c]| => |D-Fructose-6-phosphate[C_c]| + |H[C_c]| + |Nicotinamide-adenine-dinucleotide-reduced[C_c]|
-    MANNI1PPHOS	0.0	|M_manni1p[C_c]| + |H2O[C_c]| => |M_manni[C_c]| + |Phosphate[C_c]|
-    MANNIDEH	0.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |M_manni[C_c]| => |Nicotinamide-adenine-dinucleotide-reduced[C_c]| + |M_fru_c[C_c]|
-    MANNIPTS	10.0	|M_manni[C_e]| + |Phosphoenolpyruvate[C_c]| => |M_manni1p[C_c]| + |Pyruvate[C_c]|
+    FRUKIN	0.0	|fru_c[C_c]| + |ATP[C_c]| => |D-Fructose-6-phosphate[C_c]| + |ADP[C_c]| + |H[C_c]|
+    MANNI1PDEH	10.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |manni1p[C_c]| => |D-Fructose-6-phosphate[C_c]| + |H[C_c]| + |Nicotinamide-adenine-dinucleotide-reduced[C_c]|
+    MANNI1PPHOS	0.0	|manni1p[C_c]| + |H2O[C_c]| => |manni[C_c]| + |Phosphate[C_c]|
+    MANNIDEH	0.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |manni[C_c]| => |Nicotinamide-adenine-dinucleotide-reduced[C_c]| + |fru_c[C_c]|
+    MANNIPTS	10.0	|manni[C_e]| + |Phosphoenolpyruvate[C_c]| => |manni1p[C_c]| + |Pyruvate[C_c]|
 
 You can also choose to maximize other reactions in the network. For
 example this could be used to analyze the network when production of a certain
@@ -1107,12 +1107,12 @@ function was used as the objective function.
 
 .. code-block:: shell
 
-    EX_M_manni_C_e	-10.0	|M_manni[C_e]| <=>
-    FRUKIN	10.0	|M_fru_c[C_c]| + |ATP[C_c]| => |D-Fructose-6-phosphate[C_c]| + |ADP[C_c]| + |H[C_c]|
-    MANNI1PDEH	0.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |M_manni1p[C_c]| => |D-Fructose-6-phosphate[C_c]| + |H[C_c]| + |Nicotinamide-adenine-dinucleotide-reduced[C_c]|
-    MANNI1PPHOS	10.0	|M_manni1p[C_c]| + |H2O[C_c]| => |M_manni[C_c]| + |Phosphate[C_c]|
-    MANNIDEH	10.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |M_manni[C_c]| => |Nicotinamide-adenine-dinucleotide-reduced[C_c]| + |M_fru_c[C_c]|
-    MANNIPTS	10.0	|M_manni[C_e]| + |Phosphoenolpyruvate[C_c]| => |M_manni1p[C_c]| + |Pyruvate[C_c]|
+    EX_manni_e	-10.0	|manni[C_e]| <=>
+    FRUKIN	10.0	|fru_c[C_c]| + |ATP[C_c]| => |D-Fructose-6-phosphate[C_c]| + |ADP[C_c]| + |H[C_c]|
+    MANNI1PDEH	0.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |manni1p[C_c]| => |D-Fructose-6-phosphate[C_c]| + |H[C_c]| + |Nicotinamide-adenine-dinucleotide-reduced[C_c]|
+    MANNI1PPHOS	10.0	|manni1p[C_c]| + |H2O[C_c]| => |manni[C_c]| + |Phosphate[C_c]|
+    MANNIDEH	10.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |manni[C_c]| => |Nicotinamide-adenine-dinucleotide-reduced[C_c]| + |fru_c[C_c]|
+    MANNIPTS	10.0	|manni[C_e]| + |Phosphoenolpyruvate[C_c]| => |manni1p[C_c]| + |Pyruvate[C_c]|
 
 
 Adding new Compounds to the Model
@@ -1147,16 +1147,16 @@ various new compounds involved in this new pathway.
 .. code-block:: diff
 
     @@ -1,3 +1,12 @@
-    +- id: M_fru_c
+    +- id: fru_c
     +  name: Fructose
     +  formula: C6H12O6
-    +- id: M_manni
+    +- id: manni
     +  name: Mannitol
     +  formula: C6H14O6
-    +- id: M_manni1p
+    +- id: manni1p
     +  name: Mannitol 1-phosphate
     +  formula: C6H13O9P
-     - id: M_13dpg_c
+     - id: 13dpg_c
        name: 3-Phospho-D-glyceroyl-phosphate
        formula: C3H4O10P2
 
@@ -1175,7 +1175,7 @@ compound features are now being added to the model.
 
 .. code-block:: shell
 
-    EX_M_manni_C_e	-10.0	|Mannitol[C_e]| <=>
+    EX_manni_C_e	-10.0	|Mannitol[C_e]| <=>
     FRUKIN	0.0	|Fructose[C_c]| + |ATP[C_c]| => |D-Fructose-6-phosphate[C_c]| + |ADP[C_c]| + |H[C_c]|
     MANNI1PDEH	10.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |Mannitol 1-phosphate[C_c]| => |D-Fructose-6-phosphate[C_c]| + |H[C_c]| + |Nicotinamide-adenine-dinucleotide-reduced[C_c]|
     MANNI1PPHOS	0.0	|Mannitol 1-phosphate[C_c]| + |H2O[C_c]| => |Mannitol[C_c]| + |Phosphate[C_c]|
@@ -1296,7 +1296,7 @@ The output from the search should appear as follows:
 
     INFO: Model: Ecoli_core_model
     INFO: Model Git version: db22229
-    ID: M_fru_c
+    ID: fru_c
     Name: Fructose
     Formula: C6H12O6
     Parsed from: ./compounds.yaml:?:?
@@ -1306,7 +1306,7 @@ be used:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model search compound --id 'M_fru_c'
+    (psamm-env) $ psamm-model search compound --id 'fru_c'
 
 These searches will result in a printout of the relevant information contained
 within the model about these compounds. In a similar way reactions can also be
@@ -1322,7 +1322,7 @@ command can be used:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model search reaction --compound 'M_manni[C_c]'
+    (psamm-env) $ psamm-model search reaction --compound 'manni[C_c]'
 
 
 Stoichiometric Checking
@@ -1349,11 +1349,11 @@ This command will produce an output like the following:
 .. code-block:: shell
 
     ...
-    M_accoa_c	1.0	Acetyl-CoA
-    M_acald_e	1.0	Acetaldehyde
-    M_acald_c	1.0	Acetaldehyde
-    M_h_e	0.0	H
-    M_h_c	0.0	H
+    accoa_c	1.0	Acetyl-CoA
+    acald_e	1.0	Acetaldehyde
+    acald_c	1.0	Acetaldehyde
+    h_e	0.0	H
+    h_c	0.0	H
     INFO: Consistent compounds: 73/75
 
 The ``masscheck`` command will first try to assign a positive mass to all of
@@ -1404,14 +1404,14 @@ Sometimes the residue minimization problem may have multiple solutions. In
 these cases the residue value may be reallocated among a few connected
 reactions. In this example the unbalanced reaction is the MANNIDEH reaction::
 
-    MANNIDEH    |M_manni[C_c]| + |M_nad_c[C_c]| => |M_fru_c[C_c]| + |M_nadh_c[C_c]|
+    MANNIDEH    |manni[C_c]| + |nad_c[C_c]| => |fru_c[C_c]| + |nadh_c[C_c]|
 
 In this reaction equation the right hand side is missing a proton. However
 minimization problem can result in the residue being placed on either the
-`M_fru_c` or the `M_nadh_c` compounds in an attempt to balance the reaction.
-Because `M_nadh_c` occurs in thirteen other reactions in the network, the
+`fru_c` or the `nadh_c` compounds in an attempt to balance the reaction.
+Because `nadh_c` occurs in thirteen other reactions in the network, the
 program has already determined that that compound is stoichiometrically
-consistent. On the other hand `M_fru_c` only occurs one other time. Since
+consistent. On the other hand `fru_c` only occurs one other time. Since
 this compound is less connected the minimization problem will assign the
 non-zero residual to this compound. This process results in the FRUKIN reaction
 which contains this compound as being identified as being stoichiometrically
@@ -1765,7 +1765,7 @@ added into the media along with mannitol then the results might appear as follow
 .. code-block:: shell
 
     EX_glc_e	-10.0	-2.0	|D-Glucose[C_e]| <=>
-    EX_M_manni_C_e	-9.0	-3.0	|Mannitol[C_e]| <=>
+    EX_manni_e	-9.0	-3.0	|Mannitol[C_e]| <=>
     MANNIPTS	3.0	9.0	|Mannitol[C_e]| + |Phosphoenolpyruvate[C_c]| => |Mannitol 1-phosphate[C_c]| + |Pyruvate[C_c]|
     GLCpts	2.0	10.0	|D-Glucose[C_e]| + |Phosphoenolpyruvate[C_c]| => |Pyruvate[C_c]| + |D-Glucose-6-phosphate[C_c]|
 
@@ -1909,7 +1909,7 @@ essential to the network:
 
 .. code-block:: shell
 
-    EX_M_manni_C_e	1
+    EX_manni_e	1
     EX_ac_e	0
     EX_acald_e	0
     EX_akg_e	0
