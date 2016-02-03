@@ -339,9 +339,9 @@ give the basic statistics of the model and should look like this:
     ...
     WARNING: Species M_pyr_b was converted to boundary condition because of "_b" suffix
     WARNING: Species M_succ_b was converted to boundary condition because of "_b" suffix
-    INFO: Detected biomass reaction: R_Biomass_Ecoli_core_w_GAM
+    INFO: Detected biomass reaction: Biomass_Ecoli_core_w_GAM
     Model: Ecoli_core_model
-    - Biomass reaction: R_Biomass_Ecoli_core_w_GAM
+    - Biomass reaction: Biomass_Ecoli_core_w_GAM
     - Compounds: 72
     - Reactions: 95
     - Genes: 137
@@ -459,7 +459,7 @@ model should look like the following:
 .. code-block:: yaml
 
     name: Ecoli_core_model
-    biomass: R_Biomass_Ecoli_core_w_GAM
+    biomass: Biomass_Ecoli_core_w_GAM
     default_flux_limit: 1000.0
     compounds:
     - include: compounds.yaml
@@ -472,7 +472,7 @@ model should look like the following:
 
 The ``model.yaml`` file defines the basic components of a metabolic model,
 including the model name (`Ecoli_core_model`), the biomass function
-(`R_Biomass_Ecoli_core_w_GAM`), the compound files (``compounds.yaml``), the
+(`Biomass_Ecoli_core_w_GAM`), the compound files (``compounds.yaml``), the
 reaction files (``reactions.yaml``), the flux boundaries (``limits.yaml``), and
 the medium conditions (``medium.yaml``). The additional files are defined using
 include functions. This organization allows you to easily change
@@ -490,7 +490,7 @@ in the additional files folder in the file ``complex_model.yaml``.
 .. code-block:: yaml
 
     name: Ecoli_core_model
-    biomass: R_Biomass_Ecoli_core_w_GAM
+    biomass: Biomass_Ecoli_core_w_GAM
     default_flux_limit: 1000.0
     model:
     - include: core_model_definition.tsv
@@ -522,7 +522,7 @@ An example of how to include a model definition file can be found below.
 .. code-block:: yaml
 
     name: Ecoli_core_model
-    biomass: R_Biomass_Ecoli_core_w_GAM
+    biomass: Biomass_Ecoli_core_w_GAM
     default_flux_limit: 1000.0
     model:
     - include: subset.tsv
@@ -551,12 +551,12 @@ model. A sample of this kind of file can be seen below:
 
 .. code-block:: yaml
 
-    - id: R_ACALDt
+    - id: ACALDt
       name: acetaldehyde reversible transport
       genes: s0001
       equation: '|M_acald_e[C_e]| <=> |M_acald_c[C_c]|'
       subsystem: Transport, Extracellular
-    - id: R_ACKr
+    - id: ACKr
       name: acetate kinase
       genes: b3115 or b2296 or b1849
       equation: '|M_ac_c[C_c]| + |M_atp_c[C_c]| <=> |M_actp_c[C_c]| + |M_adp_c[C_c]|'
@@ -608,7 +608,7 @@ reaction could be represented as follows:
 
 .. code-block:: yaml
 
-    - id: R_ACKr
+    - id: ACKr
       name: acetate kinase
       equation:
         compartment: C_c
@@ -636,7 +636,7 @@ property to the reaction like follows:
 
 .. code-block:: yaml
 
-    - id: R_ACALDt
+    - id: ACALDt
       name: acetaldehyde reversible transport
       equation: '|M_acald_e[C_e]| <=> |M_acald_c[C_c]|'
       subsystem: Transport, Extracellular
@@ -691,12 +691,12 @@ reversible reactions are :math:`-1000 \leq vi \leq 1000`, and the boundary for
 irreversible reactions are :math:`0 \leq vi \leq 1000`. Therefore, the
 ``limits.yaml`` file will consist of only the reaction boundaries that are
 different from these default values. For example, if you want to force flux
-through an artificial reaction like the ATP maintenance reaction `R_ATPM` you
+through an artificial reaction like the ATP maintenance reaction `ATPM` you
 can add in a lower limit for the reaction in the limits file like this:
 
 .. code-block:: yaml
 
-    - reaction: R_ATPM
+    - reaction: ATPM
       lower: 8.39
 
 Each entry in the limits file includes a reaction ID followed by upper and
@@ -724,16 +724,16 @@ below.
     compartment: C_e
     compounds:
     - id: M_ac_e
-      reaction: R_EX_ac_e
+      reaction: EX_ac_e
       lower: 0.0
     - id: M_acald_e
-      reaction: R_EX_acald_e
+      reaction: EX_acald_e
       lower: 0.0
     - id: M_akg_e
-      reaction: R_EX_akg_e
+      reaction: EX_akg_e
       lower: 0.0
     - id: M_co2_e
-      reaction: R_EX_co2_e
+      reaction: EX_co2_e
 
 
 Each entry starts with the ID of the boundary compound and followed by lines
@@ -807,11 +807,11 @@ model file as the objective function. If the biomass tag is not defined in a
 ``model.yaml`` file or if you want to use a different reaction as the
 objective function, you can simply specify what the reaction ID is at the
 end of the command. For example to maximize the citrate synthase reactions,
-R_CS, the command would be as follows:
+CS, the command would be as follows:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model fba R_CS
+    (psamm-env) $ psamm-model fba CS
 
 The following is a sample of some output from the FBA command:
 
@@ -819,14 +819,14 @@ The following is a sample of some output from the FBA command:
 
     INFO: Model: Ecoli_core_model
     INFO: Model Git version: 9812080
-    INFO: Using R_Biomass_Ecoli_core_w_GAM as objective
+    INFO: Using Biomass_Ecoli_core_w_GAM as objective
     INFO: Loop removal disabled; spurious loops are allowed
     INFO: Setting feasibility tolerance to 1e-09
     INFO: Solving took 0.00 seconds
-    R_ACALDt	0.0	|Acetaldehyde[C_e]| <=> |Acetaldehyde[C_c]|
-    R_ACKr	0.0	|ATP[C_c]| + |Acetate[C_c]| <=> |Acetyl-phosphate[C_c]| + |ADP[C_c]|
-    R_ACONTa	6.00724957535	|Citrate[C_c]| <=> |cis-Aconitate[C_c]| + |H2O[C_c]|
-    R_ACONTb	6.00724957535	|cis-Aconitate[C_c]| + |H2O[C_c]| <=> |Isocitrate[C_c]
+    ACALDt	0.0	|Acetaldehyde[C_e]| <=> |Acetaldehyde[C_c]|
+    ACKr	0.0	|ATP[C_c]| + |Acetate[C_c]| <=> |Acetyl-phosphate[C_c]| + |ADP[C_c]|
+    ACONTa	6.00724957535	|Citrate[C_c]| <=> |cis-Aconitate[C_c]| + |H2O[C_c]|
+    ACONTb	6.00724957535	|cis-Aconitate[C_c]| + |H2O[C_c]| <=> |Isocitrate[C_c]
     ...
     INFO: Objective flux: 0.873921506968
 
@@ -925,10 +925,10 @@ knowledge that the unchanged model was able to generate biomass flux.
 
 .. code-block:: shell
 
-    R_ACALDt	0.0	|Acetaldehyde[C_e]| <=> |Acetaldehyde[C_c]|
-    R_ACKr	0.0	|ATP[C_c]| + |Acetate[C_c]| <=> |Acetyl-phosphate[C_c]| + |ADP[C_c]|
-    R_ACONTa	6.00724957535	|Citrate[C_c]| <=> |cis-Aconitate[C_c]| + |H2O[C_c]|
-    R_ACONTb	6.00724957535	|cis-Aconitate[C_c]| + |H2O[C_c]| <=> |Isocitrate[C_c]|
+    ACALDt	0.0	|Acetaldehyde[C_e]| <=> |Acetaldehyde[C_c]|
+    ACKr	0.0	|ATP[C_c]| + |Acetate[C_c]| <=> |Acetyl-phosphate[C_c]| + |ADP[C_c]|
+    ACONTa	6.00724957535	|Citrate[C_c]| <=> |cis-Aconitate[C_c]| + |H2O[C_c]|
+    ACONTb	6.00724957535	|cis-Aconitate[C_c]| + |H2O[C_c]| <=> |Isocitrate[C_c]|
     ...
     INFO: Objective flux: 0.873921506968
 
@@ -1048,16 +1048,16 @@ carbon source.
     +- id: M_manni
     +  lower: -10
      - id: M_ac_e
-       reaction: R_EX_ac_e
+       reaction: EX_ac_e
        lower: 0.0
     @@ -26,7 +28,7 @@ compounds:
        lower: 0.0
      - id: M_glc_D_e
-       reaction: R_EX_glc_e
+       reaction: EX_glc_e
     -  lower: -10.0
     +  lower: 0.0
      - id: M_gln_L_e
-       reaction: R_EX_gln_L_e
+       reaction: EX_gln_L_e
        lower: 0.0
 
 In this case the Git output indicates what lines were added or removed from the
@@ -1483,12 +1483,12 @@ The output should appear as follows:
     INFO: Model: Ecoli_core_model
     INFO: Model Git version: 9812080
     MANNIDEH	C27H40N7O20P2	C27H39N7O20P2		H
-    R_Biomass_Ecoli_core_w_GAM	C1088.0232H1471.1810N446.7617O1236.7018P240.5298S3.7478	C1045.4677H1395.2089N441.3089O1189.0281P236.8511S3.7478		C42.5555H75.9721N5.4528O47.6737P3.6787
+    Biomass_Ecoli_core_w_GAM	C1088.0232H1471.1810N446.7617O1236.7018P240.5298S3.7478	C1045.4677H1395.2089N441.3089O1189.0281P236.8511S3.7478		C42.5555H75.9721N5.4528O47.6737P3.6787
     INFO: Unbalanced reactions: 2/80
     INFO: Unchecked reactions due to missing formula: 0/80
 
 In this case two reactions are identified in the model as being unbalanced.
-The biomass objective function, `R_Biomass_Ecoli_core_w_GAM`, and the
+The biomass objective function, `Biomass_Ecoli_core_w_GAM`, and the
 reaction that was previously identified through masscheck as being
 unbalanced, `MANNIDEH`. In the case of the objective function this is
 imbalanced due to the formulation of the objective function. The reaction
@@ -1605,16 +1605,16 @@ The output should be as follows:
     INFO: Model Git version: 9812080
     INFO: Using flux bounds to determine consistency.
     INFO: Setting feasibility tolerance to 1e-09
-    R_EX_fru_e	|D-Fructose[C_e]| <=>
-    R_EX_fum_e	|Fumarate[C_e]| <=>
-    R_EX_glc_e	|D-Glucose[C_e]| <=>
-    R_EX_gln_L_e	|L-Glutamine[C_e]| <=>
-    R_EX_mal_L_e	|L-Malate[C_e]| <=>
-    R_FRUpts2	|D-Fructose[C_e]| + |Phosphoenolpyruvate[C_c]| => |D-Fructose-6-phosphate[C_c]| + |Pyruvate[C_c]|
-    R_FUMt2_2	(2) |H[C_e]| + |Fumarate[C_e]| => |Fumarate[C_c]| + (2) |H[C_c]|
-    R_GLCpts	|D-Glucose[C_e]| + |Phosphoenolpyruvate[C_c]| => |Pyruvate[C_c]| + |D-Glucose-6-phosphate[C_c]|
-    R_GLNabc	|L-Glutamine[C_e]| + |ATP[C_c]| + |H2O[C_c]| => |ADP[C_c]| + |Phosphate[C_c]| + |H[C_c]| + |L-Glutamine[C_c]|
-    R_MALt2_2	(2) |H[C_e]| + |L-Malate[C_e]| => |L-Malate[C_c]| + (2) |H[C_c]|
+    EX_fru_e	|D-Fructose[C_e]| <=>
+    EX_fum_e	|Fumarate[C_e]| <=>
+    EX_glc_e	|D-Glucose[C_e]| <=>
+    EX_gln_L_e	|L-Glutamine[C_e]| <=>
+    EX_mal_L_e	|L-Malate[C_e]| <=>
+    FRUpts2	|D-Fructose[C_e]| + |Phosphoenolpyruvate[C_c]| => |D-Fructose-6-phosphate[C_c]| + |Pyruvate[C_c]|
+    FUMt2_2	(2) |H[C_e]| + |Fumarate[C_e]| => |Fumarate[C_c]| + (2) |H[C_c]|
+    GLCpts	|D-Glucose[C_e]| + |Phosphoenolpyruvate[C_c]| => |Pyruvate[C_c]| + |D-Glucose-6-phosphate[C_c]|
+    GLNabc	|L-Glutamine[C_e]| + |ATP[C_c]| + |H2O[C_c]| => |ADP[C_c]| + |Phosphate[C_c]| + |H[C_c]| + |L-Glutamine[C_c]|
+    MALt2_2	(2) |H[C_e]| + |L-Malate[C_e]| => |L-Malate[C_c]| + (2) |H[C_c]|
     INFO: Model has 5/80 inconsistent internal reactions (0 disabled by user)
     INFO: Model has 5/21 inconsistent exchange reactions (0 disabled by user)
 
@@ -1745,12 +1745,12 @@ The following is sample output from the fva command:
 .. code-block:: shell
 
     ...
-    R_EX_pi_e	-3.44906664664	-3.44906664664	|Phosphate[C_e]| <=>
-    R_EX_pyr_e	-0.0	-0.0	|Pyruvate[C_e]| <=>
-    R_EX_succ_e	-0.0	-0.0	|Succinate[C_e]| <=>
-    R_FBA	7.00227721609	7.00227721609	|D-Fructose-1-6-bisphosphate[C_c]| <=> |Dihydroxyacetone-phosphate[C_c]| + |Glyceraldehyde-3-phosphate[C_c]|
-    R_FBP	0.0	0.0	|D-Fructose-1-6-bisphosphate[C_c]| + |H2O[C_c]| => |D-Fructose-6-phosphate[C_c]| + |Phosphate[C_c]|
-    R_FORt2	0.0	0.0	|Formate[C_e]| + |H[C_e]| => |Formate[C_c]| + |H[C_c]|
+    EX_pi_e	-3.44906664664	-3.44906664664	|Phosphate[C_e]| <=>
+    EX_pyr_e	-0.0	-0.0	|Pyruvate[C_e]| <=>
+    EX_succ_e	-0.0	-0.0	|Succinate[C_e]| <=>
+    FBA	7.00227721609	7.00227721609	|D-Fructose-1-6-bisphosphate[C_c]| <=> |Dihydroxyacetone-phosphate[C_c]| + |Glyceraldehyde-3-phosphate[C_c]|
+    FBP	0.0	0.0	|D-Fructose-1-6-bisphosphate[C_c]| + |H2O[C_c]| => |D-Fructose-6-phosphate[C_c]| + |Phosphate[C_c]|
+    FORt2	0.0	0.0	|Formate[C_e]| + |H[C_e]| => |Formate[C_c]| + |H[C_c]|
     ...
 
 
@@ -1764,10 +1764,10 @@ added into the media along with mannitol then the results might appear as follow
 
 .. code-block:: shell
 
-    R_EX_glc_e	-10.0	-2.0	|D-Glucose[C_e]| <=>
+    EX_glc_e	-10.0	-2.0	|D-Glucose[C_e]| <=>
     EX_M_manni_C_e	-9.0	-3.0	|Mannitol[C_e]| <=>
     MANNIPTS	3.0	9.0	|Mannitol[C_e]| + |Phosphoenolpyruvate[C_c]| => |Mannitol 1-phosphate[C_c]| + |Pyruvate[C_c]|
-    R_GLCpts	2.0	10.0	|D-Glucose[C_e]| + |Phosphoenolpyruvate[C_c]| => |Pyruvate[C_c]| + |D-Glucose-6-phosphate[C_c]|
+    GLCpts	2.0	10.0	|D-Glucose[C_e]| + |Phosphoenolpyruvate[C_c]| => |Pyruvate[C_c]| + |D-Glucose-6-phosphate[C_c]|
 
 
 It can be seen that in this situation the lower and upper bounds of some
@@ -1801,7 +1801,7 @@ carbon source. To run the robustness command use the following command:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model robustness --steps 1000 R_EX_o2_e
+    (psamm-env) $ psamm-model robustness --steps 1000 EX_o2_e
 
 
 If the biomass reaction flux is plotted against the oxygen uptake it can be seen
@@ -1853,8 +1853,8 @@ simulation. An example output can be seen as follows:
     b4395	0
     s0001	1
     INFO: Essential genes: 63/137
-    INFO: Reactions in minimal network: R_ACALDt, R_ACONTa, R_ACONTb, R_ACt2r, R_ATPM, R_ATPS4r,
-    R_Biomass_Ecoli_core_w_GAM, R_CO2t, R_CS, R_CYTBD
+    INFO: Reactions in minimal network: ACALDt, ACONTa, ACONTb, ACt2r, ATPM, ATPS4r,
+    Biomass_Ecoli_core_w_GAM, CO2t, CS, CYTBD
 
 
 The random minimal network analysis can also be used to generate a random
@@ -1910,26 +1910,26 @@ essential to the network:
 .. code-block:: shell
 
     EX_M_manni_C_e	1
-    R_EX_ac_e	0
-    R_EX_acald_e	0
-    R_EX_akg_e	0
-    R_EX_co2_e	1
-    R_EX_etoh_e	0
-    R_EX_for_e	0
-    R_EX_fru_e	0
-    R_EX_fum_e	0
-    R_EX_glc_e	0
-    R_EX_gln_L_e	0
-    R_EX_glu_L_e	0
-    R_EX_h2o_e	1
-    R_EX_h_e	1
-    R_EX_lac_D_e	0
-    R_EX_mal_L_e	0
-    R_EX_nh4_e	1
-    R_EX_o2_e	1
-    R_EX_pi_e	1
-    R_EX_pyr_e	0
-    R_EX_succ_e	0
+    EX_ac_e	0
+    EX_acald_e	0
+    EX_akg_e	0
+    EX_co2_e	1
+    EX_etoh_e	0
+    EX_for_e	0
+    EX_fru_e	0
+    EX_fum_e	0
+    EX_glc_e	0
+    EX_gln_L_e	0
+    EX_glu_L_e	0
+    EX_h2o_e	1
+    EX_h_e	1
+    EX_lac_D_e	0
+    EX_mal_L_e	0
+    EX_nh4_e	1
+    EX_o2_e	1
+    EX_pi_e	1
+    EX_pyr_e	0
+    EX_succ_e	0
 
 Using PSAMM to export the model to other Software
 ___________________________________________________
