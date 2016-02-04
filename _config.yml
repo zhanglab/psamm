@@ -16,3 +16,4 @@ gems: ['jekyll-github-metadata']
 
 # Build settings
 markdown: kramdown
+exclude: ['bootstrap']
