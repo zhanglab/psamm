@@ -367,19 +367,15 @@ def flux_minimization(model, fixed, solver, weights={}):
             for reaction_id in model.reactions)
 
 
-def flux_randomization(model, fixed, tfba, solver):
-    """Find a uniformly random flux mode in the solution space.
+def flux_randomization(model, threshold, tfba, solver):
+    """Find a random flux solution on the boundary of the solution space.
 
-    This can be used to generate a random sample from the solution
-    space. If many random samples are needed more efficient methods
-    (e.g. random walk) are useful.
-
-    The reactions in the fixed dictionary are constrained with the
+    The reactions in the threshold dictionary are constrained with the
     associated lower bound.
 
     Args:
         model: MetabolicModel to solve.
-        fixed: dict of additional lower bounds on reaction fluxes.
+        threshold: dict of additional lower bounds on reaction fluxes.
         tfba: If True enable thermodynamic constraints.
         solver: LP solver instance to use.
 
@@ -395,7 +391,7 @@ def flux_randomization(model, fixed, tfba, solver):
             optimize[reaction_id] = random.random()
 
     fba = _get_fba_problem(model, tfba, solver)
-    for reaction_id, value in iteritems(fixed):
+    for reaction_id, value in iteritems(threshold):
         fba.prob.add_linear_constraints(fba.get_flux_var(reaction_id) >= value)
 
     fba.maximize(optimize)
