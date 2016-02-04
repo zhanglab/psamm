@@ -52,7 +52,8 @@ some analyses require one of the other solvers.
 Cplex
 -----
 
-The Cplex Python bindings will have to be installed manually. If you are using
+The Cplex Python bindings will have to be installed manually. Make sure that
+you are using at least **Cplex version 12.6.2**. If you are using
 a virtual environment (as described above) this should be done after activating
 the virtual environment:
 

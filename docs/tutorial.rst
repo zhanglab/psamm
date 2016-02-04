@@ -151,10 +151,9 @@ The LP (linear programming) solvers are necessary for analysis of metabolic
 fluxes using the constraint-based modeling approaches.
 
 Cplex is the recommended solver for PSAMM and is available with an academic
-license from IBM. Instructions on how to install Cplex can be found at the
-following URL: `Cplex`_
-
-.. _Cplex: http://www-01.ibm.com/support/docview.wss?uid=swg21444285
+license from IBM. Make sure that you use at least **Cplex version 12.6.2**.
+Instructions on how to install Cplex can be found
+`here <http://www-01.ibm.com/support/docview.wss?uid=swg21444285>`_.
 
 Once Cplex is installed, you need to install the Python bindings under
 the psamm-env virtual environment using the following command:
