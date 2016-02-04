@@ -68,6 +68,9 @@ the virtual environment:
     (env) $ pip install \
         /path/to/IBM/ILOG/CPLEX_Studio1262/cplex/python/<version>/<platform>
 
+Further documentation on installing Cplex can be found in
+`the Cplex documentation <http://www-01.ibm.com/support/docview.wss?uid=swg21444285>`_.
+
 .. note::
 
     Python 3 support was added in a recent release of Cplex. Older versions
