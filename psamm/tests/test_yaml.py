@@ -114,6 +114,21 @@ class TestYAMLFileSystemData(unittest.TestCase):
             f.write(contents)
         return path
 
+    def test_parse_model_file(self):
+        path = self.write_model_file('model.yaml', '\n'.join([
+            'name: Test model',
+            'biomass: biomass_reaction_id',
+            'extracellular: Extra',
+            'default_flux_limit: 500'
+        ]))
+
+        model = native.NativeModel(path)
+
+        self.assertEqual(model.get_name(), 'Test model')
+        self.assertEqual(model.get_biomass_reaction(), 'biomass_reaction_id')
+        self.assertEqual(model.get_extracellular_compartment(), 'Extra')
+        self.assertEqual(model.get_default_flux_limit(), 500)
+
     def test_parse_compound_tsv_file(self):
         path = self.write_model_file('compounds.tsv', '\n'.join([
             'id\tname\tformula\tcharge\tkegg\tcas',
