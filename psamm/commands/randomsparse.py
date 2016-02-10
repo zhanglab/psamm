@@ -155,7 +155,7 @@ class RandomSparseNetworkCommand(MetabolicMixin, SolverCommandMixin, Command):
     def _delete_genes(self, prob, obj_reaction, flux_threshold):
         genes = set()
         gene_assoc = {}
-        for reaction in self._model.parse_reactions():
+        for reaction in self._model.parse_model():
             assoc = None
             if reaction.genes is None:
                 continue
