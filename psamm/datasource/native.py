@@ -230,9 +230,9 @@ class NativeModel(object):
         """Yield reaction IDs of model reactions"""
 
         if self.has_model_definition():
-            for reaction_id in parse_model_group_list(
+            for reaction in parse_model_group_list(
                     self._context, self._model['model']):
-                yield reaction_id
+                yield reaction
 
     def parse_limits(self):
         """Yield tuples of reaction ID, lower, and upper bound flux limits"""
@@ -317,7 +317,7 @@ class NativeModel(object):
 
         model_definition = None
         if self.has_model_definition():
-            model_definition = self.parse_model()
+            model_definition = (elem.id for elem in self.parse_model())
 
         return MetabolicModel.load_model(
             database, model_definition, self.parse_medium(),
@@ -806,8 +806,8 @@ def parse_model_group_list(path, groups):
     for model_group in groups:
         if 'include' in model_group:
             include_context = context.resolve(model_group['include'])
-            for reaction_id in parse_model_file(include_context):
-                yield reaction_id
+            for reaction in parse_model_file(include_context):
+                yield reaction
         else:
             for reaction_id in parse_model_group(context, model_group):
                 yield reaction_id
@@ -822,18 +822,22 @@ def parse_model_yaml_file(path, f):
 
 
 def parse_model_table_file(path, f):
-    """Parse a file as a list of model reactions
 
-    Yields reactions IDs. Path can be given as a string or a context.
+    """Parse a tab-separated file containing reaction IDs and properties
+
+    The reaction properties are parsed according to the header which specifies
+    which property is contained in each column.
     """
 
-    for line in f:
-        line, _, comment = line.partition('#')
-        line = line.strip()
-        if line == '':
-            continue
+    for lineno, row in enumerate(csv.DictReader(f, delimiter='\t')):
+        if 'reaction' not in row or row['reaction'].strip() == '':
+            raise ParseError('Expected `reaction` column in table')
 
-        yield line
+        props = {key: value for key, value in iteritems(row) if value != ''}
+
+        context = FilePathContext(path)
+        mark = FileMark(context, lineno + 2, 0)
+        yield ReactionEntry(row['reaction'], props, mark)
 
 
 def parse_model_file(path):
@@ -849,8 +853,8 @@ def parse_model_file(path):
     if re.match(r'.+\.tsv$', context.filepath):
         logger.debug('Parsing model file {} as TSV'.format(context.filepath))
         with context.open('r') as f:
-            for reaction_id in parse_model_table_file(context, f):
-                yield reaction_id
+            for reaction in parse_model_table_file(context, f):
+                yield reaction
     elif re.match(r'.+\.(yml|yaml)$', context.filepath):
         logger.debug('Parsing model file {} as YAML'.format(context.filepath))
         with context.open('r') as f:
