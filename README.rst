@@ -13,6 +13,9 @@ PSAMM metabolic modeling tools
 .. image:: https://coveralls.io/repos/zhanglab/psamm/badge.svg?branch=develop&service=github
    :alt: Test Coverage Status
    :target: https://coveralls.io/github/zhanglab/psamm?branch=develop
+.. image:: https://zhanglab.github.io/psamm/doi-flat.svg
+   :alt: Digital Object Identifier
+   :target: https://doi.org/10.1371/journal.pcbi.1004732
 
 PSAMM is an open source software that is designed for the curation and analysis
 of metabolic models. It supports model version tracking, model annotation, data
