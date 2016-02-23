@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 import functools
 import enum
 import numbers
+from collections import Counter
 
 import six
 from six import text_type, iteritems
@@ -344,6 +345,38 @@ class Reaction(object):
     def __hash__(self):
         return (hash('Reaction') ^ hash(self._direction) ^
                 hash(self._left) ^ hash(self._right))
+
+    def __add__(self, other):
+        if isinstance(other, Reaction):
+            reverse = self.direction.reverse and other.direction.reverse
+            forward = self.direction.forward and other.direction.forward
+            if not reverse and not forward:
+                raise ValueError('Reactions have incompatible directions')
+
+            direction = Direction((reverse, forward))
+            values = Counter(dict(self.compounds))
+            values.update(dict(other.compounds))
+            return Reaction(direction, values)
+
+        return NotImplemented
+
+    def __sub__(self, other):
+        return self + -other
+
+    def __neg__(self):
+        return -1 * self
+
+    def __mul__(self, other):
+        if isinstance(other, numbers.Number):
+            direction = (
+                self.direction if other > 0 else self.direction.flipped())
+            return self.__class__(
+                direction, ((c, other * v) for c, v in self.compounds))
+
+        return NotImplemented
+
+    def __rmul__(self, other):
+        return self * other
 
 
 if __name__ == '__main__':
