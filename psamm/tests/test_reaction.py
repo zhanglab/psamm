@@ -324,6 +324,64 @@ class TestReaction(unittest.TestCase):
             r, Reaction(Direction.Reverse, [(Compound('Pb'), 1)],
                         [(Compound('Au'), 1)]))
 
+    def test_reaction_plus_reaction_forward(self):
+        r = Reaction(Direction.Forward, {Compound('A'): -1, Compound('B'): 1})
+        s = Reaction(Direction.Forward, {Compound('B'): -1, Compound('C'): 1})
+        t = r + s
+        self.assertEqual(t.direction, Direction.Forward)
+        self.assertEqual(dict(t.compounds), {
+            Compound('A'): -1,
+            Compound('C'): 1})
+
+    def test_reaction_plus_reaction_reverse(self):
+        r = Reaction(Direction.Reverse, {Compound('A'): -1, Compound('B'): 1})
+        s = Reaction(Direction.Reverse, {Compound('B'): -1, Compound('C'): 1})
+        t = r + s
+        self.assertEqual(t.direction, Direction.Reverse)
+
+    def test_reaction_plus_reaction_both(self):
+        r = Reaction(Direction.Both, {Compound('A'): -1, Compound('B'): 1})
+        s = Reaction(Direction.Both, {Compound('B'): -1, Compound('C'): 1})
+        t = r + s
+        self.assertEqual(t.direction, Direction.Both)
+
+    def test_reaction_plus_reaction_mixed(self):
+        r = Reaction(Direction.Forward, {Compound('A'): -1, Compound('B'): 1})
+        s = Reaction(Direction.Both, {Compound('B'): -1, Compound('C'): 1})
+        t = r + s
+        self.assertEqual(t.direction, Direction.Forward)
+
+    def test_reaction_plus_reaction_incompatible(self):
+        r = Reaction(Direction.Forward, {Compound('A'): -1, Compound('B'): 1})
+        s = Reaction(Direction.Reverse, {Compound('B'): -1, Compound('C'): 1})
+        with self.assertRaises(ValueError):
+            t = r + s
+
+    def test_reaction_minus_reaction(self):
+        r = Reaction(Direction.Forward, {Compound('A'): -1, Compound('B'): 1})
+        s = Reaction(Direction.Reverse, {Compound('C'): -1, Compound('B'): 1})
+        t = r - s
+        self.assertEqual(t.direction, Direction.Forward)
+        self.assertEqual(dict(t.compounds), {
+            Compound('A'): -1,
+            Compound('C'): 1})
+
+    def test_reaction_negate(self):
+        r = Reaction(Direction.Forward, {Compound('A'): -1, Compound('B'): 1})
+        s = -r
+        self.assertEqual(s.direction, Direction.Reverse)
+        self.assertEqual(dict(s.compounds), {
+            Compound('B'): -1,
+            Compound('A'): 1})
+
+    def test_reaction_multiply(self):
+        r = Reaction(Direction.Forward, {Compound('A'): -1, Compound('B'): 3})
+        s = 2 * r
+        self.assertEqual(s.direction, Direction.Forward)
+        self.assertEqual(dict(s.compounds), {
+            Compound('A'): -2,
+            Compound('B'): 6})
+
 
 class TestDirection(unittest.TestCase):
     def test_forward_direction(self):
