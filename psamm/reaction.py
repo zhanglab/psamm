@@ -203,6 +203,29 @@ class Reaction(object):
     >>> r2 = Reaction(r)
     >>> str(r2)
     '|A| => |B|'
+
+    Reactions can be added to produce combined reactions.
+
+    >>> r = Reaction(Direction.Forward, {Compound('A'): -1, Compound('B'): 1})
+    >>> s = Reaction(Direction.Forward, {Compound('B'): -1, Compound('C'): 1})
+    >>> str(r + s)
+    '|A| => |C|'
+
+    Reactions can also be multiplied by a number to produce a new reaction
+    with scaled stoichiometry.
+
+    >>> r = Reaction(Direction.Forward, {Compound('A'): -1, Compound('B'): 2})
+    >>> str(2 * r)
+    '(2) |A| => (4) |B|'
+
+    Multiplying with a negative value will also flip the reaction, and as a
+    special case, negating a reaction will simply flip it.
+
+    >>> r = Reaction(Direction.Forward, {Compound('A'): -1, Compound('B'): 2})
+    >>> str(r)
+    '|A| => (2) |B|'
+    >>> str(-r)
+    '(2) |B| <= |A|'
     """
 
     def __init__(self, *args):
