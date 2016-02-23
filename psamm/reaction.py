@@ -400,8 +400,3 @@ class Reaction(object):
 
     def __rmul__(self, other):
         return self * other
-
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
