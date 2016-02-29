@@ -22,6 +22,8 @@ used as a template:
       - include: medium.yaml
     limits:
       - include: limits.yaml
+    model:
+      - include: model_def.tsv
 
 Biomass
 -------
@@ -218,3 +220,15 @@ fragment::
     ADE2t    0
     # Only allow limited flux on ADK1
     ADK1     -10    10
+
+Model Definition
+----------------
+
+The ``model`` property can be used to include a table file that specifies
+a subset of reactions that are used in the model. If no model definition file
+is given then all the reactions in the model will be used::
+
+    ACALD
+    ACALDt
+    ACKr
+    ...
