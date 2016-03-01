@@ -96,12 +96,13 @@ class MultimediaCommand(MetabolicMixin, SolverCommandMixin, Command):
 
                 result = self.run_carbon_fba(reaction, csource, eaccept)
                 #output_file.write('{}\t{}\t{}\t{}\n'.format('', 'Carbon_flux', 'Electron_acc', 'Core_Biomass'))
-                for reactio, flux, reaction_1, flux_1, reaction_2, flux_2 in result:
-                    #output_file.write('{}\t{}\n'.format(reactio, flux))
-                    #output_file.write('{}\t{}\n'.format(reaction_1, flux_1))
-                    #output_file.write('{}\t{}\n'.format(reaction_2, flux_2))
-                    #output_file.write('{}\t{}\t{}\n'.format(reactio, reaction_1, reaction_2))
-                    output_file.write('{}\t{}\t{}\t{}\n'.format(reactio, flux, flux_1, flux_2))
+                for c_e, c_l, c_u, e_e, e_l, e_u, b_e, b_l, b_u in result:
+                    output_file.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(csource, c_e, c_l, c_u,
+                                                                                  e_e, e_l, e_u, b_e, b_l, b_u))
+
+
+
+
 
                 '''
                 optimum = None
@@ -146,11 +147,30 @@ class MultimediaCommand(MetabolicMixin, SolverCommandMixin, Command):
         #start_time = time.time()
 
         p.maximize(reaction)
-
+        obj_flux = p.get_flux(reaction)
+        c_list = []
+        e_list = []
+        b_list = []
+        c_list.append('EX_{}_e'.format(carbon))
+        e_list.append('EX_{}_e'.format(electron))
+        b_list.append(reaction)
+        for exchange_c, (lower_c, upper_c) in fluxanalysis.flux_variability(model_c, c_list, {reaction: obj_flux}, tfba=False, solver=self._get_solver()):
+            c_e = exchange_c
+            c_l = lower_c
+            c_u = upper_c
+        for exchange_e, (lower_e, upper_e) in fluxanalysis.flux_variability(model_c, e_list, {reaction: obj_flux}, tfba=False, solver=self._get_solver()):
+            e_e = exchange_e
+            e_l = lower_e
+            e_u = upper_e
+        for exchange_b, (lower_b, upper_b) in fluxanalysis.flux_variability(model_c, b_list, {reaction: obj_flux}, tfba=False, solver=self._get_solver()):
+            b_e = exchange_b
+            b_l = lower_b
+            b_u = upper_b
+        yield(c_e, c_l, c_u, e_e, e_l, e_u, b_e, b_l, b_u)
         #logger.info('Solving took {:.2f} seconds'.format(
         #    time.time() - start_time))
 
-        yield 'EX_{}_e'.format(carbon), p.get_flux('EX_{}_e'.format(carbon)), 'EX_{}_e'.format(electron), p.get_flux('EX_{}_e'.format(electron)), reaction, p.get_flux(reaction)
+        #yield 'EX_{}_e'.format(carbon), p.get_flux_var('EX_{}_e'.format(carbon)), 'EX_{}_e'.format(electron), p.get_flux_var('EX_{}_e'.format(electron)), reaction, p.get_flux_var(reaction)
         #for reaction_id in self._mm.reactions:
         #    yield reaction_id, p.get_flux(reaction_id)
 
