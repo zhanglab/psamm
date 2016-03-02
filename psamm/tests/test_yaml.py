@@ -342,14 +342,62 @@ class TestYAMLFileSystemData(unittest.TestCase):
 
     def test_parse_model_table_file(self):
         path = self.write_model_file('model_1.tsv', '\n'.join([
-            '# comment',
+            'reaction',
             'rxn_1',
             'rxn_2',
             'rxn_3',
-            'rxn_4  # line comment']))
+            'rxn_4']))
 
         reactions = list(native.parse_model_file(path))
-        self.assertEqual(reactions, ['rxn_1', 'rxn_2', 'rxn_3', 'rxn_4'])
+        self.assertEqual(len(reactions), 4)
+        self.assertEqual(reactions[0].id, 'rxn_1')
+        self.assertEqual(reactions[1].id, 'rxn_2')
+        self.assertEqual(reactions[2].id, 'rxn_3')
+        self.assertEqual(reactions[3].id, 'rxn_4')
+
+    def test_parse_genes_model_table_file(self):
+        path = self.write_model_file('model_1.tsv', '\n'.join([
+            'reaction\tgenes',
+            'rxn_1\tEx_Gene1',
+            'rxn_2\tEx_Gene2',
+            'rxn_3\tEx_Gene3',
+            'rxn_4\tEx_Gene4']))
+
+        reactions = list(native.parse_model_file(path))
+        self.assertEqual(reactions[0].properties['genes'], 'Ex_Gene1')
+        self.assertEqual(reactions[1].properties['genes'], 'Ex_Gene2')
+        self.assertEqual(reactions[2].properties['genes'], 'Ex_Gene3')
+        self.assertEqual(reactions[3].properties['genes'], 'Ex_Gene4')
+
+    def test_pull_genes_model_table_file(self):
+        self._model_dir = tempfile.mkdtemp()
+        with open(os.path.join(self._model_dir, 'model.yaml'), 'w') as f:
+            f.write('''---
+                name: Test model
+                biomass: rxn_1
+                reactions:
+                  - id: rxn_1
+                    equation: '|A[e]| => |B[c]|'
+                    genes:
+                      - gene_1
+                      - gene_2
+                  - id: rxn_2
+                    equation: '|B[c]| => |C[e]|'
+                    genes: 'gene_3 or (gene_4 and gene_5)'
+                compounds:
+                  - id: A
+                  - id: B
+                  - id: C
+                media:
+                  - compartment: e
+                    compounds:
+                      - id: A
+                      - id: C
+                limits:
+                  - reaction: rxn_2
+                    upper: 100
+                ''')
+
 
     def test_parse_model_yaml_file(self):
         path = self.write_model_file('model_1.yaml', '''---
@@ -366,8 +414,11 @@ class TestYAMLFileSystemData(unittest.TestCase):
                 reactions: [rxn_2]''')
 
         reactions = list(native.parse_model_file(path))
-        self.assertEqual(reactions, ['rxn_1', 'rxn_2', 'rxn_3', 'rxn_4'])
-
+        self.assertEqual(len(reactions), 4)
+        self.assertEqual(reactions[0].id, 'rxn_1')
+        self.assertEqual(reactions[1].id, 'rxn_2')
+        self.assertEqual(reactions[2].id, 'rxn_3')
+        self.assertEqual(reactions[3].id, 'rxn_4')
 
 class TestCheckId(unittest.TestCase):
     def test_check_id_none(self):

@@ -788,12 +788,12 @@ def parse_model_group(path, group):
     context = FilePathContext(path)
 
     for reaction_id in group.get('reactions', []):
-        yield reaction_id
+        yield ReactionEntry(reaction_id, {})
 
     # Parse subgroups
-    for reaction_id in parse_model_group_list(
+    for reaction in parse_model_group_list(
             context, group.get('groups', [])):
-        yield reaction_id
+        yield reaction
 
 
 def parse_model_group_list(path, groups):
@@ -809,8 +809,8 @@ def parse_model_group_list(path, groups):
             for reaction in parse_model_file(include_context):
                 yield reaction
         else:
-            for reaction_id in parse_model_group(context, model_group):
-                yield reaction_id
+            for reaction in parse_model_group(context, model_group):
+                yield reaction
 
 
 def parse_model_yaml_file(path, f):

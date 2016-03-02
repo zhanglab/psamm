@@ -112,6 +112,10 @@ class TestCommandMain(unittest.TestCase):
                 limits:
                   - reaction: rxn_2_\u03c0
                     upper: 100
+                model:
+                  - reactions:
+                    - rxn_1
+                    - rxn_2
                 ''')
 
     def tearDown(self):
