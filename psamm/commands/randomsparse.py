@@ -155,17 +155,19 @@ class RandomSparseNetworkCommand(MetabolicMixin, SolverCommandMixin, Command):
     def _delete_genes(self, prob, obj_reaction, flux_threshold):
         genes = set()
         gene_assoc = {}
-        for reaction in self._model.parse_model():
-            assoc = None
-            if reaction.genes is None:
-                continue
-            elif isinstance(reaction.genes, string_types):
-                assoc = boolean.Expression(reaction.genes)
-            else:
-                variables = [boolean.Variable(g) for g in reaction.genes]
-                assoc = boolean.Expression(boolean.And(*variables))
-            genes.update(v.symbol for v in assoc.variables)
-            gene_assoc[reaction.id] = assoc
+
+        for func in (self._model.parse_reactions, self._model.parse_model):
+            for reaction in func():
+                assoc = None
+                if reaction.genes is None:
+                    continue
+                elif isinstance(reaction.genes, string_types):
+                    assoc = boolean.Expression(reaction.genes)
+                else:
+                    variables = [boolean.Variable(g) for g in reaction.genes]
+                    assoc = boolean.Expression(boolean.And(*variables))
+                genes.update(v.symbol for v in assoc.variables)
+                gene_assoc[reaction.id] = assoc
 
         essential = set()
         deleted = set()
