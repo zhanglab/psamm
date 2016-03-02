@@ -123,16 +123,17 @@ def get_gene_associations(model):
         model: :class:`psamm.datasource.native.NativeModel`.
     """
 
-    for reaction in model.parse_model():
-        assoc = None
-        if reaction.genes is None:
-            continue
-        elif isinstance(reaction.genes, string_types):
-            assoc = boolean.Expression(reaction.genes)
-        else:
-            variables = [boolean.Variable(g) for g in reaction.genes]
-            assoc = boolean.Expression(boolean.And(*variables))
-        yield reaction.id, assoc
+    for func in (self._model.parse_reactions, self._model.parse_model):
+        for reaction in func():
+            assoc = None
+            if reaction.genes is None:
+                continue
+            elif isinstance(reaction.genes, string_types):
+                assoc = boolean.Expression(reaction.genes)
+            else:
+                variables = [boolean.Variable(g) for g in reaction.genes]
+                assoc = boolean.Expression(boolean.And(*variables))
+            yield reaction.id, assoc
 
 
 def get_exchange_reactions(model):
