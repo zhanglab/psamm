@@ -253,8 +253,8 @@ class FVARobustnessTaskHandler(object):
                        {reaction: self._problem.flux_bound(reaction, 1)
                         for reaction in self._reactions}
             else:
-                return self._problem.flux_bound(reaction, -1), \
-                       self._problem.flux_bound(reaction, 1)
+                return (self._problem.flux_bound(reaction, -1),
+                        self._problem.flux_bound(reaction, 1))
         except fluxanalysis.FluxBalanceError:
             return None
         finally:
