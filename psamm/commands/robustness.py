@@ -168,7 +168,8 @@ class RobustnessCommand(MetabolicMixin, SolverCommandMixin,
                         for other_reaction in self._mm.reactions:
                             print('{}\t{}\t{}\t{}'.format(
                                 other_reaction, fixed_flux,
-                                result[0][other_reaction], result[1][other_reaction]))
+                                result[0][other_reaction],
+                                result[1][other_reaction]))
                     else:
                         print('{}\t{}'.format(fixed_flux, result))
         else:
@@ -248,11 +249,12 @@ class FVARobustnessTaskHandler(object):
             self._run_fba(reaction)
             if self._reactions is not None:
                 return {reaction: self._problem.flux_bound(reaction, -1)
-                        for reaction in self._reactions}, {reaction:
-                        self._problem.flux_bound(reaction, 1)
+                        for reaction in self._reactions}, \
+                       {reaction: self._problem.flux_bound(reaction, 1)
                         for reaction in self._reactions}
             else:
-                return self._problem.flux_bound(reaction, -1), self._problem.flux_bound(reaction, 1)
+                return self._problem.flux_bound(reaction, -1), \
+                       self._problem.flux_bound(reaction, 1)
         except fluxanalysis.FluxBalanceError:
             return None
         finally:
