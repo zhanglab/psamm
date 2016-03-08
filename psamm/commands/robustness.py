@@ -186,7 +186,7 @@ class RobustnessCommand(MetabolicMixin, SolverCommandMixin,
                                 other_reaction, fixed_flux,
                                 result[other_reaction]))
                     else:
-                        print('{}\t{}'.format(fixed_flux, result))
+                        print('{}\t{}'.format(fixed_flux, result[0], result[1]))
 
         executor.join()
 
@@ -243,8 +243,10 @@ class FVARobustnessTaskHandler(object):
     def handle_task(self, constraint, reaction):
         varying_reaction, fixed_flux = constraint
         flux_var = self._problem.get_flux_var(varying_reaction)
-        c, = self._problem.prob.add_linear_constraints(flux_var == fixed_flux)
-
+        self._problem.prob.add_linear_constraints(flux_var == fixed_flux)
+        flux_obj = self._problem.get_flux_var(self._args.orbjective)
+        c, = self._problem.prob.add_linear_constraints(
+            flux_obj == self._problem.maximize(self._args.objective))
         try:
             self._run_fba(reaction)
             if self._reactions is not None:
@@ -253,8 +255,7 @@ class FVARobustnessTaskHandler(object):
                        {reaction: self._problem.flux_bound(reaction, 1)
                         for reaction in self._reactions}
             else:
-                return (self._problem.flux_bound(reaction, -1),
-                        self._problem.flux_bound(reaction, 1))
+                return self._problem.flux_bound(reaction, -1), self._problem.flux_bound(reaction, 1)
         except fluxanalysis.FluxBalanceError:
             return None
         finally:
