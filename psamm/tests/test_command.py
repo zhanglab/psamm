@@ -149,7 +149,7 @@ class TestCommandMain(unittest.TestCase):
         self.assertTrue(os.path.isfile(dest_path))
 
     def test_run_fastgapfill(self):
-        # Skip test if solver is GLPK
+        # Skip test if solver is GLPK because of issue #61.
         try:
             solver = generic.Solver()
             if solver.properties['name'] == 'glpk':
