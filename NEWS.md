@@ -1,4 +1,23 @@
 
+v0.20 (2016-03-10)
+------------------
+
+- Added experimental support for GLPK solver. MILP problems are not yet
+  supported with this solver. GLPK also appears to have some issues with
+  `fastgapfill`.
+- The `gapfill` command can now take a list of compounds on the command line
+  that it will try to unblock. If a list of compounds is given, the command
+  will not run GapFind but instead only use those compounds.
+- Remove the assumption that the extracellular compartment is always called
+  `e`. The user can now specify the name of the extracellular compartment with
+  the option `extracellular` in `model.yaml`.
+- In a previous release, the code interfacing with Cplex was updated and is now
+  using an interface in Cplex that was introduced in version 12.6.2. The
+  documentation now makes it clear that at least version 12.6.2 is required.
+- Update YAML format documentation on the model definition table format.
+- Work around issue with `pkg_resources` that resulted in import errors when
+  running from IPython.
+
 v0.19 (2016-02-01)
 ------------------
 
