@@ -21,7 +21,6 @@ import csv
 import re
 
 from .context import FileMark
-from .reaction import parse_reaction as parse_universal_reaction
 
 
 class ParseError(Exception):
@@ -109,12 +108,3 @@ def parse_compound_file(f, context=None):
 
         mark = FileMark(context, lineno, 0)
         yield CompoundEntry(compound_id, names, formula, filemark=mark)
-
-
-def parse_reaction(s):
-    """Parse a ModelSEED reaction.
-
-    .. deprecated:: 0.18
-       Use :func:`~psamm.datasource.reaction.parse_reaction` instead.
-    """
-    return parse_universal_reaction(s)

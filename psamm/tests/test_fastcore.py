@@ -187,6 +187,10 @@ class TestFastcoreTinyBiomassModel(unittest.TestCase):
         except generic.RequirementsError:
             self.skipTest('Unable to find an LP solver for tests')
 
+        # Skip these tests with GLPK because of issue #61.
+        if self.solver.properties['name'] == 'glpk':
+            self.skipTest('Test has known issue with GLPK')
+
     def test_fastcc_is_consistent(self):
         self.assertTrue(fastcore.fastcc_is_consistent(
             self.model, 0.0001, solver=self.solver))

@@ -11,6 +11,7 @@ used as a template:
     ---
     name: Escherichia coli test model
     biomass: Biomass
+    extracellular: e
     compounds:
       - include: ../path/to/ModelSEED_cpds.tsv
         format: modelseed
@@ -21,12 +22,21 @@ used as a template:
       - include: medium.yaml
     limits:
       - include: limits.yaml
+    model:
+      - include: model_def.tsv
 
 Biomass
 -------
 
 The optional ``biomass`` key specifies the default reaction to use for
 various analyses (e.g. FBA, FVA, etc.)
+
+Extracellular Compartment
+-------------------------
+
+The optional ``extracellular`` key specifies the default string for
+the extracellular compartment on compounds. If this option is not
+specified it will be assumed that the extracellular compartment is called ``e``.
 
 Compounds
 ---------
@@ -210,3 +220,15 @@ fragment::
     ADE2t    0
     # Only allow limited flux on ADK1
     ADK1     -10    10
+
+Model Definition
+----------------
+
+The ``model`` property can be used to include a table file that specifies
+a subset of reactions that are used in the model. If no model definition file
+is given then all the reactions in the model will be used::
+
+    ACALD
+    ACALDt
+    ACKr
+    ...
