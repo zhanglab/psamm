@@ -76,6 +76,8 @@ class Problem(BaseProblem):
         self._variables = {}
         self._constraints = {}
 
+        self._do_presolve = True
+
         self._result = None
 
     def __del__(self):
@@ -141,6 +143,8 @@ class Problem(BaseProblem):
             if vt != VariableType.Continuous:
                 swiglpk.glp_set_col_kind(self._p, i, self.VARTYPE_MAP[vt])
 
+        self._do_presolve = True
+
     def has_variable(self, name):
         """Check whether variable is defined in the model."""
         return name in self._variables
@@ -181,6 +185,8 @@ class Problem(BaseProblem):
                     self._p, i, swiglpk.GLP_FX, -float(expression.offset), 0)
 
             names.append(i)
+
+        self._do_presolve = True
 
         return names
 
@@ -241,7 +247,11 @@ class Problem(BaseProblem):
 
         parm = swiglpk.glp_smcp()
         swiglpk.glp_init_smcp(parm)
-        parm.presolve = swiglpk.GLP_ON
+        if self._do_presolve:
+            parm.presolve = swiglpk.GLP_ON
+            self._do_presolve = False
+        else:
+            parm.presolve = swiglpk.GLP_OFF
 
         logger.debug('Solving using glp_simplex()')
         r = swiglpk.glp_simplex(self._p, parm)
