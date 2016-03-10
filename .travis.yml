@@ -8,6 +8,8 @@ addons:
         packages:
             - libgmp-dev
             - libgmp10
+            - glpk
+            - swig
 
 install:
     # Install QSopt_ex library
@@ -31,6 +33,7 @@ after_success: coveralls
 env:
     - TOXENV=py27-nosolver,py34-nosolver,coverage
     - TOXENV=py27-qsoptex,py34-qsoptex,coverage
+    - TOXENV=py27-glpk,py34-glpk,coverage
     - TOXENV=docs
     - TOXENV=flake
 

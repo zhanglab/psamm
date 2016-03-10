@@ -74,6 +74,20 @@ try:
 except ImportError as e:
     _solver_import_errors['gurobi'] = str(e)
 
+# Try to load GLPK solver
+try:
+    from . import glpk
+    _solvers.append({
+        'class': glpk.Solver,
+        'name': 'glpk',
+        'integer': False,
+        'quadratic': False,
+        'rational': False,
+        'priority': 8
+    })
+except ImportError as e:
+    _solver_import_errors['glpk'] = str(e)
+
 
 class RequirementsError(Exception):
     """Error resolving solver requirements"""

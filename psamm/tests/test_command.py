@@ -149,6 +149,14 @@ class TestCommandMain(unittest.TestCase):
         self.assertTrue(os.path.isfile(dest_path))
 
     def test_run_fastgapfill(self):
+        # Skip test if solver is GLPK
+        try:
+            solver = generic.Solver()
+            if solver.properties['name'] == 'glpk':
+                self.skipTest('Test has known issue with GLPK')
+        except generic.RequirementsError:
+            pass
+
         self.run_solver_command([
             '--model', self._model_dir, 'fastgapfill'], {})
 
