@@ -80,6 +80,12 @@ class Problem(BaseProblem):
         # using the OutputFlag parameter but instead we lose the log file.
         self._p.params.OutputFlag = 0
 
+        # Set feasibility tolerance. By default, we decrease it to 1e-9.
+        feasibility_tolerance = kwargs.get('feasibility_tolerance', 1e-9)
+        logger.info('Setting feasibility tolerance to {!r}'.format(
+            feasibility_tolerance))
+        self._p.params.FeasibilityTol = feasibility_tolerance
+
         # Set number of threads
         if 'threads' in kwargs:
             logger.info('Setting threads to {!r}'.format(kwargs['threads']))
