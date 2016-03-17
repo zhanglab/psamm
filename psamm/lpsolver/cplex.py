@@ -84,6 +84,13 @@ class Problem(BaseProblem):
         self._cp.parameters.simplex.tolerances.feasibility.set(
             feasibility_tolerance)
 
+        # Set optimality tolerance. By default, we decrease it to 1e-9.
+        optimality_tolerance = kwargs.get('optimality_tolerance', 1e-9)
+        logger.info('Setting optimality tolerance to {!r}'.format(
+            optimality_tolerance))
+        self._cp.parameters.simplex.tolerances.optimality.set(
+            optimality_tolerance)
+
         # Set number of threads
         if 'threads' in kwargs:
             logger.info('Setting threads to {!r}'.format(kwargs['threads']))
