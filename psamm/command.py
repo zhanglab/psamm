@@ -39,8 +39,6 @@ from six import add_metaclass, iteritems, itervalues
 
 from . import __version__ as package_version
 from .datasource.native import NativeModel
-from .metabolicmodel import MetabolicModel
-from .database import DictDatabase
 from .lpsolver import generic
 from . import util
 
@@ -100,36 +98,7 @@ class MetabolicMixin(object):
     def __init__(self, *args, **kwargs):
         super(MetabolicMixin, self).__init__(*args, **kwargs)
 
-        # Create metabolic model
-        database = DictDatabase()
-        for reaction in self._model.parse_reactions():
-            if reaction.equation is not None:
-                database.set_reaction(reaction.id, reaction.equation)
-
-        # Warn about undefined compounds
-        compounds = set()
-        for compound in self._model.parse_compounds():
-            compounds.add(compound.id)
-
-        undefined_compounds = set()
-        for reaction in database.reactions:
-            for compound, _ in database.get_reaction_values(reaction):
-                if compound.name not in compounds:
-                    undefined_compounds.add(compound.name)
-
-        for compound in sorted(undefined_compounds):
-            logger.warning(
-                'The compound {} was not defined in the list'
-                ' of compounds'.format(compound))
-
-        model_definition = None
-        if self._model.has_model_definition():
-            model_definition = self._model.parse_model()
-
-        self._mm = MetabolicModel.load_model(
-            database, model_definition, self._model.parse_medium(),
-            self._model.parse_limits(),
-            v_max=self._model.get_default_flux_limit())
+        self._mm = self._model.create_metabolic_model()
 
 
 class SolverCommandMixin(object):

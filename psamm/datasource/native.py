@@ -34,6 +34,8 @@ import yaml
 from six import string_types, iteritems
 
 from ..reaction import Reaction, Compound, Direction
+from ..metabolicmodel import MetabolicModel
+from ..database import DictDatabase
 from .context import FilePathContext, FileMark
 from .reaction import ReactionParser
 from . import modelseed
@@ -265,6 +267,40 @@ class NativeModel(object):
             for compound in parse_compound_list(
                     self._context, self._model['compounds']):
                 yield compound
+
+    def create_metabolic_model(self):
+        """Create a :class:`psamm.metabolicmodel.MetabolicModel`."""
+
+        # Create metabolic model
+        database = DictDatabase()
+        for reaction in self.parse_reactions():
+            if reaction.equation is not None:
+                database.set_reaction(reaction.id, reaction.equation)
+
+        # Warn about undefined compounds
+        compounds = set()
+        for compound in self.parse_compounds():
+            compounds.add(compound.id)
+
+        undefined_compounds = set()
+        for reaction in database.reactions:
+            for compound, _ in database.get_reaction_values(reaction):
+                if compound.name not in compounds:
+                    undefined_compounds.add(compound.name)
+
+        for compound in sorted(undefined_compounds):
+            logger.warning(
+                'The compound {} was not defined in the list'
+                ' of compounds'.format(compound))
+
+        model_definition = None
+        if self.has_model_definition():
+            model_definition = self.parse_model()
+
+        return MetabolicModel.load_model(
+            database, model_definition, self.parse_medium(),
+            self.parse_limits(),
+            v_max=self.get_default_flux_limit())
 
     @property
     def context(self):
