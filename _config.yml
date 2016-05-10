@@ -12,7 +12,9 @@ github_username: zhanglab
 repository: zhanglab/psamm
 google_analytics: UA-57907252-3
 
-gems: ['jekyll-github-metadata']
+gems:
+  - jekyll-github-metadata
+  - jekyll-seo-tag
 
 # Build settings
 markdown: kramdown
