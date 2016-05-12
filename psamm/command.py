@@ -317,7 +317,7 @@ class SequentialExecutor(Executor):
     def apply(self, task):
         return self._handler.handle_task(*task)
 
-    def imap_unordered(self, iterable, chunksize):
+    def imap_unordered(self, iterable, chunksize=1):
         for task in iterable:
             yield task, self._handler.handle_task(*task)
 
