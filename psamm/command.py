@@ -221,7 +221,8 @@ class _ExecutorProcess(mp.Process):
         try:
             handler = self._handler_init(*self._handler_args)
             for tasks in iter(self._task_queue.get, None):
-                results = {task: handler.handle_task(*task) for task in tasks}
+                results = [
+                    (task, handler.handle_task(*task)) for task in tasks]
                 self._result_queue.put(results)
         except BaseException:
             self._result_queue.put(_ErrorMarker())
@@ -297,7 +298,7 @@ class ProcessPoolExecutor(Executor):
 
             self._task_queue.put(tasks)
 
-            for task, result in iteritems(results):
+            for task, result in results:
                 yield task, result
 
     def close(self):
