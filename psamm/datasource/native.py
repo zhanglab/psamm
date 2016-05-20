@@ -167,7 +167,7 @@ class ReactionEntry(object):
 
 class NativeModel(object):
     """Represents a model specified using the native data formats
-
+    
     The model is created from a model file or from a directory containing a
     model file using the default file name (model.yaml or model.yml). This file
     can specify the model fully or refer to other files within the same
@@ -247,7 +247,7 @@ class NativeModel(object):
 
     def parse_medium(self):
         """Yield tuples of medium compounds.
-
+        
         Each medium compound is a tuple of compound, reaction ID, lower and
         upper flux limits.
         """
@@ -309,12 +309,14 @@ class NativeModel(object):
 
 def parse_compound(compound_def, context=None):
     """Parse a structured compound definition as obtained from a YAML file
-
+    
     Returns a CompoundEntry."""
 
     compound_id = compound_def.get('id')
     if compound_id is None:
         raise ParseError('Compound ID missing')
+    elif type(compound_id) is not str:
+        raise ParseError('Compound ID must be a string')
 
     mark = FileMark(context, None, None)
     return CompoundEntry(compound_id, compound_def, mark)
@@ -322,7 +324,7 @@ def parse_compound(compound_def, context=None):
 
 def parse_compound_list(path, compounds):
     """Parse a structured list of compounds as obtained from a YAML file
-
+    
     Yields CompoundEntries. Path can be given as a string or a context.
     """
 
@@ -340,7 +342,7 @@ def parse_compound_list(path, compounds):
 
 def parse_compound_table_file(path, f):
     """Parse a tab-separated file containing compound IDs and properties
-
+    
     The compound properties are parsed according to the header which specifies
     which property is contained in each column.
     """
@@ -358,7 +360,7 @@ def parse_compound_table_file(path, f):
 
 def parse_compound_yaml_file(path, f):
     """Parse a file as a YAML-format list of compounds
-
+    
     Path can be given as a string or a context.
     """
 
@@ -367,7 +369,7 @@ def parse_compound_yaml_file(path, f):
 
 def parse_compound_file(path, format):
     """Open and parse reaction file based on file extension or given format
-
+    
     Path can be given as a string or a context.
     """
 
@@ -400,7 +402,7 @@ def parse_compound_file(path, format):
 
 def parse_reaction_equation(equation_def):
     """Parse a structured reaction equation as obtained from a YAML file
-
+    
     Returns a Reaction.
     """
 
@@ -439,7 +441,7 @@ def parse_reaction_equation(equation_def):
 
 def parse_reaction(reaction_def, context=None):
     """Parse a structured reaction definition as obtained from a YAML file
-
+    
     Returns a ReactionEntry.
     """
 
@@ -460,7 +462,7 @@ def parse_reaction(reaction_def, context=None):
 
 def parse_reaction_list(path, reactions):
     """Parse a structured list of reactions as obtained from a YAML file
-
+    
     Yields tuples of reaction ID and reaction object. Path can be given as a
     string or a context.
     """
@@ -478,7 +480,7 @@ def parse_reaction_list(path, reactions):
 
 def parse_reaction_yaml_file(path, f):
     """Parse a file as a YAML-format list of reactions
-
+    
     Path can be given as a string or a context.
     """
 
@@ -487,7 +489,7 @@ def parse_reaction_yaml_file(path, f):
 
 def parse_reaction_table_file(path, f):
     """Parse a tab-separated file containing reaction IDs and properties
-
+    
     The reaction properties are parsed according to the header which specifies
     which property is contained in each column.
     """
@@ -509,7 +511,7 @@ def parse_reaction_table_file(path, f):
 
 def parse_reaction_file(path):
     """Open and parse reaction file based on file extension
-
+    
     Path can be given as a string or a context.
     """
 
@@ -534,7 +536,7 @@ def parse_reaction_file(path):
 
 def parse_medium(medium_def):
     """Parse a structured medium definition as obtained from a YAML file
-
+    
     Returns in iterator of compound, reaction, lower and upper bounds.
     """
 
@@ -551,7 +553,7 @@ def parse_medium(medium_def):
 
 def parse_medium_list(path, medium):
     """Parse a structured medium list as obtained from a YAML file.
-
+    
     Yields tuples of compound, reaction ID, lower and upper flux bounds. Path
     can be given as a string or a context.
     """
@@ -570,7 +572,7 @@ def parse_medium_list(path, medium):
 
 def parse_medium_yaml_file(path, f):
     """Parse a file as a YAML-format medium definition
-
+    
     Path can be given as a string or a context.
     """
 
@@ -579,7 +581,7 @@ def parse_medium_yaml_file(path, f):
 
 def parse_medium_table_file(f):
     """Parse a space-separated file containing medium compound flux limits
-
+    
     The first two columns contain compound IDs and compartment while the
     third column contains the lower flux limits. The fourth column is
     optional and contains the upper flux limit.
@@ -610,7 +612,7 @@ def parse_medium_table_file(f):
 
 def parse_medium_file(path):
     """Parse a file as a list of medium compounds with flux limits
-
+    
     The file format is detected and the file is parsed accordingly. Path can
     be given as a string or a context.
     """
@@ -636,7 +638,7 @@ def parse_medium_file(path):
 
 def parse_limit(limit_def):
     """Parse a structured flux limit definition as obtained from a YAML file
-
+    
     Returns a tuple of reaction, lower and upper bound.
     """
 
@@ -652,7 +654,7 @@ def parse_limit(limit_def):
 
 def parse_limits_list(path, limits):
     """Parse a structured list of flux limits as obtained from a YAML file
-
+    
     Yields tuples of reaction ID, lower and upper flux bounds. Path can be
     given as a string or a context.
     """
@@ -670,7 +672,7 @@ def parse_limits_list(path, limits):
 
 def parse_limits_table_file(f):
     """Parse a space-separated file containing reaction flux limits
-
+    
     The first column contains reaction IDs while the second column contains
     the lower flux limits. The third column is optional and contains the
     upper flux limit.
@@ -700,7 +702,7 @@ def parse_limits_table_file(f):
 
 def parse_limits_yaml_file(path, f):
     """Parse a file as a YAML-format flux limits definition
-
+    
     Path can be given as a string or a context.
     """
 
@@ -709,7 +711,7 @@ def parse_limits_yaml_file(path, f):
 
 def parse_limits_file(path):
     """Parse a file as a list of reaction flux limits
-
+    
     The file format is detected and the file is parsed accordingly. Path can
     be given as a string or a context.
     """
@@ -735,7 +737,7 @@ def parse_limits_file(path):
 
 def parse_model_group(path, group):
     """Parse a structured model group as obtained from a YAML file
-
+    
     Path can be given as a string or a context.
     """
 
@@ -752,7 +754,7 @@ def parse_model_group(path, group):
 
 def parse_model_group_list(path, groups):
     """Parse a structured list of model groups as obtained from a YAML file
-
+    
     Yields reaction IDs. Path can be given as a string or a context.
     """
 
@@ -769,7 +771,7 @@ def parse_model_group_list(path, groups):
 
 def parse_model_yaml_file(path, f):
     """Parse a file as a YAML-format list of model reaction groups
-
+    
     Path can be given as a string or a context.
     """
     return parse_model_group_list(path, yaml_load(f))
@@ -777,7 +779,7 @@ def parse_model_yaml_file(path, f):
 
 def parse_model_table_file(path, f):
     """Parse a file as a list of model reactions
-
+    
     Yields reactions IDs. Path can be given as a string or a context.
     """
 
@@ -792,7 +794,7 @@ def parse_model_table_file(path, f):
 
 def parse_model_file(path):
     """Parse a file as a list of model reactions
-
+    
     The file format is detected and the file is parsed accordinly. The file is
     specified as a file path that will be opened for reading. Path can be given
     as a string or a context.
@@ -810,3 +812,4 @@ def parse_model_file(path):
         with context.open('r') as f:
             for reaction_id in parse_model_yaml_file(context, f):
                 yield reaction_id
+
