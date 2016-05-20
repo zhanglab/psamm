@@ -784,8 +784,3 @@ def parse_model_file(path):
             for reaction_id in parse_model_yaml_file(context, f):
                 yield reaction_id
 
-    Status API Training Shop Blog About 
-
-    © 2016 GitHub, Inc. Terms Privacy Security Contact Help 
-
-
