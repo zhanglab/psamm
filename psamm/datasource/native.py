@@ -315,6 +315,8 @@ def parse_compound(compound_def, context=None):
     compound_id = compound_def.get('id')
     if compound_id is None:
         raise ParseError('Compound ID missing')
+    elif type(compound_id) is not str:
+        raise ParseError('Compound ID is not string')
 
     mark = FileMark(context, None, None)
     return CompoundEntry(compound_id, compound_def, mark)
