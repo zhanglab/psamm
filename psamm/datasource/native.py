@@ -283,15 +283,33 @@ class NativeModel(object):
             compounds.add(compound.id)
 
         undefined_compounds = set()
+        extracellular_compounds = set()
+        extracellular = self.get_extracellular_compartment()
         for reaction in database.reactions:
             for compound, _ in database.get_reaction_values(reaction):
                 if compound.name not in compounds:
                     undefined_compounds.add(compound.name)
+                if compound.compartment == extracellular:
+                    extracellular_compounds.add(compound.name)
 
         for compound in sorted(undefined_compounds):
             logger.warning(
                 'The compound {} was not defined in the list'
                 ' of compounds'.format(compound))
+
+        medium_compounds = set()
+        for medium_compound in self.parse_medium():
+            if medium_compound[0].compartment == extracellular:
+                medium_compounds.add(medium_compound[0].name)
+
+        for compound in sorted(extracellular_compounds - medium_compounds):
+            logger.warning(
+                'The compound {} was in the extracellular compartment'
+                ' but not defined in the medium'.format(compound))
+        for compound in sorted(medium_compounds - extracellular_compounds):
+            logger.warning(
+                'The compound {} was defined in the medium but'
+                ' is not in the extracellular compartment'.format(compound))
 
         model_definition = None
         if self.has_model_definition():
