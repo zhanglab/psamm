@@ -251,13 +251,21 @@ class NativeModel(object):
         Each medium compound is a tuple of compound, reaction ID, lower and
         upper flux limits.
         """
-
+        extracellular = self.get_extracellular_compartment()
         if 'media' in self._model:
             if not isinstance(self._model['media'], list):
                 raise ParseError('Expected media to be a list')
 
             for medium_compound in parse_medium_list(
                     self._context, self._model['media']):
+                compound, reaction_id, lower, upper = medium_compound
+                if not compound.compartment:
+                    compound._compartment = extracellular
+                    medium_compound = (compound,
+                                       reaction_id,
+                                       lower,
+                                       upper
+                                      )
                 yield medium_compound
 
     def parse_compounds(self):
