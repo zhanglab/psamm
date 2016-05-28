@@ -129,6 +129,22 @@ class TestYAMLFileSystemData(unittest.TestCase):
         self.assertEqual(model.get_extracellular_compartment(), 'Extra')
         self.assertEqual(model.get_default_flux_limit(), 500)
 
+    def test_parse_model_file_with_media(self):
+        path = self.write_model_file('model.yaml', '\n'.join([
+            'extracellular: Ex',
+            'media:',
+            ' - compounds:',
+            '    - id: A',
+            '    - id: B',
+            '      compartment: c'
+        ]))
+
+        model = native.NativeModel(path)
+
+        medium = list(model.parse_medium())
+        self.assertEqual(medium[0][0], Compound('A', 'Ex'))
+        self.assertEqual(medium[1][0], Compound('B', 'c'))
+
     def test_parse_compound_tsv_file(self):
         path = self.write_model_file('compounds.tsv', '\n'.join([
             'id\tname\tformula\tcharge\tkegg\tcas',
