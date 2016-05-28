@@ -261,11 +261,7 @@ class NativeModel(object):
                 compound, reaction_id, lower, upper = medium_compound
                 if not compound.compartment:
                     compound._compartment = extracellular
-                    medium_compound = (compound,
-                                       reaction_id,
-                                       lower,
-                                       upper
-                                      )
+                    medium_compound = (compound, reaction_id, lower, upper)
                 yield medium_compound
 
     def parse_compounds(self):
