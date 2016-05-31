@@ -38,8 +38,8 @@ class FluxBalanceCommand(MetabolicMixin, SolverCommandMixin, Command):
             '--all-reactions', help='Show all reaction fluxes',
             action='store_true')
         parser.add_argument(
-            '--epsilon', type=float, help='Threshold for flux minimization',
-            default=1e-5)
+            '--epsilon', type=float,
+            help='Threshold for non-zero reaction fluxes', default=1e-5)
         parser.add_argument('reaction', help='Reaction to maximize', nargs='?')
         super(FluxBalanceCommand, cls).init_parser(parser)
 

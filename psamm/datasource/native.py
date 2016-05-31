@@ -34,6 +34,8 @@ import yaml
 from six import string_types, iteritems
 
 from ..reaction import Reaction, Compound, Direction
+from ..metabolicmodel import MetabolicModel
+from ..database import DictDatabase
 from .context import FilePathContext, FileMark
 from .reaction import ReactionParser
 from . import modelseed
@@ -250,13 +252,17 @@ class NativeModel(object):
         upper flux limits.
         """
 
+        extracellular = self.get_extracellular_compartment()
         if 'media' in self._model:
             if not isinstance(self._model['media'], list):
                 raise ParseError('Expected media to be a list')
 
             for medium_compound in parse_medium_list(
                     self._context, self._model['media']):
-                yield medium_compound
+                compound, reaction_id, lower, upper = medium_compound
+                if compound.compartment is None:
+                    compound = compound.in_compartment(extracellular)
+                yield compound, reaction_id, lower, upper
 
     def parse_compounds(self):
         """Yield CompoundEntries for defined compounds"""
@@ -265,6 +271,58 @@ class NativeModel(object):
             for compound in parse_compound_list(
                     self._context, self._model['compounds']):
                 yield compound
+
+    def create_metabolic_model(self):
+        """Create a :class:`psamm.metabolicmodel.MetabolicModel`."""
+
+        # Create metabolic model
+        database = DictDatabase()
+        for reaction in self.parse_reactions():
+            if reaction.equation is not None:
+                database.set_reaction(reaction.id, reaction.equation)
+
+        # Warn about undefined compounds
+        compounds = set()
+        for compound in self.parse_compounds():
+            compounds.add(compound.id)
+
+        undefined_compounds = set()
+        extracellular_compounds = set()
+        extracellular = self.get_extracellular_compartment()
+        for reaction in database.reactions:
+            for compound, _ in database.get_reaction_values(reaction):
+                if compound.name not in compounds:
+                    undefined_compounds.add(compound.name)
+                if compound.compartment == extracellular:
+                    extracellular_compounds.add(compound.name)
+
+        for compound in sorted(undefined_compounds):
+            logger.warning(
+                'The compound {} was not defined in the list'
+                ' of compounds'.format(compound))
+
+        medium_compounds = set()
+        for medium_compound in self.parse_medium():
+            if medium_compound[0].compartment == extracellular:
+                medium_compounds.add(medium_compound[0].name)
+
+        for compound in sorted(extracellular_compounds - medium_compounds):
+            logger.warning(
+                'The compound {} was in the extracellular compartment'
+                ' but not defined in the medium'.format(compound))
+        for compound in sorted(medium_compounds - extracellular_compounds):
+            logger.warning(
+                'The compound {} was defined in the medium but'
+                ' is not in the extracellular compartment'.format(compound))
+
+        model_definition = None
+        if self.has_model_definition():
+            model_definition = self.parse_model()
+
+        return MetabolicModel.load_model(
+            database, model_definition, self.parse_medium(),
+            self.parse_limits(),
+            v_max=self.get_default_flux_limit())
 
     @property
     def context(self):

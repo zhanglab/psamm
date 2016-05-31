@@ -39,8 +39,6 @@ from six import add_metaclass, iteritems, itervalues
 
 from . import __version__ as package_version
 from .datasource.native import NativeModel
-from .metabolicmodel import MetabolicModel
-from .database import DictDatabase
 from .lpsolver import generic
 from . import util
 
@@ -100,36 +98,7 @@ class MetabolicMixin(object):
     def __init__(self, *args, **kwargs):
         super(MetabolicMixin, self).__init__(*args, **kwargs)
 
-        # Create metabolic model
-        database = DictDatabase()
-        for reaction in self._model.parse_reactions():
-            if reaction.equation is not None:
-                database.set_reaction(reaction.id, reaction.equation)
-
-        # Warn about undefined compounds
-        compounds = set()
-        for compound in self._model.parse_compounds():
-            compounds.add(compound.id)
-
-        undefined_compounds = set()
-        for reaction in database.reactions:
-            for compound, _ in database.get_reaction_values(reaction):
-                if compound.name not in compounds:
-                    undefined_compounds.add(compound.name)
-
-        for compound in sorted(undefined_compounds):
-            logger.warning(
-                'The compound {} was not defined in the list'
-                ' of compounds'.format(compound))
-
-        model_definition = None
-        if self._model.has_model_definition():
-            model_definition = self._model.parse_model()
-
-        self._mm = MetabolicModel.load_model(
-            database, model_definition, self._model.parse_medium(),
-            self._model.parse_limits(),
-            v_max=self._model.get_default_flux_limit())
+        self._mm = self._model.create_metabolic_model()
 
 
 class SolverCommandMixin(object):
@@ -252,7 +221,8 @@ class _ExecutorProcess(mp.Process):
         try:
             handler = self._handler_init(*self._handler_args)
             for tasks in iter(self._task_queue.get, None):
-                results = {task: handler.handle_task(*task) for task in tasks}
+                results = [
+                    (task, handler.handle_task(*task)) for task in tasks]
                 self._result_queue.put(results)
         except BaseException:
             self._result_queue.put(_ErrorMarker())
@@ -328,7 +298,7 @@ class ProcessPoolExecutor(Executor):
 
             self._task_queue.put(tasks)
 
-            for task, result in iteritems(results):
+            for task, result in results:
                 yield task, result
 
     def close(self):
@@ -347,7 +317,7 @@ class SequentialExecutor(Executor):
     def apply(self, task):
         return self._handler.handle_task(*task)
 
-    def imap_unordered(self, iterable, chunksize):
+    def imap_unordered(self, iterable, chunksize=1):
         for task in iterable:
             yield task, self._handler.handle_task(*task)
 
