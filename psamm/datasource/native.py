@@ -260,10 +260,9 @@ class NativeModel(object):
             for medium_compound in parse_medium_list(
                     self._context, self._model['media']):
                 compound, reaction_id, lower, upper = medium_compound
-                if not compound.compartment:
-                    compound._compartment = extracellular
-                    medium_compound = (compound, reaction_id, lower, upper)
-                yield medium_compound
+                if compound.compartment is None:
+                    compound = compound.in_compartment(extracellular)
+                yield compound, reaction_id, lower, upper
 
     def parse_compounds(self):
         """Yield CompoundEntries for defined compounds"""
