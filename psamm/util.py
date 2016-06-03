@@ -144,6 +144,9 @@ class FrozenOrderedSet(collections.Set, collections.Hashable):
             h ^= 31 * hash(e)
         return h
 
+    def __repr__(self):
+        return str('{}({})').format(self.__class__.__name__, list(self))
+
 
 def git_try_describe(repo_path):
     """Try to describe the current commit of a Git repository.
