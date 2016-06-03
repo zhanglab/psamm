@@ -82,7 +82,7 @@ class ChargeBalanceCommand(Command):
                 unbalanced += 1
                 rxt = reaction.equation.translated_compounds(
                     lambda x: compound_name.get(x, x))
-                print('{}\t{}\t{}'.format(reaction, charge, rxt))
+                print('{}\t{}\t{}'.format(reaction.id, charge, rxt))
 
         logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))
         logger.info('Unchecked reactions due to missing charge: {}/{}'.format(
