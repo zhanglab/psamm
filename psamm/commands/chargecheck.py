@@ -70,7 +70,7 @@ class ChargeBalanceCommand(Command):
         for reaction in self._model.parse_reactions():
             count += 1
 
-            if reaction in exclude or reaction.equation is None:
+            if reaction.id in exclude or reaction.equation is None:
                 continue
 
             charge = sum(reaction_charges(reaction.equation))
