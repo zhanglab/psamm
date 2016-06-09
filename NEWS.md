@@ -1,3 +1,20 @@
+v0.21 (2016-06-09)
+------------------
+
+- Add `genedelete` command to allow users to delete one or more genes and
+  perform a viability check on the model after all related reactions are
+  deleted.
+- Add `balancecheck` module which allows API access to charge balance and
+  formula balance checks.
+- When a compound in the extracellular space doesn't have an exchange reaction,
+  a warning would be provided so that the user may add the compound to the
+  medium.
+- If a compartment is not given for a medium, it will now be assumed to have
+  the extracellular compartment.
+- When using Gurobi and Cplex, the default optimality tolerance and feasibility
+  tolerance has been decreased to 1e-9.
+- Fixed a bug where the reaction IDs are not printed properly in the result of
+  `chargecheck` command.
 
 v0.20 (2016-03-10)
 ------------------

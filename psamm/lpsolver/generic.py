@@ -168,7 +168,7 @@ def parse_solver_setting(s):
         value = value.lower() in ('1', 'yes', 'true', 'on')
     elif key in ('threads',):
         value = int(value)
-    elif key in ('feasibility_tolerance',):
+    elif key in ('feasibility_tolerance', 'optimality_tolerance'):
         value = float(value)
 
     return key, value

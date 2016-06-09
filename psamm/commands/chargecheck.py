@@ -21,6 +21,7 @@ import math
 import logging
 
 from ..command import Command, FilePrefixAppendAction
+from ..balancecheck import charge_balance
 
 logger = logging.getLogger(__name__)
 
@@ -49,40 +50,30 @@ class ChargeBalanceCommand(Command):
 
         # Load compound information
         compound_name = {}
-        compound_charge = {}
         for compound in self._model.parse_compounds():
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
-            if hasattr(compound, 'charge') and compound.charge is not None:
-                compound_charge[compound.id] = compound.charge
 
         # Create a set of excluded reactions
         exclude = set(self._args.exclude)
-
-        def reaction_charges(reaction):
-            for compound, value in reaction.compounds:
-                charge = compound_charge.get(compound.name, float('nan'))
-                yield charge * float(value)
-
         count = 0
         unbalanced = 0
         unchecked = 0
-        for reaction in self._model.parse_reactions():
+        for reaction, charge in charge_balance(self._model):
             count += 1
 
-            if reaction in exclude or reaction.equation is None:
+            if reaction.id in exclude or reaction.equation is None:
                 continue
 
-            charge = sum(reaction_charges(reaction.equation))
             if math.isnan(charge):
                 logger.debug('Not checking reaction {};'
-                             ' missing charge'.format(reaction))
+                             ' missing charge'.format(reaction.id))
                 unchecked += 1
             elif abs(charge) > self._args.epsilon:
                 unbalanced += 1
                 rxt = reaction.equation.translated_compounds(
                     lambda x: compound_name.get(x, x))
-                print('{}\t{}\t{}'.format(reaction, charge, rxt))
+                print('{}\t{}\t{}'.format(reaction.id, charge, rxt))
 
         logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))
         logger.info('Unchecked reactions due to missing charge: {}/{}'.format(
