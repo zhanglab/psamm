@@ -22,6 +22,7 @@ import logging
 
 from ..command import Command, MetabolicMixin, SolverCommandMixin, CommandError
 from .. import fastcore, fluxanalysis
+from ..fastgapfill import create_extended_model, fastgapfill
 
 logger = logging.getLogger(__name__)
 
@@ -69,18 +70,6 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
 
-        epsilon = self._args.epsilon
-        model_compartments = set(self._mm.compartments)
-        extra_comp = self._model.get_extracellular_compartment()
-
-        # Add exchange and transport reactions to database
-        model_complete = self._mm.copy()
-        logger.info('Adding database, exchange and transport reactions')
-        db_added = model_complete.add_all_database_reactions(
-            model_compartments)
-        ex_added = model_complete.add_all_exchange_reactions(extra_comp)
-        tp_added = model_complete.add_all_transport_reactions(extra_comp)
-
         # TODO: The exchange and transport reactions have tuple names. This
         # means that in Python 3 the reactions can no longer be directly
         # compared (e.g. while sorting) so define this helper function as a
@@ -88,15 +77,8 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         def reaction_key(r):
             return r if isinstance(r, tuple) else (r,)
 
-        # Add penalty weights on reactions
-        weights = {}
-        if self._args.db_weight is not None:
-            weights.update((rxnid, self._args.db_weight) for rxnid in db_added)
-        if self._args.tp_weight is not None:
-            weights.update((rxnid, self._args.tp_weight) for rxnid in tp_added)
-        if self._args.ex_weight is not None:
-            weights.update((rxnid, self._args.ex_weight) for rxnid in ex_added)
-
+        # Calculate penalty if penalty file exists
+        penalties = {}
         if self._args.penalty is not None:
             for line in self._args.penalty:
                 line, _, comment = line.partition('#')
@@ -104,18 +86,19 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
                 if line == '':
                     continue
                 rxnid, weight = line.split(None, 1)
-                weights[rxnid] = float(weight)
+                penalties[rxnid] = float(weight)
 
-        # Run Fastcore and print the induced reaction set
-        logger.info('Calculating Fastcore induced set on model')
+        model_extended, weights = create_extended_model(
+            self._model,
+            db_weight=self._args.db_weight,
+            ex_weight=self._args.ex_weight,
+            tp_weight=self._args.tp_weight,
+            penalties=penalties)
+
+        epsilon = self._args.epsilon
         core = set(self._mm.reactions)
-
-        induced = fastcore.fastcore(model_complete, core, epsilon,
-                                    weights=weights, solver=solver)
-        logger.info('Result: |A| = {}, A = {}'.format(len(induced), induced))
-        added_reactions = induced - core
-        logger.info('Extended: |E| = {}, E = {}'.format(
-            len(added_reactions), added_reactions))
+        induced = fastgapfill(model_extended, core, weights=weights,
+                              epsilon=epsilon, solver=solver)
 
         if self._args.reaction is not None:
             maximized_reaction = self._args.reaction
@@ -131,9 +114,9 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         logger.info('Flux balance on induced model maximizing {}'.format(
             maximized_reaction))
-        model_induced = self._mm.copy()
-        for rxnid in induced:
-            model_induced.add_reaction(rxnid)
+        model_induced = model_extended.copy()
+        for rxnid in set(model_extended.reactions) - induced:
+            model_induced.remove_reaction(rxnid)
         for rxnid, flux in sorted(fluxanalysis.flux_balance(
                 model_induced, maximized_reaction, tfba=enable_tfba,
                 solver=solver), key=lambda x: (reaction_key(x[0]), x[1])):
@@ -142,7 +125,7 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             if self._mm.has_reaction(rxnid):
                 reaction_class = 'Model'
                 weight = 0
-            rx = model_complete.get_reaction(rxnid)
+            rx = model_induced.get_reaction(rxnid)
             rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
             print('{}\t{}\t{}\t{}\t{}'.format(
                 rxnid, reaction_class, weight, flux, rxt))
