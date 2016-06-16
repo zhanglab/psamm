@@ -82,8 +82,9 @@ class FormulaElement(object):
 class _AtomType(type):
     """Metaclass that gives the Atom class properties for each element.
 
-    A class based on this metaclass (i.e. :class:`.Atom`) will have a
-    property for each element which contains an instance of that element.
+    A class based on this metaclass (i.e. :class:`.Atom`) will have singleton
+    elements with each name, and will have a property for each element which
+    contains the instance for that element.
     """
 
     _ELEMENTS = set([
@@ -98,6 +99,15 @@ class _AtomType(type):
         'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt',
         'Ds', 'Rg', 'Cn', 'Uut', 'Fl', 'Uup', 'Lv', 'Uus', 'Uuo'
     ])
+
+    _instances = {}
+
+    def __call__(self, name, *args, **kwargs):
+        instances = _AtomType._instances.setdefault(self, {})
+        if name not in instances:
+            instances[name] = super(_AtomType, self).__call__(
+                name, *args, **kwargs)
+        return instances[name]
 
     def __getattribute__(self, name):
         if name in _AtomType._ELEMENTS:
