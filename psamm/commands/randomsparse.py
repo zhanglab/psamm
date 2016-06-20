@@ -15,18 +15,14 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
-
+# Copyright 2016  Chao Liu <lcddzyx@gmail.com>
 from __future__ import unicode_literals
 
-import time
-import random
 import logging
 
 from ..command import Command, MetabolicMixin, SolverCommandMixin, CommandError
 from .. import fluxanalysis, util
-from ..expression import boolean
-
-from six import string_types
+from .. import randomsparse
 
 logger = logging.getLogger(__name__)
 
@@ -91,173 +87,23 @@ class RandomSparseNetworkCommand(MetabolicMixin, SolverCommandMixin, Command):
         logger.info('Flux threshold for {} is {}'.format(
             reaction, flux_threshold))
 
-        if self._args.type in ('reactions', 'exchange'):
-            self._delete_reactions(p, reaction, flux_threshold)
-        elif self._args.type == 'genes':
-            self._delete_genes(p, reaction, flux_threshold)
-
-    def _delete_reactions(self, prob, obj_reaction, flux_threshold):
-        essential = {obj_reaction}
         if self._args.type == 'exchange':
-            reactions = set()
-            for reaction_id in self._mm.reactions:
-                if self._mm.is_exchange(reaction_id):
-                    reactions.add(reaction_id)
+            strategy = randomsparse.ReactionDeletionStrategy(
+                self._mm, randomsparse.get_exchange_reactions(self._mm))
+            entity = 'reactions'
+        elif self._args.type == 'reactions':
+            strategy = randomsparse.ReactionDeletionStrategy(
+                self._mm)
+            entity = 'reactions'
         else:
-            reactions = set(self._mm.reactions)
-        test_set = reactions - essential
-        deleted = set()
+            strategy = randomsparse.GeneDeletionStrategy(
+                self._mm, randomsparse.get_gene_associations(self._model))
+            entity = 'genes'
 
-        start_time = time.time()
+        essential, deleted = randomsparse.random_sparse(
+            strategy, p, reaction, flux_threshold)
 
-        while len(test_set) > 0:
-            testing_reaction = random.sample(test_set, 1)[0]
-            test_set.remove(testing_reaction)
-
-            flux_var = prob.get_flux_var(testing_reaction)
-            c, = prob.prob.add_linear_constraints(flux_var == 0)
-
-            logger.info('Trying FBA without reaction {}...'.format(
-                testing_reaction))
-
-            try:
-                prob.maximize(obj_reaction)
-            except fluxanalysis.FluxBalanceError:
-                logger.info(
-                    'FBA is infeasible, marking {} as essential'.format(
-                        testing_reaction))
-                c.delete()
-                essential.add(testing_reaction)
-                continue
-
-            logger.debug('Reaction {} has flux {}'.format(
-                obj_reaction, prob.get_flux(obj_reaction)))
-
-            if prob.get_flux(obj_reaction) < flux_threshold:
-                c.delete()
-                essential.add(testing_reaction)
-                logger.info('Reaction {} was essential'.format(
-                    testing_reaction))
-            else:
-                deleted.add(testing_reaction)
-                logger.info('Reaction {} was deleted'.format(testing_reaction))
-
-        logger.info('Solving took {:.2f} seconds'.format(
-            time.time() - start_time))
-
-        for reaction_id in sorted(reactions):
-            value = 0 if reaction_id in deleted else 1
-            print('{}\t{}'.format(reaction_id, value))
-
-        logger.info('Essential reactions: {}/{}'.format(
-            len(essential), len(reactions)))
-
-    def _delete_genes(self, prob, obj_reaction, flux_threshold):
-        genes = set()
-        gene_assoc = {}
-        for reaction in self._model.parse_reactions():
-            assoc = None
-            if reaction.genes is None:
-                continue
-            elif isinstance(reaction.genes, string_types):
-                assoc = boolean.Expression(reaction.genes)
-            else:
-                variables = [boolean.Variable(g) for g in reaction.genes]
-                assoc = boolean.Expression(boolean.And(*variables))
-            genes.update(v.symbol for v in assoc.variables)
-            gene_assoc[reaction.id] = assoc
-
-        essential = set()
-        deleted = set()
-        test_set = set(genes)
-        reactions = set(self._mm.reactions)
-
-        start_time = time.time()
-
-        while len(test_set) > 0:
-            testing_gene = random.sample(test_set, 1)[0]
-            test_set.remove(testing_gene)
-            new_gene_assoc = {}
-            deleted_reactions = set()
-
-            logger.info('Trying model without gene {}...'.format(
-                testing_gene))
-
-            for reaction in reactions:
-                if reaction not in gene_assoc:
-                    continue
-                assoc = gene_assoc[reaction]
-                if boolean.Variable(testing_gene) in assoc.variables:
-                    new_assoc = assoc.substitute(
-                        lambda v: v if v.symbol != testing_gene else False)
-                    if new_assoc.has_value() and not new_assoc.value:
-                        deleted_reactions.add(reaction)
-                    else:
-                        new_gene_assoc[reaction] = new_assoc
-                else:
-                    new_gene_assoc[reaction] = assoc
-
-            if obj_reaction in deleted_reactions:
-                logger.info(
-                    'Marking gene {} as essential because the objective'
-                    ' reaction depends on this gene...'.format(testing_gene))
-                essential.add(testing_gene)
-                continue
-
-            if len(deleted_reactions) == 0:
-                logger.info(
-                    'No reactions were removed when gene {}'
-                    ' was deleted'.format(testing_gene))
-                deleted.add(testing_gene)
-                gene_assoc = new_gene_assoc
-                continue
-
-            logger.info(
-                'Reactions removed when gene {} is deleted: {}'.format(
-                    testing_gene, len(deleted_reactions)))
-            logger.info('Deleted reactions: {}'.format(
-                ', '.join(deleted_reactions)))
-
-            constraints = []
-            for reaction in deleted_reactions:
-                flux_var = prob.get_flux_var(reaction)
-                c, = prob.prob.add_linear_constraints(flux_var == 0)
-                constraints.append(c)
-
-            try:
-                prob.maximize(obj_reaction)
-            except fluxanalysis.FluxBalanceError:
-                logger.info(
-                    'FBA is infeasible, marking {} as essential'.format(
-                        testing_gene))
-                for c in constraints:
-                    c.delete()
-                essential.add(testing_gene)
-                continue
-
-            logger.debug('Reaction {} has flux {}'.format(
-                obj_reaction, prob.get_flux(obj_reaction)))
-
-            if prob.get_flux(obj_reaction) < flux_threshold:
-                for c in constraints:
-                    c.delete()
-                essential.add(testing_gene)
-                logger.info('Gene {} was essential'.format(testing_gene))
-            else:
-                deleted.add(testing_gene)
-                reactions.difference_update(deleted_reactions)
-                gene_assoc = new_gene_assoc
-                logger.info('Gene {} was deleted'.format(testing_gene))
-
-        logger.info('Solving took {:.2f} seconds'.format(
-            time.time() - start_time))
-
-        for gene_id in sorted(genes):
-            value = 0 if gene_id in deleted else 1
-            print('{}\t{}'.format(gene_id, value))
-
-        logger.info('Essential genes: {}/{}'.format(
-            len(essential), len(genes)))
-
-        logger.info('Reactions in minimal network: {}'.format(
-            ', '.join(sorted(reactions))))
+        logger.info('Essential {}: {}/{}'.format(
+            entity, len(essential), len(strategy.entities)))
+        logger.info('Deleted {}: {}/{}'.format(
+            entity, len(deleted), len(strategy.entities)))
