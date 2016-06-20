@@ -79,13 +79,50 @@ class FormulaElement(object):
         return self
 
 
+class _AtomType(type):
+    """Metaclass that gives the Atom class properties for each element.
+
+    A class based on this metaclass (i.e. :class:`.Atom`) will have singleton
+    elements with each name, and will have a property for each element which
+    contains the instance for that element.
+    """
+
+    _ELEMENTS = set([
+        'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na', 'Mg', 'Al',
+        'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn',
+        'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb',
+        'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In',
+        'Sn', 'Sb', 'Te', 'I', 'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm',
+        'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu', 'Hf', 'Ta',
+        'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi', 'Po', 'At',
+        'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 'Bk',
+        'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt',
+        'Ds', 'Rg', 'Cn', 'Uut', 'Fl', 'Uup', 'Lv', 'Uus', 'Uuo'
+    ])
+
+    _instances = {}
+
+    def __call__(self, name, *args, **kwargs):
+        instances = _AtomType._instances.setdefault(self, {})
+        if name not in instances:
+            instances[name] = super(_AtomType, self).__call__(
+                name, *args, **kwargs)
+        return instances[name]
+
+    def __getattribute__(self, name):
+        if name in _AtomType._ELEMENTS:
+            return self(name)
+        return super(_AtomType, self).__getattribute__(name)
+
+
 @six.python_2_unicode_compatible
 @functools.total_ordering
+@six.add_metaclass(_AtomType)
 class Atom(FormulaElement):
     """Represent an atom in a chemical formula
 
-    >>> hydrogen = Atom('H')
-    >>> oxygen = Atom('O')
+    >>> hydrogen = Atom.H
+    >>> oxygen = Atom.O
     >>> str(oxygen | 2*hydrogen)
     'H2O'
     """
@@ -97,7 +134,7 @@ class Atom(FormulaElement):
     def symbol(self):
         """Atom symbol
 
-        >>> Atom('H').symbol
+        >>> Atom.H.symbol
         'H'
         """
 
@@ -164,7 +201,7 @@ class Formula(FormulaElement):
     This is represented as a number of
     :class:`FormulaElements <.FormulaElement>` with associated counts.
 
-    >>> f = Formula({Atom('C'): 6, Atom('H'): 12, Atom('O'): 6})
+    >>> f = Formula({Atom.C: 6, Atom.H: 12, Atom.O: 6})
     >>> str(f)
     'C6H12O6'
     """
@@ -235,7 +272,7 @@ class Formula(FormulaElement):
     def __str__(self):
         """Return formula represented using Hill notation system
 
-        >>> str(Formula({Atom('C'): 6, Atom('H'): 12, Atom('O'): 6}))
+        >>> str(Formula({Atom.C: 6, Atom.H: 12, Atom.O: 6}))
         'C6H12O6'
         """
 
@@ -249,13 +286,13 @@ class Formula(FormulaElement):
                 else:
                     return 2, None
 
-            if Atom('C') in values:
-                yield Atom('C'), values[Atom('C')]
-                if Atom('H') in values:
-                    yield Atom('H'), values[Atom('H')]
+            if Atom.C in values:
+                yield Atom.C, values[Atom.C]
+                if Atom.H in values:
+                    yield Atom.H, values[Atom.H]
                 for element, value in sorted(
                         iteritems(values), key=element_sort_key):
-                    if element not in (Atom('C'), Atom('H')):
+                    if element not in (Atom.C, Atom.H):
                         yield element, value
             else:
                 for element, value in sorted(
