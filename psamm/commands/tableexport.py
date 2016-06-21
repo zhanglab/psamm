@@ -19,9 +19,9 @@ from __future__ import unicode_literals
 
 import logging
 
-from ..command import Command
-
 from six import text_type
+
+from ..command import Command
 
 logger = logging.getLogger(__name__)
 

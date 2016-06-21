@@ -115,7 +115,8 @@ class Compound(object):
         """
         s = self._name
         if len(self._arguments) > 0:
-            s += '({})'.format(', '.join(str(a) for a in self._arguments))
+            s += '({})'.format(
+                ', '.join(text_type(a) for a in self._arguments))
         if self._compartment is not None:
             s += '[{}]'.format(self._compartment)
         return s
@@ -336,7 +337,7 @@ class Reaction(object):
         # Use the same format as ModelSEED
         def format_compound(compound, count):
             """Format compound"""
-            cpdspec = str(compound)
+            cpdspec = text_type(compound)
             if count != 1:
                 return '({}) |{}|'.format(count, cpdspec)
             return '|{}|'.format(cpdspec)
