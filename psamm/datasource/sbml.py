@@ -26,7 +26,7 @@ from functools import partial
 from itertools import count
 import logging
 
-from six import itervalues, iteritems
+from six import itervalues, iteritems, text_type
 
 from ..reaction import Reaction, Compound, Direction
 
@@ -58,7 +58,7 @@ FBC_V2 = 'http://www.sbml.org/sbml/level3/version1/fbc/version2'
 def _tag(tag, namespace=None):
     """Prepend namespace to tag name"""
     if namespace is None:
-        return str(tag)
+        return text_type(tag)
     return '{{{}}}{}'.format(namespace, tag)
 
 
@@ -672,9 +672,9 @@ class SBMLWriter(object):
         model_tag = ET.SubElement(root, self._sbml_tag('model'))
 
         # Generators of unique IDs
-        compound_id = ('M_'+str(i) for i in count(1))
-        compartment_id = ('C_'+str(i) for i in count(1))
-        reaction_id = ('R_'+str(i) for i in count(1))
+        compound_id = ('M_{}'.format(i) for i in count(1))
+        compartment_id = ('C_{}'.format(i) for i in count(1))
+        reaction_id = ('R_{}'.format(i) for i in count(1))
 
         # Build mapping from Compound to species ID
         model_compartments = {}
@@ -694,7 +694,7 @@ class SBMLWriter(object):
             compartment_tag = ET.SubElement(
                 compartments, self._sbml_tag('compartment'))
             compartment_tag.set(self._sbml_tag('id'), compartment_id)
-            compartment_tag.set(self._sbml_tag('name'), str(compartment))
+            compartment_tag.set(self._sbml_tag('name'), text_type(compartment))
 
         # Create list of species
         species_list = ET.SubElement(
@@ -705,7 +705,8 @@ class SBMLWriter(object):
             species_tag.set(self._sbml_tag('id'), species_id)
             species_tag.set(
                 self._sbml_tag('name'),
-                str(species.translate(lambda x: compound_name.get(x, x))))
+                text_type(
+                    species.translate(lambda x: compound_name.get(x, x))))
             species_tag.set(
                 self._sbml_tag('compartment'),
                 model_compartments[species.compartment])
@@ -731,7 +732,8 @@ class SBMLWriter(object):
                     dest_list, self._sbml_tag('speciesReference'))
                 spec_ref.set(
                     self._sbml_tag('species'), model_species[compound])
-                spec_ref.set(self._sbml_tag('stoichiometry'), str(abs(value)))
+                spec_ref.set(
+                    self._sbml_tag('stoichiometry'), text_type(abs(value)))
 
             notes_tag = ET.SubElement(reaction_tag, self._sbml_tag('notes'))
             if reaction in reaction_genes:
@@ -747,15 +749,18 @@ class SBMLWriter(object):
             ci_tag.text = 'FLUX_VALUE'
             param_list = ET.SubElement(
                 kl_tag, self._sbml_tag('listOfParameters'))
+
+            lower_str = text_type(model.limits[reaction].lower)
+            upper_str = text_type(model.limits[reaction].upper)
             ET.SubElement(param_list, self._sbml_tag('parameter'), {
                 self._sbml_tag('id'): 'LOWER_BOUND',
                 self._sbml_tag('name'): 'LOWER_BOUND',
-                self._sbml_tag('value'): str(model.limits[reaction].lower)
+                self._sbml_tag('value'): lower_str
             })
             ET.SubElement(param_list, self._sbml_tag('parameter'), {
                 self._sbml_tag('id'): 'UPPER_BOUND',
                 self._sbml_tag('name'): 'UPPER_BOUND',
-                self._sbml_tag('value'): str(model.limits[reaction].upper)
+                self._sbml_tag('value'): upper_str
             })
 
         tree = ET.ElementTree(root)
