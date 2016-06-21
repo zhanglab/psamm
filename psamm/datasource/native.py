@@ -329,14 +329,26 @@ class NativeModel(object):
         return self._context
 
 
+def checkid(checking):
+    """Check whether the ID is valid.
+
+    Does so by checking if type is a string or length is 0."""
+
+    if checking is None:
+        raise ParseError('Compound ID missing')
+    elif type(checking) is not str:
+        raise ParseError('Compound ID must be a string, id was ', checking)
+    elif len(checking) == 0:
+        raise ParseError('Compound ID must be not be empty')
+
+
 def parse_compound(compound_def, context=None):
     """Parse a structured compound definition as obtained from a YAML file
 
     Returns a CompoundEntry."""
 
     compound_id = compound_def.get('id')
-    if compound_id is None:
-        raise ParseError('Compound ID missing')
+    checkid(compound_id)
 
     mark = FileMark(context, None, None)
     return CompoundEntry(compound_id, compound_def, mark)
@@ -430,8 +442,7 @@ def parse_reaction_equation(equation_def):
         """Parse a list of reactants or metabolites"""
         for compound_def in l:
             compound_id = compound_def.get('id')
-            if compound_id is None:
-                raise ParseError('Compound ID missing')
+            checkid(compound_id)
 
             value = compound_def.get('value')
             if value is None:
@@ -466,8 +477,7 @@ def parse_reaction(reaction_def, context=None):
     """
 
     reaction_id = reaction_def.get('id')
-    if reaction_id is None:
-        raise ParseError('Reaction ID missing')
+    checkid(reaction_id)
 
     reaction_props = dict(reaction_def)
 
