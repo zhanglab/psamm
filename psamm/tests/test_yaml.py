@@ -369,5 +369,22 @@ class TestYAMLFileSystemData(unittest.TestCase):
         self.assertEqual(reactions, ['rxn_1', 'rxn_2', 'rxn_3', 'rxn_4'])
 
 
+class TestCheckId(unittest.TestCase):
+    def test_check_id_none(self):
+        with self.assertRaises(native.ParseError):
+            native._check_id(None, 'Compound')
+
+    def test_check_id_not_string(self):
+        with self.assertRaises(native.ParseError):
+            native._check_id(False, 'Compound')
+
+    def test_check_id_empty_string(self):
+        with self.assertRaises(native.ParseError):
+            native._check_id('', 'Reaction')
+
+    def test_check_id_success(self):
+        native._check_id(u'\u222b', 'Compound')
+
+
 if __name__ == '__main__':
     unittest.main()
