@@ -21,6 +21,8 @@ import logging
 
 from ..command import Command
 
+from six import text_type
+
 logger = logging.getLogger(__name__)
 
 
@@ -66,9 +68,9 @@ class ExportTableCommand(Command):
         property_list_sorted = sorted(
             property_set, key=lambda x: (x != 'id', x != 'equation', x))
 
-        print('\t'.join([str(x) for x in property_list_sorted]))
+        print('\t'.join([text_type(x) for x in property_list_sorted]))
         for i in self._model.parse_reactions():
-            print('\t'.join(str(i.properties.get(property))
+            print('\t'.join(text_type(i.properties.get(property))
                             for property in property_list_sorted))
 
     def _compound_export(self):
@@ -79,9 +81,9 @@ class ExportTableCommand(Command):
         compound_list_sorted = sorted(
             compound_set, key=lambda x: (x != 'id', x != 'name', x))
 
-        print('\t'.join([str(x) for x in compound_list_sorted]))
+        print('\t'.join([text_type(x) for x in compound_list_sorted]))
         for compound in self._model.parse_compounds():
-            print('\t'.join(str(compound.properties.get(property))
+            print('\t'.join(text_type(compound.properties.get(property))
                             for property in compound_list_sorted))
 
     def _media_export(self):
