@@ -491,7 +491,7 @@ def parse_reaction(reaction_def, context=None):
     """
 
     reaction_id = reaction_def.get('id')
-    _check_id(reaction_id, 'Recation')
+    _check_id(reaction_id, 'Reaction')
 
     reaction_props = dict(reaction_def)
 
