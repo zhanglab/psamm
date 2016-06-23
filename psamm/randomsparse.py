@@ -123,7 +123,7 @@ def get_gene_associations(model):
         model: :class:`psamm.datasource.native.NativeModel`.
     """
 
-    for func in (self._model.parse_reactions, self._model.parse_model):
+    for func in (model.parse_reactions, model.parse_model):
         for reaction in func():
             assoc = None
             if reaction.genes is None:

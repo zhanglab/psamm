@@ -115,7 +115,7 @@ class TestCommandMain(unittest.TestCase):
                 model:
                   - reactions:
                     - rxn_1
-                    - rxn_2
+                    - rxn_2_\u03c0
                 ''')
 
     def tearDown(self):
