@@ -206,7 +206,7 @@ class NativeModel(object):
         return self._model.get('biomass', None)
 
     def get_extracellular_compartment(self):
-        """Return the extracellular comparment specified by the model."""
+        """Return the extracellular compartment specified by the model."""
         return self._model.get('extracellular', 'e')
 
     def get_default_compartment(self):
