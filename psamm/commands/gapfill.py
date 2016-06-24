@@ -36,6 +36,9 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         parser.add_argument(
             '--compound', metavar='compound', action=FilePrefixAppendAction,
             type=str, default=[], help='Select Compounds to GapFill')
+        parser.add_argument(
+            '--epsilon', type=float, default=1e-5,
+            help='Threshold for reaction flux')
         super(GapFillCommand, cls).init_parser(parser)
 
     def run(self):
@@ -54,11 +57,12 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         solver = self._get_solver(integer=True)
         extracellular_comp = self._model.get_extracellular_compartment()
+        epsilon = self._args.epsilon
 
         if len(self._args.compound) == 0:
             # Run GapFind on model
-            logger.info('Searching for blocked compounds')
-            result = gapfind(self._mm, solver=solver)
+            logger.info('Searching for blocked compounds...')
+            result = gapfind(self._mm, solver=solver, epsilon=epsilon)
             blocked = set(compound for compound in result
                           if compound.compartment != extracellular_comp)
             if len(blocked) > 0:
@@ -84,7 +88,8 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
 
             logger.info('Searching for reactions to fill gaps')
             added_reactions, reversed_reactions = gapfill(
-                model_complete, core, blocked, solver=solver)
+                model_complete, core, blocked, solver=solver,
+                epsilon=epsilon)
 
             for rxnid in added_reactions:
                 rx = model_complete.get_reaction(rxnid)
