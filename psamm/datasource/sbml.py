@@ -648,7 +648,7 @@ class SBMLWriter(object):
         self._namespace = SBML_NS_L3_V1_CORE
         self._sbml_tag = partial(_tag, namespace=self._namespace)
 
-    def write_model(self, file, model, reactions, compounds):
+    def write_model(self, file, model):
         """Write a given model to file"""
 
         ET.register_namespace('mathml', MATHML_NS)
@@ -656,14 +656,32 @@ class SBMLWriter(object):
 
         # Load compound information
         compound_name = {}
-        for compound in compounds:
+        for compound in model.parse_compounds():
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
 
         reaction_genes = {}
-        for reaction in reactions:
+        reaction_equations = {}
+        for reaction in model.parse_reactions():
             if reaction.genes is not None:
                 reaction_genes[reaction.id] = reaction.genes
+            if reaction.equation is not None:
+                reaction_equations[reaction.id] = reaction.equation
+        # Add exchange reactions to reaction_equations,
+        # also add flux limit info to flux_limits
+        flux_limits = {}
+        for compound, reaction_id, lower, upper in model.parse_medium():
+            # Create exchange reaction
+            if reaction_id is None:
+                reaction_id = 'EX_{}_{}'.format(
+                    compound.name, compound.compartment)
+            reaction_equations[reaction_id] = Reaction(
+                Direction.Both, {compound: -1})
+            if lower is None:
+                lower = -model.get_default_flux_limit()
+            if upper is None:
+                upper = model.get_default_flux_limit()
+            flux_limits[reaction_id] = (lower, upper)
 
         root = ET.Element(self._sbml_tag('sbml'))
         root.set(self._sbml_tag('level'), '3')
@@ -679,8 +697,8 @@ class SBMLWriter(object):
         # Build mapping from Compound to species ID
         model_compartments = {}
         model_species = {}
-        for reaction in model.reactions:
-            for compound, value in model.get_reaction_values(reaction):
+        for _, equation in iteritems(reaction_equations):
+            for compound, _ in equation.compounds:
                 if compound.compartment not in model_compartments:
                     model_compartments[compound.compartment] = (
                         next(compartment_id))
@@ -713,20 +731,40 @@ class SBMLWriter(object):
 
         # Create list of reactions
         reactions = ET.SubElement(model_tag, self._sbml_tag('listOfReactions'))
-        for reaction in model.reactions:
+        # Create mapping for reactions containing flux limit definitions
+        for flux_limit in model.parse_limits():
+            eq_id = flux_limit[0]
+            # Deal with lower limit
+            if flux_limit[2] is None:
+                lower = (
+                    0.0
+                    if reaction_equations[eq_id].direction == Direction.Forward
+                    else -model.get_default_flux_limit())
+            else:
+                lower = flux_limit[2]
+            # Deal with upper limit
+            if flux_limit[1] is None:
+                upper = (
+                    0.0
+                    if reaction_equations[eq_id].direction == Direction.Reverse
+                    else model.get_default_flux_limit())
+            else:
+                upper = flux_limit[1]
+            flux_limits[eq_id] = (lower, upper)
+
+        for eq_id, equation in iteritems(reaction_equations):
             reaction_tag = ET.SubElement(reactions, self._sbml_tag('reaction'))
             reaction_tag.set(self._sbml_tag('id'), next(reaction_id))
-            reaction_tag.set(self._sbml_tag('name'), reaction)
-            reaction_tag.set(
-                self._sbml_tag('reversible'),
-                'true' if model.is_reversible(reaction) else 'false')
+            reaction_tag.set(self._sbml_tag('name'), eq_id)
+            reaction_tag.set(self._sbml_tag('reversible'), text_type(
+                equation.direction == Direction.Both).lower())
 
             reactants = ET.SubElement(
                 reaction_tag, self._sbml_tag('listOfReactants'))
             products = ET.SubElement(
                 reaction_tag, self._sbml_tag('listOfProducts'))
 
-            for compound, value in model.get_reaction_values(reaction):
+            for compound, value in equation.compounds:
                 dest_list = reactants if value < 0 else products
                 spec_ref = ET.SubElement(
                     dest_list, self._sbml_tag('speciesReference'))
@@ -736,11 +774,11 @@ class SBMLWriter(object):
                     self._sbml_tag('stoichiometry'), text_type(abs(value)))
 
             notes_tag = ET.SubElement(reaction_tag, self._sbml_tag('notes'))
-            if reaction in reaction_genes:
+            if eq_id in reaction_genes:
                 body_tag = ET.SubElement(notes_tag, _tag('body', XHTML_NS))
                 p_tag = ET.SubElement(body_tag, _tag('p', XHTML_NS))
                 p_tag.text = 'GENE_ASSOCIATION: {}'.format(
-                    reaction_genes[reaction])
+                    reaction_genes[eq_id])
 
             # Create COBRA-compliant parameter list
             kl_tag = ET.SubElement(reaction_tag, self._sbml_tag('kineticLaw'))
@@ -750,8 +788,18 @@ class SBMLWriter(object):
             param_list = ET.SubElement(
                 kl_tag, self._sbml_tag('listOfParameters'))
 
-            lower_str = text_type(model.limits[reaction].lower)
-            upper_str = text_type(model.limits[reaction].upper)
+            if eq_id in flux_limits:
+                lower_str = text_type(flux_limits[eq_id][0])
+                upper_str = text_type(flux_limits[eq_id][1])
+            else:
+                lower_str = text_type(
+                    0.0
+                    if equation.direction == Direction.Forward
+                    else -model.get_default_flux_limit())
+                upper_str = text_type(
+                    0.0
+                    if equation.direction == Direction.Reverse
+                    else model.get_default_flux_limit())
             ET.SubElement(param_list, self._sbml_tag('parameter'), {
                 self._sbml_tag('id'): 'LOWER_BOUND',
                 self._sbml_tag('name'): 'LOWER_BOUND',
