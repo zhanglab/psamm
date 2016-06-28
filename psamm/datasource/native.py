@@ -171,7 +171,7 @@ class NativeModel(object):
     The model is created from a model file or from a directory containing a
     model file using the default file name (model.yaml or model.yml). This file
     can specify the model fully or refer to other files within the same
-    directory subtree that specifes part of the model.
+    directory subtree that specifies part of the model.
     """
 
     def __init__(self, path):
