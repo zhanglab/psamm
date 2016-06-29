@@ -27,8 +27,10 @@ import unittest
 
 from six import StringIO, BytesIO
 
-from psamm.command import main, Command, MetabolicMixin, SolverCommandMixin
+from psamm.command import (main, Command, MetabolicMixin, SolverCommandMixin,
+                           CommandError)
 from psamm.lpsolver import generic
+from psamm.datasource.native import NativeModel
 
 
 @contextmanager
@@ -113,6 +115,7 @@ class TestCommandMain(unittest.TestCase):
                   - reaction: rxn_2_\u03c0
                     upper: 100
                 ''')
+        self._model = NativeModel(self._model_dir)
 
     def tearDown(self):
         shutil.rmtree(self._model_dir)
@@ -334,3 +337,13 @@ class TestCommandMain(unittest.TestCase):
         main(MockMetabolicCommand, args=[
             '--model', self._model_dir])
         self.assertTrue(MockMetabolicCommand.has_metabolic_model)
+
+    def test_command_fail(self):
+        mock_command = MockCommand(self._model, None)
+        with self.assertRaises(SystemExit):
+            mock_command.fail('Run time error')
+
+    def test_command_argument_error(self):
+        mock_command = MockCommand(self._model, None)
+        with self.assertRaises(CommandError):
+            mock_command.argument_error(msg='Argument error')

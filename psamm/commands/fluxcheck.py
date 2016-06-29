@@ -22,7 +22,7 @@ import logging
 from itertools import product
 
 from ..command import (Command, MetabolicMixin, SolverCommandMixin,
-                       ParallelTaskMixin, CommandError)
+                       ParallelTaskMixin)
 from .. import fluxanalysis, fastcore
 
 logger = logging.getLogger(__name__)
@@ -82,10 +82,9 @@ class FluxConsistencyCommand(MetabolicMixin, SolverCommandMixin,
         enable_fastcore = self._args.fastcore
 
         if enable_tfba and enable_fastcore:
-            raise CommandError(
+            self.argument_error(
                 'Using Fastcore with thermodynamic constraints'
                 ' is not supported!')
-
         start_time = time.time()
 
         if enable_fastcore:

@@ -20,7 +20,7 @@ from __future__ import unicode_literals
 import argparse
 import logging
 
-from ..command import Command, MetabolicMixin, SolverCommandMixin, CommandError
+from ..command import Command, MetabolicMixin, SolverCommandMixin
 from .. import fastcore, fluxanalysis
 from ..fastgapfill import create_extended_model, fastgapfill
 
@@ -105,12 +105,12 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         else:
             maximized_reaction = self._model.get_biomass_reaction()
             if maximized_reaction is None:
-                raise CommandError('The maximized reaction was not specified')
+                self.argument_error(
+                    'The maximized reaction was not specified')
 
         if not self._mm.has_reaction(maximized_reaction):
-            raise CommandError(
-                'The biomass reaction is not a valid model'
-                ' reaction: {}'.format(maximized_reaction))
+            self.fail('The biomass reaction is not a valid model'
+                      ' reaction: {}'.format(maximized_reaction))
 
         logger.info('Flux balance on induced model maximizing {}'.format(
             maximized_reaction))

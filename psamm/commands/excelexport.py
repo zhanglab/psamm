@@ -21,7 +21,7 @@ import logging
 
 from six import text_type
 
-from ..command import Command, CommandError
+from ..command import Command
 
 try:
     import xlsxwriter
@@ -42,8 +42,7 @@ class ExcelExportCommand(Command):
     def run(self):
         model = self._model
         if xlsxwriter is None:
-            raise CommandError(
-                'Excel export requires the XlsxWriter python module')
+            self.fail('Excel export requires the XlsxWriter python module')
         workbook = xlsxwriter.Workbook(self._args.file)
         reaction_sheet = workbook.add_worksheet(name='Reactions')
 

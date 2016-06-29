@@ -20,7 +20,7 @@ from __future__ import unicode_literals
 
 import logging
 
-from ..command import Command, MetabolicMixin, SolverCommandMixin, CommandError
+from ..command import Command, MetabolicMixin, SolverCommandMixin
 from .. import fluxanalysis, util
 from .. import randomsparse
 
@@ -61,11 +61,11 @@ class RandomSparseNetworkCommand(MetabolicMixin, SolverCommandMixin, Command):
         else:
             reaction = self._model.get_biomass_reaction()
             if reaction is None:
-                raise CommandError('The biomass reaction was not specified')
+                self.argument_error('The biomass reaction was not specified')
 
         if not self._mm.has_reaction(reaction):
-            raise CommandError('Specified reaction is not in model: {}'.format(
-                reaction))
+            self.fail(
+                'Specified reaction is not in model: {}'.format(reaction))
 
         if not self._args.tfba:
             solver = self._get_solver()
