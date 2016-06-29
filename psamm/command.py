@@ -28,6 +28,7 @@ The :func:`.main` function is the entry point of command line interface.
 from __future__ import division, unicode_literals
 
 import os
+import sys
 import argparse
 import logging
 import abc
@@ -90,6 +91,16 @@ class Command(object):
     @abc.abstractmethod
     def run(self):
         """Execute command"""
+
+    def error(self, msg):
+        """Raise error indicating error parsing an argument."""
+        raise CommandError(msg)
+
+    def fail(self, exc=None):
+        """Exit command as a result of a failure."""
+        if exc is not None:
+            logger.debug('Command failure caused by exception!', exc_info=exc)
+        sys.exit(1)
 
 
 class MetabolicMixin(object):
