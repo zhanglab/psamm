@@ -85,8 +85,6 @@ class ExcelExportCommand(Command):
         media_sheet.write_string(0, 3, 'Upper Limit')
 
         default_flux = model.get_default_flux_limit()
-        if default_flux is None:
-            default_flux = 1000
 
         for x, (compound, reaction, lower, upper) in enumerate(
                 model.parse_medium()):

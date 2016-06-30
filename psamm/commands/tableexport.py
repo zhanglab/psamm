@@ -90,8 +90,6 @@ class ExportTableCommand(Command):
         print('{}\t{}\t{}\t{}'.format('Compound ID', 'Reaction ID',
                                       'Lower Limit', 'Upper Limit'))
         default_flux = self._model.get_default_flux_limit()
-        if default_flux is None:
-            default_flux = 1000
 
         for compound, reaction, lower, upper in self._model.parse_medium():
             if lower is None:

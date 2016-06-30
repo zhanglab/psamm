@@ -316,7 +316,7 @@ class TestCommandMain(unittest.TestCase):
         self.assertEqual(f.getvalue(), '\n'.join([
             'Model Name: Test model',
             'Biomass Reaction: rxn_1',
-            'Default Flux Limits: None',
+            'Default Flux Limits: 1000',
             ''
         ]))
 
