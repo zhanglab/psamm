@@ -20,7 +20,7 @@ from __future__ import unicode_literals
 import time
 import logging
 
-from ..command import SolverCommandMixin, MetabolicMixin, Command, CommandError
+from ..command import SolverCommandMixin, MetabolicMixin, Command
 from .. import fluxanalysis
 
 logger = logging.getLogger(__name__)
@@ -65,11 +65,11 @@ class FluxBalanceCommand(MetabolicMixin, SolverCommandMixin, Command):
         else:
             reaction = self._model.get_biomass_reaction()
             if reaction is None:
-                raise CommandError('The biomass reaction was not specified')
+                self.argument_error('The biomass reaction was not specified')
 
         if not self._mm.has_reaction(reaction):
-            raise CommandError('Specified reaction is not in model: {}'.format(
-                reaction))
+            self.fail(
+                'Specified reaction is not in model: {}'.format(reaction))
 
         logger.info('Using {} as objective'.format(reaction))
 
@@ -84,8 +84,8 @@ class FluxBalanceCommand(MetabolicMixin, SolverCommandMixin, Command):
             logger.info('Loop removal using thermodynamic constraints')
             result = self.run_tfba(reaction)
         else:
-            raise CommandError('Invalid loop constraint mode: {}'.format(
-                loop_removal))
+            self.argument_error(
+                'Invalid loop constraint mode: {}'.format(loop_removal))
 
         optimum = None
         total_reactions = 0

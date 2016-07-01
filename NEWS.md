@@ -1,3 +1,16 @@
+v0.22 (2016-06-30)
+------------------
+
+- Better unicode handling in commands.
+- When parsing reaction and compound entities from the YAML files, produce
+  better error messages when IDs are invalid.
+- Work around a bug in Cplex that in rare causes a segmentation fault when a
+  linear programming problem is solved repeatedly.
+- API: Add `fastgapfill` module which allows API access to run fastgapfill
+    algorithm.
+- API: Add `randomsparse` module which allows API access to generate a random
+    minimum model which satisfies the flux threshold of the objective reaction.
+
 v0.21 (2016-06-09)
 ------------------
 

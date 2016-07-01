@@ -171,7 +171,7 @@ class NativeModel(object):
     The model is created from a model file or from a directory containing a
     model file using the default file name (model.yaml or model.yml). This file
     can specify the model fully or refer to other files within the same
-    directory subtree that specifes part of the model.
+    directory subtree that specifies part of the model.
     """
 
     def __init__(self, path):
@@ -211,7 +211,7 @@ class NativeModel(object):
 
     def get_default_flux_limit(self):
         """Return the default flux limit specified by the model"""
-        return self._model.get('default_flux_limit', None)
+        return self._model.get('default_flux_limit', 1000)
 
     def parse_reactions(self):
         """Yield tuples of reaction ID and reactions defined in the model"""
@@ -329,14 +329,40 @@ class NativeModel(object):
         return self._context
 
 
+def _check_id(entity, entity_type):
+    """Check whether the ID is valid.
+
+    First check if the ID is missing, and then check if it is a qualified
+    string type, finally check if the string is empty. For all checks, it
+    would raise a ParseError with the corresponding message.
+
+    Args:
+        entity: a string type object to be checked.
+        entity_type: a string that shows the type of entities to check, usually
+            `Compound` or 'Reaction'.
+    """
+
+    if entity is None:
+        raise ParseError('{} ID missing'.format(entity_type))
+    elif not isinstance(entity, string_types):
+        msg = '{} ID must be a string, id was {}.'.format(entity_type, entity)
+        if isinstance(entity, bool):
+            msg += (' You may have accidentally used an ID value that YAML'
+                    ' interprets as a boolean, such as "yes", "no", "on",'
+                    ' "off", "true" or "false". To use this ID, you have to'
+                    ' quote it with single or double quotes')
+        raise ParseError(msg)
+    elif len(entity) == 0:
+        raise ParseError('{} ID must not be empty'.format(entity_type))
+
+
 def parse_compound(compound_def, context=None):
     """Parse a structured compound definition as obtained from a YAML file
 
     Returns a CompoundEntry."""
 
     compound_id = compound_def.get('id')
-    if compound_id is None:
-        raise ParseError('Compound ID missing')
+    _check_id(compound_id, 'Compound')
 
     mark = FileMark(context, None, None)
     return CompoundEntry(compound_id, compound_def, mark)
@@ -430,8 +456,7 @@ def parse_reaction_equation(equation_def):
         """Parse a list of reactants or metabolites"""
         for compound_def in l:
             compound_id = compound_def.get('id')
-            if compound_id is None:
-                raise ParseError('Compound ID missing')
+            _check_id(compound_id, 'Compound')
 
             value = compound_def.get('value')
             if value is None:
@@ -466,8 +491,7 @@ def parse_reaction(reaction_def, context=None):
     """
 
     reaction_id = reaction_def.get('id')
-    if reaction_id is None:
-        raise ParseError('Reaction ID missing')
+    _check_id(reaction_id, 'Reaction')
 
     reaction_props = dict(reaction_def)
 

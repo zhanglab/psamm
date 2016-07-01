@@ -22,7 +22,7 @@ import logging
 from itertools import product
 
 from ..command import (Command, SolverCommandMixin, MetabolicMixin,
-                       ParallelTaskMixin, CommandError)
+                       ParallelTaskMixin)
 from ..util import MaybeRelative
 from .. import fluxanalysis
 
@@ -60,11 +60,11 @@ class FluxVariabilityCommand(MetabolicMixin, SolverCommandMixin,
         else:
             reaction = self._model.get_biomass_reaction()
             if reaction is None:
-                raise CommandError('The biomass reaction was not specified')
+                self.argument_error('The biomass reaction was not specified')
 
         if not self._mm.has_reaction(reaction):
-            raise CommandError('Specified reaction is not in model: {}'.format(
-                reaction))
+            self.fail(
+                'Specified reaction is not in model: {}'.format(reaction))
 
         enable_tfba = self._args.tfba
         if enable_tfba:

@@ -15,8 +15,11 @@
 #
 # Copyright 2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+from __future__ import unicode_literals
+
 import sys
 import os
+import codecs
 import shutil
 import tempfile
 from contextlib import contextmanager
@@ -24,8 +27,10 @@ import unittest
 
 from six import StringIO, BytesIO
 
-from psamm.command import main, Command, MetabolicMixin, SolverCommandMixin
+from psamm.command import (main, Command, MetabolicMixin, SolverCommandMixin,
+                           CommandError)
 from psamm.lpsolver import generic
+from psamm.datasource.native import NativeModel
 
 
 @contextmanager
@@ -83,32 +88,34 @@ class MockSolverCommand(SolverCommandMixin, Command):
 class TestCommandMain(unittest.TestCase):
     def setUp(self):
         self._model_dir = tempfile.mkdtemp()
-        with open(os.path.join(self._model_dir, 'model.yaml'), 'w') as f:
+        path = os.path.join(self._model_dir, 'model.yaml')
+        with codecs.open(path, 'w', 'utf-8') as f:
             f.write('''---
                 name: Test model
                 biomass: rxn_1
                 reactions:
                   - id: rxn_1
-                    equation: '|A[e]| => |B[c]|'
+                    equation: '|A_\u2206[e]| => |B[c]|'
                     genes:
                       - gene_1
                       - gene_2
-                  - id: rxn_2
+                  - id: rxn_2_\u03c0
                     equation: '|B[c]| => |C[e]|'
                     genes: 'gene_3 or (gene_4 and gene_5)'
                 compounds:
-                  - id: A
+                  - id: A_\u2206
                   - id: B
                   - id: C
                 media:
                   - compartment: e
                     compounds:
-                      - id: A
+                      - id: A_\u2206
                       - id: C
                 limits:
-                  - reaction: rxn_2
+                  - reaction: rxn_2_\u03c0
                     upper: 100
                 ''')
+        self._model = NativeModel(self._model_dir)
 
     def tearDown(self):
         shutil.rmtree(self._model_dir)
@@ -240,7 +247,7 @@ class TestCommandMain(unittest.TestCase):
 
     def test_run_robustness(self):
         self.run_solver_command([
-            '--model', self._model_dir, 'robustness', 'rxn_2'], {})
+            '--model', self._model_dir, 'robustness', 'rxn_2_\u03c0'], {})
 
     def test_run_sbmlexport(self):
         with redirected_stdout(BytesIO()):
@@ -264,8 +271,8 @@ class TestCommandMain(unittest.TestCase):
 
         self.assertEqual(f.getvalue(), '\n'.join([
             'id\tequation\tgenes',
-            "rxn_1\t|A[e]| => |B[c]|\t['gene_1', 'gene_2']",
-            'rxn_2\t|B[c]| => |C[e]|\tgene_3 or (gene_4 and gene_5)',
+            "rxn_1\t|A_\u2206[e]| => |B[c]|\t['gene_1', 'gene_2']",
+            'rxn_2_\u03c0\t|B[c]| => |C[e]|\tgene_3 or (gene_4 and gene_5)',
             ''
         ]))
 
@@ -275,7 +282,7 @@ class TestCommandMain(unittest.TestCase):
                 '--model', self._model_dir, 'tableexport', 'compounds'])
 
         self.assertEqual(f.getvalue(), '\n'.join([
-            'id', 'A', 'B', 'C', ''
+            'id', 'A_\u2206', 'B', 'C', ''
         ]))
 
     def test_run_tableexport_medium(self):
@@ -285,7 +292,7 @@ class TestCommandMain(unittest.TestCase):
 
         self.assertEqual(f.getvalue(), '\n'.join([
             'Compound ID\tReaction ID\tLower Limit\tUpper Limit',
-            'A[e]\tNone\t-1000\t1000',
+            'A_\u2206[e]\tNone\t-1000\t1000',
             'C[e]\tNone\t-1000\t1000',
             ''
         ]))
@@ -297,7 +304,7 @@ class TestCommandMain(unittest.TestCase):
 
         self.assertEqual(f.getvalue(), '\n'.join([
             'Reaction ID\tLower Limits\tUpper Limits',
-            'rxn_2\tNone\t100',
+            'rxn_2_\u03c0\tNone\t100',
             ''
         ]))
 
@@ -309,7 +316,7 @@ class TestCommandMain(unittest.TestCase):
         self.assertEqual(f.getvalue(), '\n'.join([
             'Model Name: Test model',
             'Biomass Reaction: rxn_1',
-            'Default Flux Limits: None',
+            'Default Flux Limits: 1000',
             ''
         ]))
 
@@ -330,3 +337,13 @@ class TestCommandMain(unittest.TestCase):
         main(MockMetabolicCommand, args=[
             '--model', self._model_dir])
         self.assertTrue(MockMetabolicCommand.has_metabolic_model)
+
+    def test_command_fail(self):
+        mock_command = MockCommand(self._model, None)
+        with self.assertRaises(SystemExit):
+            mock_command.fail('Run time error')
+
+    def test_command_argument_error(self):
+        mock_command = MockCommand(self._model, None)
+        with self.assertRaises(CommandError):
+            mock_command.argument_error(msg='Argument error')

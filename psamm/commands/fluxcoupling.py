@@ -20,7 +20,7 @@ from __future__ import unicode_literals
 import logging
 
 from ..command import (Command, SolverCommandMixin, MetabolicMixin,
-                       ParallelTaskMixin, CommandError)
+                       ParallelTaskMixin)
 from .. import fluxanalysis, fluxcoupling
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ class FluxCouplingCommand(MetabolicMixin, SolverCommandMixin,
 
         max_reaction = self._model.get_biomass_reaction()
         if max_reaction is None:
-            raise CommandError('The biomass reaction was not specified')
+            self.fail('The biomass reaction was not specified')
 
         fba_fluxes = dict(fluxanalysis.flux_balance(
             self._mm, max_reaction, tfba=False, solver=solver))
