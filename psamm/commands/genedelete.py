@@ -22,7 +22,7 @@ import time
 import logging
 
 from ..command import (Command, MetabolicMixin, SolverCommandMixin,
-                       CommandError, FilePrefixAppendAction)
+                       FilePrefixAppendAction)
 from .. import fluxanalysis
 from ..expression import boolean
 
@@ -48,7 +48,7 @@ class GeneDeletionCommand(MetabolicMixin, SolverCommandMixin, Command):
         else:
             obj_reaction = self._model.get_biomass_reaction()
             if obj_reaction is None:
-                raise CommandError('The biomass reaction was not specified')
+                self.argument_error('The biomass reaction was not specified')
 
         genes = set()
         gene_assoc = {}

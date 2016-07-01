@@ -22,7 +22,7 @@ import logging
 
 from six import iteritems
 
-from ..command import (Command, CommandError, SolverCommandMixin,
+from ..command import (Command, SolverCommandMixin,
                        MetabolicMixin, FilePrefixAppendAction)
 from .. import massconsistency
 from ..reaction import Compound
@@ -87,8 +87,8 @@ class MassConsistencyCommand(MetabolicMixin, SolverCommandMixin, Command):
         elif self._args.type == 'reaction':
             self._check_reactions(known_inconsistent, zeromass, solver)
         else:
-            raise CommandError('Invalid type of check: {}'.format(
-                self._args.type))
+            self.argument_error(
+                'Invalid type of check: {}'.format(self._args.type))
 
     def _check_compounds(self, known_inconsistent, zeromass, solver):
         logger.info('Checking stoichiometric consistency of compounds...')

@@ -25,9 +25,10 @@ discovered.
 The :func:`.main` function is the entry point of command line interface.
 """
 
-from __future__ import division
+from __future__ import division, unicode_literals
 
 import os
+import sys
 import argparse
 import logging
 import abc
@@ -35,7 +36,7 @@ from itertools import islice
 import multiprocessing as mp
 
 import pkg_resources
-from six import add_metaclass, iteritems, itervalues
+from six import add_metaclass, iteritems, itervalues, text_type
 
 from . import __version__ as package_version
 from .datasource.native import NativeModel
@@ -76,7 +77,7 @@ class Command(object):
 
         name = self._model.get_name()
         if name is None:
-            name = str(self._model.context)
+            name = text_type(self._model.context)
         logger.info('Model: {}'.format(name))
 
         version = util.git_try_describe(self._model.context.basepath)
@@ -90,6 +91,17 @@ class Command(object):
     @abc.abstractmethod
     def run(self):
         """Execute command"""
+
+    def argument_error(self, msg):
+        """Raise error indicating error parsing an argument."""
+        raise CommandError(msg)
+
+    def fail(self, msg, exc=None):
+        """Exit command as a result of a failure."""
+        logger.error(msg)
+        if exc is not None:
+            logger.debug('Command failure caused by exception!', exc_info=exc)
+        sys.exit(1)
 
 
 class MetabolicMixin(object):
@@ -396,4 +408,4 @@ def main(command_class=None, args=None):
     try:
         command.run()
     except CommandError as e:
-        parser.error(str(e))
+        parser.error(text_type(e))

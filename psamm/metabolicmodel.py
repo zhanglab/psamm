@@ -17,6 +17,8 @@
 
 """Representation of metabolic network models."""
 
+from __future__ import unicode_literals
+
 from collections import Mapping
 
 from .database import MetabolicDatabase, StoichiometricMatrixView
@@ -118,8 +120,8 @@ class FluxBounds(object):
         return not self == other
 
     def __repr__(self):
-        return '{}({}, {})'.format(
-            self.__class__.__name__, repr(self.lower), repr(self.upper))
+        return str('{}({!r}, {!r})').format(
+            self.__class__.__name__, self.lower, self.upper)
 
 
 class LimitsView(Mapping):

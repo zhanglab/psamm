@@ -19,7 +19,9 @@ from __future__ import unicode_literals
 
 import logging
 
-from ..command import Command, CommandError
+from six import text_type
+
+from ..command import Command
 
 try:
     import xlsxwriter
@@ -40,8 +42,7 @@ class ExcelExportCommand(Command):
     def run(self):
         model = self._model
         if xlsxwriter is None:
-            raise CommandError(
-                'Excel export requires the XlsxWriter python module')
+            self.fail('Excel export requires the XlsxWriter python module')
         workbook = xlsxwriter.Workbook(self._args.file)
         reaction_sheet = workbook.add_worksheet(name='Reactions')
 
@@ -53,10 +54,11 @@ class ExcelExportCommand(Command):
                                       key=lambda x: (x != 'id',
                                                      x != 'equation', x))
         for z, i in enumerate(property_list_sorted):
-            reaction_sheet.write_string(0, z, str(i))
+            reaction_sheet.write_string(0, z, text_type(i))
         for x, i in enumerate(model.parse_reactions()):
             for y, j in enumerate(property_list_sorted):
-                reaction_sheet.write_string(x+1, y, str(i.properties.get(j)))
+                reaction_sheet.write_string(
+                    x+1, y, text_type(i.properties.get(j)))
 
         compound_sheet = workbook.add_worksheet(name='Compounds')
 
@@ -69,10 +71,11 @@ class ExcelExportCommand(Command):
                                                      x != 'name', x))
 
         for z, i in enumerate(compound_list_sorted):
-            compound_sheet.write_string(0, z, str(i))
+            compound_sheet.write_string(0, z, text_type(i))
         for x, i in enumerate(model.parse_compounds()):
             for y, j in enumerate(compound_list_sorted):
-                compound_sheet.write_string(x+1, y, str(i.properties.get(j)))
+                compound_sheet.write_string(
+                    x+1, y, text_type(i.properties.get(j)))
 
         media_sheet = workbook.add_worksheet(name='Medium')
 
@@ -82,8 +85,6 @@ class ExcelExportCommand(Command):
         media_sheet.write_string(0, 3, 'Upper Limit')
 
         default_flux = model.get_default_flux_limit()
-        if default_flux is None:
-            default_flux = 1000
 
         for x, (compound, reaction, lower, upper) in enumerate(
                 model.parse_medium()):
@@ -93,16 +94,16 @@ class ExcelExportCommand(Command):
             if upper is None:
                 upper = default_flux
 
-            media_sheet.write(x+1, 0, str(compound))
-            media_sheet.write(x+1, 1, str(reaction))
-            media_sheet.write(x+1, 2, str(lower))
-            media_sheet.write(x+1, 3, str(upper))
+            media_sheet.write(x+1, 0, text_type(compound))
+            media_sheet.write(x+1, 1, text_type(reaction))
+            media_sheet.write(x+1, 2, text_type(lower))
+            media_sheet.write(x+1, 3, text_type(upper))
 
         limits_sheet = workbook.add_worksheet(name='Limits')
 
         limits_sheet.write_string(0, 0, 'Reaction ID')
         limits_sheet.write_string(0, 1, 'Lower Limit')
-        limits_sheet.write_string(0, 2, str('Upper Limit'))
+        limits_sheet.write_string(0, 2, 'Upper Limit')
 
         for x, i in enumerate(model.parse_limits()):
             limits_sheet.write(x, 0, (i[0]))

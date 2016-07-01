@@ -21,7 +21,7 @@ import time
 import logging
 
 from ..command import (Command, MetabolicMixin, SolverCommandMixin,
-                       ParallelTaskMixin, CommandError)
+                       ParallelTaskMixin)
 from .. import fluxanalysis
 
 from six.moves import range
@@ -78,20 +78,20 @@ class RobustnessCommand(MetabolicMixin, SolverCommandMixin,
         else:
             reaction = self._model.get_biomass_reaction()
             if reaction is None:
-                raise CommandError('The biomass reaction was not specified')
+                self.argument_error('The biomass reaction was not specified')
 
         if not self._mm.has_reaction(reaction):
-            raise CommandError('Specified reaction is not in model: {}'.format(
+            self.fail('Specified biomass reaction is not in model: {}'.format(
                 reaction))
 
         varying_reaction = self._args.varying
         if not self._mm.has_reaction(varying_reaction):
-            raise CommandError('Specified reaction is not in model: {}'.format(
+            self.fail('Specified varying reaction is not in model: {}'.format(
                 varying_reaction))
 
         steps = self._args.steps
         if steps <= 0:
-            raise CommandError('Invalid number of steps: {}\n'.format(steps))
+            self.argument_error('Invalid number of steps: {}\n'.format(steps))
 
         loop_removal = self._args.loop_removal
         if loop_removal == 'tfba':
@@ -106,8 +106,8 @@ class RobustnessCommand(MetabolicMixin, SolverCommandMixin,
         elif loop_removal == 'tfba':
             logger.info('Loop removal using thermodynamic constraints')
         else:
-            raise CommandError('Invalid loop constraint mode: {}'.format(
-                loop_removal))
+            self.argument_error(
+                'Invalid loop constraint mode: {}'.format(loop_removal))
 
         p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
         if loop_removal == 'tfba':
@@ -127,7 +127,7 @@ class RobustnessCommand(MetabolicMixin, SolverCommandMixin,
             flux_min = self._args.minimum
 
         if flux_min > flux_max:
-            raise CommandError('Invalid flux range: {}, {}\n'.format(
+            self.argument_error('Invalid flux range: {}, {}\n'.format(
                 flux_min, flux_max))
 
         logger.info('Varying {} in {} steps between {} and {}'.format(

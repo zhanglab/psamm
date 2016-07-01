@@ -17,6 +17,8 @@
 
 """Implementation of Flux Balance Analysis."""
 
+from __future__ import unicode_literals
+
 import logging
 import random
 

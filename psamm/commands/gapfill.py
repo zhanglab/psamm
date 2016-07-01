@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from __future__ import unicode_literals
 
@@ -21,10 +21,8 @@ import logging
 
 from ..command import (Command, MetabolicMixin, SolverCommandMixin,
                        FilePrefixAppendAction)
-
-from ..gapfill import gapfind, gapfill
-
-from psamm.datasource import reaction
+from ..gapfill import gapfind, gapfill, GapFillError
+from ..datasource import reaction
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +34,9 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         parser.add_argument(
             '--compound', metavar='compound', action=FilePrefixAppendAction,
             type=str, default=[], help='Select Compounds to GapFill')
+        parser.add_argument(
+            '--epsilon', type=float, default=1e-5,
+            help='Threshold for reaction flux')
         super(GapFillCommand, cls).init_parser(parser)
 
     def run(self):
@@ -54,13 +55,19 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         solver = self._get_solver(integer=True)
         extracellular_comp = self._model.get_extracellular_compartment()
+        epsilon = self._args.epsilon
 
         if len(self._args.compound) == 0:
             # Run GapFind on model
-            logger.info('Searching for blocked compounds')
-            result = gapfind(self._mm, solver=solver)
-            blocked = set(compound for compound in result
-                          if compound.compartment != extracellular_comp)
+            logger.info('Searching for blocked compounds...')
+            result = gapfind(self._mm, solver=solver, epsilon=epsilon)
+
+            try:
+                blocked = set(compound for compound in result
+                              if compound.compartment != extracellular_comp)
+            except GapFillError as e:
+                self._log_epsilon_and_fail(epsilon, e)
+
             if len(blocked) > 0:
                 logger.info('Blocked compounds')
                 for compound in blocked:
@@ -83,8 +90,12 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             model_complete.add_all_transport_reactions(extracellular_comp)
 
             logger.info('Searching for reactions to fill gaps')
-            added_reactions, reversed_reactions = gapfill(
-                model_complete, core, blocked, solver=solver)
+            try:
+                added_reactions, reversed_reactions = gapfill(
+                    model_complete, core, blocked, solver=solver,
+                    epsilon=epsilon)
+            except GapFillError as e:
+                self._log_epsilon_and_fail(epsilon, e)
 
             for rxnid in added_reactions:
                 rx = model_complete.get_reaction(rxnid)
@@ -99,3 +110,9 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
                 print('{}\t{}\t{}'.format(rxnid, 'Reverse', rxt))
         else:
             logger.info('No blocked compounds found')
+
+    def _log_epsilon_and_fail(self, epsilon, exc):
+        msg = ('Finding blocked compounds failed with epsilon set to {}. Try'
+               ' lowering the epsilon value to reduce artifical constraints on'
+               ' the model.'.format(epsilon))
+        self.fail(msg, exc)
