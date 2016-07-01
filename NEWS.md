@@ -1,3 +1,18 @@
+v0.22 (2016-07-01)
+------------------
+
+- Better unicode handling in commands.
+- When running the `gapfill` command the epsilon parameter can now be
+  specified on the command line.
+- When parsing reaction and compound entities from the YAML files, produce
+  better error messages when IDs are invalid.
+- Work around a bug in Cplex that in rare causes a segmentation fault when a
+  linear programming problem is solved repeatedly.
+- API: Add `fastgapfill` module which allows access to run the fastGapFill
+  algorithm.
+- API: Add `randomsparse` module which allows access to generate a random
+  minimal model which satisfies the flux threshold of the objective reaction.
+
 v0.21 (2016-06-09)
 ------------------
 
