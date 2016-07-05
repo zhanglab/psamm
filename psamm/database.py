@@ -164,18 +164,54 @@ class DictDatabase(MetabolicDatabase):
 
     def __init__(self):
         super(DictDatabase, self).__init__()
+        self._model_name = None
+        self._biomass_reaction = None
+        self._default_flux_limit = None
+        self._extracellular_compartment = None
+        # _flux_limits is a map from reaction_id to (upper, lower)
+        self._flux_limits = {}
+        # _medium is a map from reaction_id to (Compound, upper, lower)
+        self._medium = {}
+        # reaction IDs in the model
+        self._model = set()
+        # compound map from compound ID to CompoundEntry
+        self._compound_entries = defaultdict(dict)
+        # reaction map from reaction ID to ReactionEntry
+        self._reaction_entries = defaultdict(dict)
+        # original attributes in DictDatabase, consider to be moved
         self._reactions = defaultdict(dict)
         self._compound_reactions = defaultdict(set)
         self._reversible = set()
+
+    @property
+    def model_name(self):
+        return self._model_name
+
+    @property
+    def extracelluar_compartment(self):
+        return self._extracellular_compartment
+
+    @property
+    def defalut_flux_limit(self):
+        return self._default_flux_limit
 
     @property
     def reactions(self):
         return iter(self._reactions)
 
     @property
+    def compound_entries(self):
+        return iter(self._compound_entries)
+
+    @property
     def compounds(self):
         return iter(self._compound_reactions)
 
+    @property
+    def model(self):
+        return iter(self._model)
+
+    # consider to be moved
     @property
     def compartments(self):
         compartment_set = set()
@@ -184,8 +220,11 @@ class DictDatabase(MetabolicDatabase):
                 compartment_set.add(compound.compartment)
                 yield compound.compartment
 
+    def has_compound(self, compound_id):
+        return compound_id in self._compound_entries
+
     def has_reaction(self, reaction_id):
-        return reaction_id in self._reactions
+        return reaction_id in self._reaction_entries
 
     def is_reversible(self, reaction_id):
         return reaction_id in self._reversible
@@ -195,8 +234,35 @@ class DictDatabase(MetabolicDatabase):
             raise ValueError('Unknown reaction: {}'.format(repr(reaction_id)))
         return iteritems(self._reactions[reaction_id])
 
-    def get_compound_reactions(self, compound_id):
-        return iter(self._compound_reactions[compound_id])
+    def get_compound_reactions(self, compound):
+        return iter(self._compound_reactions[compound])
+
+    @model_name.setter
+    def model_name(self, model_name):
+        self._model_name = model_name
+
+    @extracelluar_compartment.setter
+    def extracellular_compartment(self, extracelluar_compartment):
+        self._extracellular_compartment = extracelluar_compartment
+
+    @defalut_flux_limit.setter
+    def default_flux_limit(self, flux_limit):
+        self._default_flux_limit = flux_limit
+
+    def add_medium(self, reaction_id, compound, lower, upper):
+        self._medium[reaction_id] = (compound, lower, upper)
+
+    def add_compound_entry(self, compound_id, compound_entry):
+        self._compound_entries[compound_id] = compound_entry
+
+    def add_reaction_entry(self, reaction_id, reaction_entry):
+        self._reaction_entries[reaction_id] = reaction_entry
+
+    def add_model_reaction(self, reaction_id):
+        self._model.add(reaction_id)
+
+    def add_flux_limit(self, reaction_id, lower, upper):
+        self._flux_limits[reaction_id] = (lower, upper)
 
     def set_reaction(self, reaction_id, reaction):
         """Set the reaction ID to a reaction given by a
