@@ -179,7 +179,7 @@ class DictDatabase(MetabolicDatabase):
         # reaction map from reaction ID to ReactionEntry
         self._reaction_entries = defaultdict(dict)
         # original attributes in DictDatabase, consider to be moved
-        self._reactions = defaultdict(dict)
+        self._reaction_values = defaultdict(dict)
         self._compound_reactions = defaultdict(set)
         self._reversible = set()
 
@@ -196,8 +196,12 @@ class DictDatabase(MetabolicDatabase):
         return self._default_flux_limit
 
     @property
+    def reaction_entries(self):
+        return iter(self._reaction_entries)
+
+    @property
     def reactions(self):
-        return iter(self._reactions)
+        return iter(self._reaction_values)
 
     @property
     def compound_entries(self):
@@ -224,15 +228,15 @@ class DictDatabase(MetabolicDatabase):
         return compound_id in self._compound_entries
 
     def has_reaction(self, reaction_id):
-        return reaction_id in self._reaction_entries
+        return reaction_id in self._reaction_values
 
     def is_reversible(self, reaction_id):
         return reaction_id in self._reversible
 
     def get_reaction_values(self, reaction_id):
-        if reaction_id not in self._reactions:
+        if reaction_id not in self._reaction_values:
             raise ValueError('Unknown reaction: {}'.format(repr(reaction_id)))
-        return iteritems(self._reactions[reaction_id])
+        return iteritems(self._reaction_values[reaction_id])
 
     def get_compound_reactions(self, compound):
         return iter(self._compound_reactions[compound])
@@ -273,35 +277,35 @@ class DictDatabase(MetabolicDatabase):
         """
 
         # Overwrite previous reaction if the same id is used
-        if reaction_id in self._reactions:
+        if reaction_id in self._reaction_values:
             # Clean up compound to reaction mapping
-            for compound in self._reactions[reaction_id]:
+            for compound in self._reaction_values[reaction_id]:
                 self._compound_reactions[compound].remove(reaction_id)
 
             self._reversible.discard(reaction_id)
-            del self._reactions[reaction_id]
+            del self._reaction_values[reaction_id]
 
         # Add values to global (sparse) stoichiometric matrix
         # Compounds that occur on both sides will get a stoichiometric
         # value based on the sum of the signed values on each side.
         for compound, _ in reaction.compounds:
-            if compound not in self._reactions[reaction_id]:
-                self._reactions[reaction_id][compound] = 0
+            if compound not in self._reaction_values[reaction_id]:
+                self._reaction_values[reaction_id][compound] = 0
                 self._compound_reactions[compound].add(reaction_id)
         for compound, value in reaction.left:
-            self._reactions[reaction_id][compound] -= value
+            self._reaction_values[reaction_id][compound] -= value
         for compound, value in reaction.right:
-            self._reactions[reaction_id][compound] += value
+            self._reaction_values[reaction_id][compound] += value
 
         # Remove reaction from compound reactions if the resulting
         # stoichiometric value turned out to be zero.
         zero_compounds = set()
-        for compound, value in iteritems(self._reactions[reaction_id]):
+        for compound, value in iteritems(self._reaction_values[reaction_id]):
             if value == 0:
                 zero_compounds.add(compound)
 
         for compound in zero_compounds:
-            del self._reactions[reaction_id][compound]
+            del self._reaction_values[reaction_id][compound]
             self._compound_reactions[compound].remove(reaction_id)
 
         if reaction.direction != Direction.Forward:
