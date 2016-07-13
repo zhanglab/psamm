@@ -246,7 +246,8 @@ class Problem(BaseProblem):
         if len(quad) > 0:
             self._cp.objective.set_quadratic_coefficients(quad)
 
-        self._cp.objective.set_offset(expression.offset)
+        if self._cp.get_version() >= '12.6.2.0':
+            self._cp.objective.set_offset(expression.offset)
 
     set_linear_objective = set_objective
     """Set objective of the problem.
