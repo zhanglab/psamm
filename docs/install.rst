@@ -54,7 +54,7 @@ Cplex
 -----
 
 The Cplex Python bindings will have to be installed manually. Make sure that
-you are using at least **Cplex version 12.6.2**. If you are using
+you are using at least **Cplex version 12.6**. If you are using
 a virtual environment (as described above) this should be done after activating
 the virtual environment:
 
