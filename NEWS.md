@@ -1,3 +1,10 @@
+v0.23 (2016-07-26)
+------------------
+
+- Fix a bug where no output of the `randomsparse` command was produced.
+- Make Cplex interface in PSAMM compatible with earlier versions
+  (12.6 and 12.6.1) again.
+
 v0.22 (2016-07-01)
 ------------------
 

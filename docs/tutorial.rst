@@ -151,7 +151,7 @@ The LP (linear programming) solvers are necessary for analysis of metabolic
 fluxes using the constraint-based modeling approaches.
 
 Cplex is the recommended solver for PSAMM and is available with an academic
-license from IBM. Make sure that you use at least **Cplex version 12.6.2**.
+license from IBM. Make sure that you use at least **Cplex version 12.6**.
 Instructions on how to install Cplex can be found
 `here <http://www-01.ibm.com/support/docview.wss?uid=swg21444285>`_.
 

@@ -107,3 +107,7 @@ class RandomSparseNetworkCommand(MetabolicMixin, SolverCommandMixin, Command):
             entity, len(essential), len(strategy.entities)))
         logger.info('Deleted {}: {}/{}'.format(
             entity, len(deleted), len(strategy.entities)))
+
+        for entity_id in sorted(strategy.entities):
+            value = 0 if entity_id in deleted else 1
+            print('{}\t{}'.format(entity_id, value))

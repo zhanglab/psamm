@@ -194,7 +194,7 @@ def random_sparse(strategy, prob, obj_reaction, flux_threshold):
             constr.append(c)
 
         logger.info('Trying FBA without reactions {}...'.format(
-            deleted_reactions))
+            ', '.join(deleted_reactions)))
 
         try:
             prob.maximize(obj_reaction)
