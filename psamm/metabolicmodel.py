@@ -145,10 +145,32 @@ class LimitsView(Mapping):
         return self._create_bounds(key)
 
     def __iter__(self):
-        return self._model.reactions
+        return iter(self._model.reactions)
 
     def __len__(self):
         return sum(1 for _ in self._model.reactions)
+
+
+class _ListWithKey(list):
+    """A list-like which can also use 'key' to access elements in it
+
+    It can be used in the `MetabolicModel` to access reaction entities.
+    """
+
+    def __init__(self, database):
+        super(_ListWithKey, self).__init__()
+        self._database = database
+
+    def __getitem__(self, key):
+        val = None
+        try:
+            val = list.__getitem__(self, key)
+        except TypeError:
+            val = key
+        return self._database._reactions[val]
+
+    def __setitem__(self, key, val):
+        raise RuntimeError('Not allowed to change value of reactions.')
 
 
 class MetabolicModel(MetabolicDatabase):
@@ -163,7 +185,7 @@ class MetabolicModel(MetabolicDatabase):
         self._limits_lower = {}
         self._limits_upper = {}
 
-        self._reaction_set = set()
+        self._reaction_set = _ListWithKey(self._database)
         self._compound_set = set()
 
         self._v_max = v_max
@@ -174,11 +196,11 @@ class MetabolicModel(MetabolicDatabase):
 
     @property
     def reactions(self):
-        return iter(self._reaction_set)
+        return self._reaction_set
 
     @property
     def compounds(self):
-        return iter(self._compound_set)
+        return self._compound_set
 
     @property
     def compartments(self):
@@ -233,7 +255,7 @@ class MetabolicModel(MetabolicDatabase):
             return
 
         reaction = self._database.get_reaction(reaction_id)
-        self._reaction_set.add(reaction_id)
+        self._reaction_set.append(reaction_id)
         for compound, _ in reaction.compounds:
             self._compound_set.add(compound)
 
