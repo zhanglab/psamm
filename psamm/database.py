@@ -18,7 +18,7 @@
 """Representation of metabolic network databases."""
 
 import abc
-from collections import defaultdict, Mapping
+from collections import defaultdict, OrderedDict, Mapping
 
 from six import iteritems, add_metaclass
 
@@ -164,7 +164,7 @@ class DictDatabase(MetabolicDatabase):
 
     def __init__(self):
         super(DictDatabase, self).__init__()
-        self._reactions = defaultdict(dict)
+        self._reactions = OrderedDict()
         self._compound_reactions = defaultdict(set)
         self._reversible = set()
 
@@ -215,6 +215,7 @@ class DictDatabase(MetabolicDatabase):
             self._reversible.discard(reaction_id)
             del self._reactions[reaction_id]
 
+        self._reactions[reaction_id] = OrderedDict()
         # Add values to global (sparse) stoichiometric matrix
         # Compounds that occur on both sides will get a stoichiometric
         # value based on the sum of the signed values on each side.
