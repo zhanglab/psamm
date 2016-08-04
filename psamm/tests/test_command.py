@@ -114,6 +114,10 @@ class TestCommandMain(unittest.TestCase):
                 limits:
                   - reaction: rxn_2_\u03c0
                     upper: 100
+                model:
+                  - reactions:
+                    - rxn_1
+                    - rxn_2_\u03c0
                 ''')
         self._model = NativeModel(self._model_dir)
 
