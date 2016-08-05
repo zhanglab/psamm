@@ -578,19 +578,18 @@ def parse_reaction_file(path):
             context.filepath))
 
 
-def get_limits(limit_def):
-    limit = limit_def['compounds'][0]
-    if ('fixed' in limit and
-            ('lower' not in limit and 'upper'not in limit)):
-        fixed = limit['fixed']
+def get_limits(compound_def):
+    if ('fixed' in compound_def and
+            ('lower' not in compound_def and 'upper'not in compound_def)):
+        fixed = compound_def['fixed']
         lower = fixed
         upper = fixed
-    elif ('fixed' in limit and
-            ('lower'in limit or 'upper' in limit)):
+    elif ('fixed' in compound_def and
+            ('lower'in compound_def or 'upper' in compound_def)):
         raise ParseError('Cannot use fixed and a lower or upper bound')
     else:
-        lower = limit_def.get('lower', None)
-        upper = limit_def.get('upper', None)
+        lower = compound_def.get('lower', None)
+        upper = compound_def.get('upper', None)
     return lower, upper
 
 
@@ -606,7 +605,7 @@ def parse_medium(medium_def):
         compartment = compound_def.get('compartment', default_compartment)
         compound = Compound(compound_def['id'], compartment=compartment)
         reaction = compound_def.get('reaction')
-        lower, upper = get_limits(medium_def)
+        lower, upper = get_limits(compound_def)
         yield compound, reaction, lower, upper
 
 
