@@ -38,8 +38,17 @@ class MultimediaCommand(MetabolicMixin, SolverCommandMixin, Command):
         parser.add_argument(
             '--electron', type=str, help='File path to electron acceptor source id list')
         parser.add_argument(
-            '--loop-removal', help='Select type of loop removal constraints',
-            choices=['none', 'tfba', 'l1min'], default='none')
+            '--none', help='Select type of loop removal constraints',
+            action='store_true')
+        parser.add_argument(
+            '--l1min', help='Select type of loop removal constraints',
+            action='store_true')
+        parser.add_argument(
+            '--fva', help='Select type of loop removal constraints',
+            action='store_true')
+        parser.add_argument(
+            '--fba', help='Select type of loop removal constraints',
+            action='store_true')
         parser.add_argument(
             '--all-reactions', help='Show all reaction fluxes',
             action='store_true')
@@ -89,19 +98,47 @@ class MultimediaCommand(MetabolicMixin, SolverCommandMixin, Command):
                 reaction))
 
         #logger.info('Using {} as objective'.format(reaction))
+        if self._args.fva is True:
+            for csource in carbon_l:
+                for eaccept in electron_l:
+                    output_file = open('{}_fva.tsv'.format(eaccept), mode='a')
 
-        for csource in carbon_l:
-            for eaccept in electron_l:
-                output_file = open('{}.tsv'.format(eaccept), mode='a')
+                    result = self.run_carbon_fva(reaction, csource, eaccept)
+                    #output_file.write('{}\t{}\t{}\t{}\n'.format('', 'Carbon_flux', 'Electron_acc', 'Core_Biomass'))
+                    for c_e, c_l, c_u, e_e, e_l, e_u, b_e, b_l, b_u in result:
+                        output_file.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(csource, c_e, c_l, c_u,
+                                                                                     e_e, e_l, e_u, b_e, b_l, b_u))
+        if self._args.fba is True:
+            for csource in carbon_l:
+                for eaccept in electron_l:
+                    print(csource, eaccept)
+                    output_file = open('{}_fba.tsv'.format(eaccept), mode='a')
 
-                result = self.run_carbon_fba(reaction, csource, eaccept)
-                #output_file.write('{}\t{}\t{}\t{}\n'.format('', 'Carbon_flux', 'Electron_acc', 'Core_Biomass'))
-                for c_e, c_l, c_u, e_e, e_l, e_u, b_e, b_l, b_u in result:
-                    output_file.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(csource, c_e, c_l, c_u,
-                                                                                  e_e, e_l, e_u, b_e, b_l, b_u))
+                    result = self.run_carbon_fba(reaction, csource, eaccept)
+                    #output_file.write('{}\t{}\t{}\t{}\n'.format('', 'Carbon_flux', 'Electron_acc', 'Core_Biomass'))
+                    for c_e, c_u, e_e, e_u, b_e, b_u in result:
+                        output_file.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(csource, c_e, c_u,
+                                                                                    e_e, e_u, b_e, b_u))
+        if self._args.tfba is True:
+            for csource in carbon_l:
+                for eaccept in electron_l:
+                    output_file = open('{}_tfba.tsv'.format(eaccept), mode='a')
 
+                    result = self.run_carbon_tfba(reaction, csource, eaccept)
+                    #output_file.write('{}\t{}\t{}\t{}\n'.format('', 'Carbon_flux', 'Electron_acc', 'Core_Biomass'))
+                    for c_e, c_u, e_e, e_u, b_e, b_u in result:
+                        output_file.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(csource, c_e, c_u,
+                                                                                     e_e, e_u, b_e, b_u))
+        if self._args.l1min is True:
+            for csource in carbon_l:
+                for eaccept in electron_l:
+                    output_file = open('{}_l1fba.tsv'.format(eaccept), mode='a')
 
-
+                    result = self.run_carbon_l1fba(reaction, csource, eaccept)
+                    #output_file.write('{}\t{}\t{}\t{}\n'.format('', 'Carbon_flux', 'Electron_acc', 'Core_Biomass'))
+                    for c_e, c_u, e_e, e_u, b_e, b_u in result:
+                        output_file.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(csource, c_e, c_u,
+                                                                                      e_e, e_u, b_e, b_u))
 
 
                 '''
@@ -133,20 +170,20 @@ class MultimediaCommand(MetabolicMixin, SolverCommandMixin, Command):
                     total_reactions - nonzero_reactions, total_reactions))
                 '''
 
-
-    def run_carbon_fba(self, reaction, carbon, electron):
+    def run_carbon_fva(self, reaction, carbon, electron):
         """Run standard FBA on model."""
         solver = self._get_solver()
         model = self._mm
         model_c = model.copy()
+        model_c.limits['EX_nh4_e_e']._assign_lower(-1000)
+        model_c.limits['EX_pi_e_e']._assign_lower(-1000)
+        model_c.limits['EX_so4_e_e']._assign_lower(-1000)
         model_c.limits['EX_{}_e'.format(carbon)]._assign_lower(-10)
         model_c.limits['EX_{}_e'.format(electron)]._assign_lower(-1000)
-        if electron == 'cpd_fe3':
-            model_c.limits['EX_cpd_fe2_e']._assign_upper(1000)
         p = fluxanalysis.FluxBalanceProblem(model_c, solver)
-        #start_time = time.time()
 
         p.maximize(reaction)
+        obj_var = p.get_flux_var(reaction)
         obj_flux = p.get_flux(reaction)
         c_list = []
         e_list = []
@@ -154,19 +191,22 @@ class MultimediaCommand(MetabolicMixin, SolverCommandMixin, Command):
         c_list.append('EX_{}_e'.format(carbon))
         e_list.append('EX_{}_e'.format(electron))
         b_list.append(reaction)
-        for exchange_c, (lower_c, upper_c) in fluxanalysis.flux_variability(model_c, c_list, {reaction: obj_flux}, tfba=False, solver=self._get_solver()):
-            c_e = exchange_c
-            c_l = lower_c
-            c_u = upper_c
-        for exchange_e, (lower_e, upper_e) in fluxanalysis.flux_variability(model_c, e_list, {reaction: obj_flux}, tfba=False, solver=self._get_solver()):
-            e_e = exchange_e
-            e_l = lower_e
-            e_u = upper_e
-        for exchange_b, (lower_b, upper_b) in fluxanalysis.flux_variability(model_c, b_list, {reaction: obj_flux}, tfba=False, solver=self._get_solver()):
-            b_e = exchange_b
-            b_l = lower_b
-            b_u = upper_b
-        yield(c_e, c_l, c_u, e_e, e_l, e_u, b_e, b_l, b_u)
+        try:
+            for exchange_c, (lower_c, upper_c) in fluxanalysis.flux_variability(model_c, c_list, {reaction: obj_flux}, tfba=False, solver=self._get_solver()):
+                c_e = exchange_c
+                c_l = lower_c
+                c_u = upper_c
+            for exchange_e, (lower_e, upper_e) in fluxanalysis.flux_variability(model_c, e_list, {reaction: obj_flux}, tfba=False, solver=self._get_solver()):
+                e_e = exchange_e
+                e_l = lower_e
+                e_u = upper_e
+            for exchange_b, (lower_b, upper_b) in fluxanalysis.flux_variability(model_c, b_list, {reaction: obj_flux}, tfba=False, solver=self._get_solver()):
+                b_e = exchange_b
+                b_l = lower_b
+                b_u = upper_b
+            yield(c_e, c_l, c_u, e_e, e_l, e_u, b_e, b_l, b_u)
+        except:
+            yield('EX_{}_e'.format(carbon),'0', '0', 'EX_{}_e'.format(electron),'0', '0', 'Core_Biomass', '0', '0')
         #logger.info('Solving took {:.2f} seconds'.format(
         #    time.time() - start_time))
 
@@ -174,3 +214,60 @@ class MultimediaCommand(MetabolicMixin, SolverCommandMixin, Command):
         #for reaction_id in self._mm.reactions:
         #    yield reaction_id, p.get_flux(reaction_id)
 
+    def run_carbon_tfba(self, reaction, carbon, electron):
+        """Run standard FBA on model."""
+        solver = self._get_solver()
+        model = self._mm
+        model_c = model.copy()
+        model_c.limits['EX_cpd_nh4_e']._assign_lower(-1000)
+        model_c.limits['EX_cpd_pi_e']._assign_lower(-1000)
+        model_c.limits['EX_cpd_so4_e']._assign_lower(-1000)
+        model_c.limits['EX_{}_e'.format(carbon)]._assign_lower(-10)
+        model_c.limits['EX_{}_e'.format(electron)]._assign_lower(-1000)
+        p = fluxanalysis.FluxBalanceProblem(model_c, solver)
+        p.maximize(reaction)
+        b_u = p.get_flux(reaction)
+        flux_var = p.get_flux_var(reaction)
+        p.add_thermodynamic()
+        p.maximize(reaction)
+        c_u = p.get_flux('EX_{}_e'.format(carbon))
+        e_u = p.get_flux('EX_{}_e'.format(electron))
+        yield(carbon, c_u, electron, e_u, reaction, b_u)
+
+    def run_carbon_fba(self, reaction, carbon, electron):
+        """Run standard FBA on model."""
+        solver = self._get_solver()
+        model = self._mm
+        model_c = model.copy()
+        model_c.limits['EX_cpd_nh4_e']._assign_lower(-1000)
+        model_c.limits['EX_cpd_pi_e']._assign_lower(-1000)
+        model_c.limits['EX_cpd_so4_e']._assign_lower(-1000)
+        model_c.limits['EX_{}_e'.format(carbon)]._assign_lower(-10)
+        model_c.limits['EX_{}_e'.format(electron)]._assign_lower(-1000)
+        p = fluxanalysis.FluxBalanceProblem(model_c, solver)
+        p.maximize(reaction)
+        b_u = p.get_flux(reaction)
+        c_u = p.get_flux('EX_{}_e'.format(carbon))
+        e_u = p.get_flux('EX_{}_e'.format(electron))
+        yield(carbon, c_u, electron, e_u, reaction, b_u)
+
+    def run_carbon_l1fba(self, reaction, carbon, electron):
+        """Run standard FBA on model."""
+        solver = self._get_solver()
+        model = self._mm
+        model_c = model.copy()
+
+        model_c.limits['EX_cpd_nh4_e']._assign_lower(-1000)
+        model_c.limits['EX_cpd_pi_e']._assign_lower(-1000)
+        model_c.limits['EX_cpd_so4_e']._assign_lower(-1000)
+        model_c.limits['EX_{}_e'.format(carbon)]._assign_lower(-10)
+        model_c.limits['EX_{}_e'.format(electron)]._assign_lower(-1000)
+        p = fluxanalysis.FluxBalanceProblem(model_c, solver)
+        p.maximize(reaction)
+        b_u = p.get_flux(reaction)
+        flux_var = p.get_flux_var(reaction)
+        p.prob.add_linear_constraints(flux_var == b_u)
+        p.minimize_l1()
+        c_u = p.get_flux('EX_{}_e'.format(carbon))
+        e_u = p.get_flux('EX_{}_e'.format(electron))
+        yield(carbon, c_u, electron, e_u, reaction, b_u)
