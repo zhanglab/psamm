@@ -244,6 +244,14 @@ class TestYAMLFileSystemData(unittest.TestCase):
             (Compound('cpd_D', 'e'), None, -100, -10)
         ])
 
+    def test_get_limits_invalid_fixed(self):
+        d = {
+            'fixed' : 10,
+            'upper' : 20
+            }
+        with self.assertRaises(native.ParseError):
+            native.get_limits(d)
+
     def test_parse_medium_yaml_file(self):
         path = self.write_model_file('medium.yaml', '\n'.join([
             'compartment: e',
@@ -257,7 +265,9 @@ class TestYAMLFileSystemData(unittest.TestCase):
             '    lower: -100.0',
             '    upper: 500.0',
             '  - id: cpd_D',
-            '    compartment: c'
+            '    compartment: c',
+            '  - id: cpd_E',
+            '    fixed: 100.0',
         ]))
 
         medium = list(native.parse_medium_file(path))
@@ -265,7 +275,8 @@ class TestYAMLFileSystemData(unittest.TestCase):
             (Compound('cpd_A', 'e'), 'EX_A', -40, None),
             (Compound('cpd_B', 'e'), None, None, 100),
             (Compound('cpd_C', 'e'), None, -100, 500),
-            (Compound('cpd_D', 'c'), None, None, None)
+            (Compound('cpd_D', 'c'), None, None, None),
+            (Compound('cpd_E', 'e'), None, 100, 100)
         ])
 
     def test_parse_medium_yaml_list(self):
@@ -322,7 +333,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
             '- reaction: rxn_3',
             '  lower: -1000',
             '- reaction: rxn_4',
-            '  upper: 0'
+            '  fixed: 10'
         ]))
 
         self.write_model_file('limits_2.yml', '\n'.join([
@@ -337,7 +348,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
             ('rxn_1', -1, 25.5),
             ('rxn_2', None, None),
             ('rxn_3', -1000, None),
-            ('rxn_4', None, 0)
+            ('rxn_4', 10, 10)
         ])
 
     def test_parse_model_table_file(self):
