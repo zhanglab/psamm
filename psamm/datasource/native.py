@@ -578,6 +578,21 @@ def parse_reaction_file(path):
             context.filepath))
 
 
+def get_limits(compound_def):
+    if ('fixed' in compound_def and
+            ('lower' not in compound_def and 'upper'not in compound_def)):
+        fixed = compound_def['fixed']
+        lower = fixed
+        upper = fixed
+    elif ('fixed' in compound_def and
+            ('lower'in compound_def or 'upper' in compound_def)):
+        raise ParseError('Cannot use fixed and a lower or upper bound')
+    else:
+        lower = compound_def.get('lower', None)
+        upper = compound_def.get('upper', None)
+    return lower, upper
+
+
 def parse_medium(medium_def):
     """Parse a structured medium definition as obtained from a YAML file
 
@@ -590,8 +605,7 @@ def parse_medium(medium_def):
         compartment = compound_def.get('compartment', default_compartment)
         compound = Compound(compound_def['id'], compartment=compartment)
         reaction = compound_def.get('reaction')
-        lower = compound_def.get('lower')
-        upper = compound_def.get('upper')
+        lower, upper = get_limits(compound_def)
         yield compound, reaction, lower, upper
 
 
@@ -686,12 +700,8 @@ def parse_limit(limit_def):
     Returns a tuple of reaction, lower and upper bound.
     """
 
-    if 'reaction' not in limit_def:
-        raise ParseError('Expected reaction key in limit entry')
-
+    lower, upper = get_limits(limit_def)
     reaction = limit_def.get('reaction')
-    lower = limit_def.get('lower', None)
-    upper = limit_def.get('upper', None)
 
     return reaction, lower, upper
 
