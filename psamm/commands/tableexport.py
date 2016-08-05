@@ -62,16 +62,25 @@ class ExportTableCommand(Command):
 
     def _reaction_export(self):
         property_set = set()
-        for j in self._model.parse_reactions():
-            property_set.update(j.properties)
+        for reaction in self._model.parse_reactions():
+            property_set.update(reaction.properties)
 
         property_list_sorted = sorted(
             property_set, key=lambda x: (x != 'id', x != 'equation', x))
 
-        print('\t'.join([text_type(x) for x in property_list_sorted]))
-        for i in self._model.parse_reactions():
-            print('\t'.join(text_type(i.properties.get(property))
-                            for property in property_list_sorted))
+        print('\t'.join(
+            [text_type(x) for x in property_list_sorted] + ['in_model']))
+
+        model_reactions = set(self._model.parse_model())
+        for reaction in self._model.parse_reactions():
+            line_content = [text_type(reaction.properties.get(property))
+                            for property in property_list_sorted]
+            if (not self._model.has_model_definition() or
+                    reaction.id in model_reactions):
+                line_content.append('True')
+            else:
+                line_content.append('False')
+            print('\t'.join(line_content))
 
     def _compound_export(self):
         compound_set = set()
@@ -81,10 +90,20 @@ class ExportTableCommand(Command):
         compound_list_sorted = sorted(
             compound_set, key=lambda x: (x != 'id', x != 'name', x))
 
-        print('\t'.join([text_type(x) for x in compound_list_sorted]))
+        print('\t'.join(
+            [text_type(x) for x in compound_list_sorted] + ['in_model']))
+
+        metabolic_model = self._model.create_metabolic_model()
+        model_compounds = set(x.name for x in metabolic_model.compounds)
         for compound in self._model.parse_compounds():
-            print('\t'.join(text_type(compound.properties.get(property))
-                            for property in compound_list_sorted))
+            line_content = [text_type(compound.properties.get(property))
+                            for property in compound_list_sorted]
+            if (not self._model.has_model_definition() or
+                    compound.id in model_compounds):
+                line_content.append('True')
+            else:
+                line_content.append('False')
+            print('\t'.join(line_content))
 
     def _media_export(self):
         print('{}\t{}\t{}\t{}'.format('Compound ID', 'Reaction ID',
