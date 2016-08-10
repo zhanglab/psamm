@@ -413,6 +413,18 @@ def parse_compound_yaml_file(path, f):
     return parse_compound_list(path, yaml_load(f))
 
 
+def resolve_format(format, path):
+    """Looks at a file's extension and format (if any) and returns format.
+    """
+    if format is None:
+        if (re.match(r'.+\.(yml|yaml)$', path)):
+            return 'yaml'
+        elif (re.match(r'.+\.tsv$', path)):
+            return 'tsv'
+    else:
+        return format.lower()
+
+
 def parse_compound_file(path, format):
     """Open and parse reaction file based on file extension or given format
 
@@ -422,8 +434,8 @@ def parse_compound_file(path, format):
     context = FilePathContext(path)
 
     # YAML files do not need to explicitly specify format
-    if (re.match(r'.+\.(yml|yaml)$', context.filepath) and
-            (format is None or format == 'yaml')):
+    format = resolve_format(format, context.filepath)
+    if format == 'yaml':
         logger.debug('Parsing compound file {} as YAML'.format(
             context.filepath))
         with context.open('r') as f:
@@ -435,7 +447,7 @@ def parse_compound_file(path, format):
         with context.open('r') as f:
             for compound in modelseed.parse_compound_file(f, context):
                 yield compound
-    elif re.match(r'.+\.tsv$', context.filepath) or format == 'tsv':
+    elif format == 'tsv':
         logger.debug('Parsing compound file {} as TSV'.format(
             context.filepath))
         with context.open('r') as f:
@@ -561,13 +573,14 @@ def parse_reaction_file(path):
 
     context = FilePathContext(path)
 
-    if re.match(r'.+\.tsv$', context.filepath):
+    format = resolve_format(None, context.filepath)
+    if format == 'tsv':
         logger.debug('Parsing reaction file {} as TSV'.format(
             context.filepath))
         with context.open('r') as f:
             for reaction in parse_reaction_table_file(context, f):
                 yield reaction
-    elif re.match(r'.+\.(yml|yaml)$', context.filepath):
+    elif format == 'yaml':
         logger.debug('Parsing reaction file {} as YAML'.format(
             context.filepath))
         with context.open('r') as f:
@@ -677,13 +690,14 @@ def parse_medium_file(path):
 
     context = FilePathContext(path)
 
-    if re.match(r'.+\.tsv$', context.filepath):
+    format = resolve_format(None, context.filepath)
+    if format == 'tsv':
         logger.debug('Parsing medium file {} as TSV'.format(
             context.filepath))
         with context.open('r') as f:
             for entry in parse_medium_table_file(f):
                 yield entry
-    elif re.match(r'.+\.(yml|yaml)$', context.filepath):
+    elif format == 'yaml':
         logger.debug('Parsing medium file {} as YAML'.format(
             context.filepath))
         with context.open('r') as f:
@@ -772,13 +786,14 @@ def parse_limits_file(path):
 
     context = FilePathContext(path)
 
-    if re.match(r'.+\.tsv$', context.filepath):
+    format = resolve_format(None, context.filepath)
+    if format == 'tsv':
         logger.debug('Parsing limits file {} as TSV'.format(
             context.filepath))
         with context.open('r') as f:
             for limit in parse_limits_table_file(f):
                 yield limit
-    elif re.match(r'.+\.(yml|yaml)$', context.filepath):
+    elif format == 'yaml':
         logger.debug('Parsing limits file {} as YAML'.format(
             context.filepath))
         with context.open('r') as f:
@@ -856,12 +871,13 @@ def parse_model_file(path):
 
     context = FilePathContext(path)
 
-    if re.match(r'.+\.tsv$', context.filepath):
+    format = resolve_format(None, context.filepath)
+    if format == 'tsv':
         logger.debug('Parsing model file {} as TSV'.format(context.filepath))
         with context.open('r') as f:
             for reaction_id in parse_model_table_file(context, f):
                 yield reaction_id
-    elif re.match(r'.+\.(yml|yaml)$', context.filepath):
+    elif format == 'yaml':
         logger.debug('Parsing model file {} as YAML'.format(context.filepath))
         with context.open('r') as f:
             for reaction_id in parse_model_yaml_file(context, f):
