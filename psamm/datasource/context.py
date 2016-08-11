@@ -25,6 +25,10 @@ import six
 from six import string_types, text_type
 
 
+class ContextError(Exception):
+    """Raised when a context failure occurs."""
+
+
 @six.python_2_unicode_compatible
 class FilePathContext(object):
     """File context that keeps track of contextual information.
@@ -38,11 +42,15 @@ class FilePathContext(object):
     def __init__(self, arg):
         """Create new context from a path or existing context"""
 
-        if isinstance(arg, string_types):
-            self._filepath = arg
+        if arg is not None:
+            if isinstance(arg, string_types):
+                self._filepath = arg
+            else:
+                self._filepath = arg.filepath
+            self._basepath = os.path.dirname(self._filepath)
         else:
-            self._filepath = arg.filepath
-        self._basepath = os.path.dirname(self._filepath)
+            self._filepath = None
+            self._basepath = None
 
     @property
     def filepath(self):
@@ -53,9 +61,13 @@ class FilePathContext(object):
         return self._basepath
 
     def resolve(self, relpath):
+        if self._basepath is None:
+            raise ContextError('Context is a null context')
         return FilePathContext(os.path.join(self._basepath, relpath))
 
     def open(self, mode='r'):
+        if self._basepath is None:
+            raise ContextError('Context is a null context')
         return open(self.filepath, mode)
 
     def __str__(self):
