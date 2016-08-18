@@ -47,18 +47,26 @@ class ExcelExportCommand(Command):
         reaction_sheet = workbook.add_worksheet(name='Reactions')
 
         property_set = set()
-        for j in model.parse_reactions():
-            property_set.update(j.properties)
+        for reaction in model.parse_reactions():
+            property_set.update(reaction.properties)
         property_list = list(property_set)
         property_list_sorted = sorted(property_list,
                                       key=lambda x: (x != 'id',
                                                      x != 'equation', x))
-        for z, i in enumerate(property_list_sorted):
+        model_reactions = set(model.parse_model())
+        for z, i in enumerate(property_list_sorted + ['in_model']):
             reaction_sheet.write_string(0, z, text_type(i))
         for x, i in enumerate(model.parse_reactions()):
             for y, j in enumerate(property_list_sorted):
                 reaction_sheet.write_string(
                     x+1, y, text_type(i.properties.get(j)))
+            if (not model.has_model_definition() or
+                    i.id in model_reactions):
+                reaction_sheet.write_string(
+                    x+1, len(property_list_sorted), 'True')
+            else:
+                reaction_sheet.write_string(
+                    x+1, len(property_list_sorted), 'False')
 
         compound_sheet = workbook.add_worksheet(name='Compounds')
 
@@ -70,12 +78,21 @@ class ExcelExportCommand(Command):
                                       key=lambda x: (x != 'id',
                                                      x != 'name', x))
 
-        for z, i in enumerate(compound_list_sorted):
+        metabolic_model = self._model.create_metabolic_model()
+        model_compounds = set(x.name for x in metabolic_model.compounds)
+        for z, i in enumerate(compound_list_sorted + ['in_model']):
             compound_sheet.write_string(0, z, text_type(i))
         for x, i in enumerate(model.parse_compounds()):
             for y, j in enumerate(compound_list_sorted):
                 compound_sheet.write_string(
                     x+1, y, text_type(i.properties.get(j)))
+            if (not self._model.has_model_definition() or
+                    i.id in model_compounds):
+                compound_sheet.write_string(
+                    x+1, len(compound_list_sorted), 'True')
+            else:
+                compound_sheet.write_string(
+                    x+1, len(compound_list_sorted), 'False')
 
         media_sheet = workbook.add_worksheet(name='Medium')
 
