@@ -54,7 +54,7 @@ class TestBalanceCheckWithModel(unittest.TestCase):
                 '  - id: D',
                 '    formula: H2O',
             ]))
-        self._model = NativeModel(self._model_dir)
+        self._model = NativeModel.load_model_from_path(self._model_dir)
 
     def tearDown(self):
         shutil.rmtree(self._model_dir)

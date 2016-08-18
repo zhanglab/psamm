@@ -174,28 +174,45 @@ class NativeModel(object):
     directory subtree that specifies part of the model.
     """
 
-    def __init__(self, path):
-        """Create a model from the specified model file or directory"""
+    def __init__(self, model_from, context=None):
+        """Create a model from the specified content.
 
-        if os.path.isfile(path):
-            self._context = FilePathContext(path)
-            with open(self._context.filepath, 'r') as f:
-                self._model = yaml_load(f)
+        Model can be a string, open file, or dictionary.
+        """
+        if isinstance(model_from, string_types):
+            self._model = yaml_load(model_from)
+            self._context = context
+        elif isinstance(model_from, dict):
+            self._context = context
+            self._model = model_from
+        elif hasattr(model_from, 'read') and callable(model_from.read):
+            self._context = context
+            self._model = yaml_load(model_from)
         else:
+            raise ValueError("Model is of an invalid types")
+
+    @classmethod
+    def load_model_from_path(cls, path):
+        """Create a model from specified path."""
+        context = FilePathContext(path)
+        try:
+            with open(context.filepath, 'r') as f:
+                return NativeModel(f, context)
+        except IOError:
             # Try to open the default file
             for filename in DEFAULT_MODEL:
                 try:
-                    self._context = FilePathContext(
+                    context = FilePathContext(
                         os.path.join(path, filename))
-                    with open(self._context.filepath, 'r') as f:
-                        self._model = yaml_load(f)
-                        break
+                    with open(context.filepath, 'r') as f:
+                        return NativeModel(f, context)
                 except:
-                    logger.debug('Failed to load model file', exc_info=True)
-            else:
-                # No model could be loaded
-                raise ParseError('No model file could be found ({})'.format(
-                    ', '.join(DEFAULT_MODEL)))
+                    logger.debug('Failed to load model file',
+                                 exc_info=True)
+
+        # No model could be loaded
+        raise ParseError('No model file could be found ({})'.format(
+            ', '.join(DEFAULT_MODEL)))
 
     def get_name(self):
         """Return the name specified by the model"""
