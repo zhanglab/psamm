@@ -26,12 +26,12 @@ from psamm.datasource.reaction import parse_reaction
 class TestMetabolicDatabase(unittest.TestCase):
     def setUp(self):
         self.database = DictDatabase()
-        self.database.set_reaction('rxn_1', parse_reaction('=> (2) |A|'))
-        self.database.set_reaction('rxn_2', parse_reaction('|A| <=> |B|'))
-        self.database.set_reaction('rxn_3', parse_reaction('|A| => |D[e]|'))
-        self.database.set_reaction('rxn_4', parse_reaction('|A| => |C|'))
-        self.database.set_reaction('rxn_5', parse_reaction('|C| => |D[e]|'))
-        self.database.set_reaction('rxn_6', parse_reaction('|D[e]| =>'))
+        self.database.set_reaction('rxn_1', parse_reaction('=> 2 A'))
+        self.database.set_reaction('rxn_2', parse_reaction('A <=> B'))
+        self.database.set_reaction('rxn_3', parse_reaction('A => D[e]'))
+        self.database.set_reaction('rxn_4', parse_reaction('A + 2 B => C'))
+        self.database.set_reaction('rxn_5', parse_reaction('C => 3 D[e]'))
+        self.database.set_reaction('rxn_6', parse_reaction('D[e] =>'))
 
     def test_reactions(self):
         self.assertEqual(
@@ -59,35 +59,39 @@ class TestMetabolicDatabase(unittest.TestCase):
         self.assertFalse(self.database.is_reversible('rxn_5'))
 
     def test_get_reaction_values(self):
-        self.assertEqual(set(self.database.get_reaction_values('rxn_2')),
-                            { (Compound('A'), -1), (Compound('B'), 1) })
+        self.assertEqual(
+            list(self.database.get_reaction_values('rxn_4')),
+            [(Compound('A'), -1), (Compound('B'), -2), (Compound('C'), 1)])
 
     def test_get_compound_reactions(self):
-        self.assertEqual(set(self.database.get_compound_reactions(Compound('A'))),
-                            { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4' })
+        self.assertEqual(
+            set(self.database.get_compound_reactions(Compound('A'))),
+            {'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4'})
 
     def test_reversible(self):
         self.assertEqual(set(self.database.reversible), { 'rxn_2' })
 
     def test_get_reaction(self):
-        reaction = parse_reaction('|A| => |D[e]|')
-        self.assertEqual(self.database.get_reaction('rxn_3'), reaction)
+        reaction = parse_reaction('A + (2) B => C')
+        self.assertEqual(self.database.get_reaction('rxn_4'), reaction)
 
     def test_set_reaction_with_zero_coefficient(self):
         reaction = Reaction(
             Direction.Both, [(Compound('A'), 1), (Compound('B'), 0)],
             [(Compound('C'), 1)])
         self.database.set_reaction('rxn_new', reaction)
-        self.assertNotIn('rxn_new', self.database.get_compound_reactions(Compound('B')))
+        self.assertNotIn(
+            'rxn_new', self.database.get_compound_reactions(Compound('B')))
 
     def test_matrix_get_item(self):
         self.assertEqual(self.database.matrix[Compound('A'), 'rxn_1'], 2)
         self.assertEqual(self.database.matrix[Compound('A'), 'rxn_2'], -1)
         self.assertEqual(self.database.matrix[Compound('B'), 'rxn_2'], 1)
         self.assertEqual(self.database.matrix[Compound('A'), 'rxn_4'], -1)
+        self.assertEqual(self.database.matrix[Compound('B'), 'rxn_4'], -2)
         self.assertEqual(self.database.matrix[Compound('C'), 'rxn_4'], 1)
         self.assertEqual(self.database.matrix[Compound('C'), 'rxn_5'], -1)
-        self.assertEqual(self.database.matrix[Compound('D', 'e'), 'rxn_5'], 1)
+        self.assertEqual(self.database.matrix[Compound('D', 'e'), 'rxn_5'], 3)
 
     def test_matrix_get_item_invalid_key(self):
         with self.assertRaises(KeyError):
@@ -100,20 +104,23 @@ class TestMetabolicDatabase(unittest.TestCase):
             self.database.matrix[Compound('A'), 'rxn_1'] = 4
 
     def test_matrix_iter(self):
-        matrix_keys = { (Compound('A'), 'rxn_1'),
-                        (Compound('A'), 'rxn_2'),
-                        (Compound('B'), 'rxn_2'),
-                        (Compound('A'), 'rxn_3'),
-                        (Compound('D', 'e'), 'rxn_3'),
-                        (Compound('A'), 'rxn_4'),
-                        (Compound('C'), 'rxn_4'),
-                        (Compound('C'), 'rxn_5'),
-                        (Compound('D', 'e'), 'rxn_5'),
-                        (Compound('D', 'e'), 'rxn_6') }
+        matrix_keys = {
+            (Compound('A'), 'rxn_1'),
+            (Compound('A'), 'rxn_2'),
+            (Compound('B'), 'rxn_2'),
+            (Compound('A'), 'rxn_3'),
+            (Compound('D', 'e'), 'rxn_3'),
+            (Compound('A'), 'rxn_4'),
+            (Compound('B'), 'rxn_4'),
+            (Compound('C'), 'rxn_4'),
+            (Compound('C'), 'rxn_5'),
+            (Compound('D', 'e'), 'rxn_5'),
+            (Compound('D', 'e'), 'rxn_6')
+        }
         self.assertEqual(set(iter(self.database.matrix)), matrix_keys)
 
     def test_matrix_len(self):
-        self.assertEqual(len(self.database.matrix), 10)
+        self.assertEqual(len(self.database.matrix), 11)
 
 class TestChainedDatabase(unittest.TestCase):
     def setUp(self):
