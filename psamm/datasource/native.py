@@ -130,6 +130,7 @@ class ReactionEntry(object):
     def __init__(self, id, properties, filemark=None):
         self._id = id
         self._properties = dict(properties)
+        self._subsystem = self._properties.get('subsystem')
         self._name = self._properties.get('name')
         self._equation = self._properties.get('equation')
         self._ec = self._properties.get('ec')
@@ -139,6 +140,10 @@ class ReactionEntry(object):
     @property
     def id(self):
         return self._id
+
+    @property
+    def subsystem(self):
+        return self._subsystem
 
     @property
     def name(self):
@@ -289,18 +294,22 @@ class NativeModel(object):
                     self._context, self._model['compounds']):
                 yield compound
 
-    def create_metabolic_model(self):
-        """Create a :class:`psamm.metabolicmodel.MetabolicModel`."""
+    def create_database(self):
+        """
+        """
 
-        # Create metabolic model
         database = DictDatabase()
+        # Load ReactionEntry into database
         for reaction in self.parse_reactions():
             if reaction.equation is not None:
+                database.add_reaction_entry(reaction.id, reaction)
                 database.set_reaction(reaction.id, reaction.equation)
 
+        # Load CompoundEntry into database
         # Warn about undefined compounds
         compounds = set()
         for compound in self.parse_compounds():
+            database.add_compound_entry(compound.id, compound)
             compounds.add(compound.id)
 
         undefined_compounds = set()
@@ -320,8 +329,10 @@ class NativeModel(object):
 
         medium_compounds = set()
         for medium_compound in self.parse_medium():
-            if medium_compound[0].compartment == extracellular:
-                medium_compounds.add(medium_compound[0].name)
+            compound, reaction_id, lower, upper = medium_compound
+            if compound.compartment == extracellular:
+                database.add_medium(reaction_id, compound, lower, upper)
+                medium_compounds.add(compound.name)
 
         for compound in sorted(extracellular_compounds - medium_compounds):
             logger.warning(
@@ -332,6 +343,22 @@ class NativeModel(object):
                 'The compound {} was defined in the medium but'
                 ' is not in the extracellular compartment'.format(compound))
 
+        # Load model_definition into database
+        if self.has_model_definition():
+            for reaction_id in self.parse_model():
+                database.add_model_reaction(reaction_id)
+
+        # Load flux_limit into database
+        for reaction_id, lower, upper in self.parse_limits():
+            database.add_flux_limit(reaction_id, lower, upper)
+
+        return database
+
+    def create_metabolic_model(self):
+        """Create a :class:`psamm.metabolicmodel.MetabolicModel`."""
+
+        # Create metabolic model
+        database = self.create_database()
         model_definition = None
         if self.has_model_definition():
             model_definition = self.parse_model()
