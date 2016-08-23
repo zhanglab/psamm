@@ -401,7 +401,7 @@ def main(command_class=None, args=None):
     parsed_args = parser.parse_args(args)
 
     # Load model definition
-    model = NativeModel(parsed_args.model)
+    model = NativeModel.load_model_from_path(parsed_args.model)
 
     # Instantiate command with model and run
     command = parsed_args.command(model, parsed_args)

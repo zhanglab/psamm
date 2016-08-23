@@ -115,7 +115,7 @@ class TestCommandMain(unittest.TestCase):
                   - reaction: rxn_2_\u03c0
                     upper: 100
                 ''')
-        self._model = NativeModel(self._model_dir)
+        self._model = NativeModel.load_model_from_path(self._model_dir)
 
     def tearDown(self):
         shutil.rmtree(self._model_dir)
@@ -270,9 +270,10 @@ class TestCommandMain(unittest.TestCase):
                 '--model', self._model_dir, 'tableexport', 'reactions'])
 
         self.assertEqual(f.getvalue(), '\n'.join([
-            'id\tequation\tgenes',
-            "rxn_1\t|A_\u2206[e]| => |B[c]|\t['gene_1', 'gene_2']",
-            'rxn_2_\u03c0\t|B[c]| => |C[e]|\tgene_3 or (gene_4 and gene_5)',
+            'id\tequation\tgenes\tin_model',
+            "rxn_1\t|A_\u2206[e]| => |B[c]|\t['gene_1', 'gene_2']\tTrue",
+            'rxn_2_\u03c0\t|B[c]| => |C[e]|\tgene_3 or'
+            ' (gene_4 and gene_5)\tTrue',
             ''
         ]))
 
@@ -282,7 +283,7 @@ class TestCommandMain(unittest.TestCase):
                 '--model', self._model_dir, 'tableexport', 'compounds'])
 
         self.assertEqual(f.getvalue(), '\n'.join([
-            'id', 'A_\u2206', 'B', 'C', ''
+            'id\tin_model', 'A_\u2206\tTrue', 'B\tTrue', 'C\tTrue', ''
         ]))
 
     def test_run_tableexport_medium(self):
