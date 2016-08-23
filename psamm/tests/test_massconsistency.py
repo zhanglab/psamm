@@ -101,10 +101,8 @@ class TestMassConsistencyZeroMass(unittest.TestCase):
     def test_compound_consistency_with_zeromass(self):
         compounds = dict(massconsistency.check_compound_consistency(
             self.model, solver=self.solver, zeromass={Compound('Z')}))
-        self.assertEquals(compounds[Compound('Z')], 0)
         for c, value in iteritems(compounds):
-            if c.name != 'Z':
-                self.assertGreaterEqual(value, 1)
+            self.assertGreaterEqual(value, 1)
 
     def test_reaction_consistency_with_zeromass(self):
         reactions, _ = massconsistency.check_reaction_consistency(

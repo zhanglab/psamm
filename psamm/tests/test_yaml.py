@@ -21,7 +21,7 @@ import shutil
 import tempfile
 import unittest
 
-from psamm.datasource import native
+from psamm.datasource import native, context
 from psamm.reaction import Reaction, Compound, Direction
 
 from six import StringIO
@@ -114,6 +114,88 @@ class TestYAMLFileSystemData(unittest.TestCase):
             f.write(contents)
         return path
 
+    def test_long_string_model(self):
+        long_string = '''---
+            name: Test model
+            biomass: rxn_1
+            reactions:
+              - id: rxn_1
+                equation: '|A_\u2206[e]| => |B[c]|'
+                genes:
+                  - gene_1
+                  - gene_2
+              - id: rxn_2_\u03c0
+                equation: '|B[c]| => |C[e]|'
+                genes: 'gene_3 or (gene_4 and gene_5)'
+            compounds:
+              - id: A_\u2206
+              - id: B
+              - id: C
+            media:
+              - compartment: e
+                compounds:
+                  - id: A_\u2206
+                  - id: C
+            limits:
+              - reaction: rxn_2_\u03c0
+                upper: 100
+            '''
+        m = native.NativeModel(long_string)
+        self.assertEqual(m.get_name(), 'Test model')
+        self.assertEqual(m.get_biomass_reaction(), 'rxn_1')
+        self.assertEqual(m.get_extracellular_compartment(), 'e')
+        reactions = list(m.parse_reactions())
+        self.assertEqual(reactions[0].id, 'rxn_1')
+
+    def test_long_string_model_include(self):
+        longString = '''---
+            name: Test model
+            biomass: rxn_1
+            reactions:
+              - include: medium.yaml
+            '''
+        m = native.NativeModel(longString)
+        with self.assertRaises(context.ContextError):
+            list(m.parse_reactions())
+
+    def test_dict_model(self):
+        dict_model = {
+            'name': 'Test model',
+            'biomass': 'rxn_1',
+            'reactions': [
+                {'id': 'rxn_1',
+                 'equation': '|A_\u2206[e]| => |B[c]|',
+                 'genes': [
+                    'gene_1',
+                    'gene_2']
+                },
+                {'id': 'rxn_2_\u03c0',
+                 'equation': '|B[c]| => |C[e]|',
+                 'genes': 'gene_3 or (gene_4 and gene_5)'
+                }
+                ],
+            'compounds': [
+                {'id': 'A_\u2206'},
+                {'id': 'B'},
+                {'id': 'C'}
+              ],
+            'media': [
+                {'compartment': 'e',
+                 'compounds':[
+                    {'id': 'A_\u2206'},
+                    {'id': 'C'}]
+                }],
+            'limits':[
+                {'reaction': 'rxn_2_\u03c0',
+                 'upper': 100
+                }]
+            }
+
+        dmodel = native.NativeModel(dict_model)
+        self.assertEqual(dmodel.get_name(), 'Test model')
+        self.assertEqual(dmodel.get_biomass_reaction(), 'rxn_1')
+        self.assertEqual(dmodel.get_extracellular_compartment(), 'e')
+
     def test_parse_model_file(self):
         path = self.write_model_file('model.yaml', '\n'.join([
             'name: Test model',
@@ -122,12 +204,20 @@ class TestYAMLFileSystemData(unittest.TestCase):
             'default_flux_limit: 500'
         ]))
 
-        model = native.NativeModel(path)
+        model = native.NativeModel.load_model_from_path(path)
 
         self.assertEqual(model.get_name(), 'Test model')
         self.assertEqual(model.get_biomass_reaction(), 'biomass_reaction_id')
         self.assertEqual(model.get_extracellular_compartment(), 'Extra')
         self.assertEqual(model.get_default_flux_limit(), 500)
+
+    def test_bad_path(self):
+        with self.assertRaises(native.ParseError):
+            native.NativeModel.load_model_from_path('/nope/nreal/path')
+
+    def test_invalid_model_type(self):
+        with self.assertRaises(ValueError):
+            native.NativeModel(42.2)
 
     def test_parse_model_file_with_media(self):
         path = self.write_model_file('model.yaml', '\n'.join([
@@ -139,7 +229,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
             '      compartment: c'
         ]))
 
-        model = native.NativeModel(path)
+        model = native.NativeModel.load_model_from_path(path)
 
         medium = list(model.parse_medium())
         self.assertEqual(medium[0][0], Compound('A', 'Ex'))
@@ -244,6 +334,14 @@ class TestYAMLFileSystemData(unittest.TestCase):
             (Compound('cpd_D', 'e'), None, -100, -10)
         ])
 
+    def test_get_limits_invalid_fixed(self):
+        d = {
+            'fixed' : 10,
+            'upper' : 20
+            }
+        with self.assertRaises(native.ParseError):
+            native.get_limits(d)
+
     def test_parse_medium_yaml_file(self):
         path = self.write_model_file('medium.yaml', '\n'.join([
             'compartment: e',
@@ -257,7 +355,9 @@ class TestYAMLFileSystemData(unittest.TestCase):
             '    lower: -100.0',
             '    upper: 500.0',
             '  - id: cpd_D',
-            '    compartment: c'
+            '    compartment: c',
+            '  - id: cpd_E',
+            '    fixed: 100.0',
         ]))
 
         medium = list(native.parse_medium_file(path))
@@ -265,7 +365,8 @@ class TestYAMLFileSystemData(unittest.TestCase):
             (Compound('cpd_A', 'e'), 'EX_A', -40, None),
             (Compound('cpd_B', 'e'), None, None, 100),
             (Compound('cpd_C', 'e'), None, -100, 500),
-            (Compound('cpd_D', 'c'), None, None, None)
+            (Compound('cpd_D', 'c'), None, None, None),
+            (Compound('cpd_E', 'e'), None, 100, 100)
         ])
 
     def test_parse_medium_yaml_list(self):
@@ -322,7 +423,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
             '- reaction: rxn_3',
             '  lower: -1000',
             '- reaction: rxn_4',
-            '  upper: 0'
+            '  fixed: 10'
         ]))
 
         self.write_model_file('limits_2.yml', '\n'.join([
@@ -337,7 +438,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
             ('rxn_1', -1, 25.5),
             ('rxn_2', None, None),
             ('rxn_3', -1000, None),
-            ('rxn_4', None, 0)
+            ('rxn_4', 10, 10)
         ])
 
     def test_parse_model_table_file(self):
