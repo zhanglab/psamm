@@ -1,3 +1,17 @@
+
+v0.24 (2016-08-23)
+------------------
+- When specifying flux bounds in media and limits, the `fixed` key can now be
+  used when lower and upper limits are the same.
+- New column in output of `excelexport` and `tableexport` commands to
+  indicate if reactions and compounds are in the model.
+- Zero mass compounds are now omitted from the output of the `massconsistency`
+  command.
+- When exporting SBML file using the `sbmlexport` command, the exported
+  compounds and reactions now have IDs that are based on the YAML model IDs.
+  Characters that are not allowed in SBML IDs are transformed in a way that is
+  compatible with COBRA.
+
 v0.23 (2016-07-26)
 ------------------
 
