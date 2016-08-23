@@ -1,3 +1,13 @@
+v0.24 (2016-08-23)
+------------------
+- When specifying flux bounds in media and limits, the `fixed` key can now be
+  used when lower and upper limits are the same.
+- New column in output of `excelexport` and `tableexport` commands to
+  indicate if reactions and compounds are in the model.
+- Zero mass compounds are now omitted from the output of the `massconsistency`
+  command.
+- Safe IDs are now generated from YAML ID, the encoding is COBRA compatible.
+
 v0.23 (2016-07-26)
 ------------------
 
