@@ -36,18 +36,12 @@ class FastcoreProblem(FluxBalanceProblem):
     def __init__(self, *args, **kwargs):
         self._epsilon = kwargs.pop('epsilon', 1e-5)
         super(FastcoreProblem, self).__init__(*args, **kwargs)
-        self._has_maximization_vars = False
+        self._zl = None
         self._flipped = set()
 
     def _add_maximization_vars(self):
-        if self._has_maximization_vars:
-            return
-
-        # Define maximization variables
-        self._prob.define(*(('zl', rxnid) for rxnid in self._model.reactions),
-                          lower=0, upper=self._epsilon)
-
-        self._has_maximization_vars = True
+        self._zl = self.prob.namespace(
+            self._model.reactions, lower=0, upper=self._epsilon)
 
     def lp7(self, reaction_subset):
         """Approximately maximize the number of reaction with flux.
@@ -58,23 +52,23 @@ class FastcoreProblem(FluxBalanceProblem):
         "flux concentrating".
         """
 
-        self._add_maximization_vars()
+        if self._zl is None:
+            self._add_maximization_vars()
 
         positive = set(reaction_subset) - self._flipped
         negative = set(reaction_subset) & self._flipped
 
-        v = self._prob.set(('v', rxnid) for rxnid in positive)
-        zl = self._prob.set(('zl', rxnid) for rxnid in positive)
+        v = self._v.set(positive)
+        zl = self._zl.set(positive)
         cs = self._prob.add_linear_constraints(v >= zl)
         self._temp_constr.extend(cs)
 
-        v = self._prob.set(('v', rxnid) for rxnid in negative)
-        zl = self._prob.set(('zl', rxnid) for rxnid in negative)
+        v = self._v.set(negative)
+        zl = self._zl.set(negative)
         cs = self._prob.add_linear_constraints(v <= -zl)
         self._temp_constr.extend(cs)
 
-        self._prob.set_objective(self._prob.expr(
-            {('zl', rxnid): 1 for rxnid in reaction_subset}))
+        self._prob.set_objective(self._zl.sum(reaction_subset))
 
         self._solve()
 
@@ -86,21 +80,22 @@ class FastcoreProblem(FluxBalanceProblem):
         in subset P (L1-regularization).
         """
 
-        self._add_minimization_vars()
+        if self._z is None:
+            self._add_minimization_vars()
 
         positive = set(subset_k) - self._flipped
         negative = set(subset_k) & self._flipped
 
-        v = self._prob.set(('v', rxnid) for rxnid in positive)
+        v = self._v.set(positive)
         cs = self._prob.add_linear_constraints(v >= self._epsilon)
         self._temp_constr.extend(cs)
 
-        v = self._prob.set(('v', rxnid) for rxnid in negative)
+        v = self._v.set(negative)
         cs = self._prob.add_linear_constraints(v <= -self._epsilon)
         self._temp_constr.extend(cs)
 
-        self._prob.set_objective(self._prob.expr(
-            {('z', rxnid): -weights.get(rxnid, 1) for rxnid in subset_p}))
+        self._prob.set_objective(self._z.expr(
+            (rxnid, -weights.get(rxnid, 1)) for rxnid in subset_p))
 
         self._solve()
 
