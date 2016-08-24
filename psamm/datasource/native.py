@@ -23,7 +23,7 @@ pound (#). YAML-based formats are structured data following the YAML
 specification.
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import os
 import logging
@@ -412,7 +412,7 @@ def parse_compound_table_file(path, f):
 
     context = FilePathContext(path)
 
-    for i, row in enumerate(csv.DictReader(f, delimiter='\t')):
+    for i, row in enumerate(csv.DictReader(f, delimiter=str('\t'))):
         if 'id' not in row or row['id'].strip() == '':
             raise ParseError('Expected `id` column in table')
 
@@ -569,7 +569,7 @@ def parse_reaction_table_file(path, f):
 
     context = FilePathContext(path)
 
-    for lineno, row in enumerate(csv.DictReader(f, delimiter='\t')):
+    for lineno, row in enumerate(csv.DictReader(f, delimiter=str('\t'))):
         if 'id' not in row or row['id'].strip() == '':
             raise ParseError('Expected `id` column in table')
 
