@@ -279,7 +279,7 @@ class NativeModel(object):
                 raise ParseError('Expected media to be a list')
 
             for medium_compound in parse_medium_list(
-                    self._context, self._model['media']):
+                    self._context, self._model['media'], extracellular):
                 compound, reaction_id, lower, upper = medium_compound
                 if compound.compartment is None:
                     compound = compound.in_compartment(extracellular)
@@ -646,13 +646,13 @@ def get_limits(compound_def):
     return lower, upper
 
 
-def parse_medium(medium_def):
+def parse_medium(medium_def, default_compartment):
     """Parse a structured medium definition as obtained from a YAML file
 
     Returns in iterator of compound, reaction, lower and upper bounds.
     """
 
-    default_compartment = medium_def.get('compartment')
+    default_compartment = medium_def.get('compartment', default_compartment)
 
     for compound_def in medium_def.get('compounds', []):
         compartment = compound_def.get('compartment', default_compartment)
@@ -662,7 +662,7 @@ def parse_medium(medium_def):
         yield compound, reaction, lower, upper
 
 
-def parse_medium_list(path, medium):
+def parse_medium_list(path, medium, default_compartment):
     """Parse a structured medium list as obtained from a YAML file.
 
     Yields tuples of compound, reaction ID, lower and upper flux bounds. Path
@@ -674,20 +674,22 @@ def parse_medium_list(path, medium):
     for medium_def in medium:
         if 'include' in medium_def:
             include_context = context.resolve(medium_def['include'])
-            for medium_compound in parse_medium_file(include_context):
+            for medium_compound in parse_medium_file(
+                    include_context, default_compartment):
                 yield medium_compound
         else:
-            for medium_compound in parse_medium(medium_def):
+            for medium_compound in parse_medium(
+                    medium_def, default_compartment):
                 yield medium_compound
 
 
-def parse_medium_yaml_file(path, f):
+def parse_medium_yaml_file(path, f, default_compartment):
     """Parse a file as a YAML-format medium definition
 
     Path can be given as a string or a context.
     """
 
-    return parse_medium(yaml_load(f))
+    return parse_medium(yaml_load(f), default_compartment)
 
 
 def parse_medium_table_file(f):
@@ -721,7 +723,7 @@ def parse_medium_table_file(f):
         yield compound, None, lower, upper
 
 
-def parse_medium_file(path):
+def parse_medium_file(path, default_compartment):
     """Parse a file as a list of medium compounds with flux limits
 
     The file format is detected and the file is parsed accordingly. Path can
@@ -741,7 +743,8 @@ def parse_medium_file(path):
         logger.debug('Parsing medium file {} as YAML'.format(
             context.filepath))
         with context.open('r') as f:
-            for entry in parse_medium_yaml_file(context, f):
+            for entry in parse_medium_yaml_file(
+                    context, f, default_compartment):
                 yield entry
     else:
         raise ParseError('Unable to detect format of medium file {}'.format(
