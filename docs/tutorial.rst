@@ -36,6 +36,7 @@ folders:
     additional_files/
     E_coli_sbml/
     E_coli_excel/
+    E_coli_json/
 
 These directories include all of the files that will be needed to run the tutorial.
 
@@ -336,14 +337,16 @@ give the basic statistics of the model and should look like this:
 .. code-block:: shell
 
     ...
-    WARNING: Species pyr_b was converted to boundary condition because of "_b" suffix
-    WARNING: Species succ_b was converted to boundary condition because of "_b" suffix
-    INFO: Detected biomass reaction: Biomass_Ecoli_core_w_GAM
+    INFO: Detected biomass reaction: R_Biomass_Ecoli_core_w_GAM
+    INFO: Removing compound prefix 'M_'
+    INFO: Removing reaction prefix 'R_'
+    INFO: Removing compartment prefix 'C_'
     Model: Ecoli_core_model
     - Biomass reaction: Biomass_Ecoli_core_w_GAM
     - Compounds: 72
     - Reactions: 95
     - Genes: 137
+    INFO: e is extracellular compartment
     INFO: Using default flux limit of 1000.0
     INFO: Converting exchange reactions to medium definition
 
