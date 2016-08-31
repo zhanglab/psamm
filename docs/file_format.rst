@@ -38,6 +38,16 @@ The optional ``extracellular`` key specifies the default string for
 the extracellular compartment on compounds. If this option is not
 specified it will be assumed that the extracellular compartment is called ``e``.
 
+Default Compartment
+--------------------------
+
+The optional ``default_compartment`` key specifies the default compartment
+that is used if a compound in a reaction does not explicitly specify a
+compartment.  For example, the reaction ``|x[e]| + |atp| => |x| + |adp| + |pi|``
+does not specify a compartment on four of the compounds so those four would
+automatically be presumed to be in the default compartment (or ``c`` if no default
+compartment is specified).
+
 Compounds
 ---------
 
@@ -203,7 +213,8 @@ The optional ``limits`` property lists the files that are to be combined and
 applied as the reaction flux limits. This can be used to limit certain
 reactions in the model. The following fragment is an example of a limits file
 in the YAML format. The lower and upper specifies the flux bounds and they are
-both optional:
+both optional. The fixed key is a shortcut to set both lower and upper to its
+value:
 
 .. code-block:: yaml
 
@@ -212,6 +223,8 @@ both optional:
     - reaction: ADE2t
       lower: -50
       upper: 50
+    - reaction: DHPTDNRN
+      fixed: 0
 
 The limits can also be specified using a TSV-file as shown in the following
 fragment::
