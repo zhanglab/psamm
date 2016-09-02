@@ -838,6 +838,7 @@ class SBMLWriter(object):
         root.set(_tag('required', FBC_V2), 'false')
 
         model_tag = ET.SubElement(root, self._sbml_tag('model'))
+        model_tag.set(_tag('strict', FBC_V2), 'true')
 
         # Generators of unique IDs
         compartment_id = ('C_{}'.format(i) for i in count(1))
@@ -887,7 +888,6 @@ class SBMLWriter(object):
             species_tag.set(self._sbml_tag('constant'), 'false')
             species_tag.set(self._sbml_tag('boundaryCondition'), 'false')
             species_tag.set(self._sbml_tag('hasOnlySubstanceUnits'), 'true')
-
 
         params_list = ET.SubElement(
             model_tag, self._sbml_tag('listOfParameters'))
