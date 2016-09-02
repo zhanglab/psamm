@@ -30,7 +30,7 @@ import re
 from six import itervalues, iteritems, text_type
 
 from ..reaction import Reaction, Compound, Direction
-
+from ..expression.boolean import Expression, And, Or, Variable
 
 logger = logging.getLogger(__name__)
 
@@ -720,6 +720,45 @@ class SBMLWriter(object):
     def _make_safe_numerical_id(self, stri):
         return stri.replace('-', 'neg').replace('.', '_')
 
+    def _add_gene_associations(self, r_id, r_genes, gene_ids, r_tag):
+        """Adds all the different kinds of genes into a list."""
+        if r_id in r_genes:
+            genes = ET.SubElement(
+                r_tag, _tag('geneProductAssociation', FBC_V2))
+            if isinstance(r_genes[r_id], list):
+                e = Expression(
+                    And(*(Variable(i) for i in r_genes[r_id])))
+            else:
+                e = Expression(r_genes[r_id])
+            gene_stack = [(e._root, genes)]
+            while len(gene_stack) > 0:
+                current, parent = gene_stack.pop()
+                if isinstance(current, Or):
+                    gene_tag = ET.SubElement(parent, _tag('or', FBC_V2))
+                elif isinstance(current, And):
+                    gene_tag = ET.SubElement(parent, _tag('and', FBC_V2))
+                elif isinstance(current, Variable):
+                    gene_tag = ET.SubElement(parent, _tag(
+                        'geneProductRef', FBC_V2))
+                    if current.symbol not in gene_ids:
+                        id = 'g_' + self._create_unique_id(
+                            gene_ids, self._make_safe_id(current.symbol))
+                        gene_ids[id] = current.symbol
+                        gene_tag.set(_tag('geneProduct', FBC_V2), id)
+                if isinstance(current, (Or, And)):
+                    for item in current:
+                        gene_stack.append((item, gene_tag))
+
+    def _add_gene_list(self, parent_tag, gene_id_dict):
+        """Create list of all gene products as sbml readable elements."""
+        list_all_genes = ET.SubElement(parent_tag, _tag(
+            'listOfGeneProducts', FBC_V2))
+        for id, label in sorted(iteritems(gene_id_dict)):
+            gene_tag = ET.SubElement(
+                list_all_genes, _tag('geneProduct', FBC_V2))
+            gene_tag.set(_tag('id', FBC_V2), id)
+            gene_tag.set(_tag('label', FBC_V2), label)
+
     def write_model(self, file, model):
         """Write a given model to file"""
 
@@ -831,6 +870,7 @@ class SBMLWriter(object):
             flux_limits[rxn_id] = lower_lim, upper_lim
 
         params = {}
+        gene_ids = {}
 
         # Create list of reactions
         reactions = ET.SubElement(model_tag, self._sbml_tag('listOfReactions'))
@@ -851,6 +891,9 @@ class SBMLWriter(object):
                 _tag('upperFluxBound', FBC_V2), params[upper_str])
             reaction_tag.set(
                 _tag('lowerFluxBound', FBC_V2), params[lower_str])
+
+            self._add_gene_associations(
+                eq_id, reaction_genes, gene_ids, reaction_tag)
 
             reactants = ET.SubElement(
                 reaction_tag, self._sbml_tag('listOfReactants'))
@@ -899,6 +942,8 @@ class SBMLWriter(object):
             param_tag.set(self._sbml_tag('id'), id)
             param_tag.set(self._sbml_tag('value'), val)
             param_tag.set(self._sbml_tag('constant'), 'true')
+
+        self._add_gene_list(model_tag, gene_ids)
 
         tree = ET.ElementTree(root)
         tree.write(file, default_namespace=self._namespace)
