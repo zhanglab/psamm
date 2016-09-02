@@ -692,6 +692,34 @@ class SBMLWriter(object):
                 suffix += 1
         return orig_id
 
+    def _get_flux_bounds(self, r_id, model, flux_limits, equation):
+        """Read reaction's limits to set up strings for limits in the output file.
+        """
+        if r_id not in flux_limits or flux_limits[r_id][0] is None:
+            if equation.direction == Direction.Forward:
+                lower = 0
+            else:
+                lower = -model.get_default_flux_limit()
+        else:
+            lower = flux_limits[r_id][0]
+
+        if r_id not in flux_limits or flux_limits[r_id][1] is None:
+            if equation.direction == Direction.Reverse:
+                upper = 0
+            else:
+                upper = model.get_default_flux_limit()
+        else:
+            upper = flux_limits[r_id][1]
+
+        if lower % 1 == 0:
+            lower = int(lower)
+        if upper % 1 == 0:
+            upper = int(upper)
+        return text_type(lower), text_type(upper)
+
+    def _make_safe_numerical_id(self, stri):
+        return stri.replace('-', 'neg').replace('.', '_')
+
     def write_model(self, file, model):
         """Write a given model to file"""
 
@@ -795,9 +823,14 @@ class SBMLWriter(object):
                 self._sbml_tag('compartment'),
                 model_compartments[species.compartment])
 
+        params_list = ET.SubElement(
+            model_tag, self._sbml_tag('listOfParameters'))
+
         # Create mapping for reactions containing flux limit definitions
         for rxn_id, lower_lim, upper_lim in model.parse_limits():
             flux_limits[rxn_id] = lower_lim, upper_lim
+
+        params = {}
 
         # Create list of reactions
         reactions = ET.SubElement(model_tag, self._sbml_tag('listOfReactions'))
@@ -808,6 +841,16 @@ class SBMLWriter(object):
                 reaction_tag.set(self._sbml_tag('name'), reaction_names[eq_id])
             reaction_tag.set(self._sbml_tag('reversible'), text_type(
                 equation.direction == Direction.Both).lower())
+
+            lower_str, upper_str = self._get_flux_bounds(
+                eq_id, model, flux_limits, equation)
+
+            params[upper_str] = 'P_'+self._make_safe_numerical_id(upper_str)
+            params[lower_str] = 'P_'+self._make_safe_numerical_id(lower_str)
+            reaction_tag.set(
+                _tag('upperFluxBound', FBC_V2), params[upper_str])
+            reaction_tag.set(
+                _tag('lowerFluxBound', FBC_V2), params[lower_str])
 
             reactants = ET.SubElement(
                 reaction_tag, self._sbml_tag('listOfReactants'))
@@ -838,30 +881,24 @@ class SBMLWriter(object):
             param_list = ET.SubElement(
                 kl_tag, self._sbml_tag('listOfParameters'))
 
-            if eq_id not in flux_limits or flux_limits[eq_id][0] is None:
-                if equation.direction == Direction.Forward:
-                    lower_str = text_type(0)
-                else:
-                    lower_str = text_type(-model.get_default_flux_limit())
-            else:
-                lower_str = text_type(flux_limits[eq_id][0])
-            if eq_id not in flux_limits or flux_limits[eq_id][1] is None:
-                if equation.direction == Direction.Reverse:
-                    upper_str = text_type(0)
-                else:
-                    upper_str = text_type(model.get_default_flux_limit())
-            else:
-                upper_str = text_type(flux_limits[eq_id][1])
             ET.SubElement(param_list, self._sbml_tag('parameter'), {
                 self._sbml_tag('id'): 'LOWER_BOUND',
                 self._sbml_tag('name'): 'LOWER_BOUND',
-                self._sbml_tag('value'): lower_str
+                self._sbml_tag('value'): lower_str,
+                self._sbml_tag('constant'): 'true'
             })
             ET.SubElement(param_list, self._sbml_tag('parameter'), {
                 self._sbml_tag('id'): 'UPPER_BOUND',
                 self._sbml_tag('name'): 'UPPER_BOUND',
-                self._sbml_tag('value'): upper_str
+                self._sbml_tag('value'): upper_str,
+                self._sbml_tag('constant'): 'true'
             })
+
+        for val, id in iteritems(params):
+            param_tag = ET.SubElement(params_list, self._sbml_tag('parameter'))
+            param_tag.set(self._sbml_tag('id'), id)
+            param_tag.set(self._sbml_tag('value'), val)
+            param_tag.set(self._sbml_tag('constant'), 'true')
 
         tree = ET.ElementTree(root)
         tree.write(file, default_namespace=self._namespace)
