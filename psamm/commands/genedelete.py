@@ -32,7 +32,9 @@ logger = logging.getLogger(__name__)
 
 
 class GeneDeletionCommand(MetabolicMixin, SolverCommandMixin, Command):
-    """Find reactions requiring a spcified gene and delete them from model.
+    """Find reactions requiring a specified gene and delete them from model.
+
+    Reports the new objective flux after the gene was deleted.
     """
     @classmethod
     def init_parser(cls, parser):
