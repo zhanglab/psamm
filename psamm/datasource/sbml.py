@@ -749,6 +749,22 @@ class SBMLWriter(object):
                     for item in current:
                         gene_stack.append((item, gene_tag))
 
+    def _add_fbc_objective(self, model_tag, obj_id):
+        """Adds the objective(s) to the sbml document."""
+        objective_list = ET.SubElement(model_tag, _tag(
+            'listOfObjectives', FBC_V2))
+        objective_list.set(_tag('activeObjective', FBC_V2), 'O_1')
+        objective_tag = ET.SubElement(
+            objective_list, _tag('objective', FBC_V2))
+        objective_tag.set(_tag('id', FBC_V2), 'O_1')
+        objective_tag.set(_tag('type', FBC_V2), 'maximize')
+        flux_objective_list = ET.SubElement(objective_tag, _tag(
+            'listOfFluxObjectives', FBC_V2))
+        flux_objective_tag = ET.SubElement(flux_objective_list, _tag(
+            'fluxObjective', FBC_V2))
+        flux_objective_tag.set(_tag('reaction', FBC_V2), 'R_' + obj_id)
+        flux_objective_tag.set(_tag('coefficient', FBC_V2), '1')
+
     def _add_gene_list(self, parent_tag, gene_id_dict):
         """Create list of all gene products as sbml readable elements."""
         list_all_genes = ET.SubElement(parent_tag, _tag(
@@ -779,6 +795,7 @@ class SBMLWriter(object):
         reaction_genes = {}
         reaction_equations = {}
         reaction_names = {}
+        biomass_id = None
         for r in model.parse_reactions():
             if (model_reactions is not None and
                     r.id not in model_reactions):
@@ -786,6 +803,8 @@ class SBMLWriter(object):
 
             reaction_id = self._create_unique_id(
                 reaction_equations, self._make_safe_id(r.id))
+            if r.id == model.get_biomass_reaction():
+                biomass_id = reaction_id
 
             if r.genes is not None:
                 reaction_genes[reaction_id] = r.genes
@@ -871,6 +890,9 @@ class SBMLWriter(object):
 
         params = {}
         gene_ids = {}
+
+        if biomass_id is not None:
+            self._add_fbc_objective(model_tag, biomass_id)
 
         # Create list of reactions
         reactions = ET.SubElement(model_tag, self._sbml_tag('listOfReactions'))
