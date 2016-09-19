@@ -32,6 +32,7 @@ import csv
 
 import yaml
 from six import string_types, iteritems
+from decimal import Decimal
 
 from ..reaction import Reaction, Compound, Direction
 from ..metabolicmodel import MetabolicModel
@@ -55,6 +56,10 @@ class ParseError(Exception):
     """Exception used to signal errors while parsing"""
 
 
+def float_constructor(loader, node):
+    return Decimal(loader.construct_scalar(node))
+
+
 def whendefined(func, value):
     """Apply func to value if value is not None"""
     return func(value) if value is not None else None
@@ -74,9 +79,11 @@ def yaml_load(stream):
                            ' speed up loading the model files.')
 
     if _HAS_YAML_LIBRARY:
-        return yaml.load(stream, Loader=yaml.CSafeLoader)
-
-    return yaml.safe_load(stream)
+        loader = yaml.CSafeLoader(stream)
+    else:
+        loader = yaml.SafeLoader(stream)
+    loader.add_constructor('tag:yaml.org,2002:float', float_constructor)
+    return loader.get_data()
 
 
 class CompoundEntry(object):
