@@ -645,9 +645,10 @@ class SBMLReader(object):
 class SBMLWriter(object):
     """Writer of SBML files"""
 
-    def __init__(self):
+    def __init__(self, cobra_flux_bounds=False):
         self._namespace = SBML_NS_L3_V1_CORE
         self._sbml_tag = partial(_tag, namespace=self._namespace)
+        self._cobra_flux_bounds = False
 
     def _make_safe_id(self, id):
         """Returns a modified id that has been made safe for SBML.
@@ -938,26 +939,28 @@ class SBMLWriter(object):
                 p_tag.text = 'GENE_ASSOCIATION: {}'.format(
                     reaction_genes[eq_id])
 
-            # Create COBRA-compliant parameter list
-            kl_tag = ET.SubElement(reaction_tag, self._sbml_tag('kineticLaw'))
-            math_tag = ET.SubElement(kl_tag, self._sbml_tag('math'))
-            ci_tag = ET.SubElement(math_tag, _tag('ci', MATHML_NS))
-            ci_tag.text = 'FLUX_VALUE'
-            param_list = ET.SubElement(
-                kl_tag, self._sbml_tag('listOfParameters'))
+            if self._cobra_flux_bounds is True:
+                # Create COBRA-compliant parameter list
+                kl_tag = ET.SubElement(
+                    reaction_tag, self._sbml_tag('kineticLaw'))
+                math_tag = ET.SubElement(kl_tag, self._sbml_tag('math'))
+                ci_tag = ET.SubElement(math_tag, _tag('ci', MATHML_NS))
+                ci_tag.text = 'FLUX_VALUE'
+                param_list = ET.SubElement(
+                    kl_tag, self._sbml_tag('listOfParameters'))
 
-            ET.SubElement(param_list, self._sbml_tag('parameter'), {
-                self._sbml_tag('id'): 'LOWER_BOUND',
-                self._sbml_tag('name'): 'LOWER_BOUND',
-                self._sbml_tag('value'): lower_str,
-                self._sbml_tag('constant'): 'true'
-            })
-            ET.SubElement(param_list, self._sbml_tag('parameter'), {
-                self._sbml_tag('id'): 'UPPER_BOUND',
-                self._sbml_tag('name'): 'UPPER_BOUND',
-                self._sbml_tag('value'): upper_str,
-                self._sbml_tag('constant'): 'true'
-            })
+                ET.SubElement(param_list, self._sbml_tag('parameter'), {
+                    self._sbml_tag('id'): 'LOWER_BOUND',
+                    self._sbml_tag('name'): 'LOWER_BOUND',
+                    self._sbml_tag('value'): lower_str,
+                    self._sbml_tag('constant'): 'true'
+                })
+                ET.SubElement(param_list, self._sbml_tag('parameter'), {
+                    self._sbml_tag('id'): 'UPPER_BOUND',
+                    self._sbml_tag('name'): 'UPPER_BOUND',
+                    self._sbml_tag('value'): upper_str,
+                    self._sbml_tag('constant'): 'true'
+                })
 
         for val, id in iteritems(params):
             param_tag = ET.SubElement(params_list, self._sbml_tag('parameter'))
