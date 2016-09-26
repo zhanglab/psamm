@@ -697,6 +697,7 @@ class SBMLWriter(object):
 
         ET.register_namespace('mathml', MATHML_NS)
         ET.register_namespace('xhtml', XHTML_NS)
+        ET.register_namespace('fbc', FBC_V2)
 
         # Load compound information
         compound_name = {}
@@ -745,6 +746,7 @@ class SBMLWriter(object):
         root = ET.Element(self._sbml_tag('sbml'))
         root.set(self._sbml_tag('level'), '3')
         root.set(self._sbml_tag('version'), '1')
+        root.set(_tag('required', FBC_V2), 'false')
 
         model_tag = ET.SubElement(root, self._sbml_tag('model'))
 
