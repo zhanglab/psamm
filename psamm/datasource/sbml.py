@@ -867,6 +867,7 @@ class SBMLWriter(object):
                 compartments, self._sbml_tag('compartment'))
             compartment_tag.set(self._sbml_tag('id'), compartment_id)
             compartment_tag.set(self._sbml_tag('name'), text_type(compartment))
+            compartment_tag.set(self._sbml_tag('constant'), 'true')
 
         # Create list of species
         species_list = ET.SubElement(
