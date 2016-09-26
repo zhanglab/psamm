@@ -822,6 +822,8 @@ class SBMLWriter(object):
             if reaction_id is None:
                 reaction_id = 'EX_{}_{}'.format(
                     compound.name, compound.compartment)
+            reaction_id = self._create_unique_id(
+                reaction_equations, self._make_safe_id(reaction_id))
             reaction_equations[reaction_id] = Reaction(
                 Direction.Both, {compound: -1})
             if lower is None:
@@ -881,6 +883,10 @@ class SBMLWriter(object):
             species_tag.set(
                 self._sbml_tag('compartment'),
                 model_compartments[species.compartment])
+            species_tag.set(self._sbml_tag('constant'), 'false')
+            species_tag.set(self._sbml_tag('boundaryCondition'), 'false')
+            species_tag.set(self._sbml_tag('hasOnlySubstanceUnits'), 'true')
+
 
         params_list = ET.SubElement(
             model_tag, self._sbml_tag('listOfParameters'))
@@ -904,7 +910,7 @@ class SBMLWriter(object):
                 reaction_tag.set(self._sbml_tag('name'), reaction_names[eq_id])
             reaction_tag.set(self._sbml_tag('reversible'), text_type(
                 equation.direction == Direction.Both).lower())
-
+            reaction_tag.set(self._sbml_tag('fast'), 'false')
             lower_str, upper_str = self._get_flux_bounds(
                 eq_id, model, flux_limits, equation)
 
@@ -918,10 +924,13 @@ class SBMLWriter(object):
             self._add_gene_associations(
                 eq_id, reaction_genes, gene_ids, reaction_tag)
 
-            reactants = ET.SubElement(
-                reaction_tag, self._sbml_tag('listOfReactants'))
-            products = ET.SubElement(
-                reaction_tag, self._sbml_tag('listOfProducts'))
+            if any(value < 0 for _, value in equation.compounds):
+                reactants = ET.SubElement(
+                    reaction_tag, self._sbml_tag('listOfReactants'))
+
+            if any(value > 0 for _, value in equation.compounds):
+                products = ET.SubElement(
+                    reaction_tag, self._sbml_tag('listOfProducts'))
 
             for compound, value in sorted(equation.compounds):
                 dest_list = reactants if value < 0 else products
@@ -929,6 +938,8 @@ class SBMLWriter(object):
                     dest_list, self._sbml_tag('speciesReference'))
                 spec_ref.set(
                     self._sbml_tag('species'), 'M_' + model_species[compound])
+                spec_ref.set(
+                    self._sbml_tag('constant'), 'true')
                 spec_ref.set(
                     self._sbml_tag('stoichiometry'), text_type(abs(value)))
 
