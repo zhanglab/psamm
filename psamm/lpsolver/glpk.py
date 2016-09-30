@@ -132,13 +132,17 @@ class Problem(BaseProblem):
             if lb is None and ub is None:
                 swiglpk.glp_set_col_bnds(self._p, i, swiglpk.GLP_FR, 0, 0)
             elif lb is None:
-                swiglpk.glp_set_col_bnds(self._p, i, swiglpk.GLP_UP, 0, ub)
+                swiglpk.glp_set_col_bnds(
+                    self._p, i, swiglpk.GLP_UP, 0, float(ub))
             elif ub is None:
-                swiglpk.glp_set_col_bnds(self._p, i, swiglpk.GLP_LO, lb, 0)
+                swiglpk.glp_set_col_bnds(
+                    self._p, i, swiglpk.GLP_LO, float(lb), 0)
             elif lb == ub:
-                swiglpk.glp_set_col_bnds(self._p, i, swiglpk.GLP_FX, lb, 0)
+                swiglpk.glp_set_col_bnds(
+                    self._p, i, swiglpk.GLP_FX, float(lb), 0)
             else:
-                swiglpk.glp_set_col_bnds(self._p, i, swiglpk.GLP_DB, lb, ub)
+                swiglpk.glp_set_col_bnds(
+                    self._p, i, swiglpk.GLP_DB, float(lb), float(ub))
 
             if vt != VariableType.Continuous:
                 swiglpk.glp_set_col_kind(self._p, i, self.VARTYPE_MAP[vt])

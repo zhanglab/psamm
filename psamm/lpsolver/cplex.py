@@ -142,9 +142,9 @@ class Problem(BaseProblem):
 
         # Assign default values
         lower = (-cp.infinity if value is None or value == -_INF
-                 else value for value in lower)
+                 else float(value) for value in lower)
         upper = (cp.infinity if value is None or value == _INF
-                 else value for value in upper)
+                 else float(value) for value in upper)
         vartype = tuple(VariableType.Continuous if value is None else value
                         for value in vartype)
 
