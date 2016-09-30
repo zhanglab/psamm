@@ -136,9 +136,9 @@ class Problem(BaseProblem):
         lp_names = tuple(next(self._var_names) for name in names)
 
         # Assign default values
-        lower = (-gurobipy.GRB.INFINITY if value is None else value
+        lower = (-gurobipy.GRB.INFINITY if value is None else float(value)
                  for value in lower)
-        upper = (gurobipy.GRB.INFINITY if value is None else value
+        upper = (gurobipy.GRB.INFINITY if value is None else float(value)
                  for value in upper)
         vartype = tuple(VariableType.Continuous if value is None else value
                         for value in vartype)
