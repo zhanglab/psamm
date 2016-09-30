@@ -126,8 +126,8 @@ class Problem(BaseProblem):
                 var_indices, names, lower, upper, vartype):
             self._variables[name] = i
 
-            lb = None if lb == -_INF else lb
-            ub = None if ub == _INF else ub
+            lb = None if lb == -_INF else float(lb)
+            ub = None if ub == _INF else float(ub)
 
             if lb is None and ub is None:
                 swiglpk.glp_set_col_bnds(self._p, i, swiglpk.GLP_FR, 0, 0)
