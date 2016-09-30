@@ -137,9 +137,9 @@ class Problem(BaseProblem):
 
         # Assign default values
         lower = (-gurobipy.GRB.INFINITY if value is None else value
-                 for value in lower)
+                 for float(value) in lower)
         upper = (gurobipy.GRB.INFINITY if value is None else value
-                 for value in upper)
+                 for float(value) in upper)
         vartype = tuple(VariableType.Continuous if value is None else value
                         for value in vartype)
 
