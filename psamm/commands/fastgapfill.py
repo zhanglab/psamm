@@ -96,7 +96,10 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             penalties=penalties)
 
         epsilon = self._args.epsilon
-        core = set(self._mm.reactions)
+        core = set()
+        for r in self._mm.reactions:
+            if not self._mm.is_exchange(r):
+                core.add(r)
         induced = fastgapfill(model_extended, core, weights=weights,
                               epsilon=epsilon, solver=solver)
 
