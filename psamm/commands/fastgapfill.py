@@ -33,6 +33,9 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
+            '--subset', metavar='file', type=argparse.FileType('r'),
+            help='specify core reaction subset to use')
+        parser.add_argument(
             '--penalty', metavar='file', type=argparse.FileType('r'),
             help='List of penalty scores for database reactions')
         parser.add_argument(
@@ -97,9 +100,17 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         epsilon = self._args.epsilon
         core = set()
-        for r in self._mm.reactions:
-            if not self._mm.is_exchange(r):
-                core.add(r)
+        if self._args.subset is None:
+            subset = set(self._mm.reactions)
+            for r in subset:
+                if not self._mm.is_exchange(r):
+                    core.add(r)
+        else:
+            for line in self._args.subset:
+                line = line.strip()
+                if line == '':
+                    continue
+                core.add(line)
         induced = fastgapfill(model_extended, core, weights=weights,
                               epsilon=epsilon, solver=solver)
 
