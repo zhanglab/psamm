@@ -183,8 +183,16 @@ class SpeciesEntry(_SBMLEntry):
             properties['name'] = self._root.get('name')
         if 'compartment' in self._root.attrib:
             properties['compartment'] = self._root.get('compartment')
-        if 'charge' in self._root.attrib and self._root.get('charge') != '':
-            properties['charge'] = int(self._root.get('charge'))
+
+        charge_tag = _tag('charge', FBC_V2)
+        if (charge_tag in self._root.attrib and
+                self._root.get(charge_tag) != ''):
+            properties['charge'] = int(self._root.get(charge_tag))
+
+        formula_tag = _tag('chemicalFormula', FBC_V2)
+        if (formula_tag in self._root.attrib and
+                self._root.get(formula_tag) != ''):
+            properties['formula'] = self._root.get(formula_tag)
 
         return properties
 
@@ -784,9 +792,15 @@ class SBMLWriter(object):
 
         # Load compound information
         compound_name = {}
+        compound_formula = {}
+        compound_charge = {}
         for compound in model.parse_compounds():
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
+            if compound.charge is not None:
+                compound_charge[compound.id] = compound.charge
+            if compound.formula is not None:
+                compound_formula[compound.id] = compound.formula
 
         model_reactions = None
         if model.has_model_definition():
@@ -879,14 +893,20 @@ class SBMLWriter(object):
             species_tag.set(self._sbml_tag('id'), 'M_' + species_id)
             species_tag.set(
                 self._sbml_tag('name'),
-                text_type(
-                    species.translate(lambda x: compound_name.get(x, x))))
+                compound_name.get(species.name, species.name))
             species_tag.set(
                 self._sbml_tag('compartment'),
                 model_compartments[species.compartment])
             species_tag.set(self._sbml_tag('constant'), 'false')
             species_tag.set(self._sbml_tag('boundaryCondition'), 'false')
             species_tag.set(self._sbml_tag('hasOnlySubstanceUnits'), 'true')
+            if species.name in compound_charge:
+                species_tag.set(_tag('charge', FBC_V2), text_type(
+                    compound_charge[species.name]))
+            if species.name in compound_formula:
+                species_tag.set(_tag(
+                    'chemicalFormula', FBC_V2), text_type(
+                        compound_formula[species.name]))
 
         params_list = ET.SubElement(
             model_tag, self._sbml_tag('listOfParameters'))
