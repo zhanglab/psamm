@@ -75,7 +75,7 @@ class SearchCommand(Command):
     def _search_compound(self):
         selected_compounds = set()
 
-        for compound in self._model.parse_compounds():
+        for compound in self._model.compounds:
             if len(self._args.id) > 0:
                 if any(c == compound.id for c in self._args.id):
                     selected_compounds.add(compound)
@@ -107,7 +107,7 @@ class SearchCommand(Command):
 
         # Prepare translation table from compound id to name
         compound_name = {}
-        for compound in self._model.parse_compounds():
+        for compound in self._model.compounds:
             if 'name' in compound.properties:
                 compound_name[compound.id] = compound.properties['name']
 
@@ -119,7 +119,7 @@ class SearchCommand(Command):
                 compound_set.add(parse_compound(compound_spec.strip()))
             search_compounds.append(compound_set)
 
-        for reaction in self._model.parse_reactions():
+        for reaction in self._model.reactions:
             if len(self._args.id) > 0:
                 if any(r == reaction.id for r in self._args.id):
                     selected_reactions.add(reaction)

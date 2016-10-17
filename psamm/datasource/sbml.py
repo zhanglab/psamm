@@ -887,25 +887,19 @@ class SBMLWriter(object):
         ET.register_namespace('xhtml', XHTML_NS)
         ET.register_namespace('fbc', FBC_V2)
 
-        git_version = None
-        if model.context is not None:
-            git_version = util.git_try_describe(model.context.basepath)
-
         # Load compound information
         compound_name = {}
         compound_properties = {}
-        for compound in model.parse_compounds():
+        for compound in model.compounds:
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
             compound_properties[compound.id] = compound.properties
 
-        model_reactions = None
-        if model.has_model_definition():
-            model_reactions = set(model.parse_model())
+        model_reactions = set(model.model)
 
         reaction_properties = {}
         biomass_id = None
-        for r in model.parse_reactions():
+        for r in model.reactions:
             if (model_reactions is not None and
                     r.id not in model_reactions):
                 continue
@@ -920,7 +914,7 @@ class SBMLWriter(object):
         # Add exchange reactions to reaction_properties,
         # also add flux limit info to flux_limits
         flux_limits = {}
-        for compound, reaction_id, lower, upper in model.parse_exchange():
+        for compound, reaction_id, lower, upper in itervalues(model.exchange):
             # Create exchange reaction
             if reaction_id is None:
                 reaction_id = create_exchange_id(reaction_properties, compound)
@@ -948,11 +942,11 @@ class SBMLWriter(object):
         root.set(self._sbml_tag('level'), '3')
         root.set(self._sbml_tag('version'), '1')
         root.set(_tag('required', FBC_V2), 'false')
-        if git_version is not None:
+        if model.version_string is not None:
             notes_tag = ET.SubElement(root, self._sbml_tag('notes'))
             body_tag = ET.SubElement(notes_tag, _tag('body', XHTML_NS))
             self._add_properties_notes(
-                body_tag, {'git version': git_version})
+                body_tag, {'model version': model.version_string})
 
         model_tag = ET.SubElement(root, self._sbml_tag('model'))
         model_tag.set(_tag('strict', FBC_V2), 'true')
@@ -1027,7 +1021,7 @@ class SBMLWriter(object):
             model_tag, self._sbml_tag('listOfParameters'))
 
         # Create mapping for reactions containing flux limit definitions
-        for rxn_id, lower_lim, upper_lim in model.parse_limits():
+        for rxn_id, lower_lim, upper_lim in itervalues(model.limits):
             flux_limits[rxn_id] = lower_lim, upper_lim
 
         params = {}

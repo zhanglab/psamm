@@ -175,9 +175,8 @@ def create_extended_model(model, db_penalty=None, ex_penalty=None,
     # Create metabolic model
     model_extended = model.create_metabolic_model()
     extra_compartment = model.extracellular_compartment
-    compartments, boundaries = model.parse_compartments()
 
-    compartment_ids = set(c.id for c in compartments)
+    compartment_ids = set(c.id for c in model.compartments)
 
     # Add database reactions to extended model
     if len(compartment_ids) > 0:
@@ -200,6 +199,7 @@ def create_extended_model(model, db_penalty=None, ex_penalty=None,
         model_extended, extra_compartment, allow_duplicates=True)
 
     # Add transport reactions to extended model
+    boundaries = model.compartment_boundaries
     if len(boundaries) > 0:
         logger.info(
             'Using artificial transport reactions for the compartment'

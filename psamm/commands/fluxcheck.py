@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from __future__ import unicode_literals
 
@@ -63,12 +63,10 @@ class FluxConsistencyCommand(MetabolicMixin, LoopRemovalMixin,
         """Run flux consistency check command"""
 
         # Load compound information
-        compound_name = {}
-        for compound in self._model.parse_compounds():
-            if 'name' in compound.properties:
-                compound_name[compound.id] = compound.properties['name']
-            elif compound.id not in compound_name:
-                compound_name[compound.id] = compound.id
+        def compound_name(id):
+            if id not in self._model.compounds:
+                return id
+            return self._model.compounds[id].properties.get('name', id)
 
         epsilon = self._args.epsilon
 
@@ -148,8 +146,7 @@ class FluxConsistencyCommand(MetabolicMixin, LoopRemovalMixin,
 
             if reaction in inconsistent:
                 rx = self._mm.get_reaction(reaction)
-                rxt = rx.translated_compounds(
-                    lambda x: compound_name.get(x, x))
+                rxt = rx.translated_compounds(compound_name)
                 print('{}\t{}'.format(reaction, rxt))
 
         logger.info('Model has {}/{} inconsistent internal reactions'

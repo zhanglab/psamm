@@ -31,7 +31,7 @@ from six import StringIO, BytesIO
 from psamm.command import (main, Command, MetabolicMixin, SolverCommandMixin,
                            CommandError)
 from psamm.lpsolver import generic
-from psamm.datasource.native import NativeModel
+from psamm.datasource import native
 
 from psamm.commands.chargecheck import ChargeBalanceCommand
 from psamm.commands.duplicatescheck import DuplicatesCheck
@@ -107,7 +107,7 @@ class MockSolverCommand(SolverCommandMixin, Command):
 
 class TestCommandMain(unittest.TestCase):
     def setUp(self):
-        self._model = NativeModel({
+        reader = native.ModelReader({
             'name': 'Test model',
             'biomass': 'rxn_1',
             'compartments': [
@@ -172,8 +172,9 @@ class TestCommandMain(unittest.TestCase):
                 }
             ]
         })
+        self._model = reader.create_model()
 
-        self._infeasible_model = NativeModel({
+        reader = native.ModelReader({
             'biomass': 'rxn_1',
             'reactions': [
                 {
@@ -188,6 +189,7 @@ class TestCommandMain(unittest.TestCase):
                 }
             ]
         })
+        self._infeasible_model = reader.create_model()
 
     def assertTableOutputEqual(self, output, table):
         self.assertEqual(

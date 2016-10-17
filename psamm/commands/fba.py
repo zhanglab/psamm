@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from __future__ import unicode_literals
 
@@ -47,18 +47,16 @@ class FluxBalanceCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
         """Run flux analysis command."""
 
         # Load compound information
-        compound_name = {}
-        for compound in self._model.parse_compounds():
-            if 'name' in compound.properties:
-                compound_name[compound.id] = compound.properties['name']
-            elif compound.id not in compound_name:
-                compound_name[compound.id] = compound.id
+        def compound_name(id):
+            if id not in self._model.compounds:
+                return id
+            return self._model.compounds[id].properties.get('name', id)
 
         # Reaction genes information
-        reaction_genes = {}
-        for reaction in self._model.parse_reactions():
-            if 'genes' in reaction.properties:
-                reaction_genes[reaction.id] = reaction.properties['genes']
+        def reaction_genes_string(id):
+            if id not in self._model.reactions:
+                return ''
+            return self._model.reactions[id].properties.get('genes', '')
 
         reaction = self._get_objective()
         if not self._mm.has_reaction(reaction):
@@ -83,9 +81,8 @@ class FluxBalanceCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
 
             if abs(flux) > self._args.epsilon or self._args.all_reactions:
                 rx = self._mm.get_reaction(reaction_id)
-                rx_trans = rx.translated_compounds(
-                    lambda x: compound_name.get(x, x))
-                genes = reaction_genes.get(reaction_id, '')
+                rx_trans = rx.translated_compounds(compound_name)
+                genes = reaction_genes_string(reaction_id)
                 print('{}\t{}\t{}\t{}'.format(
                     reaction_id, flux, rx_trans, genes))
 

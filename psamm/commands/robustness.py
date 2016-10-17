@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from __future__ import unicode_literals
 
@@ -62,14 +62,6 @@ class RobustnessCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
 
     def run(self):
         """Run robustness command."""
-
-        # Load compound information
-        compound_name = {}
-        for compound in self._model.parse_compounds():
-            if 'name' in compound.properties:
-                compound_name[compound.id] = compound.properties['name']
-            elif compound.id not in compound_name:
-                compound_name[compound.id] = compound.id
 
         reaction = self._get_objective()
         if not self._mm.has_reaction(reaction):

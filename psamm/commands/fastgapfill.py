@@ -59,10 +59,10 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         solver = self._get_solver()
 
         # Load compound information
-        compound_name = {}
-        for compound in self._model.parse_compounds():
-            compound_name[compound.id] = (
-                compound.name if compound.name is not None else compound.id)
+        def compound_name(id):
+            if id not in self._model.compounds:
+                return id
+            return self._model.compounds[id].properties.get('name', id)
 
         # TODO: The exchange and transport reactions have tuple names. This
         # means that in Python 3 the reactions can no longer be directly
@@ -106,15 +106,13 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         for reaction_id in sorted(self._mm.reactions):
             rx = self._mm.get_reaction(reaction_id)
-            rxt = rx.translated_compounds(
-                lambda x: compound_name.get(x, x))
+            rxt = rx.translated_compounds(compound_name)
             print('{}\t{}\t{}\t{}'.format(reaction_id, 'Model', 0, rxt))
 
         for rxnid in sorted(induced, key=reaction_key):
             if self._mm.has_reaction(rxnid):
                 continue
             rx = model_extended.get_reaction(rxnid)
-            rxt = rx.translated_compounds(
-                lambda x: compound_name.get(x, x))
+            rxt = rx.translated_compounds(compound_name)
             print('{}\t{}\t{}\t{}'.format(
                 rxnid, 'Add', weights.get(rxnid, 1), rxt))
