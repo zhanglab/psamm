@@ -131,6 +131,15 @@ class TestExpression(unittest.TestCase):
             Variable('b1'), Variable('b2'), Variable('b3'), Variable('b4')
         ])
 
+    def test_expression_root(self):
+        e = Expression(Or(Variable('b1'), Variable('b2')))
+        root = e.root
+        self.assertIsInstance(e.root, Or)
+
+    def test_expression_root_boolean(self):
+        e = Expression(False)
+        self.assertEqual(e.root, False)
+
     def test_expression_to_string(self):
         e = Expression('(a and b) or (c and d)')
         self.assertEqual(str(e), '(a and b) or (c and d)')

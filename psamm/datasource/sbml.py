@@ -731,7 +731,7 @@ class SBMLWriter(object):
                     And(*(Variable(i) for i in r_genes[r_id])))
             else:
                 e = Expression(r_genes[r_id])
-            gene_stack = [(e._root, genes)]
+            gene_stack = [(e.root, genes)]
             while len(gene_stack) > 0:
                 current, parent = gene_stack.pop()
                 if isinstance(current, Or):

@@ -140,6 +140,11 @@ class Expression(object):
             self._variables = FrozenOrderedSet(_vars)
 
     @property
+    def root(self):
+        """Return root term, variable or boolean of the expression."""
+        return self._root
+
+    @property
     def variables(self):
         """Immutable set of variables in the expression."""
         return self._variables
