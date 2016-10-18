@@ -80,7 +80,7 @@ try:
     _solvers.append({
         'class': glpk.Solver,
         'name': 'glpk',
-        'integer': False,
+        'integer': True,
         'quadratic': False,
         'rational': False,
         'priority': 8
