@@ -94,7 +94,7 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000):
         raise GapFillError('Non-optimal solution: {}'.format(result.status))
 
     for compound in model.compounds:
-        if result.get_value(xp(compound)) == 0:
+        if result.get_value(xp(compound)) < 0.5:
             yield compound
 
 
