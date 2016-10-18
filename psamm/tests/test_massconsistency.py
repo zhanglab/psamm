@@ -32,7 +32,6 @@ class TestMassConsistency(unittest.TestCase):
     """Test mass consistency using a simple model"""
 
     def setUp(self):
-        # TODO use mock model instead of actual model
         self.database = DictDatabase()
         self.database.set_reaction('rxn_1', parse_reaction('=> (2) |A|'))
         self.database.set_reaction('rxn_2', parse_reaction('|A| <=> |B|'))
@@ -79,7 +78,6 @@ class TestMassConsistencyZeroMass(unittest.TestCase):
     """Test mass consistency using a model with zero-mass compound"""
 
     def setUp(self):
-        # TODO use mock model instead of actual model
         self.database = DictDatabase()
         self.database.set_reaction('rxn_1', parse_reaction(
             '|A| + |B| => |C|'))
