@@ -43,14 +43,15 @@ class TestGapfind(unittest.TestCase):
 
     def test_gapfind(self):
         self.model.remove_reaction('rxn_4')
-        compounds = set(gapfind(self.model, self.solver))
+        compounds = set(gapfind(self.model, self.solver, epsilon=0.1))
         self.assertEqual(compounds, {Compound('D'), Compound('E')})
 
     def test_gapfill_add_reaction(self):
         core = set(self.model.reactions) - {'rxn_4'}
         blocked = {Compound('D'), Compound('E')}
 
-        add, rev = gapfill(self.model, core, blocked, self.solver)
+        add, rev = gapfill(
+            self.model, core, blocked, self.solver, epsilon=0.1)
         self.assertEqual(set(rev), set())
         self.assertEqual(set(add), {'rxn_4'})
 
@@ -59,6 +60,7 @@ class TestGapfind(unittest.TestCase):
         core = set(self.model.reactions)
         blocked = {Compound('D'), Compound('E')}
 
-        add, rev = gapfill(self.model, core, blocked, self.solver)
+        add, rev = gapfill(
+            self.model, core, blocked, self.solver, epsilon=0.1)
         self.assertEqual(set(rev), {'rxn_4'})
         self.assertEqual(set(add), set())
