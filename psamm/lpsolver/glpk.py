@@ -37,9 +37,16 @@ from .lp import (Expression, RelationSense, ObjectiveSense, VariableType,
 # Module-level logging
 logger = logging.getLogger(__name__)
 
-# Disable terminal output. TODO instead the output should be redirected to
-# the Python logger.
-swiglpk.glp_term_out(0)
+# Logger specific to log messages from GLPK library
+_glpk_logger = logging.getLogger('glpk')
+
+
+# Redirect GLPK terminal output to logger
+def _term_hook(s):
+    _glpk_logger.debug(s.rstrip())
+
+swiglpk.glp_term_hook(_term_hook)
+
 
 _INF = float('inf')
 
@@ -50,6 +57,10 @@ class GLPKError(Exception):
 
 class Solver(BaseSolver):
     """Represents an LP-solver using Gurobi."""
+
+    def __init__(self):
+        super(Solver, self).__init__()
+        logger.warn('Support for GLPK solver is experimental!')
 
     def create_problem(self, **kwargs):
         """Create a new LP-problem using the solver."""
@@ -248,9 +259,6 @@ class Problem(BaseProblem):
         """Solve problem."""
         if sense is not None:
             self.set_objective_sense(sense)
-
-        logger.debug('Scaling problem using glp_scale_prob()')
-        swiglpk.glp_scale_prob(self._p, swiglpk.GLP_SF_AUTO)
 
         parm = swiglpk.glp_smcp()
         swiglpk.glp_init_smcp(parm)
