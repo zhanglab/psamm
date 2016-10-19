@@ -260,9 +260,6 @@ class Problem(BaseProblem):
         if sense is not None:
             self.set_objective_sense(sense)
 
-        logger.debug('Scaling problem using glp_scale_prob()')
-        swiglpk.glp_scale_prob(self._p, swiglpk.GLP_SF_AUTO)
-
         parm = swiglpk.glp_smcp()
         swiglpk.glp_init_smcp(parm)
         if self._do_presolve:
