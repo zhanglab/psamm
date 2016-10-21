@@ -39,14 +39,14 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             '--penalty', metavar='file', type=argparse.FileType('r'),
             help='List of penalty scores for database reactions')
         parser.add_argument(
-            '--db-weight', metavar='weight', type=float,
-            help='Default weight for database reactions')
+            '--db-penalty', metavar='penalty', type=float,
+            help='Default penalty for database reactions')
         parser.add_argument(
-            '--tp-weight', metavar='weight', type=float,
-            help='Default weight for transport reactions')
+            '--tp-penalty', metavar='penalty', type=float,
+            help='Default penalty for transport reactions')
         parser.add_argument(
-            '--ex-weight', metavar='weight', type=float,
-            help='Default weight for exchange reactions')
+            '--ex-penalty', metavar='penalty', type=float,
+            help='Default penalty for exchange reactions')
         parser.add_argument(
             '--epsilon', type=float, help='Threshold for Fastcore',
             default=1e-5)
@@ -88,14 +88,14 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
                 line = line.strip()
                 if line == '':
                     continue
-                rxnid, weight = line.split(None, 1)
-                penalties[rxnid] = float(weight)
+                rxnid, penalty = line.split(None, 1)
+                penalties[rxnid] = float(penalty)
 
         model_extended, weights = create_extended_model(
             self._model,
-            db_weight=self._args.db_weight,
-            ex_weight=self._args.ex_weight,
-            tp_weight=self._args.tp_weight,
+            db_penalty=self._args.db_penalty,
+            ex_penalty=self._args.ex_penalty,
+            tp_penalty=self._args.tp_penalty,
             penalties=penalties)
 
         epsilon = self._args.epsilon
@@ -135,14 +135,14 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
                 model_induced, maximized_reaction, tfba=enable_tfba,
                 solver=solver), key=lambda x: (reaction_key(x[0]), x[1])):
             reaction_class = 'Dbase'
-            weight = weights.get(rxnid, 1)
+            penalty = weights.get(rxnid, 1)
             if self._mm.has_reaction(rxnid):
                 reaction_class = 'Model'
-                weight = 0
+                penalty = 0
             rx = model_induced.get_reaction(rxnid)
             rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
             print('{}\t{}\t{}\t{}\t{}'.format(
-                rxnid, reaction_class, weight, flux, rxt))
+                rxnid, reaction_class, penalty, flux, rxt))
 
         logger.info('Calculating Fastcc consistent subset of induced model')
         consistent_core = fastcore.fastcc_consistent_subset(
