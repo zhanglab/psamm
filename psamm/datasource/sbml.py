@@ -838,6 +838,8 @@ class SBMLWriter(object):
 
         model_tag = ET.SubElement(root, self._sbml_tag('model'))
         model_tag.set(_tag('strict', FBC_V2), 'true')
+        if model.get_name() is not None:
+            model_tag.set(self._sbml_tag('name'), model.get_name())
 
         # Build mapping from Compound to species ID
         model_compartments = {}
