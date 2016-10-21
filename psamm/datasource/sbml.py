@@ -23,7 +23,6 @@ import xml.etree.ElementTree as ET
 from decimal import Decimal
 from fractions import Fraction
 from functools import partial
-from itertools import count
 import logging
 import re
 
@@ -840,18 +839,12 @@ class SBMLWriter(object):
         model_tag = ET.SubElement(root, self._sbml_tag('model'))
         model_tag.set(_tag('strict', FBC_V2), 'true')
 
-        # Generators of unique IDs
-        compartment_id = ('C_{}'.format(i) for i in count(1))
-
         # Build mapping from Compound to species ID
         model_compartments = {}
         model_species = {}
         species_ids = set()
         for _, equation in iteritems(reaction_equations):
             for compound, _ in equation.compounds:
-                if compound.compartment not in model_compartments:
-                    model_compartments[compound.compartment] = (
-                        next(compartment_id))
                 if compound in model_species:
                     continue
 
@@ -859,15 +852,19 @@ class SBMLWriter(object):
                     species_ids, self._make_safe_id(compound.name))
                 model_species[compound] = compound_id
                 species_ids.add(compound_id)
+                if compound.compartment not in model_compartments:
+                    model_compartments[
+                        compound.compartment] = 'C_' + self._create_unique_id(
+                            model_compartments, self._make_safe_id(
+                                compound.compartment))
 
         # Create list of compartments
         compartments = ET.SubElement(
             model_tag, self._sbml_tag('listOfCompartments'))
-        for compartment, compartment_id in iteritems(model_compartments):
+        for _, compartment_id in iteritems(model_compartments):
             compartment_tag = ET.SubElement(
                 compartments, self._sbml_tag('compartment'))
             compartment_tag.set(self._sbml_tag('id'), compartment_id)
-            compartment_tag.set(self._sbml_tag('name'), text_type(compartment))
             compartment_tag.set(self._sbml_tag('constant'), 'true')
 
         # Create list of species
