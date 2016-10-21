@@ -97,9 +97,9 @@ class TestCreateExtendedModel(unittest.TestCase):
 
         model_extended, weights = fastgapfill.create_extended_model(
             self._model,
-            db_weight=1.0,
-            ex_weight=2.0,
-            tp_weight=3.0,
+            db_penalty=1.0,
+            ex_penalty=2.0,
+            tp_penalty=3.0,
             penalties=penalties)
         self.assertEqual(set(model_extended.reactions), expected_reactions)
         self.assertEqual(weights, expected_weights)
