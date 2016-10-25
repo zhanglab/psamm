@@ -214,7 +214,8 @@ Flux coupling analysis (``fluxcoupling``)
 
 The flux coupling analysis identifies any reaction pairs where the flux of one
 reaction constrains the flux of another reaction. The reactions can be coupled
-in three distinct ways depending on the ratio between the reaction fluxes.
+in three distinct ways depending on the ratio between the reaction fluxes
+[Burgard04]_.
 
 The reactions can be fully coupled (the ratio is static and non-zero);
 partially coupled (the ratio is bounded and non-zero); or directionally
@@ -351,7 +352,7 @@ algorithm will try to compute an extension of the model with reactions from the
 reaction database and try to find a minimal subset that allows all blocked
 compounds to be produced. This command will run GapFind to identify the blocked
 compounds and then uses GapFill to try to reconstruct a model that allows these
-compounds to be produced.
+compounds to be produced [Kumar07]_.
 
 .. code-block:: shell
 
@@ -371,7 +372,7 @@ The FastGapFill algorithm tries to reconstruct a flux consistent model (i.e. a
 model where every reaction takes a non-zero flux for at least one solutions).
 This is done by extending the model with reactions from the reaction database
 and trying to find a minimal subset that is flux consistent. The solution is
-approximate.
+approximate [Thiele14]_.
 
 The database reactions can be assigned a weight (or "cost") using the
 ``--penalty`` option. These weights are taken into account when determining the

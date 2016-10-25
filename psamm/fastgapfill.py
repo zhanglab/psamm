@@ -16,6 +16,11 @@
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2016  Chao Liu <lcddzyx@gmail.com>
 
+"""Implementation of fastGapFill.
+
+Described in [Thiele14]_.
+"""
+
 from __future__ import unicode_literals
 
 import logging
