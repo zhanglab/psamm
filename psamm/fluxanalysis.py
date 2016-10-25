@@ -319,6 +319,9 @@ def flux_variability(model, reactions, fixed, tfba, solver):
     of the given reactions. The fixed reactions are given in a dictionary as
     a reaction id to value mapping.
 
+    This is an implementation of flux variability analysis (FVA) as described
+    in [Mahadevan03]_.
+
     Args:
         model: MetabolicModel to solve.
         reactions: Reactions on which to report variablity.

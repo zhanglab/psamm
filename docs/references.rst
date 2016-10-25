@@ -14,6 +14,9 @@ References
 .. [Kumar07] Satish Kumar V, Dasika MS, Maranas CD. Optimization based
     automated curation of metabolic reconstructions. BMC Bioinformatics.
     2007;8: 212. :doi:`10.1186/1471-2105-8-212`.
+.. [Mahadevan03] Mahadevan R, Schilling CH. The effects of alternate optimal
+    solutions in constraint-based genome-scale metabolic models. Metab Eng.
+    2003;5: 264–276. :doi:`10.1016/j.ymben.2003.09.002`.
 .. [Muller13] Müller AC, Bockmayr A. Fast thermodynamically constrained flux
     variability analysis. Bioinformatics. 2013;29: 903–909.
     :doi:`10.1093/bioinformatics/btt059`.
