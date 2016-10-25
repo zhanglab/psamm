@@ -392,7 +392,7 @@ Exports the model to the SBML file format.
     $ psamm-model sbmlexport > model.xml
 
 Excel Export (``excelexport``)
------------------------------
+------------------------------
 
 Exports the model to the Excel file format.
 
@@ -401,7 +401,7 @@ Exports the model to the Excel file format.
     $ psamm-model excelexport model.xls
 
 Table Export (``tableexport``)
------------------------------
+------------------------------
 
 Exports the model to the tsv file format.
 
