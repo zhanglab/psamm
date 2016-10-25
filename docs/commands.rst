@@ -124,7 +124,8 @@ Robustness (``robustness``)
 Given a reaction to maximize and a reaction to vary, the robustness analysis
 will run flux balance analysis and flux minimization while fixing the reaction
 to vary at each iteration. The reaction will be fixed at a given number of
-steps between the minimum and maximum flux value specified in the model.
+steps between the minimum and maximum flux value specified in the model
+[Edwards00]_.
 
 .. code-block:: shell
 

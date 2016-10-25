@@ -5,6 +5,9 @@ References
 .. [Burgard04] Burgard AP, Nikolaev E V, Schilling CH, Maranas CD. Flux
     coupling analysis of genome-scale metabolic network reconstructions.
     Genome Res. 2004;14: 301–312. :doi:`10.1101/gr.1926504`.
+.. [Edwards00] Edwards JS, Palsson BO. Robustness Analysis of the Escherichia
+    coli Metabolic Network. Biotechnol Prog. American Chemical Society;
+    2000;16: 927–939. :doi:`10.1021/bp0000712`.
 .. [Fell86] Fell DA, Small JR. Fat synthesis in adipose tissue. An examination
     of stoichiometric constraints. Biochem J. 1986;238.
     :doi:`10.1042/bj2380781`.
