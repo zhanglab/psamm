@@ -63,7 +63,7 @@ Flux balance analysis (``fba``)
 
 This command will try to maximize the flux of the biomass reaction defined in
 the model. It is also possible to provide a different reaction on the command
-line to maximize.
+line to maximize. [Orth10]_ [Fell86]_
 
 To run FBA use:
 

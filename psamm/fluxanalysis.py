@@ -292,6 +292,9 @@ def flux_balance(model, reaction, tfba, solver):
     it is recommended to setup and reuse the FluxBalanceProblem manually
     for a speed up.
 
+    This is an implementation of flux balance analysis (FBA) as described in
+    [Orth10]_ and [Fell86]_.
+
     Args:
         model: MetabolicModel to solve.
         reaction: Reaction to maximize. If a dict is given, this instead
