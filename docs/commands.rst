@@ -230,7 +230,7 @@ A model or reaction database can be checked for stoichiometric inconsistencies
 (mass inconsistencies). The basic idea is that we should be able to assign a
 positive mass to each compound in the model and have each reaction be balanced
 with respect to these mass assignments. If it can be shown that assigning the
-masses is impossible, we have discovered an inconsistency.
+masses is impossible, we have discovered an inconsistency [Gevorgyan08]_.
 
 Some variants of this idea is implemented in the :mod:`psamm.massconsistency`
 module. The mass consistency check can be run using
