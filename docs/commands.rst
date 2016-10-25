@@ -80,13 +80,13 @@ or with a specific reaction:
 By default, this performs a standard FBA and the result is output as
 tab-separated values with the reaction ID, the reaction flux and the reaction
 equation. If the parameter ``--loop-removal`` is given, the flux of the
-internal reactions is further constrained to remove internal loops. Loop
-removal is more time-consuming and under normal cicumstances the biomass
-reaction flux will *not* change in response to the loop removal (only internal
-reaction fluxes may change). The ``--loop-removal`` option is followed by
-``none`` (no loop removal), ``tfba`` (removal using thermodynamic constraints),
-or ``l1min`` (L1 minimization of the fluxes). For example, the following
-command performs an FBA with thermodynamic constraints:
+internal reactions is further constrained to remove internal loops
+[Schilling00]_. Loop removal is more time-consuming and under normal
+cicumstances the biomass reaction flux will *not* change in response to the
+loop removal (only internal reaction fluxes may change). The ``--loop-removal``
+option is followed by ``none`` (no loop removal), ``tfba`` (removal using
+thermodynamic constraints), or ``l1min`` (L1 minimization of the fluxes). For
+example, the following command performs an FBA with thermodynamic constraints:
 
 .. code-block:: shell
 
@@ -116,7 +116,7 @@ maximum of 1000 units.
 
 If the parameter ``--tfba`` is given, additonal thermodynamic constraints will
 be imposed when evaluating model fluxes. This automatically removes internal
-flux loops but is much more time-consuming.
+flux loops [Schilling00]_ but is much more time-consuming.
 
 Robustness (``robustness``)
 ---------------------------

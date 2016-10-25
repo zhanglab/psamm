@@ -111,10 +111,10 @@ class FluxBalanceProblem(object):
         """Apply thermodynamic constraints to the model.
 
         Adding these constraints restricts the solution space to only
-        contain solutions that have no internal loops. This is solved as a
-        MILP problem as described in [Muller13]_. The time to solve a problem
-        with thermodynamic constraints is usually much longer than a normal
-        FBA problem.
+        contain solutions that have no internal loops [Schilling00]_. This is
+        solved as a MILP problem as described in [Muller13]_. The time to solve
+        a problem with thermodynamic constraints is usually much longer than a
+        normal FBA problem.
 
         The ``em`` parameter is the upper bound on the delta mu reaction
         variables. This parameter has to be balanced based on the model size

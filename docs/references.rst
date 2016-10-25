@@ -14,6 +14,10 @@ References
 .. [Muller13] Müller AC, Bockmayr A. Fast thermodynamically constrained flux
     variability analysis. Bioinformatics. 2013;29: 903–909.
     :doi:`10.1093/bioinformatics/btt059`.
+.. [Schilling00] Schilling CH, Letscher D, Palsson BO. Theory for the systemic
+    definition of metabolic pathways and their use in interpreting metabolic
+    function from a pathway-oriented perspective. J Theor Biol. 2000;203:
+    229–48. :doi:`10.1006/jtbi.2000.1073`.
 .. [Thiele14] Thiele I, Vlassis N, Fleming RMT. fastGapFill: efficient gap
     filling in metabolic networks. Bioinformatics. 2014;30: 2529–31.
     :doi:`10.1093/bioinformatics/btu321`.
