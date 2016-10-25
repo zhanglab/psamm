@@ -292,6 +292,9 @@ def flux_balance(model, reaction, tfba, solver):
     it is recommended to setup and reuse the FluxBalanceProblem manually
     for a speed up.
 
+    This is an implementation of flux balance analysis (FBA) as described in
+    [Orth10]_ and [Fell86]_.
+
     Args:
         model: MetabolicModel to solve.
         reaction: Reaction to maximize. If a dict is given, this instead
@@ -315,6 +318,9 @@ def flux_variability(model, reactions, fixed, tfba, solver):
     Yields the reaction id, and a tuple of minimum and maximum value for each
     of the given reactions. The fixed reactions are given in a dictionary as
     a reaction id to value mapping.
+
+    This is an implementation of flux variability analysis (FVA) as described
+    in [Mahadevan03]_.
 
     Args:
         model: MetabolicModel to solve.

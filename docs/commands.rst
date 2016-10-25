@@ -63,7 +63,7 @@ Flux balance analysis (``fba``)
 
 This command will try to maximize the flux of the biomass reaction defined in
 the model. It is also possible to provide a different reaction on the command
-line to maximize.
+line to maximize. [Orth10]_ [Fell86]_
 
 To run FBA use:
 
@@ -96,9 +96,9 @@ Flux variability analysis (``fva``)
 -----------------------------------
 
 This command will find the possible flux range of each reaction when the
-biomass is at the maximum value. The command will use the biomass reaction
-specified in the model definition, or alternatively, a reaction can be given on
-the command line.
+biomass is at the maximum value [Mahadevan03]_. The command will use the
+biomass reaction specified in the model definition, or alternatively, a
+reaction can be given on the command line.
 
 .. code-block:: shell
 
@@ -124,7 +124,8 @@ Robustness (``robustness``)
 Given a reaction to maximize and a reaction to vary, the robustness analysis
 will run flux balance analysis and flux minimization while fixing the reaction
 to vary at each iteration. The reaction will be fixed at a given number of
-steps between the minimum and maximum flux value specified in the model.
+steps between the minimum and maximum flux value specified in the model
+[Edwards00]_.
 
 .. code-block:: shell
 
