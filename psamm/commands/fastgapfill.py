@@ -101,8 +101,7 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         epsilon = self._args.epsilon
         core = set()
         if self._args.subset is None:
-            subset = set(self._mm.reactions)
-            for r in subset:
+            for r in self._mm.reactions:
                 if not self._mm.is_exchange(r):
                     core.add(r)
         else:
@@ -129,8 +128,9 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         logger.info('Flux balance on induced model maximizing {}'.format(
             maximized_reaction))
         model_induced = model_extended.copy()
-        for rxnid in set(model_extended.reactions) - induced:
-            model_induced.remove_reaction(rxnid)
+        for rxnid in model_extended.reactions:
+            if not self._mm.has_reaction(rxnid) and rxnid not in induced:
+                model_induced.remove_reaction(rxnid)
         for rxnid, flux in sorted(fluxanalysis.flux_balance(
                 model_induced, maximized_reaction, tfba=enable_tfba,
                 solver=solver), key=lambda x: (reaction_key(x[0]), x[1])):
