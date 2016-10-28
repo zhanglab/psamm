@@ -46,7 +46,6 @@ class TestLoadMetabolicModel(unittest.TestCase):
 
 class TestMetabolicModel(unittest.TestCase):
     def setUp(self):
-        # TODO use mock database instead of actual database
         self.database = DictDatabase()
         self.database.set_reaction('rxn_1', parse_reaction('=> (2) |A|'))
         self.database.set_reaction('rxn_2', parse_reaction('|A| <=> |B|'))
@@ -224,7 +223,6 @@ class TestMetabolicModel(unittest.TestCase):
 
 class TestMetabolicModelFlipableView(unittest.TestCase):
     def setUp(self):
-        # TODO use mock database instead of actual database
         self.database = DictDatabase()
         self.database.set_reaction('rxn_1', parse_reaction('=> (2) |A|'))
         self.database.set_reaction('rxn_2', parse_reaction('|A| <=> |B|'))

@@ -29,7 +29,6 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
     """Test fastcore using the simple model in [Vlassis14]_."""
 
     def setUp(self):
-        # TODO use mock model instead of actual model
         self.database = DictDatabase()
         self.database.set_reaction('rxn_1', parse_reaction('=> (2) |A|'))
         self.database.set_reaction('rxn_2', parse_reaction('|A| <=> |B|'))
@@ -174,7 +173,6 @@ class TestFastcoreTinyBiomassModel(unittest.TestCase):
     """
 
     def setUp(self):
-        # TODO use mock model instead of actual model
         self.database = DictDatabase()
         self.database.set_reaction('rxn_1', parse_reaction('=> |A|'))
         self.database.set_reaction('rxn_2',
@@ -218,7 +216,6 @@ class TestFlippingModel(unittest.TestCase):
     """Test fastcore on a model that has to flip"""
 
     def setUp(self):
-        # TODO use mock model instead of actual model
         self.database = DictDatabase()
         self.database.set_reaction('rxn_1', parse_reaction('|A| <=>'))
         self.database.set_reaction('rxn_2', parse_reaction('|A| <=> |B|'))

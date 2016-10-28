@@ -23,7 +23,7 @@ pound (#). YAML-based formats are structured data following the YAML
 specification.
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import os
 import logging
@@ -32,6 +32,7 @@ import csv
 
 import yaml
 from six import string_types, iteritems
+from decimal import Decimal
 
 from ..reaction import Reaction, Compound, Direction
 from ..metabolicmodel import MetabolicModel
@@ -55,6 +56,10 @@ class ParseError(Exception):
     """Exception used to signal errors while parsing"""
 
 
+def float_constructor(loader, node):
+    return Decimal(loader.construct_scalar(node))
+
+
 def whendefined(func, value):
     """Apply func to value if value is not None"""
     return func(value) if value is not None else None
@@ -74,9 +79,11 @@ def yaml_load(stream):
                            ' speed up loading the model files.')
 
     if _HAS_YAML_LIBRARY:
-        return yaml.load(stream, Loader=yaml.CSafeLoader)
-
-    return yaml.safe_load(stream)
+        loader = yaml.CSafeLoader(stream)
+    else:
+        loader = yaml.SafeLoader(stream)
+    loader.add_constructor('tag:yaml.org,2002:float', float_constructor)
+    return loader.get_data()
 
 
 class CompoundEntry(object):
@@ -223,8 +230,12 @@ class NativeModel(object):
         return self._model.get('biomass', None)
 
     def get_extracellular_compartment(self):
-        """Return the extracellular comparment specified by the model."""
+        """Return the extracellular compartment specified by the model."""
         return self._model.get('extracellular', 'e')
+
+    def get_default_compartment(self):
+        """Return the compartment to use when unspecified."""
+        return self._model.get('default_compartment', 'c')
 
     def get_default_flux_limit(self):
         """Return the default flux limit specified by the model"""
@@ -275,7 +286,7 @@ class NativeModel(object):
                 raise ParseError('Expected media to be a list')
 
             for medium_compound in parse_medium_list(
-                    self._context, self._model['media']):
+                    self._context, self._model['media'], extracellular):
                 compound, reaction_id, lower, upper = medium_compound
                 if compound.compartment is None:
                     compound = compound.in_compartment(extracellular)
@@ -292,11 +303,30 @@ class NativeModel(object):
     def create_metabolic_model(self):
         """Create a :class:`psamm.metabolicmodel.MetabolicModel`."""
 
+        def _translate_compartments(reaction, compartment):
+            """Translate compound with missing compartments.
+
+            These compounds will have the specified compartment in the output.
+            """
+            left = (((c.in_compartment(compartment), v)
+                     if c.compartment is None else (c, v))
+                    for c, v in reaction.left)
+            right = (((c.in_compartment(compartment), v)
+                      if c.compartment is None else (c, v))
+                     for c, v in reaction.right)
+            return Reaction(reaction.direction, left, right)
+
+        default_compartment = self.get_default_compartment()
+
         # Create metabolic model
         database = DictDatabase()
         for reaction in self.parse_reactions():
             if reaction.equation is not None:
-                database.set_reaction(reaction.id, reaction.equation)
+                # Translate unset compartments to default value
+                eq = _translate_compartments(
+                    reaction.equation, default_compartment)
+
+                database.set_reaction(reaction.id, eq)
 
         # Warn about undefined compounds
         compounds = set()
@@ -412,7 +442,7 @@ def parse_compound_table_file(path, f):
 
     context = FilePathContext(path)
 
-    for i, row in enumerate(csv.DictReader(f, delimiter='\t')):
+    for i, row in enumerate(csv.DictReader(f, delimiter=str('\t'))):
         if 'id' not in row or row['id'].strip() == '':
             raise ParseError('Expected `id` column in table')
 
@@ -569,7 +599,7 @@ def parse_reaction_table_file(path, f):
 
     context = FilePathContext(path)
 
-    for lineno, row in enumerate(csv.DictReader(f, delimiter='\t')):
+    for lineno, row in enumerate(csv.DictReader(f, delimiter=str('\t'))):
         if 'id' not in row or row['id'].strip() == '':
             raise ParseError('Expected `id` column in table')
 
@@ -623,13 +653,13 @@ def get_limits(compound_def):
     return lower, upper
 
 
-def parse_medium(medium_def):
+def parse_medium(medium_def, default_compartment):
     """Parse a structured medium definition as obtained from a YAML file
 
     Returns in iterator of compound, reaction, lower and upper bounds.
     """
 
-    default_compartment = medium_def.get('compartment')
+    default_compartment = medium_def.get('compartment', default_compartment)
 
     for compound_def in medium_def.get('compounds', []):
         compartment = compound_def.get('compartment', default_compartment)
@@ -639,7 +669,7 @@ def parse_medium(medium_def):
         yield compound, reaction, lower, upper
 
 
-def parse_medium_list(path, medium):
+def parse_medium_list(path, medium, default_compartment):
     """Parse a structured medium list as obtained from a YAML file.
 
     Yields tuples of compound, reaction ID, lower and upper flux bounds. Path
@@ -651,20 +681,22 @@ def parse_medium_list(path, medium):
     for medium_def in medium:
         if 'include' in medium_def:
             include_context = context.resolve(medium_def['include'])
-            for medium_compound in parse_medium_file(include_context):
+            for medium_compound in parse_medium_file(
+                    include_context, default_compartment):
                 yield medium_compound
         else:
-            for medium_compound in parse_medium(medium_def):
+            for medium_compound in parse_medium(
+                    medium_def, default_compartment):
                 yield medium_compound
 
 
-def parse_medium_yaml_file(path, f):
+def parse_medium_yaml_file(path, f, default_compartment):
     """Parse a file as a YAML-format medium definition
 
     Path can be given as a string or a context.
     """
 
-    return parse_medium(yaml_load(f))
+    return parse_medium(yaml_load(f), default_compartment)
 
 
 def parse_medium_table_file(f):
@@ -698,7 +730,7 @@ def parse_medium_table_file(f):
         yield compound, None, lower, upper
 
 
-def parse_medium_file(path):
+def parse_medium_file(path, default_compartment):
     """Parse a file as a list of medium compounds with flux limits
 
     The file format is detected and the file is parsed accordingly. Path can
@@ -718,7 +750,8 @@ def parse_medium_file(path):
         logger.debug('Parsing medium file {} as YAML'.format(
             context.filepath))
         with context.open('r') as f:
-            for entry in parse_medium_yaml_file(context, f):
+            for entry in parse_medium_yaml_file(
+                    context, f, default_compartment):
                 yield entry
     else:
         raise ParseError('Unable to detect format of medium file {}'.format(

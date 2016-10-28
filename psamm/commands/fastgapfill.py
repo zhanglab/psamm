@@ -33,17 +33,20 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
+            '--subset', metavar='file', type=argparse.FileType('r'),
+            help='specify core reaction subset to use')
+        parser.add_argument(
             '--penalty', metavar='file', type=argparse.FileType('r'),
             help='List of penalty scores for database reactions')
         parser.add_argument(
-            '--db-weight', metavar='weight', type=float,
-            help='Default weight for database reactions')
+            '--db-penalty', metavar='penalty', type=float,
+            help='Default penalty for database reactions')
         parser.add_argument(
-            '--tp-weight', metavar='weight', type=float,
-            help='Default weight for transport reactions')
+            '--tp-penalty', metavar='penalty', type=float,
+            help='Default penalty for transport reactions')
         parser.add_argument(
-            '--ex-weight', metavar='weight', type=float,
-            help='Default weight for exchange reactions')
+            '--ex-penalty', metavar='penalty', type=float,
+            help='Default penalty for exchange reactions')
         parser.add_argument(
             '--epsilon', type=float, help='Threshold for Fastcore',
             default=1e-5)
@@ -85,18 +88,28 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
                 line = line.strip()
                 if line == '':
                     continue
-                rxnid, weight = line.split(None, 1)
-                penalties[rxnid] = float(weight)
+                rxnid, penalty = line.split(None, 1)
+                penalties[rxnid] = float(penalty)
 
         model_extended, weights = create_extended_model(
             self._model,
-            db_weight=self._args.db_weight,
-            ex_weight=self._args.ex_weight,
-            tp_weight=self._args.tp_weight,
+            db_penalty=self._args.db_penalty,
+            ex_penalty=self._args.ex_penalty,
+            tp_penalty=self._args.tp_penalty,
             penalties=penalties)
 
         epsilon = self._args.epsilon
-        core = set(self._mm.reactions)
+        core = set()
+        if self._args.subset is None:
+            for r in self._mm.reactions:
+                if not self._mm.is_exchange(r):
+                    core.add(r)
+        else:
+            for line in self._args.subset:
+                line = line.strip()
+                if line == '':
+                    continue
+                core.add(line)
         induced = fastgapfill(model_extended, core, weights=weights,
                               epsilon=epsilon, solver=solver)
 
@@ -115,20 +128,21 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         logger.info('Flux balance on induced model maximizing {}'.format(
             maximized_reaction))
         model_induced = model_extended.copy()
-        for rxnid in set(model_extended.reactions) - induced:
-            model_induced.remove_reaction(rxnid)
+        for rxnid in model_extended.reactions:
+            if not self._mm.has_reaction(rxnid) and rxnid not in induced:
+                model_induced.remove_reaction(rxnid)
         for rxnid, flux in sorted(fluxanalysis.flux_balance(
                 model_induced, maximized_reaction, tfba=enable_tfba,
                 solver=solver), key=lambda x: (reaction_key(x[0]), x[1])):
             reaction_class = 'Dbase'
-            weight = weights.get(rxnid, 1)
+            penalty = weights.get(rxnid, 1)
             if self._mm.has_reaction(rxnid):
                 reaction_class = 'Model'
-                weight = 0
+                penalty = 0
             rx = model_induced.get_reaction(rxnid)
             rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
             print('{}\t{}\t{}\t{}\t{}'.format(
-                rxnid, reaction_class, weight, flux, rxt))
+                rxnid, reaction_class, penalty, flux, rxt))
 
         logger.info('Calculating Fastcc consistent subset of induced model')
         consistent_core = fastcore.fastcc_consistent_subset(

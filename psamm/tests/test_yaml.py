@@ -87,7 +87,7 @@ co2     e       -       50
                 {'id': 'compound_x', 'compartment': 'c'},
                 {'id': 'compound_y', 'reaction': 'EX_cpdy'}
             ]
-        }))
+        }, 'e'))
 
         self.assertEqual(len(medium), 5)
         self.assertEqual(medium[0], (Compound('ac', 'e'), None, None, None))
@@ -326,7 +326,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
             'cpd_D\te\t-100\t-10'
         ]))
 
-        medium = list(native.parse_medium_file(path))
+        medium = list(native.parse_medium_file(path, 'e'))
         self.assertEqual(medium, [
             (Compound('cpd_A', 'c'), None, None, None),
             (Compound('cpd_B', 'e'), None, -1000, None),
@@ -360,7 +360,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
             '    fixed: 100.0',
         ]))
 
-        medium = list(native.parse_medium_file(path))
+        medium = list(native.parse_medium_file(path, 'e'))
         self.assertEqual(medium, [
             (Compound('cpd_A', 'e'), 'EX_A', -40, None),
             (Compound('cpd_B', 'e'), None, None, 100),
@@ -386,7 +386,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
                     {'id': 'cpd_B', 'upper': 767}
                 ]
             }
-        ]))
+        ], 'e'))
 
         self.assertEqual(medium, [
             (Compound('cpd_A', 'e'), None, -42, None),

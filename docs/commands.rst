@@ -63,7 +63,7 @@ Flux balance analysis (``fba``)
 
 This command will try to maximize the flux of the biomass reaction defined in
 the model. It is also possible to provide a different reaction on the command
-line to maximize.
+line to maximize. [Orth10]_ [Fell86]_
 
 To run FBA use:
 
@@ -80,13 +80,13 @@ or with a specific reaction:
 By default, this performs a standard FBA and the result is output as
 tab-separated values with the reaction ID, the reaction flux and the reaction
 equation. If the parameter ``--loop-removal`` is given, the flux of the
-internal reactions is further constrained to remove internal loops. Loop
-removal is more time-consuming and under normal cicumstances the biomass
-reaction flux will *not* change in response to the loop removal (only internal
-reaction fluxes may change). The ``--loop-removal`` option is followed by
-``none`` (no loop removal), ``tfba`` (removal using thermodynamic constraints),
-or ``l1min`` (L1 minimization of the fluxes). For example, the following
-command performs an FBA with thermodynamic constraints:
+internal reactions is further constrained to remove internal loops
+[Schilling00]_. Loop removal is more time-consuming and under normal
+cicumstances the biomass reaction flux will *not* change in response to the
+loop removal (only internal reaction fluxes may change). The ``--loop-removal``
+option is followed by ``none`` (no loop removal), ``tfba`` (removal using
+thermodynamic constraints), or ``l1min`` (L1 minimization of the fluxes). For
+example, the following command performs an FBA with thermodynamic constraints:
 
 .. code-block:: shell
 
@@ -96,9 +96,9 @@ Flux variability analysis (``fva``)
 -----------------------------------
 
 This command will find the possible flux range of each reaction when the
-biomass is at the maximum value. The command will use the biomass reaction
-specified in the model definition, or alternatively, a reaction can be given on
-the command line.
+biomass is at the maximum value [Mahadevan03]_. The command will use the
+biomass reaction specified in the model definition, or alternatively, a
+reaction can be given on the command line.
 
 .. code-block:: shell
 
@@ -116,7 +116,7 @@ maximum of 1000 units.
 
 If the parameter ``--tfba`` is given, additonal thermodynamic constraints will
 be imposed when evaluating model fluxes. This automatically removes internal
-flux loops but is much more time-consuming.
+flux loops [Schilling00]_ but is much more time-consuming.
 
 Robustness (``robustness``)
 ---------------------------
@@ -124,7 +124,8 @@ Robustness (``robustness``)
 Given a reaction to maximize and a reaction to vary, the robustness analysis
 will run flux balance analysis and flux minimization while fixing the reaction
 to vary at each iteration. The reaction will be fixed at a given number of
-steps between the minimum and maximum flux value specified in the model.
+steps between the minimum and maximum flux value specified in the model
+[Edwards00]_.
 
 .. code-block:: shell
 
@@ -213,7 +214,8 @@ Flux coupling analysis (``fluxcoupling``)
 
 The flux coupling analysis identifies any reaction pairs where the flux of one
 reaction constrains the flux of another reaction. The reactions can be coupled
-in three distinct ways depending on the ratio between the reaction fluxes.
+in three distinct ways depending on the ratio between the reaction fluxes
+[Burgard04]_.
 
 The reactions can be fully coupled (the ratio is static and non-zero);
 partially coupled (the ratio is bounded and non-zero); or directionally
@@ -230,7 +232,7 @@ A model or reaction database can be checked for stoichiometric inconsistencies
 (mass inconsistencies). The basic idea is that we should be able to assign a
 positive mass to each compound in the model and have each reaction be balanced
 with respect to these mass assignments. If it can be shown that assigning the
-masses is impossible, we have discovered an inconsistency.
+masses is impossible, we have discovered an inconsistency [Gevorgyan08]_.
 
 Some variants of this idea is implemented in the :mod:`psamm.massconsistency`
 module. The mass consistency check can be run using
@@ -350,7 +352,7 @@ algorithm will try to compute an extension of the model with reactions from the
 reaction database and try to find a minimal subset that allows all blocked
 compounds to be produced. This command will run GapFind to identify the blocked
 compounds and then uses GapFill to try to reconstruct a model that allows these
-compounds to be produced.
+compounds to be produced [Kumar07]_.
 
 .. code-block:: shell
 
@@ -370,7 +372,7 @@ The FastGapFill algorithm tries to reconstruct a flux consistent model (i.e. a
 model where every reaction takes a non-zero flux for at least one solutions).
 This is done by extending the model with reactions from the reaction database
 and trying to find a minimal subset that is flux consistent. The solution is
-approximate.
+approximate [Thiele14]_.
 
 The database reactions can be assigned a weight (or "cost") using the
 ``--penalty`` option. These weights are taken into account when determining the
@@ -388,6 +390,24 @@ Exports the model to the SBML file format.
 .. code-block:: shell
 
     $ psamm-model sbmlexport > model.xml
+
+Excel Export (``excelexport``)
+------------------------------
+
+Exports the model to the Excel file format.
+
+.. code-block:: shell
+
+    $ psamm-model excelexport model.xls
+
+Table Export (``tableexport``)
+------------------------------
+
+Exports the model to the tsv file format.
+
+.. code-block:: shell
+
+    $ psamm-model tableexport reactions > model.tsv
 
 Search (``search``)
 -------------------

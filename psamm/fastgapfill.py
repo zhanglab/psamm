@@ -16,6 +16,11 @@
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2016  Chao Liu <lcddzyx@gmail.com>
 
+"""Implementation of fastGapFill.
+
+Described in [Thiele14]_.
+"""
+
 from __future__ import unicode_literals
 
 import logging
@@ -26,8 +31,8 @@ from .fastcore import fastcore
 logger = logging.getLogger(__name__)
 
 
-def create_extended_model(model, db_weight=None, ex_weight=None,
-                          tp_weight=None, penalties=None):
+def create_extended_model(model, db_penalty=None, ex_penalty=None,
+                          tp_penalty=None, penalties=None):
     """Create an extended model for FastGapFill algorithm.
 
     Create a :class:`psamm.metabolicmodel.MetabolicModel` with
@@ -39,9 +44,9 @@ def create_extended_model(model, db_weight=None, ex_weight=None,
 
     Args:
         model: :class:`psamm.datasource.native.NativeModel`.
-        db_weight: weight(float) for database reactions, default is `None`.
-        ex_weight: weight(float) for exchange reactions, default is `None`.
-        tb_weigth: weight(float) for transport reactions, default is `None`.
+        db_penalty: penalty score for database reactions, default is `None`.
+        ex_penalty: penalty score for exchange reactions, default is `None`.
+        tb_penalty: penalty score for transport reactions, default is `None`.
         penalties: a dictionary of penalty scores for database reactions.
     """
 
@@ -60,16 +65,16 @@ def create_extended_model(model, db_weight=None, ex_weight=None,
 
     # Add penalty weights on reactions
     weights = {}
-    if db_weight is not None:
-        weights.update((rxnid, db_weight) for rxnid in db_added)
-    if tp_weight is not None:
-        weights.update((rxnid, tp_weight) for rxnid in tp_added)
-    if ex_weight is not None:
-        weights.update((rxnid, ex_weight) for rxnid in ex_added)
+    if db_penalty is not None:
+        weights.update((rxnid, db_penalty) for rxnid in db_added)
+    if tp_penalty is not None:
+        weights.update((rxnid, tp_penalty) for rxnid in tp_added)
+    if ex_penalty is not None:
+        weights.update((rxnid, ex_penalty) for rxnid in ex_added)
 
     if penalties is not None:
-        for rxnid, weight in iteritems(penalties):
-            weights[rxnid] = weight
+        for rxnid, penalty in iteritems(penalties):
+            weights[rxnid] = penalty
     return model_extended, weights
 
 

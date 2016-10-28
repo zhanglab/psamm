@@ -443,6 +443,37 @@ class Constraint(object):
         """Remove constraint from Problem instance"""
 
 
+class VariableNamespace(object):
+    def __init__(self, problem, **kwargs):
+        self._problem = problem
+        self._define_kwargs = kwargs
+
+    def define(self, names, **kwargs):
+        define_kwargs = dict(self._define_kwargs)
+        define_kwargs.update(kwargs)
+        self._problem.define(
+            *((self, name) for name in names), **define_kwargs)
+
+    def __call__(self, name):
+        return self._problem.var((self, name))
+
+    def set(self, names):
+        return self._problem.set((self, name) for name in names)
+
+    def sum(self, names):
+        return Expression({(self, name): 1 for name in names})
+
+    def expr(self, items):
+        return Expression({(self, name): value for name, value in items})
+
+    def value(self, name):
+        return self._problem.result.get_value((self, name))
+
+    def __repr__(self):
+        return '<{} of {} ({})>'.format(
+            self.__class__.__name__, repr(self._problem), id(self))
+
+
 @add_metaclass(abc.ABCMeta)
 class Problem(object):
     """Representation of LP Problem instance
@@ -459,6 +490,12 @@ class Problem(object):
     @abc.abstractmethod
     def has_variable(self, name):
         """Check whether a variable is defined in the problem."""
+
+    def namespace(self, names=None, **kwargs):
+        ns = VariableNamespace(self, **kwargs)
+        if names is not None:
+            ns.define(names)
+        return ns
 
     def var(self, name):
         """Return variable as an :class:`.Expression`."""

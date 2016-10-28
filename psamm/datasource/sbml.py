@@ -23,14 +23,13 @@ import xml.etree.ElementTree as ET
 from decimal import Decimal
 from fractions import Fraction
 from functools import partial
-from itertools import count
 import logging
 import re
 
 from six import itervalues, iteritems, text_type
 
 from ..reaction import Reaction, Compound, Direction
-
+from ..expression.boolean import Expression, And, Or, Variable
 
 logger = logging.getLogger(__name__)
 
@@ -184,8 +183,16 @@ class SpeciesEntry(_SBMLEntry):
             properties['name'] = self._root.get('name')
         if 'compartment' in self._root.attrib:
             properties['compartment'] = self._root.get('compartment')
-        if 'charge' in self._root.attrib and self._root.get('charge') != '':
-            properties['charge'] = int(self._root.get('charge'))
+
+        charge_tag = _tag('charge', FBC_V2)
+        if (charge_tag in self._root.attrib and
+                self._root.get(charge_tag) != ''):
+            properties['charge'] = int(self._root.get(charge_tag))
+
+        formula_tag = _tag('chemicalFormula', FBC_V2)
+        if (formula_tag in self._root.attrib and
+                self._root.get(formula_tag) != ''):
+            properties['formula'] = self._root.get(formula_tag)
 
         return properties
 
@@ -645,9 +652,10 @@ class SBMLReader(object):
 class SBMLWriter(object):
     """Writer of SBML files"""
 
-    def __init__(self):
+    def __init__(self, cobra_flux_bounds=False):
         self._namespace = SBML_NS_L3_V1_CORE
         self._sbml_tag = partial(_tag, namespace=self._namespace)
+        self._cobra_flux_bounds = False
 
     def _make_safe_id(self, id):
         """Returns a modified id that has been made safe for SBML.
@@ -692,17 +700,107 @@ class SBMLWriter(object):
                 suffix += 1
         return orig_id
 
+    def _get_flux_bounds(self, r_id, model, flux_limits, equation):
+        """Read reaction's limits to set up strings for limits in the output file.
+        """
+        if r_id not in flux_limits or flux_limits[r_id][0] is None:
+            if equation.direction == Direction.Forward:
+                lower = 0
+            else:
+                lower = -model.get_default_flux_limit()
+        else:
+            lower = flux_limits[r_id][0]
+
+        if r_id not in flux_limits or flux_limits[r_id][1] is None:
+            if equation.direction == Direction.Reverse:
+                upper = 0
+            else:
+                upper = model.get_default_flux_limit()
+        else:
+            upper = flux_limits[r_id][1]
+
+        if lower % 1 == 0:
+            lower = int(lower)
+        if upper % 1 == 0:
+            upper = int(upper)
+        return text_type(lower), text_type(upper)
+
+    def _make_safe_numerical_id(self, stri):
+        return stri.replace('-', 'neg').replace('.', '_')
+
+    def _add_gene_associations(self, r_id, r_genes, gene_ids, r_tag):
+        """Adds all the different kinds of genes into a list."""
+        if r_id in r_genes:
+            genes = ET.SubElement(
+                r_tag, _tag('geneProductAssociation', FBC_V2))
+            if isinstance(r_genes[r_id], list):
+                e = Expression(
+                    And(*(Variable(i) for i in r_genes[r_id])))
+            else:
+                e = Expression(r_genes[r_id])
+            gene_stack = [(e.root, genes)]
+            while len(gene_stack) > 0:
+                current, parent = gene_stack.pop()
+                if isinstance(current, Or):
+                    gene_tag = ET.SubElement(parent, _tag('or', FBC_V2))
+                elif isinstance(current, And):
+                    gene_tag = ET.SubElement(parent, _tag('and', FBC_V2))
+                elif isinstance(current, Variable):
+                    gene_tag = ET.SubElement(parent, _tag(
+                        'geneProductRef', FBC_V2))
+                    if current.symbol not in gene_ids:
+                        id = 'g_' + self._create_unique_id(
+                            gene_ids, self._make_safe_id(current.symbol))
+                        gene_ids[id] = current.symbol
+                        gene_tag.set(_tag('geneProduct', FBC_V2), id)
+                if isinstance(current, (Or, And)):
+                    for item in current:
+                        gene_stack.append((item, gene_tag))
+
+    def _add_fbc_objective(self, model_tag, obj_id):
+        """Adds the objective(s) to the sbml document."""
+        objective_list = ET.SubElement(model_tag, _tag(
+            'listOfObjectives', FBC_V2))
+        objective_list.set(_tag('activeObjective', FBC_V2), 'O_1')
+        objective_tag = ET.SubElement(
+            objective_list, _tag('objective', FBC_V2))
+        objective_tag.set(_tag('id', FBC_V2), 'O_1')
+        objective_tag.set(_tag('type', FBC_V2), 'maximize')
+        flux_objective_list = ET.SubElement(objective_tag, _tag(
+            'listOfFluxObjectives', FBC_V2))
+        flux_objective_tag = ET.SubElement(flux_objective_list, _tag(
+            'fluxObjective', FBC_V2))
+        flux_objective_tag.set(_tag('reaction', FBC_V2), 'R_' + obj_id)
+        flux_objective_tag.set(_tag('coefficient', FBC_V2), '1')
+
+    def _add_gene_list(self, parent_tag, gene_id_dict):
+        """Create list of all gene products as sbml readable elements."""
+        list_all_genes = ET.SubElement(parent_tag, _tag(
+            'listOfGeneProducts', FBC_V2))
+        for id, label in sorted(iteritems(gene_id_dict)):
+            gene_tag = ET.SubElement(
+                list_all_genes, _tag('geneProduct', FBC_V2))
+            gene_tag.set(_tag('id', FBC_V2), id)
+            gene_tag.set(_tag('label', FBC_V2), label)
+
     def write_model(self, file, model):
         """Write a given model to file"""
 
         ET.register_namespace('mathml', MATHML_NS)
         ET.register_namespace('xhtml', XHTML_NS)
+        ET.register_namespace('fbc', FBC_V2)
 
         # Load compound information
         compound_name = {}
+        compound_formula = {}
+        compound_charge = {}
         for compound in model.parse_compounds():
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
+            if compound.charge is not None:
+                compound_charge[compound.id] = compound.charge
+            if compound.formula is not None:
+                compound_formula[compound.id] = compound.formula
 
         model_reactions = None
         if model.has_model_definition():
@@ -711,6 +809,7 @@ class SBMLWriter(object):
         reaction_genes = {}
         reaction_equations = {}
         reaction_names = {}
+        biomass_id = None
         for r in model.parse_reactions():
             if (model_reactions is not None and
                     r.id not in model_reactions):
@@ -718,6 +817,8 @@ class SBMLWriter(object):
 
             reaction_id = self._create_unique_id(
                 reaction_equations, self._make_safe_id(r.id))
+            if r.id == model.get_biomass_reaction():
+                biomass_id = reaction_id
 
             if r.genes is not None:
                 reaction_genes[reaction_id] = r.genes
@@ -734,6 +835,8 @@ class SBMLWriter(object):
             if reaction_id is None:
                 reaction_id = 'EX_{}_{}'.format(
                     compound.name, compound.compartment)
+            reaction_id = self._create_unique_id(
+                reaction_equations, self._make_safe_id(reaction_id))
             reaction_equations[reaction_id] = Reaction(
                 Direction.Both, {compound: -1})
             if lower is None:
@@ -745,11 +848,12 @@ class SBMLWriter(object):
         root = ET.Element(self._sbml_tag('sbml'))
         root.set(self._sbml_tag('level'), '3')
         root.set(self._sbml_tag('version'), '1')
+        root.set(_tag('required', FBC_V2), 'false')
 
         model_tag = ET.SubElement(root, self._sbml_tag('model'))
-
-        # Generators of unique IDs
-        compartment_id = ('C_{}'.format(i) for i in count(1))
+        model_tag.set(_tag('strict', FBC_V2), 'true')
+        if model.get_name() is not None:
+            model_tag.set(self._sbml_tag('name'), model.get_name())
 
         # Build mapping from Compound to species ID
         model_compartments = {}
@@ -757,9 +861,6 @@ class SBMLWriter(object):
         species_ids = set()
         for _, equation in iteritems(reaction_equations):
             for compound, _ in equation.compounds:
-                if compound.compartment not in model_compartments:
-                    model_compartments[compound.compartment] = (
-                        next(compartment_id))
                 if compound in model_species:
                     continue
 
@@ -767,15 +868,20 @@ class SBMLWriter(object):
                     species_ids, self._make_safe_id(compound.name))
                 model_species[compound] = compound_id
                 species_ids.add(compound_id)
+                if compound.compartment not in model_compartments:
+                    model_compartments[
+                        compound.compartment] = 'C_' + self._create_unique_id(
+                            model_compartments, self._make_safe_id(
+                                compound.compartment))
 
         # Create list of compartments
         compartments = ET.SubElement(
             model_tag, self._sbml_tag('listOfCompartments'))
-        for compartment, compartment_id in iteritems(model_compartments):
+        for _, compartment_id in iteritems(model_compartments):
             compartment_tag = ET.SubElement(
                 compartments, self._sbml_tag('compartment'))
             compartment_tag.set(self._sbml_tag('id'), compartment_id)
-            compartment_tag.set(self._sbml_tag('name'), text_type(compartment))
+            compartment_tag.set(self._sbml_tag('constant'), 'true')
 
         # Create list of species
         species_list = ET.SubElement(
@@ -787,15 +893,33 @@ class SBMLWriter(object):
             species_tag.set(self._sbml_tag('id'), 'M_' + species_id)
             species_tag.set(
                 self._sbml_tag('name'),
-                text_type(
-                    species.translate(lambda x: compound_name.get(x, x))))
+                compound_name.get(species.name, species.name))
             species_tag.set(
                 self._sbml_tag('compartment'),
                 model_compartments[species.compartment])
+            species_tag.set(self._sbml_tag('constant'), 'false')
+            species_tag.set(self._sbml_tag('boundaryCondition'), 'false')
+            species_tag.set(self._sbml_tag('hasOnlySubstanceUnits'), 'true')
+            if species.name in compound_charge:
+                species_tag.set(_tag('charge', FBC_V2), text_type(
+                    compound_charge[species.name]))
+            if species.name in compound_formula:
+                species_tag.set(_tag(
+                    'chemicalFormula', FBC_V2), text_type(
+                        compound_formula[species.name]))
+
+        params_list = ET.SubElement(
+            model_tag, self._sbml_tag('listOfParameters'))
 
         # Create mapping for reactions containing flux limit definitions
         for rxn_id, lower_lim, upper_lim in model.parse_limits():
             flux_limits[rxn_id] = lower_lim, upper_lim
+
+        params = {}
+        gene_ids = {}
+
+        if biomass_id is not None:
+            self._add_fbc_objective(model_tag, biomass_id)
 
         # Create list of reactions
         reactions = ET.SubElement(model_tag, self._sbml_tag('listOfReactions'))
@@ -806,11 +930,27 @@ class SBMLWriter(object):
                 reaction_tag.set(self._sbml_tag('name'), reaction_names[eq_id])
             reaction_tag.set(self._sbml_tag('reversible'), text_type(
                 equation.direction == Direction.Both).lower())
+            reaction_tag.set(self._sbml_tag('fast'), 'false')
+            lower_str, upper_str = self._get_flux_bounds(
+                eq_id, model, flux_limits, equation)
 
-            reactants = ET.SubElement(
-                reaction_tag, self._sbml_tag('listOfReactants'))
-            products = ET.SubElement(
-                reaction_tag, self._sbml_tag('listOfProducts'))
+            params[upper_str] = 'P_'+self._make_safe_numerical_id(upper_str)
+            params[lower_str] = 'P_'+self._make_safe_numerical_id(lower_str)
+            reaction_tag.set(
+                _tag('upperFluxBound', FBC_V2), params[upper_str])
+            reaction_tag.set(
+                _tag('lowerFluxBound', FBC_V2), params[lower_str])
+
+            self._add_gene_associations(
+                eq_id, reaction_genes, gene_ids, reaction_tag)
+
+            if any(value < 0 for _, value in equation.compounds):
+                reactants = ET.SubElement(
+                    reaction_tag, self._sbml_tag('listOfReactants'))
+
+            if any(value > 0 for _, value in equation.compounds):
+                products = ET.SubElement(
+                    reaction_tag, self._sbml_tag('listOfProducts'))
 
             for compound, value in sorted(equation.compounds):
                 dest_list = reactants if value < 0 else products
@@ -818,6 +958,8 @@ class SBMLWriter(object):
                     dest_list, self._sbml_tag('speciesReference'))
                 spec_ref.set(
                     self._sbml_tag('species'), 'M_' + model_species[compound])
+                spec_ref.set(
+                    self._sbml_tag('constant'), 'true')
                 spec_ref.set(
                     self._sbml_tag('stoichiometry'), text_type(abs(value)))
 
@@ -828,38 +970,36 @@ class SBMLWriter(object):
                 p_tag.text = 'GENE_ASSOCIATION: {}'.format(
                     reaction_genes[eq_id])
 
-            # Create COBRA-compliant parameter list
-            kl_tag = ET.SubElement(reaction_tag, self._sbml_tag('kineticLaw'))
-            math_tag = ET.SubElement(kl_tag, self._sbml_tag('math'))
-            ci_tag = ET.SubElement(math_tag, _tag('ci', MATHML_NS))
-            ci_tag.text = 'FLUX_VALUE'
-            param_list = ET.SubElement(
-                kl_tag, self._sbml_tag('listOfParameters'))
+            if self._cobra_flux_bounds is True:
+                # Create COBRA-compliant parameter list
+                kl_tag = ET.SubElement(
+                    reaction_tag, self._sbml_tag('kineticLaw'))
+                math_tag = ET.SubElement(kl_tag, self._sbml_tag('math'))
+                ci_tag = ET.SubElement(math_tag, _tag('ci', MATHML_NS))
+                ci_tag.text = 'FLUX_VALUE'
+                param_list = ET.SubElement(
+                    kl_tag, self._sbml_tag('listOfParameters'))
 
-            if eq_id not in flux_limits or flux_limits[eq_id][0] is None:
-                if equation.direction == Direction.Forward:
-                    lower_str = text_type(0)
-                else:
-                    lower_str = text_type(-model.get_default_flux_limit())
-            else:
-                lower_str = text_type(flux_limits[eq_id][0])
-            if eq_id not in flux_limits or flux_limits[eq_id][1] is None:
-                if equation.direction == Direction.Reverse:
-                    upper_str = text_type(0)
-                else:
-                    upper_str = text_type(model.get_default_flux_limit())
-            else:
-                upper_str = text_type(flux_limits[eq_id][1])
-            ET.SubElement(param_list, self._sbml_tag('parameter'), {
-                self._sbml_tag('id'): 'LOWER_BOUND',
-                self._sbml_tag('name'): 'LOWER_BOUND',
-                self._sbml_tag('value'): lower_str
-            })
-            ET.SubElement(param_list, self._sbml_tag('parameter'), {
-                self._sbml_tag('id'): 'UPPER_BOUND',
-                self._sbml_tag('name'): 'UPPER_BOUND',
-                self._sbml_tag('value'): upper_str
-            })
+                ET.SubElement(param_list, self._sbml_tag('parameter'), {
+                    self._sbml_tag('id'): 'LOWER_BOUND',
+                    self._sbml_tag('name'): 'LOWER_BOUND',
+                    self._sbml_tag('value'): lower_str,
+                    self._sbml_tag('constant'): 'true'
+                })
+                ET.SubElement(param_list, self._sbml_tag('parameter'), {
+                    self._sbml_tag('id'): 'UPPER_BOUND',
+                    self._sbml_tag('name'): 'UPPER_BOUND',
+                    self._sbml_tag('value'): upper_str,
+                    self._sbml_tag('constant'): 'true'
+                })
+
+        for val, id in iteritems(params):
+            param_tag = ET.SubElement(params_list, self._sbml_tag('parameter'))
+            param_tag.set(self._sbml_tag('id'), id)
+            param_tag.set(self._sbml_tag('value'), val)
+            param_tag.set(self._sbml_tag('constant'), 'true')
+
+        self._add_gene_list(model_tag, gene_ids)
 
         tree = ET.ElementTree(root)
         tree.write(file, default_namespace=self._namespace)

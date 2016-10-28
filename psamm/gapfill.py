@@ -47,44 +47,42 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000):
     prob = solver.create_problem()
 
     # Define flux variables
+    v = prob.namespace()
     for reaction_id in model.reactions:
         lower, upper = model.limits[reaction_id]
-        prob.define(('v', reaction_id), lower=lower, upper=upper)
+        v.define([reaction_id], lower=lower, upper=upper)
 
     # Define constraints on production of metabolites in reaction
+    w = prob.namespace(types=lp.VariableType.Binary)
     binary_cons_lhs = {compound: 0 for compound in model.compounds}
     for spec, value in iteritems(model.matrix):
         compound, reaction_id = spec
         if value != 0 and (reaction_id in model.reversible or value > 0):
-            prob.define(('w', reaction_id, compound),
-                        types=lp.VariableType.Binary)
+            w.define([spec])
+            w_var = w(spec)
+            sv = v(reaction_id) * float(value)
 
-            w = prob.var(('w', reaction_id, compound))
-            sv = float(value) * prob.var(('v', reaction_id))
-
-            prob.add_linear_constraints(sv <= v_max*w)
+            prob.add_linear_constraints(sv <= v_max * w_var)
             if model.is_reversible(reaction_id):
-                prob.add_linear_constraints(sv >= epsilon-v_max*(1 - w))
+                prob.add_linear_constraints(
+                    sv >= epsilon - v_max * (1 - w_var))
             else:
-                prob.add_linear_constraints(sv >= epsilon*w)
+                prob.add_linear_constraints(sv >= epsilon * w_var)
 
-            binary_cons_lhs[compound] += w
+            binary_cons_lhs[compound] += w_var
 
-    prob.define(*(('xp', compound) for compound in model.compounds),
-                types=lp.VariableType.Binary)
-
-    objective = prob.expr(
-        {('xp', compound): 1 for compound in model.compounds})
+    xp = prob.namespace(model.compounds, types=lp.VariableType.Binary)
+    objective = xp.sum(model.compounds)
     prob.set_objective(objective)
 
     for compound, lhs in iteritems(binary_cons_lhs):
-        prob.add_linear_constraints(lhs >= prob.var(('xp', compound)))
+        prob.add_linear_constraints(lhs >= xp(compound))
 
     # Define mass balance constraints
     massbalance_lhs = {compound: 0 for compound in model.compounds}
     for spec, value in iteritems(model.matrix):
         compound, reaction_id = spec
-        massbalance_lhs[compound] += prob.var(('v', reaction_id)) * value
+        massbalance_lhs[compound] += v(reaction_id) * value
     for compound, lhs in iteritems(massbalance_lhs):
         # The constraint is merely >0 meaning that we have implicit sinks
         # for all compounds.
@@ -96,7 +94,7 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000):
         raise GapFillError('Non-optimal solution: {}'.format(result.status))
 
     for compound in model.compounds:
-        if result.get_value(('xp', compound)) == 0:
+        if result.get_value(xp(compound)) < 0.5:
             yield compound
 
 
@@ -124,65 +122,54 @@ def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
     prob = solver.create_problem()
 
     # Define flux variables
-    prob.define(*(('v', reaction_id) for reaction_id in model.reactions),
-                lower=-v_max, upper=v_max)
+    v = prob.namespace(model.reactions, lower=-v_max, upper=v_max)
 
     # Add binary indicator variables
     database_reactions = set(model.reactions).difference(core)
-    prob.define(*(('ym', reaction_id) for reaction_id in core),
-                types=lp.VariableType.Binary)
-    prob.define(*(('yd', reaction_id) for reaction_id in database_reactions),
-                types=lp.VariableType.Binary)
+    ym = prob.namespace(core, types=lp.VariableType.Binary)
+    yd = prob.namespace(database_reactions, types=lp.VariableType.Binary)
 
-    objective = prob.expr(
-        {('ym', reaction_id): 1 for reaction_id in core})
-    objective += prob.expr(
-        {('yd', reaction_id): 1 for reaction_id in database_reactions})
+    objective = ym.sum(core) + yd.sum(database_reactions)
     prob.set_objective(objective)
 
     # Add constraints on core reactions
-    for reaction_id in core:
-        v = prob.var(('v', reaction_id))
-        if model.is_reversible(reaction_id):
-            prob.add_linear_constraints(v >= model.limits[reaction_id].lower)
+    for r in core:
+        if model.is_reversible(r):
+            prob.add_linear_constraints(v(r) >= model.limits[r].lower)
         else:
-            ym = prob.var(('ym', reaction_id))
-            prob.add_linear_constraints(v >= -v_max * ym)
-        prob.add_linear_constraints(v <= model.limits[reaction_id].upper)
+            prob.add_linear_constraints(v(r) >= -v_max * ym(r))
+        prob.add_linear_constraints(v(r) <= model.limits[r].upper)
 
     # Add constraints on database reactions
-    for reaction_id in database_reactions:
-        v = prob.var(('v', reaction_id))
-        yd = prob.var(('yd', reaction_id))
-        prob.add_linear_constraints(
-            v >= yd * model.limits[reaction_id].lower,
-            v <= yd * model.limits[reaction_id].upper)
+    for r in database_reactions:
+        prob.add_linear_constraints(v(r) >= yd(r) * model.limits[r].lower)
+        prob.add_linear_constraints(v(r) <= yd(r) * model.limits[r].upper)
 
     # Define constraints on production of blocked metabolites in reaction
+    w = prob.namespace(types=lp.VariableType.Binary)
+    yn = prob.namespace(types=lp.VariableType.Binary)
     binary_cons_lhs = {compound: 0 for compound in blocked}
     for (compound, reaction_id), value in iteritems(model.matrix):
         if compound in blocked and value != 0:
-            prob.define(('w', reaction_id, compound),
-                        types=lp.VariableType.Binary)
+            w.define([(compound, reaction_id)])
+            w_var = w((compound, reaction_id))
 
-            w = prob.var(('w', reaction_id, compound))
-            sv = float(value) * prob.var(('v', reaction_id))
+            sv = float(value) * v(reaction_id)
+            prob.add_linear_constraints(
+                sv >= epsilon - v_max * (1 - w_var))
+            prob.add_linear_constraints(sv <= v_max * w_var)
 
-            prob.add_linear_constraints(sv >= epsilon - v_max * (1 - w))
-            prob.add_linear_constraints(sv <= v_max * w)
-
-            if model.is_reversible(reaction_id) or value > 0:
-                binary_cons_lhs[compound] += w
+            if reaction_id in model.reversible or value > 0:
+                binary_cons_lhs[compound] += w_var
             elif reaction_id in core:
                 # In this case, we need to perform a logical AND on the w and
                 # ym variables. This is done by introducing another helper
                 # variable, yn.
-                prob.define(('yn', reaction_id, compound),
-                            types=lp.VariableType.Binary)
-                yn = prob.var(('yn', reaction_id, compound))
+                yn.define([(reaction_id, compound)])
+                yn_var = yn((reaction_id, compound))
                 prob.add_linear_constraints(
-                    2 * yn <= w + prob.var(('ym', reaction_id)))
-                binary_cons_lhs[compound] += yn
+                    2 * yn_var <= w_var + ym(reaction_id))
+                binary_cons_lhs[compound] += yn_var
 
     for compound, lhs in iteritems(binary_cons_lhs):
         if compound in blocked:
@@ -190,9 +177,8 @@ def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
 
     # Define mass balance constraints
     massbalance_lhs = {compound: 0 for compound in model.compounds}
-    for spec, value in iteritems(model.matrix):
-        compound, reaction_id = spec
-        massbalance_lhs[compound] += prob.var(('v', reaction_id)) * value
+    for (compound, reaction_id), value in iteritems(model.matrix):
+        massbalance_lhs[compound] += v(reaction_id) * value
     for compound, lhs in iteritems(massbalance_lhs):
         # The constraint is merely >0 meaning that we have implicit sinks
         # for all compounds.
@@ -205,12 +191,12 @@ def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
 
     def added_iter():
         for reaction_id in database_reactions:
-            if result.get_value(('yd', reaction_id)) > 0.5:
+            if yd.value(reaction_id) > 0.5:
                 yield reaction_id
 
     def reversed_iter():
         for reaction_id in core:
-            if result.get_value(('ym', reaction_id)) > 0.5:
+            if ym.value(reaction_id) > 0.5:
                 yield reaction_id
 
     return added_iter(), reversed_iter()

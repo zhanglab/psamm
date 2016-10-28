@@ -71,6 +71,9 @@ class FluxBalanceProblem(object):
         self._prob = solver.create_problem()
         self._model = model
 
+        self._z = None
+        self._v = v = self._prob.namespace()
+
         self._has_minimization_vars = False
 
         # We keep track of temporary constraints from the last optimization so
@@ -83,13 +86,13 @@ class FluxBalanceProblem(object):
         # Define flux variables
         for reaction_id in self._model.reactions:
             lower, upper = self._model.limits[reaction_id]
-            self._prob.define(('v', reaction_id), lower=lower, upper=upper)
+            v.define([reaction_id], lower=lower, upper=upper)
 
         # Define constraints
         massbalance_lhs = {compound: 0 for compound in model.compounds}
         for spec, value in iteritems(self._model.matrix):
             compound, reaction_id = spec
-            massbalance_lhs[compound] += self.get_flux_var(reaction_id) * value
+            massbalance_lhs[compound] += v(reaction_id) * value
         for compound, lhs in iteritems(massbalance_lhs):
             self._prob.add_linear_constraints(lhs == 0)
 
@@ -108,10 +111,10 @@ class FluxBalanceProblem(object):
         """Apply thermodynamic constraints to the model.
 
         Adding these constraints restricts the solution space to only
-        contain solutions that have no internal loops. This is solved as a
-        MILP problem as described in [Muller13]_. The time to solve a problem
-        with thermodynamic constraints is usually much longer than a normal
-        FBA problem.
+        contain solutions that have no internal loops [Schilling00]_. This is
+        solved as a MILP problem as described in [Muller13]_. The time to solve
+        a problem with thermodynamic constraints is usually much longer than a
+        normal FBA problem.
 
         The ``em`` parameter is the upper bound on the delta mu reaction
         variables. This parameter has to be balanced based on the model size
@@ -122,43 +125,47 @@ class FluxBalanceProblem(object):
         model is not unusually large.
         """
 
-        p = self._prob
+        internal = set(r for r in self._model.reactions
+                       if not self._model.is_exchange(r))
+
+        # Reaction fluxes
+        v = self._v
+
+        # Indicator variable
+        alpha = self._prob.namespace(internal, types=lp.VariableType.Binary)
+
+        # Delta mu is the stoichiometrically weighted sum of the compound mus.
+        dmu = self._prob.namespace(internal)
+
         for reaction_id in self._model.reactions:
             if not self._model.is_exchange(reaction_id):
-                # Indicator variable
-                p.define(('alpha', reaction_id), types=lp.VariableType.Binary)
-
-                # Delta mu is the stoichiometrically weighted sum of the
-                # compound mus.
-                p.define(('dmu', reaction_id))
-
-                flux = self.get_flux_var(reaction_id)
-                alpha = p.var(('alpha', reaction_id))
-                dmu = p.var(('dmu', reaction_id))
+                flux = v(reaction_id)
+                alpha_r = alpha(reaction_id)
+                dmu_r = dmu(reaction_id)
 
                 lower, upper = self._model.limits[reaction_id]
 
                 # Constrain the reaction to a direction determined by alpha
                 # and contrain the delta mu to a value in [-em; -1] if
                 # alpha is one, otherwise in [1; em].
-                p.add_linear_constraints(
-                    flux >= lower * (1 - alpha),
-                    flux <= upper * alpha,
-                    dmu >= -em * alpha + (1 - alpha),
-                    dmu <= em * (1 - alpha) - alpha)
+                self._prob.add_linear_constraints(
+                    flux >= lower * (1 - alpha_r),
+                    flux <= upper * alpha_r,
+                    dmu_r >= -em * alpha_r + (1 - alpha_r),
+                    dmu_r <= em * (1 - alpha_r) - alpha_r)
 
         # Define mu variables
-        p.define(*(('mu', compound) for compound in self._model.compounds))
+        mu = self._prob.namespace(self._model.compounds)
 
         tdbalance_lhs = {reaction_id: 0
                          for reaction_id in self._model.reactions}
         for spec, value in iteritems(self._model.matrix):
             compound, reaction_id = spec
             if not self._model.is_exchange(reaction_id):
-                tdbalance_lhs[reaction_id] += p.var(('mu', compound)) * value
+                tdbalance_lhs[reaction_id] += mu(compound) * value
         for reaction_id, lhs in iteritems(tdbalance_lhs):
             if not self._model.is_exchange(reaction_id):
-                p.add_linear_constraints(lhs == p.var(('dmu', reaction_id)))
+                self._prob.add_linear_constraints(lhs == dmu(reaction_id))
 
     def maximize(self, reaction):
         """Solve the model by maximizing the given reaction.
@@ -189,19 +196,14 @@ class FluxBalanceProblem(object):
 
     def _add_minimization_vars(self):
         """Add variables and constraints for L1 norm minimization."""
-        if self._has_minimization_vars:
-            return
 
-        var_names = (('z', reaction_id)
-                     for reaction_id in self._model.reactions)
-        self._prob.define(*var_names, lower=0)
+        self._z = self._prob.namespace(self._model.reactions, lower=0)
 
         # Define constraints
-        v = self._prob.set(('v', rxnid) for rxnid in self._model.reactions)
-        z = self._prob.set(('z', rxnid) for rxnid in self._model.reactions)
-        self._prob.add_linear_constraints(z >= v, v >= -z)
+        v = self._v.set(self._model.reactions)
+        z = self._z.set(self._model.reactions)
 
-        self._has_minimization_vars = True
+        self._prob.add_linear_constraints(z >= v, v >= -z)
 
     def minimize_l1(self, weights={}):
         """Solve the model by minimizing the L1 norm of the fluxes.
@@ -211,11 +213,12 @@ class FluxBalanceProblem(object):
         (default 1).
         """
 
-        self._add_minimization_vars()
+        if self._z is None:
+            self._add_minimization_vars()
 
-        objective = self._prob.expr({
-            ('z', reaction_id): -weights.get(reaction_id, 1)
-            for reaction_id in self._model.reactions})
+        objective = self._z.expr(
+            (reaction_id, -weights.get(reaction_id, 1))
+            for reaction_id in self._model.reactions)
         self._prob.set_objective(objective)
 
         self._solve()
@@ -266,18 +269,17 @@ class FluxBalanceProblem(object):
 
     def get_flux_var(self, reaction):
         """Get LP variable representing the reaction flux."""
-        return self._prob.var(('v', reaction))
+        return self._v(reaction)
 
     def flux_expr(self, reaction):
         """Get LP expression representing the reaction flux."""
         if isinstance(reaction, dict):
-            return self._prob.expr(
-                {('v', r): v for r, v in iteritems(reaction)})
-        return self._prob.expr(('v', reaction))
+            return self._v.expr(iteritems(reaction))
+        return self._v(reaction)
 
     def get_flux(self, reaction):
         """Get resulting flux value for reaction."""
-        return self._prob.result.get_value(('v', reaction))
+        return self._prob.result.get_value(self._v(reaction))
 
 
 def flux_balance(model, reaction, tfba, solver):
@@ -289,6 +291,9 @@ def flux_balance(model, reaction, tfba, solver):
     FluxBalanceProblem. If the FBA is solved for more than one parameter
     it is recommended to setup and reuse the FluxBalanceProblem manually
     for a speed up.
+
+    This is an implementation of flux balance analysis (FBA) as described in
+    [Orth10]_ and [Fell86]_.
 
     Args:
         model: MetabolicModel to solve.
@@ -313,6 +318,9 @@ def flux_variability(model, reactions, fixed, tfba, solver):
     Yields the reaction id, and a tuple of minimum and maximum value for each
     of the given reactions. The fixed reactions are given in a dictionary as
     a reaction id to value mapping.
+
+    This is an implementation of flux variability analysis (FVA) as described
+    in [Mahadevan03]_.
 
     Args:
         model: MetabolicModel to solve.
