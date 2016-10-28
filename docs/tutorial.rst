@@ -556,12 +556,12 @@ model. A sample of this kind of file can be seen below:
     - id: ACALDt
       name: acetaldehyde reversible transport
       genes: s0001
-      equation: '|acald_e[C_e]| <=> |acald_c[C_c]|'
+      equation: '|acald_e[e]| <=> |acald_c[c]|'
       subsystem: Transport, Extracellular
     - id: ACKr
       name: acetate kinase
       genes: b3115 or b2296 or b1849
-      equation: '|ac_c[C_c]| + |atp_c[C_c]| <=> |actp_c[C_c]| + |adp_c[C_c]|'
+      equation: '|ac_c[c]| + |atp_c[c]| <=> |actp_c[c]| + |adp_c[c]|'
       subsystem: Pyruvate Metabolism
 
 Each reaction entry is designated with the reaction ID first. Then the various
@@ -602,7 +602,7 @@ formatted reaction could be as follows:
 
 .. code-block:: shell
 
-    '|ac_c[C_c]| + |atp_c[C_c]| <=> |actp_c[C_c]| + |adp_c[C_c]|'
+    '|ac_c[c]| + |atp_c[c]| <=> |actp_c[c]| + |adp_c[c]|'
 
 For longer reactions the YAML format
 provides a way to list each reaction component on a single line. For example a
@@ -613,7 +613,7 @@ reaction could be represented as follows:
     - id: ACKr
       name: acetate kinase
       equation:
-        compartment: C_c
+        compartment: c
         reversible: yes
         left:
           - id: ac_c
@@ -640,7 +640,7 @@ property to the reaction like follows:
 
     - id: ACALDt
       name: acetaldehyde reversible transport
-      equation: '|acald_e[C_e]| <=> |acald_c[C_c]|'
+      equation: '|acald_e[e]| <=> |acald_c[c]|'
       subsystem: Transport, Extracellular
       genes: gene_0001
 
@@ -804,17 +804,6 @@ in your file system:
 
     (psamm-env) $ psamm-model --model <PATH-TO-MODEL.YAML> fba
 
-By default, PSAMM fba will use the biomass function designated in the central
-model file as the objective function. If the biomass tag is not defined in a
-``model.yaml`` file or if you want to use a different reaction as the
-objective function, you can simply specify what the reaction ID is at the
-end of the command. For example to maximize the citrate synthase reactions,
-CS, the command would be as follows:
-
-.. code-block:: shell
-
-    (psamm-env) $ psamm-model fba CS
-
 The following is a sample of some output from the FBA command:
 
 .. code-block:: shell
@@ -824,13 +813,14 @@ The following is a sample of some output from the FBA command:
     INFO: Using Biomass_Ecoli_core_w_GAM as objective
     INFO: Loop removal disabled; spurious loops are allowed
     INFO: Setting feasibility tolerance to 1e-09
-    INFO: Solving took 0.00 seconds
-    ACALDt	0.0	|Acetaldehyde[C_e]| <=> |Acetaldehyde[C_c]|
-    ACKr	0.0	|ATP[C_c]| + |Acetate[C_c]| <=> |Acetyl-phosphate[C_c]| + |ADP[C_c]|
-    ACONTa	6.00724957535	|Citrate[C_c]| <=> |cis-Aconitate[C_c]| + |H2O[C_c]|
-    ACONTb	6.00724957535	|cis-Aconitate[C_c]| + |H2O[C_c]| <=> |Isocitrate[C_c]
+    INFO: Setting optimality tolerance to 1e-09
+    INFO: Solving took 0.05 seconds
+    ACONTa	6.00724957535	|Citrate[c]| <=> |cis-Aconitate[c]| + |H2O[c]|	b0118 or b1276
+    ACONTb	6.00724957535	|cis-Aconitate[c]| + |H2O[c]| <=> |Isocitrate[c]|	b0118 or b1276
+    AKGDH	5.06437566148	|2-Oxoglutarate[c]| + |Coenzyme-A[c]|...
     ...
     INFO: Objective flux: 0.873921506968
+    INFO: Reactions at zero flux: 47/95
 
 At the beginning of the output of ``psamm-model`` commands information about
 the model as well as information about simulation settings will be printed.
@@ -842,6 +832,17 @@ human readable because the reactions equations are represented with the full
 names of compound. It can be saved as a tab separated file that can be sorted
 and analyzed quickly allowing for easy analysis and comparison between FBA in
 different conditions.
+
+By default, PSAMM fba will use the biomass function designated in the central
+model file as the objective function. If the biomass tag is not defined in a
+``model.yaml`` file or if you want to use a different reaction as the
+objective function, you can simply specify what the reaction ID is at the
+end of the command. For example to maximize the citrate synthase reactions,
+CS, the command would be as follows:
+
+    .. code-block:: shell
+
+        (psamm-env) $ psamm-model fba CS
 
 Flux balance analysis will be used throughout this tutorial as both a checking
 tool during model curation and an analysis tool. PSAMM allows you to easily
@@ -927,10 +928,10 @@ knowledge that the unchanged model was able to generate biomass flux.
 
 .. code-block:: shell
 
-    ACALDt	0.0	|Acetaldehyde[C_e]| <=> |Acetaldehyde[C_c]|
-    ACKr	0.0	|ATP[C_c]| + |Acetate[C_c]| <=> |Acetyl-phosphate[C_c]| + |ADP[C_c]|
-    ACONTa	6.00724957535	|Citrate[C_c]| <=> |cis-Aconitate[C_c]| + |H2O[C_c]|
-    ACONTb	6.00724957535	|cis-Aconitate[C_c]| + |H2O[C_c]| <=> |Isocitrate[C_c]|
+    ACONTa	4.69666522532	|Citrate[c]| <=> |cis-Aconitate[c]| + |H2O[c]|	b0118 or b1276
+    ACONTb	4.69666522532	|cis-Aconitate[c]| + |H2O[c]| <=> |Isocitrate[c]|	b0118 or b1276
+    AKGDH	3.68511277336	|2-Oxoglutarate[c]| + |Coenzyme-A[c]| + |Nicotinamide-adenine-dinucleotide[c]| => |CO2[c]| + |Nicotinamide-adenine-dinucleotide-reduced[c]| + |Succinyl-CoA[c]|	b0116 and b0726 and b0727
+    ATPM	8.39	|ATP[c]| + |H2O[c]| => |ADP[c]| + |H[c]| + |Phosphate[c]|
     ...
     INFO: Objective flux: 0.873921506968
 
@@ -999,7 +1000,9 @@ following command:
     (psamm-env) $ psamm-model fba --all-reactions
 
 
-It can be seen that the newly added reactions are being read into the model
+The ``--all-reactions`` option makes the command write out all reactions in
+the model even if they have a flux of zero in the simulation result. It can be
+seen that the newly added reactions are being read into the model
 since they do appear in the output. For example the `MANNI1DEH` reaction can be
 seen in the FBA output and it can be seen that this reaction is not carrying
 any flux. This is because there is no exchange reaction added into the model that
@@ -1007,19 +1010,19 @@ would provide mannitol.
 
 .. code-block:: shell
 
-    FRUKIN	0.0	|fru_c[C_c]| + |ATP[C_c]| => |D-Fructose-6-phosphate[C_c]| + |ADP[C_c]| + |H[C_c]|
-    MANNI1PDEH	0.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |manni1p[C_c]| => |D-Fructose-6-phosphate[C_c]| + |H[C_c]| + |Nicotinamide-adenine-dinucleotide-reduced[C_c]|
-    MANNI1PPHOS	0.0	|manni1p[C_c]| + |H2O[C_c]| => |manni[C_c]| + |Phosphate[C_c]|
-    MANNIDEH	0.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |manni[C_c]| => |Nicotinamide-adenine-dinucleotide-reduced[C_c]| + |fru_c[C_c]|
-    MANNIPTS	0.0	|manni[C_e]| + |Phosphoenolpyruvate[C_c]| => |manni1p[C_c]| + |Pyruvate[C_c]|
+    FRUKIN	0.0	|fru_c[c]| + |ATP[c]| => |D-Fructose-6-phosphate[c]| + |ADP[c]| + |H[c]|
+    MANNI1PDEH	0.0	|Nicotinamide-adenine-dinucleotide[c]| + |manni1p[c]| => |D-Fructose-6-phosphate[c]| + |H[c]| + |Nicotinamide-adenine-dinucleotide-reduced[c]|
+    MANNI1PPHOS	0.0	|manni1p[c]| + |H2O[c]| => |manni[c]| + |Phosphate[c]|
+    MANNIDEH	0.0	|Nicotinamide-adenine-dinucleotide[c]| + |manni[c]| => |Nicotinamide-adenine-dinucleotide-reduced[c]| + |fru_c[c]|
+    MANNIPTS	0.0	|manni[e]| + |Phosphoenolpyruvate[c]| => |manni1p[c]| + |Pyruvate[c]|
     ...
 
 Changing the Boundary Definitions Through the Medium File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To add new exchange reactions to the model a modified ``media.yaml`` file has
+To add new exchange reactions to the model a modified ``medium.yaml`` file has
 been included in the additional files. This new boundary condition could be
-added by creating a new entry in the existing ``media.yaml`` file but for this
+added by creating a new entry in the existing ``medium.yaml`` file but for this
 tutorial the media can be changed by running the following command:
 
 .. code-block:: shell
@@ -1043,16 +1046,15 @@ carbon source.
 
 .. code-block:: diff
 
-    @@ -1,6 +1,8 @@
-    name: Default medium
-    compartment: C_e
-    compounds:
+    @@ -1,5 +1,7 @@
+     name: Default medium
+     compounds:
     +- id: manni
     +  lower: -10
      - id: ac_e
        reaction: EX_ac_e
        lower: 0.0
-    @@ -26,7 +28,7 @@ compounds:
+    @@ -25,7 +27,7 @@
        lower: 0.0
      - id: glc_D_e
        reaction: EX_glc_e
@@ -1076,7 +1078,7 @@ can be used to run FBA on the model:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model fba
+    (psamm-env) $ psamm-model fba --all-reactions
 
 From the output it can be seen that there is flux through the biomass reaction
 and that the mannitol utilization reactions are being used. In this situation
@@ -1085,11 +1087,11 @@ is not being used.
 
 .. code-block:: shell
 
-    FRUKIN	0.0	|fru_c[C_c]| + |ATP[C_c]| => |D-Fructose-6-phosphate[C_c]| + |ADP[C_c]| + |H[C_c]|
-    MANNI1PDEH	10.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |manni1p[C_c]| => |D-Fructose-6-phosphate[C_c]| + |H[C_c]| + |Nicotinamide-adenine-dinucleotide-reduced[C_c]|
-    MANNI1PPHOS	0.0	|manni1p[C_c]| + |H2O[C_c]| => |manni[C_c]| + |Phosphate[C_c]|
-    MANNIDEH	0.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |manni[C_c]| => |Nicotinamide-adenine-dinucleotide-reduced[C_c]| + |fru_c[C_c]|
-    MANNIPTS	10.0	|manni[C_e]| + |Phosphoenolpyruvate[C_c]| => |manni1p[C_c]| + |Pyruvate[C_c]|
+    FRUKIN	0.0	|fru_c[c]| + |ATP[c]| => |D-Fructose-6-phosphate[c]| + |ADP[c]| + |H[c]|
+    MANNI1PDEH	10.0	|Nicotinamide-adenine-dinucleotide[c]| + |manni1p[c]| => |D-Fructose-6-phosphate[c]| + |H[c]| + |Nicotinamide-adenine-dinucleotide-reduced[c]|
+    MANNI1PPHOS	0.0	|manni1p[c]| + |H2O[c]| => |manni[c]| + |Phosphate[c]|
+    MANNIDEH	0.0	|Nicotinamide-adenine-dinucleotide[c]| + |manni[c]| => |Nicotinamide-adenine-dinucleotide-reduced[c]| + |fru_c[c]|
+    MANNIPTS	10.0	|manni[e]| + |Phosphoenolpyruvate[c]| => |manni1p[c]| + |Pyruvate[c]|
 
 You can also choose to maximize other reactions in the network. For
 example this could be used to analyze the network when production of a certain
@@ -1101,7 +1103,7 @@ the `FRUKIN` reaction is maximized the following command can be used:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model fba FRUKIN
+    (psamm-env) $ psamm-model fba FRUKIN --all-reactions
 
 It can be seen from this simulation that the `FRUKIN` reaction is now being
 used and that the fluxes through the network have changed from when the biomass
@@ -1109,12 +1111,20 @@ function was used as the objective function.
 
 .. code-block:: shell
 
-    EX_manni_e	-10.0	|manni[C_e]| <=>
-    FRUKIN	10.0	|fru_c[C_c]| + |ATP[C_c]| => |D-Fructose-6-phosphate[C_c]| + |ADP[C_c]| + |H[C_c]|
-    MANNI1PDEH	0.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |manni1p[C_c]| => |D-Fructose-6-phosphate[C_c]| + |H[C_c]| + |Nicotinamide-adenine-dinucleotide-reduced[C_c]|
-    MANNI1PPHOS	10.0	|manni1p[C_c]| + |H2O[C_c]| => |manni[C_c]| + |Phosphate[C_c]|
-    MANNIDEH	10.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |manni[C_c]| => |Nicotinamide-adenine-dinucleotide-reduced[C_c]| + |fru_c[C_c]|
-    MANNIPTS	10.0	|manni[C_e]| + |Phosphoenolpyruvate[C_c]| => |manni1p[C_c]| + |Pyruvate[C_c]|
+    ...
+    EX_lac_D_e	20.0	|D-Lactate[e]| <=>
+    EX_manni_e	-10.0	|manni[e]| <=>
+    EX_o2_e	-5.0	|O2[e]| <=>
+    EX_pi_e	0.0	|Phosphate[e]| <=>
+    EX_pyr_e	0.0	|Pyruvate[e]| <=>
+    EX_succ_e	0.0	|Succinate[e]| <=>
+    FBA	10.0	|D-Fructose-1-6-bisphosphate[c]| <=> |Dihydroxyacetone-phosphate[c]| + |Glyceraldehyde-3-phosphate[c]|	b2097 or b1773 or b2925
+    FBP	0.0	|D-Fructose-1-6-bisphosphate[c]| + |H2O[c]| => |D-Fructose-6-phosphate[c]| + |Phosphate[c]|	b3925 or b4232
+    FORt2	0.0	|Formate[e]| + |H[e]| => |Formate[c]| + |H[c]|	b0904 or b2492
+    FORti	0.0	|Formate[c]| => |Formate[e]|	b0904 or b2492
+    FRD7	0.0	|Fumarate[c]| + |Ubiquinol-8[c]| => |Ubiquinone-8[c]| + |Succinate[c]|	b4151 and b4152 and b4153 and b4154
+    FRUKIN	10.0	|fru_c[c]| + |ATP[c]| => |D-Fructose-6-phosphate[c]| + |ADP[c]| + |H[c]|
+    ...
 
 
 Adding new Compounds to the Model
@@ -1169,7 +1179,7 @@ command:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model fba
+    (psamm-env) $ psamm-model fba --allreacions
 
 It can be seen that the reactions are no longer represented with compound IDs
 but are now represented with the compound names. This is because the new
@@ -1177,12 +1187,12 @@ compound features are now being added to the model.
 
 .. code-block:: shell
 
-    EX_manni_C_e	-10.0	|Mannitol[C_e]| <=>
-    FRUKIN	0.0	|Fructose[C_c]| + |ATP[C_c]| => |D-Fructose-6-phosphate[C_c]| + |ADP[C_c]| + |H[C_c]|
-    MANNI1PDEH	10.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |Mannitol 1-phosphate[C_c]| => |D-Fructose-6-phosphate[C_c]| + |H[C_c]| + |Nicotinamide-adenine-dinucleotide-reduced[C_c]|
-    MANNI1PPHOS	0.0	|Mannitol 1-phosphate[C_c]| + |H2O[C_c]| => |Mannitol[C_c]| + |Phosphate[C_c]|
-    MANNIDEH	0.0	|Nicotinamide-adenine-dinucleotide[C_c]| + |Mannitol[C_c]| => |Nicotinamide-adenine-dinucleotide-reduced[C_c]| + |Fructose[C_c]|
-    MANNIPTS	10.0	|Mannitol[C_e]| + |Phosphoenolpyruvate[C_c]| => |Mannitol 1-phosphate[C_c]| + |Pyruvate[C_c]|
+    EX_manni_e	-10.0	|Mannitol[e]| <=>
+    FRUKIN	0.0	|Fructose[c]| + |ATP[c]| => |D-Fructose-6-phosphate[c]| + |ADP[c]| + |H[c]|
+    MANNI1PDEH	10.0	|Nicotinamide-adenine-dinucleotide[c]| + |Mannitol 1-phosphate[c]| => |D-Fructose-6-phosphate[c]| + |H[c]| + |Nicotinamide-adenine-dinucleotide-reduced[c]|
+    MANNI1PPHOS	0.0	|Mannitol 1-phosphate[c]| + |H2O[c]| => |Mannitol[c]| + |Phosphate[c]|
+    MANNIDEH	0.0	|Nicotinamide-adenine-dinucleotide[c]| + |Mannitol[c]| => |Nicotinamide-adenine-dinucleotide-reduced[c]| + |Fructose[c]|
+    MANNIPTS	10.0	|Mannitol[e]| + |Phosphoenolpyruvate[c]| => |Mannitol 1-phosphate[c]| + |Pyruvate[c]|
 
 
 Checking File Changes with Git
@@ -1256,7 +1266,7 @@ command:
     (psamm-env) $ git commit -m 'Addition of mannitol utilization pathway and associated compounds'
 
 Now the model has been updated and the changes have been committed. The Git log
-command can be used to view what the commits have been made in a repository.
+command can be used to view what commits have been made in the repository.
 This allows you to track the overall progress as well as examine what
 specific changes have been made. More detailed information between the commits
 can be viewed using the ``git diff`` command along with the commit ID that you
@@ -1324,7 +1334,7 @@ command can be used:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model search reaction --compound 'manni[C_c]'
+    (psamm-env) $ psamm-model search reaction --compound 'manni[c]'
 
 
 Stoichiometric Checking
@@ -1384,14 +1394,14 @@ following command can be used:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model masscheck --type=reaction
+    (psamm-env) $ psamm-model masscheck --type=reactions
 
 The output of this command will appear as follows.
 
 .. code-block:: shell
 
     ...
-    FRUKIN	1.0	|Fructose[C_c]| + |ATP[C_c]| => |D-Fructose-6-phosphate[C_c]| + |ADP[C_c]| + |H[C_c]|
+    FRUKIN	1.0	|Fructose[c]| + |ATP[c]| => |D-Fructose-6-phosphate[c]| + |ADP[c]| + |H[c]|
     INFO: Consistent reactions: 100/101
 
 This check is performed similarly to the compound check. In addition, mass
@@ -1406,7 +1416,7 @@ Sometimes the residue minimization problem may have multiple solutions. In
 these cases the residue value may be reallocated among a few connected
 reactions. In this example the unbalanced reaction is the MANNIDEH reaction::
 
-    MANNIDEH    |manni[C_c]| + |nad_c[C_c]| => |fru_c[C_c]| + |nadh_c[C_c]|
+    MANNIDEH    |manni[c]| + |nad_c[c]| => |fru_c[c]| + |nadh_c[c]|
 
 In this reaction equation the right hand side is missing a proton. However
 minimization problem can result in the residue being placed on either the
@@ -1607,16 +1617,16 @@ The output should be as follows:
     INFO: Model Git version: 9812080
     INFO: Using flux bounds to determine consistency.
     INFO: Setting feasibility tolerance to 1e-09
-    EX_fru_e	|D-Fructose[C_e]| <=>
-    EX_fum_e	|Fumarate[C_e]| <=>
-    EX_glc_e	|D-Glucose[C_e]| <=>
-    EX_gln_L_e	|L-Glutamine[C_e]| <=>
-    EX_mal_L_e	|L-Malate[C_e]| <=>
-    FRUpts2	|D-Fructose[C_e]| + |Phosphoenolpyruvate[C_c]| => |D-Fructose-6-phosphate[C_c]| + |Pyruvate[C_c]|
-    FUMt2_2	(2) |H[C_e]| + |Fumarate[C_e]| => |Fumarate[C_c]| + (2) |H[C_c]|
-    GLCpts	|D-Glucose[C_e]| + |Phosphoenolpyruvate[C_c]| => |Pyruvate[C_c]| + |D-Glucose-6-phosphate[C_c]|
-    GLNabc	|L-Glutamine[C_e]| + |ATP[C_c]| + |H2O[C_c]| => |ADP[C_c]| + |Phosphate[C_c]| + |H[C_c]| + |L-Glutamine[C_c]|
-    MALt2_2	(2) |H[C_e]| + |L-Malate[C_e]| => |L-Malate[C_c]| + (2) |H[C_c]|
+    EX_fru_e	|D-Fructose[e]| <=>
+    EX_fum_e	|Fumarate[e]| <=>
+    EX_glc_e	|D-Glucose[e]| <=>
+    EX_gln_L_e	|L-Glutamine[e]| <=>
+    EX_mal_L_e	|L-Malate[e]| <=>
+    FRUpts2	|D-Fructose[e]| + |Phosphoenolpyruvate[c]| => |D-Fructose-6-phosphate[c]| + |Pyruvate[c]|
+    FUMt2_2	(2) |H[e]| + |Fumarate[e]| => |Fumarate[c]| + (2) |H[c]|
+    GLCpts	|D-Glucose[e]| + |Phosphoenolpyruvate[c]| => |Pyruvate[c]| + |D-Glucose-6-phosphate[c]|
+    GLNabc	|L-Glutamine[e]| + |ATP[c]| + |H2O[c]| => |ADP[c]| + |Phosphate[c]| + |H[c]| + |L-Glutamine[c]|
+    MALt2_2	(2) |H[e]| + |L-Malate[e]| => |L-Malate[c]| + (2) |H[c]|
     INFO: Model has 5/80 inconsistent internal reactions (0 disabled by user)
     INFO: Model has 5/21 inconsistent exchange reactions (0 disabled by user)
 
@@ -1747,12 +1757,12 @@ The following is sample output from the fva command:
 .. code-block:: shell
 
     ...
-    EX_pi_e	-3.44906664664	-3.44906664664	|Phosphate[C_e]| <=>
-    EX_pyr_e	-0.0	-0.0	|Pyruvate[C_e]| <=>
-    EX_succ_e	-0.0	-0.0	|Succinate[C_e]| <=>
-    FBA	7.00227721609	7.00227721609	|D-Fructose-1-6-bisphosphate[C_c]| <=> |Dihydroxyacetone-phosphate[C_c]| + |Glyceraldehyde-3-phosphate[C_c]|
-    FBP	0.0	0.0	|D-Fructose-1-6-bisphosphate[C_c]| + |H2O[C_c]| => |D-Fructose-6-phosphate[C_c]| + |Phosphate[C_c]|
-    FORt2	0.0	0.0	|Formate[C_e]| + |H[C_e]| => |Formate[C_c]| + |H[C_c]|
+    EX_pi_e	-3.44906664664	-3.44906664664	|Phosphate[e]| <=>
+    EX_pyr_e	-0.0	-0.0	|Pyruvate[e]| <=>
+    EX_succ_e	-0.0	-0.0	|Succinate[e]| <=>
+    FBA	7.00227721609	7.00227721609	|D-Fructose-1-6-bisphosphate[c]| <=> |Dihydroxyacetone-phosphate[c]| + |Glyceraldehyde-3-phosphate[c]|
+    FBP	0.0	0.0	|D-Fructose-1-6-bisphosphate[c]| + |H2O[c]| => |D-Fructose-6-phosphate[c]| + |Phosphate[c]|
+    FORt2	0.0	0.0	|Formate[e]| + |H[e]| => |Formate[c]| + |H[c]|
     ...
 
 
@@ -1766,10 +1776,10 @@ added into the media along with mannitol then the results might appear as follow
 
 .. code-block:: shell
 
-    EX_glc_e	-10.0	-2.0	|D-Glucose[C_e]| <=>
-    EX_manni_e	-9.0	-3.0	|Mannitol[C_e]| <=>
-    MANNIPTS	3.0	9.0	|Mannitol[C_e]| + |Phosphoenolpyruvate[C_c]| => |Mannitol 1-phosphate[C_c]| + |Pyruvate[C_c]|
-    GLCpts	2.0	10.0	|D-Glucose[C_e]| + |Phosphoenolpyruvate[C_c]| => |Pyruvate[C_c]| + |D-Glucose-6-phosphate[C_c]|
+    EX_glc_e	-10.0	-2.0	|D-Glucose[e]| <=>
+    EX_manni_e	-9.0	-3.0	|Mannitol[e]| <=>
+    MANNIPTS	3.0	9.0	|Mannitol[e]| + |Phosphoenolpyruvate[c]| => |Mannitol 1-phosphate[c]| + |Pyruvate[c]|
+    GLCpts	2.0	10.0	|D-Glucose[e]| + |Phosphoenolpyruvate[c]| => |Pyruvate[c]| + |D-Glucose-6-phosphate[c]|
 
 
 It can be seen that in this situation the lower and upper bounds of some
@@ -1865,13 +1875,13 @@ maintain an objective function flux above a user-defined threshold. This
 function works on the same principle as the gene deletions but instead of
 removing individual genes, reactions will be removed.
 To run random minimal network analysis on the
-model use the randomsparse command with the ``--type=reaction`` option. The
+model use the randomsparse command with the ``--type=reactions`` option. The
 last parameter for the command is a percentage of the maximum objective flux
 that will be used as the threshold for the simulation.
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model randomsparse --type=reaction 95%
+    (psamm-env) $ psamm-model randomsparse --type=reactions 95%
 
 The output from the ``randomsparse`` command could be as follows:
 
@@ -1911,7 +1921,6 @@ essential to the network:
 
 .. code-block:: shell
 
-    EX_manni_e	1
     EX_ac_e	0
     EX_acald_e	0
     EX_akg_e	0
@@ -1927,6 +1936,7 @@ essential to the network:
     EX_h_e	1
     EX_lac_D_e	0
     EX_mal_L_e	0
+    EX_manni_e	1
     EX_nh4_e	1
     EX_o2_e	1
     EX_pi_e	1
