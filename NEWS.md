@@ -1,4 +1,28 @@
 
+v0.25 (2016-10-28)
+------------------
+
+- Fixed an error parsing decimal values in reactions which resulted in a
+  failure to run FBA and other analyses on certain models.
+- The `fastgapfill` command no longer tries to unblock exchange reactions by
+  default. Only internal reactions will be unblocked by default.
+- The `fastgapfill` command has a new `--subset` option to explicitly specify
+  set of reactions to unblock. This means that the command can now be used to
+  unblock a specific reaction.
+- The weight options on `fastgapfill` have changed name to `--db-penalty`,
+  `--tp-penalty` and `--ex-penalty` for consistency with the existing
+  `--penalty` option.
+- Fixed an error in `gapfill` that in some cases would result in a compound
+  incorrectly marked as non-blocked.
+- The `sbmlexport` command now follows the FBCv2 specification for writing
+  flux bounds, biomass reaction, gene products and various other properties to
+  SBML files.
+- The `sbmlexport` command now uses the same ID for compartment IDs as used
+  in the YAML files.
+- The order of compounds in the output from commands now reflects the order
+  of compounds in the reactions as specified in the model files.
+- Experimental support for solving MILP problems with GLPK has been activated.
+
 v0.24 (2016-08-23)
 ------------------
 - When specifying flux bounds in media and limits, the `fixed` key can now be
