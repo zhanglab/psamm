@@ -1,3 +1,18 @@
+v0.25 (2016-10-28)
+------------------
+- Fix an error where decimal valued bounds would not be imported correctly.
+- `fastgapfill` command does not include exchange reactions in the core subset
+  by default.
+- Support FBCv2 in `sbmlexport`.
+- `fastgapfill` command has an option to specify the core reaction `subset` to
+  use.
+- The order of compounds in Database and MetabolicModel reactions reflects the
+  order in the file from which the reaction was parsed.
+- Activate GLPK MILP support.
+- Export SBML compartment IDs based on IDs in YAML file.
+- Export `charge` and `formula` as per FBCv2 specifications when using
+  `sbmlexport`.
+- Make `penalty` options consistent.
 
 v0.24 (2016-08-23)
 ------------------
