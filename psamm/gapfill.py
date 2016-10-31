@@ -19,10 +19,16 @@
 
 This implements a variant of the algorithms described in [Kumar07]_.
 """
+import logging
 
 from six import iteritems
 
 from .lpsolver import lp
+
+# Module-level logging
+logger = logging.getLogger(__name__)
+
+MAGNITUDE_DIFF = 10000000
 
 
 class GapFillError(Exception):
@@ -51,7 +57,9 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000):
     for reaction_id in model.reactions:
         lower, upper = model.limits[reaction_id]
         v.define([reaction_id], lower=lower, upper=upper)
-
+    if(abs(v_max - epsilon) > MAGNITUDE_DIFF):
+        logger.warning(('Magnitude range of {} to {}'
+                        ' is problematic.').format(epsilon, v_max))
     # Define constraints on production of metabolites in reaction
     w = prob.namespace(types=lp.VariableType.Binary)
     binary_cons_lhs = {compound: 0 for compound in model.compounds}
@@ -120,6 +128,10 @@ def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
     not be efficient for larger models.
     """
     prob = solver.create_problem()
+
+    if(abs(v_max - epsilon) > MAGNITUDE_DIFF):
+        logger.warning(('Magnitude range of {} to {}'
+                        ' is problematic.').format(epsilon, v_max))
 
     # Define flux variables
     v = prob.namespace(model.reactions, lower=-v_max, upper=v_max)
