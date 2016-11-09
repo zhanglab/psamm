@@ -247,7 +247,8 @@ class NativeModel(object):
         # Parse reactions defined in the main model file
         if 'reactions' in self._model:
             for reaction in parse_reaction_list(
-                    self._context, self._model['reactions']):
+                    self._context, self._model['reactions'],
+                    self.get_default_compartment()):
                 yield reaction
 
     def has_model_definition(self):
@@ -303,30 +304,11 @@ class NativeModel(object):
     def create_metabolic_model(self):
         """Create a :class:`psamm.metabolicmodel.MetabolicModel`."""
 
-        def _translate_compartments(reaction, compartment):
-            """Translate compound with missing compartments.
-
-            These compounds will have the specified compartment in the output.
-            """
-            left = (((c.in_compartment(compartment), v)
-                     if c.compartment is None else (c, v))
-                    for c, v in reaction.left)
-            right = (((c.in_compartment(compartment), v)
-                      if c.compartment is None else (c, v))
-                     for c, v in reaction.right)
-            return Reaction(reaction.direction, left, right)
-
-        default_compartment = self.get_default_compartment()
-
         # Create metabolic model
         database = DictDatabase()
         for reaction in self.parse_reactions():
             if reaction.equation is not None:
-                # Translate unset compartments to default value
-                eq = _translate_compartments(
-                    reaction.equation, default_compartment)
-
-                database.set_reaction(reaction.id, eq)
+                database.set_reaction(reaction.id, reaction.equation)
 
         # Warn about undefined compounds
         compounds = set()
@@ -505,13 +487,35 @@ def parse_compound_file(path, format):
             context.filepath))
 
 
-def parse_reaction_equation(equation_def):
+def parse_reaction_equation_string(equation, default_compartment):
+    """Parse a string representation of a reaction equation.
+
+    Converts undefined compartments to the default compartment.
+    """
+    def _translate_compartments(reaction, compartment):
+        """Translate compound with missing compartments.
+
+        These compounds will have the specified compartment in the output.
+        """
+        left = (((c.in_compartment(compartment), v)
+                 if c.compartment is None else (c, v))
+                for c, v in reaction.left)
+        right = (((c.in_compartment(compartment), v)
+                  if c.compartment is None else (c, v))
+                 for c, v in reaction.right)
+        return Reaction(reaction.direction, left, right)
+
+    eq = _REACTION_PARSER.parse(equation).normalized()
+    return _translate_compartments(eq, default_compartment)
+
+
+def parse_reaction_equation(equation_def, default_compartment):
     """Parse a structured reaction equation as obtained from a YAML file
 
     Returns a Reaction.
     """
 
-    def parse_compound_list(l):
+    def parse_compound_list(l, compartment):
         """Parse a list of reactants or metabolites"""
         for compound_def in l:
             compound_id = compound_def.get('id')
@@ -530,20 +534,22 @@ def parse_reaction_equation(equation_def):
             yield compound, value
 
     if isinstance(equation_def, string_types):
-        return _REACTION_PARSER.parse(equation_def).normalized()
+        return parse_reaction_equation_string(
+            equation_def, default_compartment)
+    else:
+        compartment = equation_def.get('compartment', default_compartment)
+        reversible = bool(equation_def.get('reversible', True))
+        left = equation_def.get('left', [])
+        right = equation_def.get('right', [])
+        if len(left) == 0 and len(right) == 0:
+            raise ParseError('Reaction values are missing')
 
-    compartment = equation_def.get('compartment', None)
-    reversible = bool(equation_def.get('reversible', True))
-    left = equation_def.get('left', [])
-    right = equation_def.get('right', [])
-    if len(left) == 0 and len(right) == 0:
-        raise ParseError('Reaction values are missing')
-
-    return Reaction(Direction.Both if reversible else Direction.Forward,
-                    parse_compound_list(left), parse_compound_list(right))
+        return Reaction(Direction.Both if reversible else Direction.Forward,
+                        parse_compound_list(left, compartment),
+                        parse_compound_list(right, compartment))
 
 
-def parse_reaction(reaction_def, context=None):
+def parse_reaction(reaction_def, default_compartment, context=None):
     """Parse a structured reaction definition as obtained from a YAML file
 
     Returns a ReactionEntry.
@@ -556,14 +562,14 @@ def parse_reaction(reaction_def, context=None):
 
     # Parse reaction equation
     if 'equation' in reaction_def:
-        reaction_props['equation'] = (
-            parse_reaction_equation(reaction_def['equation']))
+        reaction_props['equation'] = parse_reaction_equation(
+            reaction_def['equation'], default_compartment)
 
     mark = FileMark(context, None, None)
     return ReactionEntry(reaction_id, reaction_props, mark)
 
 
-def parse_reaction_list(path, reactions):
+def parse_reaction_list(path, reactions, default_compartment=None):
     """Parse a structured list of reactions as obtained from a YAML file
 
     Yields tuples of reaction ID and reaction object. Path can be given as a
@@ -575,22 +581,23 @@ def parse_reaction_list(path, reactions):
     for reaction_def in reactions:
         if 'include' in reaction_def:
             include_context = context.resolve(reaction_def['include'])
-            for reaction in parse_reaction_file(include_context):
+            for reaction in parse_reaction_file(
+                    include_context, default_compartment):
                 yield reaction
         else:
-            yield parse_reaction(reaction_def, context)
+            yield parse_reaction(reaction_def, default_compartment, context)
 
 
-def parse_reaction_yaml_file(path, f):
+def parse_reaction_yaml_file(path, f, default_compartment):
     """Parse a file as a YAML-format list of reactions
 
     Path can be given as a string or a context.
     """
 
-    return parse_reaction_list(path, yaml_load(f))
+    return parse_reaction_list(path, yaml_load(f), default_compartment)
 
 
-def parse_reaction_table_file(path, f):
+def parse_reaction_table_file(path, f, default_compartment):
     """Parse a tab-separated file containing reaction IDs and properties
 
     The reaction properties are parsed according to the header which specifies
@@ -606,13 +613,14 @@ def parse_reaction_table_file(path, f):
         props = {key: value for key, value in iteritems(row) if value != ''}
 
         if 'equation' in props:
-            props['equation'] = _REACTION_PARSER.parse(props['equation'])
+            props['equation'] = parse_reaction_equation_string(
+                props['equation'], default_compartment)
 
         mark = FileMark(context, lineno + 2, 0)
         yield ReactionEntry(row['id'], props, mark)
 
 
-def parse_reaction_file(path):
+def parse_reaction_file(path, default_compartment=None):
     """Open and parse reaction file based on file extension
 
     Path can be given as a string or a context.
@@ -625,13 +633,15 @@ def parse_reaction_file(path):
         logger.debug('Parsing reaction file {} as TSV'.format(
             context.filepath))
         with context.open('r') as f:
-            for reaction in parse_reaction_table_file(context, f):
+            for reaction in parse_reaction_table_file(
+                    context, f, default_compartment):
                 yield reaction
     elif format == 'yaml':
         logger.debug('Parsing reaction file {} as YAML'.format(
             context.filepath))
         with context.open('r') as f:
-            for reaction in parse_reaction_yaml_file(context, f):
+            for reaction in parse_reaction_yaml_file(
+                    context, f, default_compartment):
                 yield reaction
     else:
         raise ParseError('Unable to detect format of reaction file {}'.format(
