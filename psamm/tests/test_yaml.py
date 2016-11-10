@@ -28,6 +28,18 @@ from six import StringIO
 
 
 class TestYAMLDataSource(unittest.TestCase):
+    def test_parse_reaction(self):
+        reaction = native.parse_reaction({
+            'id': 'reaction_123',
+            'equation': 'A + 2 B => C[e]'
+        }, default_compartment='p')
+
+        self.assertEqual(reaction.id, 'reaction_123')
+        self.assertEqual(reaction.equation, Reaction(
+            Direction.Forward,
+            [(Compound('A', 'p'), 1), (Compound('B', 'p'), 2)],
+            [(Compound('C', 'e'), 1)]))
+
     def test_parse_reaction_list(self):
         reactions = list(native.parse_reaction_list('./test.yaml', [
             {
