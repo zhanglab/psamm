@@ -57,7 +57,15 @@ class ParseError(Exception):
 
 
 def float_constructor(loader, node):
-    return Decimal(loader.construct_scalar(node))
+    """Construct Decimal from YAML float encoding."""
+    s = loader.construct_scalar(node)
+    if s == '.inf':
+        return Decimal('Infinity')
+    elif s == '-.inf':
+        return -Decimal('Infinity')
+    elif s == '.nan':
+        return Decimal('NaN')
+    return Decimal(s)
 
 
 def whendefined(func, value):
