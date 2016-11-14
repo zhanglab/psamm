@@ -100,7 +100,7 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000):
             yield compound
 
 
-def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
+def gapfill(model, core, blocked, exclude, solver, epsilon=0.001, v_max=1000):
     """Find a set of reactions to add such that no compounds are blocked.
 
     Returns two iterators: first an iterator of reactions not in
@@ -115,9 +115,10 @@ def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
 
     Core indicates the core set of reactions in the model. GapFill will
     minimize the number of added reactions that are not in core. Blocked
-    indicates the set of compounds to be resolved. Epsilon indicates the
-    threshold amount of a reaction flux for the products to be considered
-    produced. V_max indicates the maximum flux.
+    indicates the set of compounds to be resolved. Exclude is a set of
+    reactions that cannot be changed used for gap-filling. Epsilon indicates
+    the threshold amount of a compound produced for it to not be considered
+    blocked. V_max indicates the maximum flux.
 
     This method is implemented as a MILP-program. Therefore it may
     not be efficient for larger models.
@@ -128,7 +129,7 @@ def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
     v = prob.namespace(model.reactions, lower=-v_max, upper=v_max)
 
     # Add binary indicator variables
-    database_reactions = set(model.reactions).difference(core)
+    database_reactions = set(model.reactions).difference(core, exclude)
     ym = prob.namespace(model.reactions, types=lp.VariableType.Binary)
     yd = prob.namespace(database_reactions, types=lp.VariableType.Binary)
 
@@ -139,12 +140,16 @@ def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
     for reaction_id in model.reactions:
         lower, upper = (float(x) for x in model.limits[reaction_id])
 
-        # Allow flux bounds to expand up to v_max with penalty
-        delta_lower = min(0, -v_max - lower)
-        delta_upper = max(0, v_max - upper)
-        prob.add_linear_constraints(
-            v(reaction_id) >= lower + ym(reaction_id) * delta_lower,
-            v(reaction_id) <= upper + ym(reaction_id) * delta_upper)
+        if reaction_id in exclude:
+            prob.add_linear_constraints(
+                upper >= v(reaction_id), v(reaction_id) >= lower)
+        else:
+            # Allow flux bounds to expand up to v_max with penalty
+            delta_lower = min(0, -v_max - lower)
+            delta_upper = max(0, v_max - upper)
+            prob.add_linear_constraints(
+                v(reaction_id) >= lower + ym(reaction_id) * delta_lower,
+                v(reaction_id) <= upper + ym(reaction_id) * delta_upper)
 
     # Add constraints on database reactions
     for reaction_id in database_reactions:
@@ -157,7 +162,7 @@ def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
     w = prob.namespace(types=lp.VariableType.Binary)
     binary_cons_lhs = {compound: 0 for compound in blocked}
     for (compound, reaction_id), value in iteritems(model.matrix):
-        if compound in blocked and value != 0:
+        if reaction_id not in exclude and compound in blocked and value != 0:
             w.define([(compound, reaction_id)])
             w_var = w((compound, reaction_id))
 
@@ -174,7 +179,8 @@ def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
     # Define mass balance constraints
     massbalance_lhs = {compound: 0 for compound in model.compounds}
     for (compound, reaction_id), value in iteritems(model.matrix):
-        massbalance_lhs[compound] += v(reaction_id) * value
+        if reaction_id not in exclude:
+            massbalance_lhs[compound] += v(reaction_id) * value
     for compound, lhs in iteritems(massbalance_lhs):
         # The constraint is merely >0 meaning that we have implicit sinks
         # for all compounds.

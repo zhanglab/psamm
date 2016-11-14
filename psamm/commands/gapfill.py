@@ -84,6 +84,8 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
                         for c in sorted(blocked))))
 
         if len(blocked) > 0:
+            exclude = {self._model.get_biomass_reaction()}
+
             # Add exchange and transport reactions to database
             model_complete = self._mm.copy()
             logger.info('Adding database, exchange and transport reactions')
@@ -94,7 +96,7 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             logger.info('Searching for reactions to fill gaps')
             try:
                 added_reactions, no_bounds_reactions = gapfill(
-                    model_complete, core, blocked, solver=solver,
+                    model_complete, core, blocked, exclude, solver=solver,
                     epsilon=epsilon, v_max=v_max)
             except GapFillError as e:
                 self._log_epsilon_and_fail(epsilon, e)
