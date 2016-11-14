@@ -45,6 +45,7 @@ _glpk_logger = logging.getLogger('glpk')
 def _term_hook(s):
     _glpk_logger.debug(s.rstrip())
 
+
 swiglpk.glp_term_hook(_term_hook)
 
 
