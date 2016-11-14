@@ -93,7 +93,7 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
 
             logger.info('Searching for reactions to fill gaps')
             try:
-                added_reactions, reversed_reactions = gapfill(
+                added_reactions, no_bounds_reactions = gapfill(
                     model_complete, core, blocked, solver=solver,
                     epsilon=epsilon, v_max=v_max)
             except GapFillError as e:
@@ -111,11 +111,11 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
                     lambda x: compound_name.get(x, x))
                 print('{}\t{}\t{}'.format(rxnid, 'Add', rxt))
 
-            for rxnid in sorted(reversed_reactions):
+            for rxnid in sorted(no_bounds_reactions):
                 rx = model_complete.get_reaction(rxnid)
                 rxt = rx.translated_compounds(
                     lambda x: compound_name.get(x, x))
-                print('{}\t{}\t{}'.format(rxnid, 'Reverse', rxt))
+                print('{}\t{}\t{}'.format(rxnid, 'Remove bounds', rxt))
         else:
             logger.info('No blocked compounds found')
 
