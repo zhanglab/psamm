@@ -20,14 +20,16 @@ from __future__ import unicode_literals
 
 import logging
 
-from ..command import Command, MetabolicMixin, SolverCommandMixin
+from ..command import (Command, MetabolicMixin, LoopRemovalMixin,
+                       SolverCommandMixin)
 from .. import fluxanalysis, util
 from .. import randomsparse
 
 logger = logging.getLogger(__name__)
 
 
-class RandomSparseNetworkCommand(MetabolicMixin, SolverCommandMixin, Command):
+class RandomSparseNetworkCommand(MetabolicMixin, LoopRemovalMixin,
+                                 SolverCommandMixin, Command):
     """Find a random minimal network of model reactions.
 
     Given a reaction to optimize and a threshold, delete reactions randomly
@@ -40,11 +42,10 @@ class RandomSparseNetworkCommand(MetabolicMixin, SolverCommandMixin, Command):
     relative flux of the full model flux (e.g. '40.5%').
     """
 
+    _supported_loop_removal = ['none', 'tfba']
+
     @classmethod
     def init_parser(cls, parser):
-        parser.add_argument(
-            '--tfba', help='Enable thermodynamic constraints on FBA',
-            action='store_true', default=False)
         parser.add_argument('--objective', help='Reaction flux to maximize')
         parser.add_argument(
             'threshold', help='Threshold of max reaction flux',
@@ -67,14 +68,16 @@ class RandomSparseNetworkCommand(MetabolicMixin, SolverCommandMixin, Command):
             self.fail(
                 'Specified reaction is not in model: {}'.format(reaction))
 
-        if not self._args.tfba:
+        loop_removal = self._get_loop_removal_option()
+        enable_tfba = loop_removal == 'tfba'
+        if not enable_tfba:
             solver = self._get_solver()
         else:
             solver = self._get_solver(integer=True)
 
         p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
 
-        if self._args.tfba:
+        if enable_tfba:
             p.add_thermodynamic()
 
         threshold = self._args.threshold
