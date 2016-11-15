@@ -19,7 +19,7 @@ from __future__ import unicode_literals
 
 import logging
 
-from ..command import Command, FilePrefixAppendAction
+from ..command import Command, FilePrefixAppendAction, ReactionReference
 from ..formula import Formula
 from ..balancecheck import formula_balance
 
@@ -38,14 +38,17 @@ class FormulaBalanceCommand(Command):
     def init_parser(cls, parser):
         parser.add_argument(
             '--exclude', metavar='reaction', action=FilePrefixAppendAction,
-            type=str, default=[], help='Exclude reaction from balance check')
+            type=ReactionReference, default=[],
+            help='Exclude reaction from balance check')
         super(FormulaBalanceCommand, cls).init_parser(parser)
 
     def run(self):
         """Run formula balance command"""
 
+        mm = self._model.create_metabolic_model()
+
         # Create a set of excluded reactions
-        exclude = set(self._args.exclude)
+        exclude = set(r.resolve(mm) for r in self._args.exclude)
         count = 0
         unbalanced = 0
         unchecked = 0
