@@ -56,11 +56,13 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         solver = self._get_solver(integer=True)
         extracellular_comp = self._model.get_extracellular_compartment()
         epsilon = self._args.epsilon
+        v_max = float(self._model.get_default_flux_limit())
 
         if len(self._args.compound) == 0:
             # Run GapFind on model
             logger.info('Searching for blocked compounds...')
-            result = gapfind(self._mm, solver=solver, epsilon=epsilon)
+            result = gapfind(
+                self._mm, solver=solver, epsilon=epsilon, v_max=v_max)
 
             try:
                 blocked = set(compound for compound in result
@@ -93,7 +95,7 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             try:
                 added_reactions, reversed_reactions = gapfill(
                     model_complete, core, blocked, solver=solver,
-                    epsilon=epsilon)
+                    epsilon=epsilon, v_max=v_max)
             except GapFillError as e:
                 self._log_epsilon_and_fail(epsilon, e)
 
