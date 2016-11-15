@@ -212,6 +212,17 @@ class FilePrefixAppendAction(argparse.Action):
             arguments.append(values)
 
 
+class ReactionReference(object):
+    def __init__(self, reaction_ref):
+        self._reaction_id = reaction_ref
+
+    def resolve(self, model):
+        if not model.has_reaction(self._reaction_id):
+            raise ValueError('Invalid reaction reference')
+
+        return self._reaction_id
+
+
 class _ErrorMarker(object):
     """Signals error in the child process."""
 
