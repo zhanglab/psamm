@@ -99,13 +99,19 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             except GapFillError as e:
                 self._log_epsilon_and_fail(epsilon, e)
 
-            for rxnid in added_reactions:
+            for reaction_id in sorted(self._mm.reactions):
+                rx = self._mm.get_reaction(reaction_id)
+                rxt = rx.translated_compounds(
+                    lambda x: compound_name.get(x, x))
+                print('{}\t{}\t{}'.format(reaction_id, 'Model', rxt))
+
+            for rxnid in sorted(added_reactions):
                 rx = model_complete.get_reaction(rxnid)
                 rxt = rx.translated_compounds(
                     lambda x: compound_name.get(x, x))
                 print('{}\t{}\t{}'.format(rxnid, 'Add', rxt))
 
-            for rxnid in reversed_reactions:
+            for rxnid in sorted(reversed_reactions):
                 rx = model_complete.get_reaction(rxnid)
                 rxt = rx.translated_compounds(
                     lambda x: compound_name.get(x, x))
