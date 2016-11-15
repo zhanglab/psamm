@@ -189,27 +189,31 @@ class FilePrefixAppendAction(argparse.Action):
                  fromfile_prefix_chars='@', **kwargs):
         if nargs is not None:
             raise ValueError('nargs not allowed')
-        self.fromfile_prefix_chars = fromfile_prefix_chars
+
+        self.__fromfile_prefix_chars = fromfile_prefix_chars
+        self.__final_type = kwargs.get('type')
+        kwargs['type'] = text_type
+
         super(FilePrefixAppendAction, self).__init__(
             option_strings, dest, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
         arguments = getattr(namespace, self.dest)
-        if arguments is None:
+        if arguments is None or len(arguments) == 0:
             arguments = []
             setattr(namespace, self.dest, arguments)
 
-        if len(values) > 0 and values[0] in self.fromfile_prefix_chars:
+        if len(values) > 0 and values[0] in self.__fromfile_prefix_chars:
             filepath = values[1:]
             try:
                 with open(filepath, 'r') as f:
                     for line in f:
-                        arguments.append(line.strip())
+                        arguments.append(self.__final_type(line.strip()))
             except IOError:
                 parser.error('Unable to read arguments from file: {}'.format(
                     filepath))
         else:
-            arguments.append(values)
+            arguments.append(self.__final_type(values))
 
 
 class _ErrorMarker(object):
