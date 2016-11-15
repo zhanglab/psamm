@@ -189,7 +189,7 @@ class TestCommandMain(unittest.TestCase):
 
     def test_run_fluxcheck_with_tfba(self):
         self.run_solver_command([
-            '--model', self._model_dir, 'fluxcheck', '--tfba'],
+            '--model', self._model_dir, 'fluxcheck', '--loop-removal=tfba'],
             {'integer': True})
 
     def test_run_fluxcheck_with_reduce_lp(self):
@@ -200,7 +200,7 @@ class TestCommandMain(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.run_solver_command([
                 '--model', self._model_dir, 'fluxcheck',
-                '--tfba', '--fastcore'], {})
+                '--loop-removal', '--fastcore'], {})
 
     def test_run_fluxcoupling(self):
         self.run_solver_command([

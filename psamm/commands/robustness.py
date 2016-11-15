@@ -20,8 +20,8 @@ from __future__ import unicode_literals
 import time
 import logging
 
-from ..command import (Command, MetabolicMixin, SolverCommandMixin,
-                       ParallelTaskMixin)
+from ..command import (Command, MetabolicMixin, LoopRemovalMixin,
+                       SolverCommandMixin, ParallelTaskMixin)
 from .. import fluxanalysis
 
 from six.moves import range
@@ -29,7 +29,7 @@ from six.moves import range
 logger = logging.getLogger(__name__)
 
 
-class RobustnessCommand(MetabolicMixin, SolverCommandMixin,
+class RobustnessCommand(MetabolicMixin, LoopRemovalMixin, SolverCommandMixin,
                         ParallelTaskMixin, Command):
     """Run robustness analysis on the model.
 
@@ -39,6 +39,8 @@ class RobustnessCommand(MetabolicMixin, SolverCommandMixin,
     be fixed at the specified number of steps between the
     minimum and maximum flux value specified in the model.
     """
+
+    _supported_loop_removal = ['none', 'tfba', 'l1min']
 
     @classmethod
     def init_parser(cls, parser):
@@ -51,9 +53,6 @@ class RobustnessCommand(MetabolicMixin, SolverCommandMixin,
         parser.add_argument(
             '--maximum', metavar='V', type=float,
             help='Maximum flux value of varying reacton')
-        parser.add_argument(
-            '--loop-removal', help='Select type of loop removal constraints',
-            choices=['none', 'tfba', 'l1min'], default='none')
         parser.add_argument('--objective', help='Reaction to maximize')
         parser.add_argument(
             '--all-reaction-fluxes',
@@ -93,21 +92,11 @@ class RobustnessCommand(MetabolicMixin, SolverCommandMixin,
         if steps <= 0:
             self.argument_error('Invalid number of steps: {}\n'.format(steps))
 
-        loop_removal = self._args.loop_removal
+        loop_removal = self._get_loop_removal_option()
         if loop_removal == 'tfba':
             solver = self._get_solver(integer=True)
         else:
             solver = self._get_solver()
-
-        if loop_removal == 'none':
-            logger.info('Loop removal disabled; spurious loops are allowed')
-        elif loop_removal == 'l1min':
-            logger.info('Loop removal using L1 minimization')
-        elif loop_removal == 'tfba':
-            logger.info('Loop removal using thermodynamic constraints')
-        else:
-            self.argument_error(
-                'Invalid loop constraint mode: {}'.format(loop_removal))
 
         p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
         if loop_removal == 'tfba':

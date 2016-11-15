@@ -113,6 +113,61 @@ class MetabolicMixin(object):
         self._mm = self._model.create_metabolic_model()
 
 
+class LoopRemovalMixin(object):
+    """Mixin for commands that perform loop removal."""
+
+    _supported_loop_removal = ['none']
+
+    __all_methods = {
+        'none': 'Loop removal disabled; spurious loops are allowed',
+        'tfba': 'Loop removal using thermodynamic constraints',
+        'l1min': 'Loop removal using L1 minimization'
+    }
+
+    @classmethod
+    def init_parser(cls, parser):
+        supported = cls._supported_loop_removal
+        assert len(supported) > 0, 'No loop removal methods defined'
+
+        invalid = set(supported).difference(cls.__all_methods)
+        assert len(invalid) == 0, 'Loop removal methods are invalid'
+
+        if len(supported) >= 2:
+            supported_list = ', '.join(s + ' (default)' if i == 0 else s
+                                       for i, s in enumerate(supported))
+            help_text = (
+                'Select type of loop removal to perform.'
+                ' Possible methods are: ' + supported_list)
+            parser.add_argument(
+                '--loop-removal', help=help_text, type=text_type,
+                default=supported[0],
+                metavar='METHOD', dest='hidden_mixin_loop_removal')
+
+        super(LoopRemovalMixin, cls).init_parser(parser)
+
+    def _get_loop_removal_option(self, log=True):
+        supported = self._supported_loop_removal
+
+        if len(supported) >= 2:
+            loop_removal = self._args.hidden_mixin_loop_removal
+        else:
+            loop_removal = supported[0]
+
+        if loop_removal not in self.__all_methods:
+            self.argument_error(
+                'Unknown loop removal method: {}'.format(loop_removal))
+
+        if loop_removal not in supported:
+            self.argument_error(
+                'The loop removal method {} is not possible'
+                ' with this command'.format(loop_removal))
+
+        if log:
+            logger.info(self.__all_methods[loop_removal])
+
+        return loop_removal
+
+
 class SolverCommandMixin(object):
     """Mixin for commands that use an LP solver.
 

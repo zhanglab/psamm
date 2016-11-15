@@ -21,15 +21,15 @@ import time
 import logging
 from itertools import product
 
-from ..command import (Command, MetabolicMixin, SolverCommandMixin,
-                       ParallelTaskMixin)
+from ..command import (Command, MetabolicMixin, LoopRemovalMixin,
+                       SolverCommandMixin, ParallelTaskMixin)
 from .. import fluxanalysis, fastcore
 
 logger = logging.getLogger(__name__)
 
 
-class FluxConsistencyCommand(MetabolicMixin, SolverCommandMixin,
-                             ParallelTaskMixin, Command):
+class FluxConsistencyCommand(MetabolicMixin, LoopRemovalMixin,
+                             SolverCommandMixin, ParallelTaskMixin, Command):
     """Check that reactions are flux consistent in a model.
 
     A reaction is flux consistent if there exists any steady-state flux
@@ -38,14 +38,12 @@ class FluxConsistencyCommand(MetabolicMixin, SolverCommandMixin,
     consistency check by providing the ``--unrestricted`` option.
     """
 
+    _supported_loop_removal = ['none', 'tfba']
+
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
             '--fastcore', help='Enable use of Fastcore algorithm',
-            action='store_true')
-        parser.add_argument(
-            '--tfba',
-            help='Enable thermodynamic constraints on flux check',
             action='store_true')
         parser.add_argument(
             '--reduce-lp',
@@ -78,7 +76,8 @@ class FluxConsistencyCommand(MetabolicMixin, SolverCommandMixin,
                 if self._mm.is_exchange(reaction):
                     del self._mm.limits[reaction].bounds
 
-        enable_tfba = self._args.tfba
+        loop_removal = self._get_loop_removal_option()
+        enable_tfba = loop_removal == 'tfba'
         enable_fastcore = self._args.fastcore
 
         if enable_tfba and enable_fastcore:
