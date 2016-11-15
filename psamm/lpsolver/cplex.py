@@ -77,19 +77,9 @@ class Problem(BaseProblem):
         self._cp.set_warning_stream(warning_stream)
         self._cp.set_error_stream(error_stream)
 
-        # Set feasibility tolerance. By default, we decrease it to 1e-9.
-        feasibility_tolerance = kwargs.get('feasibility_tolerance', 1e-9)
-        logger.info('Setting feasibility tolerance to {!r}'.format(
-            feasibility_tolerance))
-        self._cp.parameters.simplex.tolerances.feasibility.set(
-            feasibility_tolerance)
-
-        # Set optimality tolerance. By default, we decrease it to 1e-9.
-        optimality_tolerance = kwargs.get('optimality_tolerance', 1e-9)
-        logger.info('Setting optimality tolerance to {!r}'.format(
-            optimality_tolerance))
-        self._cp.parameters.simplex.tolerances.optimality.set(
-            optimality_tolerance)
+        # Set tolerances. By default, we decrease to 1e-9.
+        self.feasibility_tolerance = kwargs.get('feasibility_tolerance', 1e-9)
+        self.optimality_tolerance = kwargs.get('optimality_tolerance', 1e-9)
 
         # Set number of threads
         if 'threads' in kwargs:
@@ -337,6 +327,33 @@ class Problem(BaseProblem):
     @property
     def result(self):
         return self._result
+
+    @property
+    def feasibility_tolerance(self):
+        return self._cp.parameters.simplex.tolerances.feasibility.get()
+
+    @feasibility_tolerance.setter
+    def feasibility_tolerance(self, value):
+        logger.info('Setting feasibility tolerance to {!r}'.format(value))
+        self._cp.parameters.simplex.tolerances.feasibility.set(value)
+
+    @property
+    def optimality_tolerance(self):
+        return self._cp.parameters.simplex.tolerances.optimality.get()
+
+    @optimality_tolerance.setter
+    def optimality_tolerance(self, value):
+        logger.info('Setting optimality tolerance to {!r}'.format(value))
+        self._cp.parameters.simplex.tolerances.optimality.set(value)
+
+    @property
+    def integrality_tolerance(self):
+        return self._cp.parameters.mip.tolerances.integrality.get()
+
+    @integrality_tolerance.setter
+    def integrality_tolerance(self, value):
+        logger.info('Setting integrality tolerance to {!r}'.format(value))
+        self._cp.parameters.mip.tolerances.integrality.set(value)
 
 
 class Constraint(BaseConstraint):

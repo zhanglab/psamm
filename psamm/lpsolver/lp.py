@@ -593,6 +593,18 @@ class Problem(object):
     def result(self):
         """Result of solved problem"""
 
+    @property
+    def feasibility_tolerance(self):
+        raise NotImplementedError('Feasiblity tolerance not available')
+
+    @property
+    def optimality_tolerance(self):
+        raise NotImplementedError('Optimality tolerance not available')
+
+    @property
+    def integrality_tolerance(self):
+        raise NotImplementedError('Integrality tolerance not available')
+
 
 class InvalidResultError(Exception):
     """Raised when a result that has been invalidated is accessed"""

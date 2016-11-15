@@ -184,6 +184,14 @@ class Problem(BaseProblem):
     def result(self):
         return self._result
 
+    @property
+    def feasibility_tolerance(self):
+        return 0
+
+    @property
+    def optimality_tolerance(self):
+        return 0
+
 
 class Constraint(BaseConstraint):
     """Represents a constraint in a qsoptex.Problem"""
