@@ -113,6 +113,31 @@ class MetabolicMixin(object):
         self._mm = self._model.create_metabolic_model()
 
 
+class ObjectiveMixin(object):
+    """Mixin for commands that use biomass as objective.
+
+    Allows the user to override the default objective from the command line.
+    """
+
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument('--objective', help='Reaction to use as objective')
+        super(ObjectiveMixin, cls).init_parser(parser)
+
+    def _get_objective(self, log=True):
+        if self._args.objective is not None:
+            reaction = self._args.objective
+        else:
+            reaction = self._model.get_biomass_reaction()
+            if reaction is None:
+                self.argument_error('The objective reaction was not specified')
+
+        if log:
+            logger.info('Using {} as objective'.format(reaction))
+
+        return reaction
+
+
 class LoopRemovalMixin(object):
     """Mixin for commands that perform loop removal."""
 
