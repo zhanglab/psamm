@@ -21,7 +21,7 @@ import time
 import logging
 
 from ..command import (Command, MetabolicMixin, LoopRemovalMixin,
-                       SolverCommandMixin, ParallelTaskMixin)
+                       ObjectiveMixin, SolverCommandMixin, ParallelTaskMixin)
 from .. import fluxanalysis
 
 from six.moves import range
@@ -29,8 +29,8 @@ from six.moves import range
 logger = logging.getLogger(__name__)
 
 
-class RobustnessCommand(MetabolicMixin, LoopRemovalMixin, SolverCommandMixin,
-                        ParallelTaskMixin, Command):
+class RobustnessCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
+                        SolverCommandMixin, ParallelTaskMixin, Command):
     """Run robustness analysis on the model.
 
     Given a reaction to maximize and a reaction to vary,
@@ -53,7 +53,6 @@ class RobustnessCommand(MetabolicMixin, LoopRemovalMixin, SolverCommandMixin,
         parser.add_argument(
             '--maximum', metavar='V', type=float,
             help='Maximum flux value of varying reacton')
-        parser.add_argument('--objective', help='Reaction to maximize')
         parser.add_argument(
             '--all-reaction-fluxes',
             help='Print reaction flux for all model reactions',
@@ -72,13 +71,7 @@ class RobustnessCommand(MetabolicMixin, LoopRemovalMixin, SolverCommandMixin,
             elif compound.id not in compound_name:
                 compound_name[compound.id] = compound.id
 
-        if self._args.objective is not None:
-            reaction = self._args.objective
-        else:
-            reaction = self._model.get_biomass_reaction()
-            if reaction is None:
-                self.argument_error('The biomass reaction was not specified')
-
+        reaction = self._get_objective()
         if not self._mm.has_reaction(reaction):
             self.fail('Specified biomass reaction is not in model: {}'.format(
                 reaction))

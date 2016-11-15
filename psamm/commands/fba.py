@@ -20,15 +20,15 @@ from __future__ import unicode_literals
 import time
 import logging
 
-from ..command import (LoopRemovalMixin, SolverCommandMixin, MetabolicMixin,
-                       Command)
+from ..command import (LoopRemovalMixin, ObjectiveMixin, SolverCommandMixin,
+                       MetabolicMixin, Command)
 from .. import fluxanalysis
 
 logger = logging.getLogger(__name__)
 
 
-class FluxBalanceCommand(MetabolicMixin, LoopRemovalMixin, SolverCommandMixin,
-                         Command):
+class FluxBalanceCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
+                         SolverCommandMixin, Command):
     """Run flux balance analysis on the model."""
 
     _supported_loop_removal = ['none', 'tfba', 'l1min']
@@ -41,7 +41,6 @@ class FluxBalanceCommand(MetabolicMixin, LoopRemovalMixin, SolverCommandMixin,
         parser.add_argument(
             '--epsilon', type=float,
             help='Threshold for non-zero reaction fluxes', default=1e-5)
-        parser.add_argument('reaction', help='Reaction to maximize', nargs='?')
         super(FluxBalanceCommand, cls).init_parser(parser)
 
     def run(self):
@@ -61,18 +60,10 @@ class FluxBalanceCommand(MetabolicMixin, LoopRemovalMixin, SolverCommandMixin,
             if 'genes' in reaction.properties:
                 reaction_genes[reaction.id] = reaction.properties['genes']
 
-        if self._args.reaction is not None:
-            reaction = self._args.reaction
-        else:
-            reaction = self._model.get_biomass_reaction()
-            if reaction is None:
-                self.argument_error('The biomass reaction was not specified')
-
+        reaction = self._get_objective()
         if not self._mm.has_reaction(reaction):
             self.fail(
                 'Specified reaction is not in model: {}'.format(reaction))
-
-        logger.info('Using {} as objective'.format(reaction))
 
         loop_removal = self._get_loop_removal_option()
         if loop_removal == 'none':

@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 import logging
 
 from ..command import (Command, MetabolicMixin, LoopRemovalMixin,
-                       SolverCommandMixin)
+                       ObjectiveMixin, SolverCommandMixin)
 from .. import fluxanalysis, util
 from .. import randomsparse
 
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 class RandomSparseNetworkCommand(MetabolicMixin, LoopRemovalMixin,
-                                 SolverCommandMixin, Command):
+                                 ObjectiveMixin, SolverCommandMixin, Command):
     """Find a random minimal network of model reactions.
 
     Given a reaction to optimize and a threshold, delete reactions randomly
@@ -46,7 +46,6 @@ class RandomSparseNetworkCommand(MetabolicMixin, LoopRemovalMixin,
 
     @classmethod
     def init_parser(cls, parser):
-        parser.add_argument('--objective', help='Reaction flux to maximize')
         parser.add_argument(
             'threshold', help='Threshold of max reaction flux',
             type=util.MaybeRelative)
@@ -57,13 +56,7 @@ class RandomSparseNetworkCommand(MetabolicMixin, LoopRemovalMixin,
         super(RandomSparseNetworkCommand, cls).init_parser(parser)
 
     def run(self):
-        if self._args.objective is not None:
-            reaction = self._args.objective
-        else:
-            reaction = self._model.get_biomass_reaction()
-            if reaction is None:
-                self.argument_error('The biomass reaction was not specified')
-
+        reaction = self._get_objective()
         if not self._mm.has_reaction(reaction):
             self.fail(
                 'Specified reaction is not in model: {}'.format(reaction))
