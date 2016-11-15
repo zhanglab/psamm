@@ -832,13 +832,13 @@ different conditions.
 By default, PSAMM fba will use the biomass function designated in the central
 model file as the objective function. If the biomass tag is not defined in a
 ``model.yaml`` file or if you want to use a different reaction as the
-objective function, you can simply specify what the reaction ID is at the
-end of the command. For example to maximize the citrate synthase reactions,
-CS, the command would be as follows:
+objective function, you can simply specify it using the ``--objective`` option.
+For example to maximize the citrate synthase reactions, `CS`, the command would
+be as follows:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model fba CS
+    (psamm-env) $ psamm-model fba --objective=CS
 
 Flux balance analysis will be used throughout this tutorial as both a checking
 tool during model curation and an analysis tool. PSAMM allows you to easily
@@ -1102,7 +1102,7 @@ the `FRUKIN` reaction is maximized the following command can be used:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model fba FRUKIN --all-reactions
+    (psamm-env) $ psamm-model fba --objective=FRUKIN --all-reactions
 
 It can be seen from this simulation that the `FRUKIN` reaction is now being
 used and that the fluxes through the network have changed from when the biomass
