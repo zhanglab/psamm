@@ -80,17 +80,9 @@ class Problem(BaseProblem):
         # using the OutputFlag parameter but instead we lose the log file.
         self._p.params.OutputFlag = 0
 
-        # Set feasibility tolerance. By default, we decrease it to 1e-9.
-        feasibility_tolerance = kwargs.get('feasibility_tolerance', 1e-9)
-        logger.info('Setting feasibility tolerance to {!r}'.format(
-            feasibility_tolerance))
-        self._p.params.FeasibilityTol = feasibility_tolerance
-
-        # Set optimality tolerance. By default, we decrease it to 1e-9.
-        optimality_tolerance = kwargs.get('optimality_tolerance', 1e-9)
-        logger.info('Setting optimality tolerance to {!r}'.format(
-            optimality_tolerance))
-        self._p.params.OptimalityTol = optimality_tolerance
+        # Set tolerances. By default, we decrease to 1e-9.
+        self.feasibility_tolerance = kwargs.get('feasibility_tolerance', 1e-9)
+        self.optimality_tolerance = kwargs.get('optimality_tolerance', 1e-9)
 
         # Set number of threads
         if 'threads' in kwargs:
@@ -252,6 +244,33 @@ class Problem(BaseProblem):
     @property
     def result(self):
         return self._result
+
+    @property
+    def feasibility_tolerance(self):
+        return self._p.params.FeasibilityTol
+
+    @feasibility_tolerance.setter
+    def feasibility_tolerance(self, value):
+        logger.info('Setting feasibility tolerance to {!r}'.format(value))
+        self._p.params.FeasibilityTol = value
+
+    @property
+    def optimality_tolerance(self):
+        return self._p.params.OptimalityTol
+
+    @optimality_tolerance.setter
+    def optimality_tolerance(self, value):
+        logger.info('Setting optimality tolerance to {!r}'.format(value))
+        self._p.params.OptimalityTol = value
+
+    @property
+    def integrality_tolerance(self):
+        return self._p.params.IntFeasTol
+
+    @integrality_tolerance.setter
+    def integrality_tolerance(self, value):
+        logger.info('Setting integrality tolerance to {!r}'.format(value))
+        self._p.params.IntFeasTol = value
 
 
 class Constraint(BaseConstraint):
