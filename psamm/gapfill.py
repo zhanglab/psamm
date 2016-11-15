@@ -98,7 +98,8 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000):
             yield compound
 
 
-def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
+def gapfill(
+        model, core, blocked, solver, epsilon=0.001, v_max=1000, weights={}):
     """Find a set of reactions to add such that no compounds are blocked.
 
     Returns two iterators: first an iterator of reactions not in
@@ -129,7 +130,9 @@ def gapfill(model, core, blocked, solver, epsilon=0.001, v_max=1000):
     ym = prob.namespace(core, types=lp.VariableType.Binary)
     yd = prob.namespace(database_reactions, types=lp.VariableType.Binary)
 
-    objective = ym.sum(core) + yd.sum(database_reactions)
+    objective = ym.sum(core)
+    objective += yd.expr(
+        (rxnid, weights.get(rxnid, 1)) for rxnid in database_reactions)
     prob.set_objective(objective)
 
     # Add constraints on core reactions
