@@ -22,6 +22,72 @@ import unittest
 from psamm.lpsolver import lp
 
 
+class DummyRangedPropertyContainer(object):
+    def __init__(self):
+        self._property_rw = 5
+
+    @lp.ranged_property(min=-5, max=10)
+    def property_ro(self):
+        return 2.0
+
+    @lp.ranged_property(min=-50, max=17)
+    def property_rw(self):
+        return self._property_rw
+
+    @property_rw.setter
+    def property_rw(self, value):
+        self._property_rw = value
+
+    @property_rw.deleter
+    def property_rw(self):
+        self._property_rw = 0
+
+
+class TestRangedProperty(unittest.TestCase):
+    def setUp(self):
+        self.c = DummyRangedPropertyContainer()
+
+    def test_read_property_ro(self):
+        self.assertEqual(self.c.property_ro.value, 2.0)
+
+    def test_write_property_ro(self):
+        with self.assertRaises(AttributeError):
+            self.c.property_ro.value = 3.0
+
+    def test_write_property_base(self):
+        with self.assertRaises(AttributeError):
+            self.c.property_ro = 3.0
+
+    def test_delete_property_base(self):
+        with self.assertRaises(AttributeError):
+            del self.c.property_ro
+
+    def test_delete_property_ro(self):
+        with self.assertRaises(AttributeError):
+            del self.c.property_ro.value
+
+    def test_read_property_ro_bounds(self):
+        self.assertEqual(self.c.property_ro.min, -5)
+        self.assertEqual(self.c.property_ro.max, 10)
+
+    def test_write_property_ro_bounds(self):
+        with self.assertRaises(AttributeError):
+            self.c.property_ro.min = -50
+        with self.assertRaises(AttributeError):
+            self.c.property_ro.max = 100
+
+    def test_read_property_rw(self):
+        self.assertEqual(self.c.property_rw.value, 5)
+
+    def test_write_property_rw(self):
+        self.c.property_rw.value = 10
+        self.assertEqual(self.c.property_rw.value, 10)
+
+    def test_delete_property_rw(self):
+        del self.c.property_rw.value
+        self.assertEqual(self.c.property_rw.value, 0)
+
+
 class TestExpression(unittest.TestCase):
     def test_create_expression(self):
         e = lp.Expression()

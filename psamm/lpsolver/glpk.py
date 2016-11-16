@@ -32,7 +32,7 @@ from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
 from .lp import (Expression, RelationSense, ObjectiveSense, VariableType,
-                 InvalidResultError)
+                 InvalidResultError, ranged_property)
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -313,8 +313,9 @@ class Problem(BaseProblem):
     def result(self):
         return self._result
 
-    @property
+    @ranged_property(min=None, max=None)
     def feasibility_tolerance(self):
+        """Feasibility tolerance."""
         return self._feasibility_tolerance
 
     @feasibility_tolerance.setter
@@ -322,8 +323,9 @@ class Problem(BaseProblem):
         logger.info('Setting feasibility tolerance to {!r}'.format(value))
         self._feasibility_tolerance = value
 
-    @property
+    @ranged_property(min=None, max=None)
     def optimality_tolerance(self):
+        """Optimality tolerance."""
         return self._optimality_tolerance
 
     @optimality_tolerance.setter
@@ -331,8 +333,9 @@ class Problem(BaseProblem):
         logger.info('Setting optimality tolerance to {!r}'.format(value))
         self._optimality_tolerance = value
 
-    @property
+    @ranged_property(min=None, max=None)
     def integrality_tolerance(self):
+        """Integrality tolerance."""
         return self._integrality_tolerance
 
     @integrality_tolerance.setter
