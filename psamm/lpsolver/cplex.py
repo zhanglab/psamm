@@ -23,6 +23,7 @@ import logging
 from itertools import repeat, count
 import numbers
 
+from six import text_type
 from six.moves import zip
 import cplex as cp
 
@@ -31,7 +32,7 @@ from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
 from .lp import (Expression, Product, RelationSense, ObjectiveSense,
-                 VariableType, InvalidResultError)
+                 VariableType, InvalidResultError, RangedProperty)
 from ..util import LoggerFile
 
 # Module-level logging
@@ -46,6 +47,27 @@ class Solver(BaseSolver):
     def create_problem(self, **kwargs):
         """Create a new LP-problem using the solver"""
         return Problem(**kwargs)
+
+
+class CplexRangedProperty(RangedProperty):
+    """Decorator for translating Cplex ranged properties."""
+    def __init__(self, get_prop, doc=None):
+        if doc is None:
+            doc = get_prop.__doc__
+
+        def fset(obj, value):
+            prop = get_prop(obj)
+            prop_name = '.'.join(text_type(prop).split('.')[1:])
+            logger.info('Setting {} to {!r}'.format(prop_name, value))
+            prop.set(value)
+
+        super(CplexRangedProperty, self).__init__(
+            fget=lambda obj: get_prop(obj).get(),
+            fset=fset,
+            fdel=lambda obj: get_prop(obj).reset(),
+            fmin=lambda obj: get_prop(obj).min(),
+            fmax=lambda obj: get_prop(obj).max(),
+            doc=doc)
 
 
 class Problem(BaseProblem):
@@ -78,8 +100,10 @@ class Problem(BaseProblem):
         self._cp.set_error_stream(error_stream)
 
         # Set tolerances. By default, we decrease to 1e-9.
-        self.feasibility_tolerance = kwargs.get('feasibility_tolerance', 1e-9)
-        self.optimality_tolerance = kwargs.get('optimality_tolerance', 1e-9)
+        self.feasibility_tolerance.value = (
+            kwargs.get('feasibility_tolerance', 1e-9))
+        self.optimality_tolerance.value = (
+            kwargs.get('optimality_tolerance', 1e-9))
 
         # Set number of threads
         if 'threads' in kwargs:
@@ -328,32 +352,20 @@ class Problem(BaseProblem):
     def result(self):
         return self._result
 
-    @property
+    @CplexRangedProperty
     def feasibility_tolerance(self):
-        return self._cp.parameters.simplex.tolerances.feasibility.get()
+        """Feasibility tolerance."""
+        return self._cp.parameters.simplex.tolerances.feasibility
 
-    @feasibility_tolerance.setter
-    def feasibility_tolerance(self, value):
-        logger.info('Setting feasibility tolerance to {!r}'.format(value))
-        self._cp.parameters.simplex.tolerances.feasibility.set(value)
-
-    @property
+    @CplexRangedProperty
     def optimality_tolerance(self):
-        return self._cp.parameters.simplex.tolerances.optimality.get()
+        """Optimality tolerance."""
+        return self._cp.parameters.simplex.tolerances.optimality
 
-    @optimality_tolerance.setter
-    def optimality_tolerance(self, value):
-        logger.info('Setting optimality tolerance to {!r}'.format(value))
-        self._cp.parameters.simplex.tolerances.optimality.set(value)
-
-    @property
+    @CplexRangedProperty
     def integrality_tolerance(self):
-        return self._cp.parameters.mip.tolerances.integrality.get()
-
-    @integrality_tolerance.setter
-    def integrality_tolerance(self, value):
-        logger.info('Setting integrality tolerance to {!r}'.format(value))
-        self._cp.parameters.mip.tolerances.integrality.set(value)
+        """Integrality tolerance."""
+        return self._cp.parameters.mip.tolerances.integrality
 
 
 class Constraint(BaseConstraint):
