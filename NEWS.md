@@ -1,4 +1,40 @@
 
+v0.26 (2016-11-17)
+------------------
+
+- All commands that perform loop removal now use the option `--loop-removal` to
+  set the type of loop removal. The `--tfba` option is no longer available for
+  the `fva`, `fluxcheck` and `randomsparse` commands, instead
+  `--loop-removal=tfba` should be used.
+- All simulation commands that perform a maximization of an objective now take
+  an `--objective` option that can be used to override the `biomass` reaction
+  set in the model. The commands `fba` and `fva` no longer allow positional
+  arguments to set the objective, instead the `--objective` option should be
+  used.
+- All user data in the model is now exported with the `sbmlexport` command.
+  User data that cannot be translated into a standard machine-readable SBML
+  form will instead be stored in the SBML notes section.
+- The output from the `gapfill` command now shows the complete induced model
+  (like `fastgapfill`) and also lists the compound IDs of the blocked
+  compounds.
+- The `gapfill` command will now propose the removal of flux bounds if such a
+  modification can unblock the model.
+- The `gapfill` command now excludes the biomass reaction from being modified
+  in the induced model. Previously the biomass reaction was sometimes reversed
+  in the induced model but this is usually not a desired solution.
+- The `gapfill` command now allows the user to specify penalties on added or
+  modified reactions (like `fastgapfill`).
+- The `gapfill` command was changed so the `--epsilon` option now
+  specifies the threshold for non-zero reaction fluxes (like the `--epsilon`
+  in other PSAMM commands).
+- The `gapfill` command was changed to be more robust when handling small
+  epsilon values. It will now lower the solver thresholds if necessary and will
+  generate a warning when epsilon is too low. This fixes an issue where
+  `gapfill` would previously fail or generate incorrect results with some
+  models.
+- Fixed: The `--exclude` option in the `formulacheck` command did not work
+  correctly.
+
 v0.25 (2016-10-28)
 ------------------
 
