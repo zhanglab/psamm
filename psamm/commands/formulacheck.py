@@ -52,7 +52,7 @@ class FormulaBalanceCommand(Command):
         for reaction, result in formula_balance(self._model):
             count += 1
 
-            if reaction in exclude or reaction.equation is None:
+            if reaction.id in exclude or reaction.equation is None:
                 continue
 
             if result is None:

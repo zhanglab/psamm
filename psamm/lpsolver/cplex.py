@@ -23,6 +23,7 @@ import logging
 from itertools import repeat, count
 import numbers
 
+from six import text_type
 from six.moves import zip
 import cplex as cp
 
@@ -31,7 +32,7 @@ from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
 from .lp import (Expression, Product, RelationSense, ObjectiveSense,
-                 VariableType, InvalidResultError)
+                 VariableType, InvalidResultError, RangedProperty)
 from ..util import LoggerFile
 
 # Module-level logging
@@ -46,6 +47,27 @@ class Solver(BaseSolver):
     def create_problem(self, **kwargs):
         """Create a new LP-problem using the solver"""
         return Problem(**kwargs)
+
+
+class CplexRangedProperty(RangedProperty):
+    """Decorator for translating Cplex ranged properties."""
+    def __init__(self, get_prop, doc=None):
+        if doc is None:
+            doc = get_prop.__doc__
+
+        def fset(obj, value):
+            prop = get_prop(obj)
+            prop_name = '.'.join(text_type(prop).split('.')[1:])
+            logger.info('Setting {} to {!r}'.format(prop_name, value))
+            prop.set(value)
+
+        super(CplexRangedProperty, self).__init__(
+            fget=lambda obj: get_prop(obj).get(),
+            fset=fset,
+            fdel=lambda obj: get_prop(obj).reset(),
+            fmin=lambda obj: get_prop(obj).min(),
+            fmax=lambda obj: get_prop(obj).max(),
+            doc=doc)
 
 
 class Problem(BaseProblem):
@@ -77,19 +99,11 @@ class Problem(BaseProblem):
         self._cp.set_warning_stream(warning_stream)
         self._cp.set_error_stream(error_stream)
 
-        # Set feasibility tolerance. By default, we decrease it to 1e-9.
-        feasibility_tolerance = kwargs.get('feasibility_tolerance', 1e-9)
-        logger.info('Setting feasibility tolerance to {!r}'.format(
-            feasibility_tolerance))
-        self._cp.parameters.simplex.tolerances.feasibility.set(
-            feasibility_tolerance)
-
-        # Set optimality tolerance. By default, we decrease it to 1e-9.
-        optimality_tolerance = kwargs.get('optimality_tolerance', 1e-9)
-        logger.info('Setting optimality tolerance to {!r}'.format(
-            optimality_tolerance))
-        self._cp.parameters.simplex.tolerances.optimality.set(
-            optimality_tolerance)
+        # Set tolerances. By default, we decrease to 1e-9.
+        self.feasibility_tolerance.value = (
+            kwargs.get('feasibility_tolerance', 1e-9))
+        self.optimality_tolerance.value = (
+            kwargs.get('optimality_tolerance', 1e-9))
 
         # Set number of threads
         if 'threads' in kwargs:
@@ -337,6 +351,21 @@ class Problem(BaseProblem):
     @property
     def result(self):
         return self._result
+
+    @CplexRangedProperty
+    def feasibility_tolerance(self):
+        """Feasibility tolerance."""
+        return self._cp.parameters.simplex.tolerances.feasibility
+
+    @CplexRangedProperty
+    def optimality_tolerance(self):
+        """Optimality tolerance."""
+        return self._cp.parameters.simplex.tolerances.optimality
+
+    @CplexRangedProperty
+    def integrality_tolerance(self):
+        """Integrality tolerance."""
+        return self._cp.parameters.mip.tolerances.integrality
 
 
 class Constraint(BaseConstraint):

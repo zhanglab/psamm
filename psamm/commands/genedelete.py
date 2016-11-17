@@ -21,8 +21,8 @@ from __future__ import unicode_literals
 import time
 import logging
 
-from ..command import (Command, MetabolicMixin, SolverCommandMixin,
-                       FilePrefixAppendAction)
+from ..command import (Command, MetabolicMixin, ObjectiveMixin,
+                       SolverCommandMixin, FilePrefixAppendAction)
 from .. import fluxanalysis
 from ..expression import boolean
 
@@ -31,7 +31,8 @@ from six import string_types
 logger = logging.getLogger(__name__)
 
 
-class GeneDeletionCommand(MetabolicMixin, SolverCommandMixin, Command):
+class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
+                          Command):
     """Find reactions requiring a specified gene and delete them from model.
 
     Reports the new objective flux after the gene was deleted.
@@ -41,16 +42,10 @@ class GeneDeletionCommand(MetabolicMixin, SolverCommandMixin, Command):
         parser.add_argument(
             '--gene', metavar='genes', action=FilePrefixAppendAction,
             type=str, default=[], help='Delete multiple genes from model')
-        parser.add_argument('--objective', help='Reaction flux to maximize')
         super(GeneDeletionCommand, cls).init_parser(parser)
 
     def run(self):
-        if self._args.objective is not None:
-            obj_reaction = self._args.objective
-        else:
-            obj_reaction = self._model.get_biomass_reaction()
-            if obj_reaction is None:
-                self.argument_error('The biomass reaction was not specified')
+        obj_reaction = self._get_objective()
 
         genes = set()
         gene_assoc = {}
@@ -101,8 +96,6 @@ class GeneDeletionCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         logger.info(
             'Solving took {:.2f} seconds'.format(time.time() - start_time))
-        logger.info(
-            'Using objective reaction {}'.format(obj_reaction))
         logger.info(
             'Objective reaction after gene deletion has flux {}'.format(
                 abs(deleteflux) if deleteflux == 0 else deleteflux))

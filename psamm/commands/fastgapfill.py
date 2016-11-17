@@ -20,15 +20,19 @@ from __future__ import unicode_literals
 import argparse
 import logging
 
-from ..command import Command, MetabolicMixin, SolverCommandMixin
+from ..command import (Command, MetabolicMixin, LoopRemovalMixin,
+                       SolverCommandMixin)
 from .. import fastcore, fluxanalysis
 from ..fastgapfill import create_extended_model, fastgapfill
 
 logger = logging.getLogger(__name__)
 
 
-class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
+class FastGapFillCommand(MetabolicMixin, LoopRemovalMixin, SolverCommandMixin,
+                         Command):
     """Run the FastGapFill gap-filling algorithm on model."""
+
+    _supported_loop_removal = ['none', 'tfba']
 
     @classmethod
     def init_parser(cls, parser):
@@ -51,17 +55,16 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             '--epsilon', type=float, help='Threshold for Fastcore',
             default=1e-5)
         parser.add_argument(
-            '--tfba', help='Enable thermodynamic constraints on FBA',
-            action='store_true')
-        parser.add_argument(
             'reaction', help='Reaction to maximize', nargs='?')
         super(FastGapFillCommand, cls).init_parser(parser)
 
     def run(self):
         """Run FastGapFill command"""
 
+        loop_removal = self._get_loop_removal_option()
+
         # Create solver
-        enable_tfba = self._args.tfba
+        enable_tfba = loop_removal == 'tfba'
         if enable_tfba:
             solver = self._get_solver(integer=True)
         else:

@@ -32,7 +32,7 @@ from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
 from .lp import (Expression, RelationSense, ObjectiveSense, VariableType,
-                 InvalidResultError)
+                 InvalidResultError, ranged_property)
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -44,6 +44,7 @@ _glpk_logger = logging.getLogger('glpk')
 # Redirect GLPK terminal output to logger
 def _term_hook(s):
     _glpk_logger.debug(s.rstrip())
+
 
 swiglpk.glp_term_hook(_term_hook)
 
@@ -88,6 +89,17 @@ class Problem(BaseProblem):
         self._constraints = {}
 
         self._do_presolve = True
+
+        # Initialize simplex tolerances to default values
+        parm = swiglpk.glp_smcp()
+        swiglpk.glp_init_smcp(parm)
+        self._feasibility_tolerance = parm.tol_bnd
+        self._optimality_tolerance = parm.tol_dj
+
+        # Initialize mip tolerance to default value
+        parm = swiglpk.glp_iocp()
+        swiglpk.glp_init_iocp(parm)
+        self._integrality_tolerance = parm.tol_int
 
         self._result = None
 
@@ -268,6 +280,9 @@ class Problem(BaseProblem):
         else:
             parm.presolve = swiglpk.GLP_OFF
 
+        parm.tol_bnd = self._feasibility_tolerance
+        parm.tol_dj = self._optimality_tolerance
+
         logger.debug('Solving using glp_simplex()')
         r = swiglpk.glp_simplex(self._p, parm)
         if r in (swiglpk.GLP_ENOPFS, swiglpk.GLP_ENODFS):
@@ -279,11 +294,14 @@ class Problem(BaseProblem):
         if swiglpk.glp_get_num_int(self._p) == 0:
             self._result = Result(self)
         else:
-            # The intopt MILP solver need an optimal solution to the LP
+            # The intopt MILP solver needs an optimal solution to the LP
             # relaxation. Therefore, glp_simplex has to run before glp_intopt
             # for MILP problems.
             logger.debug('Solving using glp_intopt()')
-            r = swiglpk.glp_intopt(self._p, None)
+            parm = swiglpk.glp_iocp()
+            swiglpk.glp_init_iocp(parm)
+            parm.tol_int = self._integrality_tolerance
+            r = swiglpk.glp_intopt(self._p, parm)
             if r != 0:
                 raise GLPKError('glp_intopt: {}'.format(r))
 
@@ -294,6 +312,36 @@ class Problem(BaseProblem):
     @property
     def result(self):
         return self._result
+
+    @ranged_property(min=None, max=None)
+    def feasibility_tolerance(self):
+        """Feasibility tolerance."""
+        return self._feasibility_tolerance
+
+    @feasibility_tolerance.setter
+    def feasibility_tolerance(self, value):
+        logger.info('Setting feasibility tolerance to {!r}'.format(value))
+        self._feasibility_tolerance = value
+
+    @ranged_property(min=None, max=None)
+    def optimality_tolerance(self):
+        """Optimality tolerance."""
+        return self._optimality_tolerance
+
+    @optimality_tolerance.setter
+    def optimality_tolerance(self, value):
+        logger.info('Setting optimality tolerance to {!r}'.format(value))
+        self._optimality_tolerance = value
+
+    @ranged_property(min=None, max=None)
+    def integrality_tolerance(self):
+        """Integrality tolerance."""
+        return self._integrality_tolerance
+
+    @integrality_tolerance.setter
+    def integrality_tolerance(self, value):
+        logger.info('Setting integrality tolerance to {!r}'.format(value))
+        self._integrality_tolerance = value
 
 
 class Constraint(BaseConstraint):

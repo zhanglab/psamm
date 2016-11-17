@@ -75,14 +75,14 @@ or with a specific reaction:
 
 .. code-block:: shell
 
-    $ psamm-model fba ATPM
+    $ psamm-model fba --objective=ATPM
 
 By default, this performs a standard FBA and the result is output as
 tab-separated values with the reaction ID, the reaction flux and the reaction
 equation. If the parameter ``--loop-removal`` is given, the flux of the
 internal reactions is further constrained to remove internal loops
 [Schilling00]_. Loop removal is more time-consuming and under normal
-cicumstances the biomass reaction flux will *not* change in response to the
+circumstances the biomass reaction flux will *not* change in response to the
 loop removal (only internal reaction fluxes may change). The ``--loop-removal``
 option is followed by ``none`` (no loop removal), ``tfba`` (removal using
 thermodynamic constraints), or ``l1min`` (L1 minimization of the fluxes). For
@@ -98,7 +98,7 @@ Flux variability analysis (``fva``)
 This command will find the possible flux range of each reaction when the
 biomass is at the maximum value [Mahadevan03]_. The command will use the
 biomass reaction specified in the model definition, or alternatively, a
-reaction can be given on the command line.
+reaction can be given on the command line following the ``--objective`` option.
 
 .. code-block:: shell
 
@@ -114,9 +114,9 @@ In this example the ``PPCK`` reaction has a minimum flux of zero and maximum
 flux of 135.3 units. The ``PTAr`` reaction has a minimum flux of 62.3 and a
 maximum of 1000 units.
 
-If the parameter ``--tfba`` is given, additonal thermodynamic constraints will
-be imposed when evaluating model fluxes. This automatically removes internal
-flux loops [Schilling00]_ but is much more time-consuming.
+If the parameter ``--loop-removal=tfba`` is given, additonal thermodynamic
+constraints will be imposed when evaluating model fluxes. This automatically
+removes internal flux loops [Schilling00]_ but is much more time-consuming.
 
 Robustness (``robustness``)
 ---------------------------
@@ -339,9 +339,10 @@ reaction is part of a pathway that is incompletely modeled.
 
     $ psamm-model fluxcheck
 
-If the parameter ``--tfba`` is given, additional thermodynamic constraints are
-imposed when considering whether reactions can take a non-zero flux. This
-automatically removes internal flux loops but is also much more time-consuming.
+If the parameter ``--loop-removal=tfba`` is given, additional thermodynamic
+constraints are imposed when considering whether reactions can take a non-zero
+flux. This automatically removes internal flux loops but is also much more
+time-consuming.
 
 GapFind/GapFill (``gapfill``)
 -----------------------------

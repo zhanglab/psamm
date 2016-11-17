@@ -53,6 +53,97 @@ class Product(tuple):
     """A tuple used to represent a variable product."""
 
 
+class _RangedAccessor(object):
+    """Accessor to value bounded by minimum/maximum."""
+    def __init__(self, obj, prop):
+        self._obj = obj
+        self._prop = prop
+
+    @property
+    def value(self):
+        """Value of property."""
+        if self._prop.fget is None:
+            raise AttributeError('Unable to read attribute')
+        return self._prop.fget(self._obj)
+
+    @value.setter
+    def value(self, v):
+        if self._prop.fset is None:
+            raise AttributeError('Unable to write attribute')
+        self._prop.fset(self._obj, v)
+
+    @value.deleter
+    def value(self):
+        if self._prop.fdel is None:
+            raise AttributeError('Unable to delete attribute')
+        self._prop.fdel(self._obj)
+
+    @property
+    def min(self):
+        """Minimum value."""
+        if self._prop.fmin is None:
+            return -_INF
+        return self._prop.fmin(self._obj)
+
+    @property
+    def max(self):
+        """Maximum value."""
+        if self._prop.fmax is None:
+            return _INF
+        return self._prop.fmax(self._obj)
+
+
+class RangedProperty(object):
+    """Numeric property with minimum and maximum values.
+
+    The value attribute is used to get/set the actual value of the propery.
+    The min/max attributes are used to get the bounds. The range is not
+    automatically enforced when the value is set.
+    """
+    def __init__(self, fget=None, fset=None, fdel=None,
+                 fmin=None, fmax=None, doc=None):
+        self.fget = fget
+        self.fset = fset
+        self.fdel = fdel
+        self.fmin = fmin
+        self.fmax = fmax
+
+        if doc is None and fget is not None:
+            doc = fget.__doc__
+        self.__doc__ = doc
+
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            return self
+        return _RangedAccessor(obj, self)
+
+    def __set__(self, obj, value):
+        raise AttributeError('Unable to set attribute (try value property)')
+
+    def __delete__(self, obj):
+        raise AttributeError('Unable to delete attribute (try value property)')
+
+    def getter(self, fget):
+        return type(self)(
+            fget, self.fset, self.fdel, self.fmin, self.fmax, self.__doc__)
+
+    def setter(self, fset):
+        return type(self)(
+            self.fget, fset, self.fdel, self.fmin, self.fmax, self.__doc__)
+
+    def deleter(self, fdel):
+        return type(self)(
+            self.fget, self.fset, fdel, self.fmin, self.fmax, self.__doc__)
+
+
+def ranged_property(min=None, max=None):
+    """Decorator for creating ranged property with fixed bounds."""
+    min_value = -_INF if min is None else min
+    max_value = _INF if max is None else max
+    return lambda fget: RangedProperty(
+        fget, fmin=lambda obj: min_value, fmax=lambda obj: max_value)
+
+
 @six.python_2_unicode_compatible
 class Expression(object):
     """Represents a linear expression
@@ -592,6 +683,18 @@ class Problem(object):
     @abc.abstractproperty
     def result(self):
         """Result of solved problem"""
+
+    @ranged_property(min=None, max=None)
+    def feasibility_tolerance(self):
+        raise NotImplementedError('Feasiblity tolerance not available')
+
+    @ranged_property(min=None, max=None)
+    def optimality_tolerance(self):
+        raise NotImplementedError('Optimality tolerance not available')
+
+    @ranged_property(min=None, max=None)
+    def integrality_tolerance(self):
+        raise NotImplementedError('Integrality tolerance not available')
 
 
 class InvalidResultError(Exception):

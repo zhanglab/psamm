@@ -113,6 +113,86 @@ class MetabolicMixin(object):
         self._mm = self._model.create_metabolic_model()
 
 
+class ObjectiveMixin(object):
+    """Mixin for commands that use biomass as objective.
+
+    Allows the user to override the default objective from the command line.
+    """
+
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument('--objective', help='Reaction to use as objective')
+        super(ObjectiveMixin, cls).init_parser(parser)
+
+    def _get_objective(self, log=True):
+        if self._args.objective is not None:
+            reaction = self._args.objective
+        else:
+            reaction = self._model.get_biomass_reaction()
+            if reaction is None:
+                self.argument_error('The objective reaction was not specified')
+
+        if log:
+            logger.info('Using {} as objective'.format(reaction))
+
+        return reaction
+
+
+class LoopRemovalMixin(object):
+    """Mixin for commands that perform loop removal."""
+
+    _supported_loop_removal = ['none']
+
+    __all_methods = {
+        'none': 'Loop removal disabled; spurious loops are allowed',
+        'tfba': 'Loop removal using thermodynamic constraints',
+        'l1min': 'Loop removal using L1 minimization'
+    }
+
+    @classmethod
+    def init_parser(cls, parser):
+        supported = cls._supported_loop_removal
+        assert len(supported) > 0, 'No loop removal methods defined'
+
+        invalid = set(supported).difference(cls.__all_methods)
+        assert len(invalid) == 0, 'Loop removal methods are invalid'
+
+        if len(supported) >= 2:
+            supported_list = ', '.join(s + ' (default)' if i == 0 else s
+                                       for i, s in enumerate(supported))
+            help_text = (
+                'Select type of loop removal to perform.'
+                ' Possible methods are: ' + supported_list)
+            parser.add_argument(
+                '--loop-removal', help=help_text, type=text_type,
+                default=supported[0],
+                metavar='METHOD', dest='hidden_mixin_loop_removal')
+
+        super(LoopRemovalMixin, cls).init_parser(parser)
+
+    def _get_loop_removal_option(self, log=True):
+        supported = self._supported_loop_removal
+
+        if len(supported) >= 2:
+            loop_removal = self._args.hidden_mixin_loop_removal
+        else:
+            loop_removal = supported[0]
+
+        if loop_removal not in self.__all_methods:
+            self.argument_error(
+                'Unknown loop removal method: {}'.format(loop_removal))
+
+        if loop_removal not in supported:
+            self.argument_error(
+                'The loop removal method {} is not possible'
+                ' with this command'.format(loop_removal))
+
+        if log:
+            logger.info(self.__all_methods[loop_removal])
+
+        return loop_removal
+
+
 class SolverCommandMixin(object):
     """Mixin for commands that use an LP solver.
 
@@ -189,27 +269,31 @@ class FilePrefixAppendAction(argparse.Action):
                  fromfile_prefix_chars='@', **kwargs):
         if nargs is not None:
             raise ValueError('nargs not allowed')
-        self.fromfile_prefix_chars = fromfile_prefix_chars
+
+        self.__fromfile_prefix_chars = fromfile_prefix_chars
+        self.__final_type = kwargs.get('type')
+        kwargs['type'] = text_type
+
         super(FilePrefixAppendAction, self).__init__(
             option_strings, dest, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
         arguments = getattr(namespace, self.dest)
-        if arguments is None:
+        if arguments is None or len(arguments) == 0:
             arguments = []
             setattr(namespace, self.dest, arguments)
 
-        if len(values) > 0 and values[0] in self.fromfile_prefix_chars:
+        if len(values) > 0 and values[0] in self.__fromfile_prefix_chars:
             filepath = values[1:]
             try:
                 with open(filepath, 'r') as f:
                     for line in f:
-                        arguments.append(line.strip())
+                        arguments.append(self.__final_type(line.strip()))
             except IOError:
                 parser.error('Unable to read arguments from file: {}'.format(
                     filepath))
         else:
-            arguments.append(values)
+            arguments.append(self.__final_type(values))
 
 
 class _ErrorMarker(object):

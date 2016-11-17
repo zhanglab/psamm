@@ -102,6 +102,8 @@ class TestCommandMain(unittest.TestCase):
                   - id: rxn_2_\u03c0
                     equation: '|B[c]| => |C[e]|'
                     genes: 'gene_3 or (gene_4 and gene_5)'
+                  - id: rxn_3
+                    equation: D[c] => E[c]
                 compounds:
                   - id: A_\u2206
                   - id: B
@@ -189,7 +191,7 @@ class TestCommandMain(unittest.TestCase):
 
     def test_run_fluxcheck_with_tfba(self):
         self.run_solver_command([
-            '--model', self._model_dir, 'fluxcheck', '--tfba'],
+            '--model', self._model_dir, 'fluxcheck', '--loop-removal=tfba'],
             {'integer': True})
 
     def test_run_fluxcheck_with_reduce_lp(self):
@@ -200,7 +202,7 @@ class TestCommandMain(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.run_solver_command([
                 '--model', self._model_dir, 'fluxcheck',
-                '--tfba', '--fastcore'], {})
+                '--loop-removal', '--fastcore'], {})
 
     def test_run_fluxcoupling(self):
         self.run_solver_command([
@@ -217,6 +219,11 @@ class TestCommandMain(unittest.TestCase):
     def test_run_gapfill(self):
         self.run_solver_command([
             '--model', self._model_dir, 'gapfill'], {'integer': True})
+
+    def test_run_gapfill_with_blocked(self):
+        self.run_solver_command([
+            '--model', self._model_dir, 'gapfill', '--compound', 'D[c]'],
+            {'integer': True})
 
     def test_run_genedelete(self):
         self.run_solver_command([
@@ -269,12 +276,14 @@ class TestCommandMain(unittest.TestCase):
             main(args=[
                 '--model', self._model_dir, 'tableexport', 'reactions'])
 
-        self.assertEqual(f.getvalue(), '\n'.join([
-            'id\tequation\tgenes\tin_model',
-            "rxn_1\t|A_\u2206[e]| => |B[c]|\t['gene_1', 'gene_2']\tTrue",
-            'rxn_2_\u03c0\t|B[c]| => |C[e]|\tgene_3 or'
-            ' (gene_4 and gene_5)\tTrue',
-            ''
+        self.assertEqual(f.getvalue(), '\n'.join('\t'.join(row) for row in [
+            ['id', 'equation', 'genes', 'in_model'],
+            ['rxn_1', '|A_\u2206[e]| => |B[c]|', "['gene_1', 'gene_2']",
+             'True'],
+            ['rxn_2_\u03c0', '|B[c]| => |C[e]|',
+             'gene_3 or (gene_4 and gene_5)', 'True'],
+            ['rxn_3', '|D[c]| => |E[c]|', 'None', 'True'],
+            []
         ]))
 
     def test_run_tableexport_compounds(self):

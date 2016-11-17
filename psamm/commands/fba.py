@@ -20,27 +20,27 @@ from __future__ import unicode_literals
 import time
 import logging
 
-from ..command import SolverCommandMixin, MetabolicMixin, Command
+from ..command import (LoopRemovalMixin, ObjectiveMixin, SolverCommandMixin,
+                       MetabolicMixin, Command)
 from .. import fluxanalysis
 
 logger = logging.getLogger(__name__)
 
 
-class FluxBalanceCommand(MetabolicMixin, SolverCommandMixin, Command):
+class FluxBalanceCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
+                         SolverCommandMixin, Command):
     """Run flux balance analysis on the model."""
+
+    _supported_loop_removal = ['none', 'tfba', 'l1min']
 
     @classmethod
     def init_parser(cls, parser):
-        parser.add_argument(
-            '--loop-removal', help='Select type of loop removal constraints',
-            choices=['none', 'tfba', 'l1min'], default='none')
         parser.add_argument(
             '--all-reactions', help='Show all reaction fluxes',
             action='store_true')
         parser.add_argument(
             '--epsilon', type=float,
             help='Threshold for non-zero reaction fluxes', default=1e-5)
-        parser.add_argument('reaction', help='Reaction to maximize', nargs='?')
         super(FluxBalanceCommand, cls).init_parser(parser)
 
     def run(self):
@@ -60,32 +60,18 @@ class FluxBalanceCommand(MetabolicMixin, SolverCommandMixin, Command):
             if 'genes' in reaction.properties:
                 reaction_genes[reaction.id] = reaction.properties['genes']
 
-        if self._args.reaction is not None:
-            reaction = self._args.reaction
-        else:
-            reaction = self._model.get_biomass_reaction()
-            if reaction is None:
-                self.argument_error('The biomass reaction was not specified')
-
+        reaction = self._get_objective()
         if not self._mm.has_reaction(reaction):
             self.fail(
                 'Specified reaction is not in model: {}'.format(reaction))
 
-        logger.info('Using {} as objective'.format(reaction))
-
-        loop_removal = self._args.loop_removal
+        loop_removal = self._get_loop_removal_option()
         if loop_removal == 'none':
-            logger.info('Loop removal disabled; spurious loops are allowed')
             result = self.run_fba(reaction)
         elif loop_removal == 'l1min':
-            logger.info('Loop removal using L1 minimization')
             result = self.run_fba_minimized(reaction)
         elif loop_removal == 'tfba':
-            logger.info('Loop removal using thermodynamic constraints')
             result = self.run_tfba(reaction)
-        else:
-            self.argument_error(
-                'Invalid loop constraint mode: {}'.format(loop_removal))
 
         optimum = None
         total_reactions = 0

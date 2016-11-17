@@ -22,7 +22,7 @@ import logging
 from itertools import product
 
 from ..command import (Command, SolverCommandMixin, MetabolicMixin,
-                       ParallelTaskMixin)
+                       ObjectiveMixin, LoopRemovalMixin, ParallelTaskMixin)
 from ..util import MaybeRelative
 from .. import fluxanalysis
 
@@ -30,18 +30,17 @@ logger = logging.getLogger(__name__)
 
 
 class FluxVariabilityCommand(MetabolicMixin, SolverCommandMixin,
+                             LoopRemovalMixin, ObjectiveMixin,
                              ParallelTaskMixin, Command):
     """Run flux variablity analysis on the model."""
+
+    _supported_loop_removal = ['none', 'tfba']
 
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
             '--threshold', help='Threshold of objective reaction flux',
             type=MaybeRelative, default=MaybeRelative('100%'))
-        parser.add_argument(
-            '--tfba', help='Enable thermodynamic constraints on FVA',
-            action='store_true')
-        parser.add_argument('reaction', help='Reaction to maximize', nargs='?')
         super(FluxVariabilityCommand, cls).init_parser(parser)
 
     def run(self):
@@ -55,18 +54,13 @@ class FluxVariabilityCommand(MetabolicMixin, SolverCommandMixin,
             elif compound.id not in compound_name:
                 compound_name[compound.id] = compound.id
 
-        if self._args.reaction is not None:
-            reaction = self._args.reaction
-        else:
-            reaction = self._model.get_biomass_reaction()
-            if reaction is None:
-                self.argument_error('The biomass reaction was not specified')
-
+        reaction = self._get_objective()
         if not self._mm.has_reaction(reaction):
             self.fail(
                 'Specified reaction is not in model: {}'.format(reaction))
 
-        enable_tfba = self._args.tfba
+        loop_removal = self._get_loop_removal_option()
+        enable_tfba = loop_removal == 'tfba'
         if enable_tfba:
             solver = self._get_solver(integer=True)
         else:

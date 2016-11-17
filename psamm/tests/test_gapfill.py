@@ -21,7 +21,7 @@ from psamm.database import DictDatabase
 from psamm.metabolicmodel import MetabolicModel
 from psamm.datasource.reaction import parse_reaction
 from psamm.lpsolver import generic
-from psamm.gapfill import gapfind, gapfill
+from psamm.gapfill import gapfind, gapfill, GapFillError
 from psamm.reaction import Compound
 
 
@@ -51,9 +51,18 @@ class TestGapfind(unittest.TestCase):
         blocked = {Compound('D'), Compound('E')}
 
         add, rev = gapfill(
-            self.model, core, blocked, self.solver, epsilon=0.1)
+            self.model, core, blocked, {}, self.solver, epsilon=0.1)
         self.assertEqual(set(rev), set())
         self.assertEqual(set(add), {'rxn_4'})
+
+    def test_gapfill_exclude_addition(self):
+        core = set(self.model.reactions) - {'rxn_4'}
+        blocked = {Compound('D'), Compound('E')}
+        exclude = {'rxn_4'}
+
+        with self.assertRaises(GapFillError):
+            gapfill(self.model, core, blocked, exclude, self.solver,
+                    epsilon=0.1)
 
     def test_gapfill_reverse_reaction(self):
         self.model.database.set_reaction('rxn_4', parse_reaction('|D| => |C|'))
@@ -61,6 +70,16 @@ class TestGapfind(unittest.TestCase):
         blocked = {Compound('D'), Compound('E')}
 
         add, rev = gapfill(
-            self.model, core, blocked, self.solver, epsilon=0.1)
+            self.model, core, blocked, {}, self.solver, epsilon=0.1)
         self.assertEqual(set(rev), {'rxn_4'})
         self.assertEqual(set(add), set())
+
+    def test_gapfill_exclude_reversal(self):
+        self.model.database.set_reaction('rxn_4', parse_reaction('D => C'))
+        core = set(self.model.reactions)
+        blocked = {Compound('D'), Compound('E')}
+        exclude = {'rxn_4'}
+
+        with self.assertRaises(GapFillError):
+            gapfill(self.model, core, blocked, exclude, self.solver,
+                    epsilon=0.1)

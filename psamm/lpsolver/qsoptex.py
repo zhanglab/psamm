@@ -31,7 +31,7 @@ from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
 from .lp import (Expression, RelationSense, ObjectiveSense, VariableType,
-                 InvalidResultError)
+                 InvalidResultError, ranged_property)
 
 
 class Solver(BaseSolver):
@@ -183,6 +183,16 @@ class Problem(BaseProblem):
     @property
     def result(self):
         return self._result
+
+    @ranged_property(min=0, max=0)
+    def feasibility_tolerance(self):
+        """Feasibility tolerance."""
+        return 0
+
+    @ranged_property(min=0, max=0)
+    def optimality_tolerance(self):
+        """Optimality tolerance."""
+        return 0
 
 
 class Constraint(BaseConstraint):

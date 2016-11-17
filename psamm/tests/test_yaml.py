@@ -20,6 +20,8 @@ import os
 import shutil
 import tempfile
 import unittest
+import math
+from decimal import Decimal
 
 from psamm.datasource import native, context
 from psamm.reaction import Reaction, Compound, Direction
@@ -28,6 +30,18 @@ from six import StringIO
 
 
 class TestYAMLDataSource(unittest.TestCase):
+    def test_parse_reaction(self):
+        reaction = native.parse_reaction({
+            'id': 'reaction_123',
+            'equation': 'A + 2 B => C[e]'
+        }, default_compartment='p')
+
+        self.assertEqual(reaction.id, 'reaction_123')
+        self.assertEqual(reaction.equation, Reaction(
+            Direction.Forward,
+            [(Compound('A', 'p'), 1), (Compound('B', 'p'), 2)],
+            [(Compound('C', 'e'), 1)]))
+
     def test_parse_reaction_list(self):
         reactions = list(native.parse_reaction_list('./test.yaml', [
             {
@@ -97,6 +111,16 @@ co2     e       -       50
             medium[3], (Compound('compound_x', 'c'), None, None, None))
         self.assertEqual(
             medium[4], (Compound('compound_y', 'e'), 'EX_cpdy', None, None))
+
+    def test_parse_normal_float(self):
+        v = native.yaml_load('-23.456')
+        self.assertEqual(v, Decimal('-23.456'))
+        self.assertIsInstance(v, Decimal)
+
+    def test_parse_special_float(self):
+        self.assertEqual(native.yaml_load('.inf'), Decimal('Infinity'))
+        self.assertEqual(native.yaml_load('-.inf'), -Decimal('Infinity'))
+        self.assertTrue(math.isnan(native.yaml_load('.nan')))
 
 
 class TestYAMLFileSystemData(unittest.TestCase):
