@@ -20,13 +20,33 @@
 This implements a variant of the algorithms described in [Kumar07]_.
 """
 
+import logging
+
 from six import iteritems
 
 from .lpsolver import lp
 
+logger = logging.getLogger(__name__)
+
 
 class GapFillError(Exception):
     """Indicates an error while running GapFind/GapFill"""
+
+
+def _find_integer_tolerance(epsilon, v_max, min_tol):
+    """Find appropriate integer tolerance for gap-filling problems."""
+    int_tol = min(epsilon / (10 * v_max), 0.1)
+    min_tol = max(1e-10, min_tol)
+    if int_tol < min_tol:
+        eps_lower = min_tol * 10 * v_max
+        logger.warning(
+            'When the maximum flux is {}, it is recommended that'
+            ' epsilon > {} to avoid numerical issues with this'
+            ' solver. Results may be incorrect with'
+            ' the current settings!'.format(v_max, eps_lower))
+        return min_tol
+
+    return int_tol
 
 
 def gapfind(model, solver, epsilon=0.001, v_max=1000):
@@ -44,6 +64,12 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000):
     not be efficient for larger models.
     """
     prob = solver.create_problem()
+
+    # Set integrality tolerance such that w constraints are correct
+    min_tol = prob.integrality_tolerance.min
+    int_tol = _find_integer_tolerance(epsilon, v_max, min_tol)
+    if int_tol < prob.integrality_tolerance.value:
+        prob.integrality_tolerance.value = int_tol
 
     # Define flux variables
     v = prob.namespace()
@@ -124,6 +150,12 @@ def gapfill(model, core, blocked, exclude, solver, epsilon=0.001, v_max=1000):
     not be efficient for larger models.
     """
     prob = solver.create_problem()
+
+    # Set integrality tolerance such that w constraints are correct
+    min_tol = prob.integrality_tolerance.min
+    int_tol = _find_integer_tolerance(epsilon, v_max, min_tol)
+    if int_tol < prob.integrality_tolerance.value:
+        prob.integrality_tolerance.value = int_tol
 
     # Define flux variables
     v = prob.namespace(model.reactions, lower=-v_max, upper=v_max)
