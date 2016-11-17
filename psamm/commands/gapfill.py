@@ -18,6 +18,7 @@
 from __future__ import unicode_literals
 
 import logging
+import argparse
 
 from six import text_type
 
@@ -25,6 +26,7 @@ from ..command import (Command, MetabolicMixin, SolverCommandMixin,
                        FilePrefixAppendAction)
 from ..gapfill import gapfind, gapfill, GapFillError
 from ..datasource.reaction import parse_compound
+from ..fastgapfill import create_extended_model
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +39,18 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             '--compound', metavar='compound', action=FilePrefixAppendAction,
             type=parse_compound, default=[],
             help='Select compounds to try to unblock')
+        parser.add_argument(
+            '--penalty', metavar='file', type=argparse.FileType('r'),
+            help='List of penalty scores for database reactions')
+        parser.add_argument(
+            '--db-penalty', metavar='penalty', type=float,
+            help='Default penalty for database reactions')
+        parser.add_argument(
+            '--tp-penalty', metavar='penalty', type=float,
+            help='Default penalty for transport reactions')
+        parser.add_argument(
+            '--ex-penalty', metavar='penalty', type=float,
+            help='Default penalty for exchange reactions')
         parser.add_argument(
             '--epsilon', type=float, default=1e-5,
             help='Threshold for reaction flux')
@@ -53,7 +67,17 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             elif compound.id not in compound_name:
                 compound_name[compound.id] = compound.id
 
-        model_compartments = set(self._mm.compartments)
+        # Calculate penalty if penalty file exists
+        penalties = {}
+        if self._args.penalty is not None:
+            for line in self._args.penalty:
+                line, _, comment = line.partition('#')
+                line = line.strip()
+                if line == '':
+                    continue
+                rxnid, penalty = line.split(None, 1)
+                penalties[rxnid] = float(penalty)
+
         core = set(self._mm.reactions)
 
         solver = self._get_solver(integer=True)
@@ -92,17 +116,18 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             exclude = {self._model.get_biomass_reaction()}
 
             # Add exchange and transport reactions to database
-            model_complete = self._mm.copy()
-            logger.info('Adding database, exchange and transport reactions')
-            model_complete.add_all_database_reactions(model_compartments)
-            model_complete.add_all_exchange_reactions(extracellular_comp)
-            model_complete.add_all_transport_reactions(extracellular_comp)
+            model_complete, weights = create_extended_model(
+                self._model,
+                db_penalty=self._args.db_penalty,
+                ex_penalty=self._args.ex_penalty,
+                tp_penalty=self._args.tp_penalty,
+                penalties=penalties)
 
             logger.info('Searching for reactions to fill gaps')
             try:
                 added_reactions, no_bounds_reactions = gapfill(
                     model_complete, core, blocked, exclude, solver=solver,
-                    epsilon=epsilon, v_max=v_max)
+                    epsilon=epsilon, v_max=v_max, weights=weights)
             except GapFillError as e:
                 self._log_epsilon_and_fail(epsilon, e)
 
