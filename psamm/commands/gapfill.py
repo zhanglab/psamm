@@ -19,10 +19,12 @@ from __future__ import unicode_literals
 
 import logging
 
+from six import text_type
+
 from ..command import (Command, MetabolicMixin, SolverCommandMixin,
                        FilePrefixAppendAction)
 from ..gapfill import gapfind, gapfill, GapFillError
-from ..datasource import reaction
+from ..datasource.reaction import parse_compound
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +35,8 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
     def init_parser(cls, parser):
         parser.add_argument(
             '--compound', metavar='compound', action=FilePrefixAppendAction,
-            type=str, default=[], help='Select Compounds to GapFill')
+            type=parse_compound, default=[],
+            help='Select compounds to try to unblock')
         parser.add_argument(
             '--epsilon', type=float, default=1e-5,
             help='Threshold for reaction flux')
@@ -55,6 +58,7 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         solver = self._get_solver(integer=True)
         extracellular_comp = self._model.get_extracellular_compartment()
+        default_comp = self._model.get_default_compartment()
         epsilon = self._args.epsilon
         v_max = float(self._model.get_default_flux_limit())
 
@@ -71,17 +75,18 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
                 self._log_epsilon_and_fail(epsilon, e)
 
             if len(blocked) > 0:
-                logger.info('Blocked compounds')
-                for compound in blocked:
-                    print(compound.translate(
-                          lambda x: compound_name.get(x, x)))
+                logger.info('Blocked compounds: {}'.format(len(blocked)))
+                for compound in sorted(blocked):
+                    name = compound_name.get(compound.name, compound.name)
+                    print('{}\t{}'.format(compound, name))
         else:
             blocked = set()
-            for c in self._args.compound:
-                cpd_obj = reaction.parse_compound(c)
-                blocked.add(cpd_obj)
-            logger.info('Filling Compounds: {}...'.format(', '.join(str(c)
-                        for c in sorted(blocked))))
+            for compound in self._args.compound:
+                if compound.compartment is None:
+                    compound = compound.in_compartment(default_comp)
+                blocked.add(compound)
+            logger.info('Filling Compounds: {}...'.format(
+                ', '.join(text_type(c) for c in sorted(blocked))))
 
         if len(blocked) > 0:
             exclude = {self._model.get_biomass_reaction()}
