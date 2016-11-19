@@ -859,7 +859,10 @@ class SBMLWriter(object):
         root.set(self._sbml_tag('version'), '1')
         root.set(_tag('required', FBC_V2), 'false')
         if git_version is not None:
-            root.set(self._sbml_tag('psamm_version'), git_version)
+            notes_tag = ET.SubElement(root, self._sbml_tag('notes'))
+            body_tag = ET.SubElement(notes_tag, _tag('body', XHTML_NS))
+            self._add_properties_notes(
+                body_tag, {'git version': git_version})
 
         model_tag = ET.SubElement(root, self._sbml_tag('model'))
         model_tag.set(_tag('strict', FBC_V2), 'true')
