@@ -16,6 +16,7 @@
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 import sys
+import argparse
 
 from ..datasource import sbml
 from ..command import MetabolicMixin, Command
@@ -24,6 +25,17 @@ from ..command import MetabolicMixin, Command
 class SBMLExport(MetabolicMixin, Command):
     """Export model as SBML file."""
 
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            'file', type=argparse.FileType('w'), nargs='?', default=sys.stdout,
+            help='File path for writing the SBML file'
+                 ' (use "-" for standard output)')
+        parser.add_argument(
+            '--pretty', action='store_true',
+            help='Format output for readability')
+        super(SBMLExport, cls).init_parser(parser)
+
     def run(self):
         writer = sbml.SBMLWriter()
-        writer.write_model(sys.stdout, self._model)
+        writer.write_model(self._args.file, self._model, self._args.pretty)
