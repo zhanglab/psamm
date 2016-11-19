@@ -24,6 +24,19 @@ from ..command import MetabolicMixin, Command
 class SBMLExport(MetabolicMixin, Command):
     """Export model as SBML file."""
 
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            'file', type=str, help='File path for writing the Excel workbook',
+            nargs='?')
+        parser.add_argument(
+            '--pretty', action='store_true',
+            help='Makes SBML output much more readable')
+        super(SBMLExport, cls).init_parser(parser)
+
     def run(self):
         writer = sbml.SBMLWriter()
-        writer.write_model(sys.stdout, self._model)
+        if self._args.file is None:
+            writer.write_model(sys.stdout, self._model, self._args.pretty)
+        else:
+            writer.write_model(self._args.file, self._model, self._args.pretty)
