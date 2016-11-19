@@ -388,9 +388,23 @@ SBML Export (``sbmlexport``)
 
 Exports the model to the SBML file format.
 
+The below will export the model to the terminal
+
 .. code-block:: shell
 
-    $ psamm-model sbmlexport > model.xml
+    $ psamm-model sbmlexport -
+
+Adding a file name allows saving this output to a file:
+
+.. code-block:: shell
+
+    $ psamm-model sbmlexport model.xml
+
+Using the `--pretty` option makes the output (in file or terminal) much more readable
+
+.. code-block:: shell
+
+    $ psamm-model sbmlexport model.xml --pretty
 
 Excel Export (``excelexport``)
 ------------------------------
