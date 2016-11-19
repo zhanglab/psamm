@@ -425,7 +425,11 @@ Exports the model to the SBML file format.
 
 .. code-block:: shell
 
-    $ psamm-model sbmlexport > model.xml
+    $ psamm-model sbmlexport model.xml
+
+If the file name is omitted, the file contents will be output directly to the
+screen. Using the ``--pretty`` option makes the output formatted for
+readability.
 
 Excel Export (``excelexport``)
 ------------------------------
