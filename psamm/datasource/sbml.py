@@ -31,6 +31,7 @@ from six import itervalues, iteritems, text_type
 
 from ..reaction import Reaction, Compound, Direction
 from ..expression.boolean import Expression, And, Or, Variable
+from .. import util
 
 logger = logging.getLogger(__name__)
 
@@ -797,6 +798,7 @@ class SBMLWriter(object):
         ET.register_namespace('mathml', MATHML_NS)
         ET.register_namespace('xhtml', XHTML_NS)
         ET.register_namespace('fbc', FBC_V2)
+        git_version = util.git_try_describe(model.context.basepath)
 
         # Load compound information
         compound_name = {}
@@ -856,6 +858,11 @@ class SBMLWriter(object):
         root.set(self._sbml_tag('level'), '3')
         root.set(self._sbml_tag('version'), '1')
         root.set(_tag('required', FBC_V2), 'false')
+        if git_version is not None:
+            notes_tag = ET.SubElement(root, self._sbml_tag('notes'))
+            body_tag = ET.SubElement(notes_tag, _tag('body', XHTML_NS))
+            self._add_properties_notes(
+                body_tag, {'git version': git_version})
 
         model_tag = ET.SubElement(root, self._sbml_tag('model'))
         model_tag.set(_tag('strict', FBC_V2), 'true')

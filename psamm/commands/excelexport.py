@@ -22,6 +22,7 @@ import logging
 from six import text_type
 
 from ..command import Command
+from .. import util
 
 try:
     import xlsxwriter
@@ -45,6 +46,7 @@ class ExcelExportCommand(Command):
             self.fail('Excel export requires the XlsxWriter python module')
         workbook = xlsxwriter.Workbook(self._args.file)
         reaction_sheet = workbook.add_worksheet(name='Reactions')
+        git_version = util.git_try_describe(self._model.context.basepath)
 
         property_set = set()
         for reaction in model.parse_reactions():
@@ -135,5 +137,8 @@ class ExcelExportCommand(Command):
                                 format(model.get_biomass_reaction())))
         model_info.write(2, 0, ('Default Flux Limits: {}'.
                                 format(model.get_default_flux_limit())))
+        if git_version is not None:
+            model_info.write(3, 0, ('Git version: {}'.
+                                    format(git_version)))
 
         workbook.close()
