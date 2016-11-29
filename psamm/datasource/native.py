@@ -187,6 +187,10 @@ class NativeModel(object):
         Defaults to 1000."""
         return self._model.get('default_flux_limit', 1000)
 
+    @property
+    def reactions(self):
+        return {reaction.id: reaction for reaction in self.parse_reactions()}
+
     def parse_reactions(self):
         """Yield tuples of reaction ID and reactions defined in the model"""
 
@@ -209,6 +213,16 @@ class NativeModel(object):
                     self._context, self._model['model']):
                 yield reaction_id
 
+    @property
+    def limits(self):
+        """Reaction flux limits specified by the model.
+
+        Dictionary keyed by the reaction ID, containing tuples of lower, upper
+        bound values.
+        """
+        return {reaction_id: (lower, upper) for reaction_id, lower, upper in
+                self.parse_limits()}
+
     def parse_limits(self):
         """Yield tuples of reaction ID, lower, and upper bound flux limits"""
 
@@ -219,6 +233,17 @@ class NativeModel(object):
             for limit in parse_limits_list(
                     self._context, self._model['limits']):
                 yield limit
+
+    @property
+    def medium(self):
+        """Medium specified by the model.
+
+        Dictionary keyed by compound, containing tuples of reaction ID, lower
+        and upper flux bounds.
+        """
+        return {compound: (reaction_id, lower, upper)
+                for compound, reaction_id, lower, upper
+                in self.parse_medium()}
 
     def parse_medium(self):
         """Yield tuples of medium compounds.
@@ -238,6 +263,10 @@ class NativeModel(object):
                 if compound.compartment is None:
                     compound = compound.in_compartment(extracellular)
                 yield compound, reaction_id, lower, upper
+
+    @property
+    def compounds(self):
+        return {compound.id: compound for compound in self.parse_compounds()}
 
     def parse_compounds(self):
         """Yield CompoundEntries for defined compounds"""
