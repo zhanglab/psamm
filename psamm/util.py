@@ -19,6 +19,8 @@
 
 from __future__ import unicode_literals
 
+import os
+import errno
 import re
 import math
 import subprocess
@@ -182,6 +184,15 @@ def git_try_describe(repo_path):
             return output.strip()
 
     return None
+
+
+def mkdir_p(path):
+    """Make directory path if it does not already exist."""
+    try:
+        os.makedirs(path)
+    except OSError as e:
+        if e.errno != errno.EEXIST or not os.path.isdir(path):
+            raise
 
 
 def convex_cardinality_relaxed(f, epsilon=1e-5):
