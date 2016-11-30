@@ -29,12 +29,16 @@ import os
 import logging
 import re
 import csv
+import math
+from collections import OrderedDict
 
 import yaml
-from six import string_types, iteritems
+from six import string_types, text_type, iteritems, PY3
 from decimal import Decimal
 
 from ..reaction import Reaction, Compound, Direction
+from ..expression import boolean
+from ..formula import Formula
 from ..metabolicmodel import MetabolicModel
 from ..database import DictDatabase
 from .context import FilePathContext, FileMark
@@ -887,3 +891,210 @@ def parse_model_file(path):
         with context.open('r') as f:
             for reaction_id in parse_model_yaml_file(context, f):
                 yield reaction_id
+
+
+# Threshold for converting reactions into dictionary representation.
+_MAX_REACTION_LENGTH = 10
+
+
+# Create wrapper representer for text_type for Py2/3 compatibility.
+if PY3:
+    def _represent_text_type(dumper, data):
+        return dumper.represent_str(data)
+else:
+    def _represent_text_type(dumper, data):
+        return dumper.represent_unicode(data)
+
+
+# Define custom dict representers for YAML
+# This allows reading/writing Python OrderedDicts in the correct order.
+# See: https://stackoverflow.com/questions/5121931/in-python-how-can-you-load-yaml-mappings-as-ordereddicts  # noqa
+def _dict_representer(dumper, data):
+    return dumper.represent_dict(iteritems(data))
+
+
+def _set_representer(dumper, data):
+    return dumper.represent_list(iter(data))
+
+
+def _boolean_expression_representer(dumper, data):
+    return _represent_text_type(dumper, text_type(data))
+
+
+def _reaction_representer(dumper, data):
+    """Generate a parsable reaction representation to the YAML parser.
+
+    Check the number of compounds in the reaction, if it is larger than 10,
+    then transform the reaction data into a list of directories with all
+    attributes in the reaction; otherwise, just return the text_type format
+    of the reaction data.
+    """
+    if len(data.compounds) > _MAX_REACTION_LENGTH:
+        def dict_make(compounds):
+            for compound, value in compounds:
+                yield OrderedDict([
+                    ('id', text_type(compound.name)),
+                    ('compartment', compound.compartment),
+                    ('value', value)])
+
+        left = list(dict_make(data.left))
+        right = list(dict_make(data.right))
+
+        direction = data.direction == Direction.Both
+
+        reaction = OrderedDict()
+        reaction['reversible'] = direction
+        if data.direction == Direction.Reverse:
+            reaction['left'] = right
+            reaction['right'] = left
+        else:
+            reaction['left'] = left
+            reaction['right'] = right
+
+        return dumper.represent_data(reaction)
+    else:
+        return _represent_text_type(dumper, text_type(data))
+
+
+def _formula_representer(dumper, data):
+    return _represent_text_type(dumper, text_type(data))
+
+
+def _decimal_representer(dumper, data):
+    # Code from float_representer in PyYAML.
+    if data % 1 == 0:
+        return dumper.represent_int(int(data))
+    elif math.isnan(data):
+        value = '.nan'
+    elif data == float('inf'):
+        value = '.inf'
+    elif data == float('-inf'):
+        value = '-.inf'
+    else:
+        value = text_type(data).lower()
+        if '.' not in value and 'e' in value:
+            value = value.replace('e', '.0e', 1)
+    return dumper.represent_scalar('tag:yaml.org,2002:float', value)
+
+
+class ModelWriter(object):
+    """Writer for native (YAML) format."""
+
+    def __init__(self):
+        self._yaml_args = {
+            'default_flow_style': False,
+            'encoding': 'utf-8',
+            'allow_unicode': True,
+            'width': 79
+        }
+
+    def _dump(self, stream, data):
+        if hasattr(yaml, 'CSafeDumper'):
+            dumper = yaml.CSafeDumper(stream, **self._yaml_args)
+        else:
+            dumper = yaml.SafeDumper(stream, **self._yaml_args)
+
+        dumper.add_representer(OrderedDict, _dict_representer)
+        dumper.add_representer(set, _set_representer)
+        dumper.add_representer(frozenset, _set_representer)
+        dumper.add_representer(
+            boolean.Expression, _boolean_expression_representer)
+        dumper.add_representer(Reaction, _reaction_representer)
+        dumper.add_representer(Formula, _formula_representer)
+        dumper.add_representer(Decimal, _decimal_representer)
+
+        dumper.ignore_aliases = lambda *args: True
+
+        try:
+            dumper.open()
+            dumper.represent(data)
+            dumper.close()
+        finally:
+            dumper.dispose()
+
+    def convert_compound_entry(self, compound):
+        """Convert compound entry to YAML dict."""
+        d = OrderedDict()
+        d['id'] = compound.id
+
+        order = {
+            key: i for i, key in enumerate(
+                ['name', 'formula', 'formula_neutral', 'charge', 'kegg',
+                 'cas'])}
+        prop_keys = (
+            set(compound.properties) - {'boundary', 'compartment'})
+        for prop in sorted(prop_keys,
+                           key=lambda x: (order.get(x, 1000), x)):
+            if compound.properties[prop] is not None:
+                d[prop] = compound.properties[prop]
+
+        return d
+
+    def convert_reaction_entry(self, reaction):
+        """Convert reaction entry to YAML dict."""
+        d = OrderedDict()
+        d['id'] = reaction.id
+
+        def is_equation_valid(equation):
+            # If the equation is a Reaction object, it must have non-zero
+            # number of compounds.
+            return (equation is not None and (
+                    not isinstance(equation, Reaction) or
+                    len(equation.compounds) > 0))
+
+        order = {
+            key: i for i, key in enumerate(
+                ['name', 'genes', 'equation', 'subsystem', 'ec'])}
+        prop_keys = (set(reaction.properties) -
+                     {'lower_flux', 'upper_flux', 'reversible'})
+        for prop in sorted(prop_keys, key=lambda x: (order.get(x, 1000), x)):
+            if reaction.properties[prop] is not None:
+                d[prop] = reaction.properties[prop]
+            if prop == 'equation' and not is_equation_valid(d[prop]):
+                del d[prop]
+
+        return d
+
+    def write_compounds(self, stream, compounds, properties=None):
+        """Write iterable of compounds as YAML object to stream.
+
+        Args:
+            stream: File-like object.
+            compounds: Iterable of compound entries.
+            properties: Set of compound properties to output (or None to output
+                all).
+        """
+        def iter_entries():
+            for c in compounds:
+                entry = self.convert_compound_entry(c)
+                if entry is None:
+                    continue
+                if properties is not None:
+                    entry = OrderedDict(
+                        (key, value) for key, value in iteritems(entry)
+                        if key == 'id' or key in properties)
+                yield entry
+
+        self._dump(stream, list(iter_entries()))
+
+    def write_reactions(self, stream, reactions, properties=None):
+        """Write iterable of reactions as YAML object to stream.
+
+        Args:
+            stream: File-like object.
+            compounds: Iterable of reaction entries.
+            properties: Set of reaction properties to output (or None to output
+                all).
+        """
+        def iter_entries():
+            for r in reactions:
+                entry = self.convert_reaction_entry(r)
+                if entry is None:
+                    continue
+                if properties is not None:
+                    entry = OrderedDict(
+                        (key, value) for key, value in iteritems(entry)
+                        if key == 'id' or key in properties)
+                yield entry
+
+        self._dump(stream, list(iter_entries()))
