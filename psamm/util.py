@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Various utilities."""
 
@@ -146,6 +146,22 @@ class FrozenOrderedSet(collections.Set, collections.Hashable):
 
     def __repr__(self):
         return str('{}({})').format(self.__class__.__name__, list(self))
+
+
+class DictView(collections.Mapping):
+    """An immutable wrapper around another dict-like object."""
+
+    def __init__(self, d):
+        self.__d = d
+
+    def __getitem__(self, key):
+        return self.__d[key]
+
+    def __iter__(self):
+        return iter(self.__d)
+
+    def __len__(self):
+        return len(self.__d)
 
 
 def git_try_describe(repo_path):
