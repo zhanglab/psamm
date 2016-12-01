@@ -273,8 +273,8 @@ class TestYAMLFileSystemData(unittest.TestCase):
         self.assertEqual(compounds[0].properties['name'], 'Water')
         self.assertEqual(compounds[0].formula, 'H2O')
         self.assertEqual(compounds[0].charge, 0)
-        self.assertEqual(compounds[0].kegg, 'C00001')
-        self.assertEqual(compounds[0].cas, '7732-18-5')
+        self.assertEqual(compounds[0].properties['kegg'], 'C00001')
+        self.assertEqual(compounds[0].properties['cas'], '7732-18-5')
 
     def test_parse_compound_yaml_file(self):
         path = self.write_model_file('compounds.yaml', '\n'.join([
@@ -307,7 +307,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
         self.assertEqual(reactions[0].properties['name'], 'Reaction 1')
         self.assertEqual(reactions[0].equation, Reaction(
             Direction.Forward, [(Compound('A'), 1)], [(Compound('B'), 2)]))
-        self.assertEqual(reactions[0].ec, None)
+        self.assertEqual(reactions[0].properties.get('ec'), None)
         self.assertEqual(reactions[0].genes, None)
         self.assertEqual(reactions[0].filemark.filecontext.filepath, path)
         self.assertEqual(reactions[0].filemark.line, 2)
