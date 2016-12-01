@@ -157,17 +157,30 @@ class NativeModel(object):
 
     @property
     def extracellular_compartment(self):
-        """Extracellular compartment specified by the model."""
+        """Extracellular compartment specified by the model.
+
+        Defaults to 'e'.
+        """
         return self._model.get('extracellular', 'e')
 
     @property
     def default_compartment(self):
-        """Compartment to use when unspecified."""
+        """Default compartment specified by the model.
+
+        The compartment that is implied when not specified. In some contexts
+        (e.g. medium) the extracellular compartment may be implied instead.
+        Defaults to 'c'.
+        """
         return self._model.get('default_compartment', 'c')
 
     @property
     def default_flux_limit(self):
-        """Default flux limit specified by the model."""
+        """Default flux limit specified by the model.
+
+        When flux limits on reactions are not specified, this value will be
+        used. Flux limit of [0;x] will be implied for irreversible reactions
+        and [-x;x] for reversible reactions, where x is this value.
+        Defaults to 1000."""
         return self._model.get('default_flux_limit', 1000)
 
     def parse_reactions(self):
