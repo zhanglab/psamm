@@ -103,7 +103,7 @@ class ExcelExportCommand(Command):
         media_sheet.write_string(0, 2, 'Lower Limit')
         media_sheet.write_string(0, 3, 'Upper Limit')
 
-        default_flux = model.get_default_flux_limit()
+        default_flux = model.default_flux_limit
 
         for x, (compound, reaction, lower, upper) in enumerate(
                 model.parse_medium()):
@@ -131,14 +131,12 @@ class ExcelExportCommand(Command):
 
         model_info = workbook.add_worksheet(name='Model Info')
 
-        model_info.write(0, 0, ('Model Name: {}'.
-                                format(model.get_name())))
-        model_info.write(1, 0, ('Biomass Reaction: {}'.
-                                format(model.get_biomass_reaction())))
-        model_info.write(2, 0, ('Default Flux Limits: {}'.
-                                format(model.get_default_flux_limit())))
+        model_info.write(0, 0, ('Model Name: {}'.format(model.name)))
+        model_info.write(
+            1, 0, ('Biomass Reaction: {}'.format(model.biomass_reaction)))
+        model_info.write(
+            2, 0, ('Default Flux Limits: {}'.format(model.default_flux_limit)))
         if git_version is not None:
-            model_info.write(3, 0, ('Git version: {}'.
-                                    format(git_version)))
+            model_info.write(3, 0, ('Git version: {}'.format(git_version)))
 
         workbook.close()

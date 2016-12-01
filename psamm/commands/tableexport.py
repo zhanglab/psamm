@@ -108,7 +108,7 @@ class ExportTableCommand(Command):
     def _media_export(self):
         print('{}\t{}\t{}\t{}'.format('Compound ID', 'Reaction ID',
                                       'Lower Limit', 'Upper Limit'))
-        default_flux = self._model.get_default_flux_limit()
+        default_flux = self._model.default_flux_limit
 
         for compound, reaction, lower, upper in self._model.parse_medium():
             if lower is None:
@@ -126,8 +126,6 @@ class ExportTableCommand(Command):
             print('{}\t{}\t{}'.format(reaction, lower, upper))
 
     def _metadata_export(self):
-        print('Model Name: {}'.format(self._model.get_name()))
-        print('Biomass Reaction: {}'.format(
-            self._model.get_biomass_reaction()))
-        print('Default Flux Limits: {}'.format(
-            self._model.get_default_flux_limit()))
+        print('Model Name: {}'.format(self._model.name))
+        print('Biomass Reaction: {}'.format(self._model.biomass_reaction))
+        print('Default Flux Limits: {}'.format(self._model.default_flux_limit))

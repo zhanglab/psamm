@@ -74,7 +74,7 @@ class MassConsistencyCommand(MetabolicMixin, SolverCommandMixin, Command):
         exclude = set(self._args.exclude)
 
         # Add biomass reaction to be excluded
-        biomass_reaction = self._model.get_biomass_reaction()
+        biomass_reaction = self._model.biomass_reaction
         if biomass_reaction is not None:
             exclude.add(biomass_reaction)
 

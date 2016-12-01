@@ -145,24 +145,29 @@ class NativeModel(object):
         raise ParseError('No model file could be found ({})'.format(
             ', '.join(DEFAULT_MODEL)))
 
-    def get_name(self):
-        """Return the name specified by the model"""
+    @property
+    def name(self):
+        """Name specified by the model."""
         return self._model.get('name', None)
 
-    def get_biomass_reaction(self):
-        """Return the biomass reaction specified by the model"""
+    @property
+    def biomass_reaction(self):
+        """Biomass reaction specified by the model."""
         return self._model.get('biomass', None)
 
-    def get_extracellular_compartment(self):
-        """Return the extracellular compartment specified by the model."""
+    @property
+    def extracellular_compartment(self):
+        """Extracellular compartment specified by the model."""
         return self._model.get('extracellular', 'e')
 
-    def get_default_compartment(self):
-        """Return the compartment to use when unspecified."""
+    @property
+    def default_compartment(self):
+        """Compartment to use when unspecified."""
         return self._model.get('default_compartment', 'c')
 
-    def get_default_flux_limit(self):
-        """Return the default flux limit specified by the model"""
+    @property
+    def default_flux_limit(self):
+        """Default flux limit specified by the model."""
         return self._model.get('default_flux_limit', 1000)
 
     def parse_reactions(self):
@@ -172,7 +177,7 @@ class NativeModel(object):
         if 'reactions' in self._model:
             for reaction in parse_reaction_list(
                     self._context, self._model['reactions'],
-                    self.get_default_compartment()):
+                    self.default_compartment):
                 yield reaction
 
     def has_model_definition(self):
@@ -205,7 +210,7 @@ class NativeModel(object):
         upper flux limits.
         """
 
-        extracellular = self.get_extracellular_compartment()
+        extracellular = self.extracellular_compartment
         if 'media' in self._model:
             if not isinstance(self._model['media'], list):
                 raise ParseError('Expected media to be a list')
@@ -241,7 +246,7 @@ class NativeModel(object):
 
         undefined_compounds = set()
         extracellular_compounds = set()
-        extracellular = self.get_extracellular_compartment()
+        extracellular = self.extracellular_compartment
         for reaction in database.reactions:
             for compound, _ in database.get_reaction_values(reaction):
                 if compound.name not in compounds:
@@ -274,8 +279,7 @@ class NativeModel(object):
 
         return MetabolicModel.load_model(
             database, model_definition, self.parse_medium(),
-            self.parse_limits(),
-            v_max=self.get_default_flux_limit())
+            self.parse_limits(), v_max=self.default_flux_limit)
 
     @property
     def context(self):

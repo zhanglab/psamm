@@ -75,7 +75,7 @@ class Command(object):
         self._model = model
         self._args = args
 
-        name = self._model.get_name()
+        name = self._model.name
         if name is None:
             name = text_type(self._model.context)
         logger.info('Model: {}'.format(name))
@@ -128,7 +128,7 @@ class ObjectiveMixin(object):
         if self._args.objective is not None:
             reaction = self._args.objective
         else:
-            reaction = self._model.get_biomass_reaction()
+            reaction = self._model.biomass_reaction
             if reaction is None:
                 self.argument_error('The objective reaction was not specified')
 
