@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Module for reading and writing native formats.
 
@@ -38,6 +38,8 @@ from ..reaction import Reaction, Compound, Direction
 from ..metabolicmodel import MetabolicModel
 from ..database import DictDatabase
 from .context import FilePathContext, FileMark
+from .entry import (DictCompoundEntry as CompoundEntry,
+                    DictReactionEntry as ReactionEntry)
 from .reaction import ReactionParser
 from . import modelseed
 
@@ -92,92 +94,6 @@ def yaml_load(stream):
         loader = yaml.SafeLoader(stream)
     loader.add_constructor('tag:yaml.org,2002:float', float_constructor)
     return loader.get_data()
-
-
-class CompoundEntry(object):
-    """Representation of a compound entry in a native model"""
-
-    def __init__(self, compound_id, properties, filemark=None):
-        self._id = compound_id
-        self._properties = dict(properties)
-        self._filemark = filemark
-
-    @property
-    def id(self):
-        return self._id
-
-    @property
-    def name(self):
-        return self._properties.get('name')
-
-    @property
-    def formula(self):
-        return self._properties.get('formula')
-
-    @property
-    def charge(self):
-        return whendefined(int, self._properties.get('charge'))
-
-    @property
-    def kegg(self):
-        return self._properties.get('kegg')
-
-    @property
-    def cas(self):
-        return self._properties.get('cas')
-
-    @property
-    def zeromass(self):
-        return self._properties.get('zeromass')
-
-    @property
-    def properties(self):
-        return self._properties
-
-    @property
-    def filemark(self):
-        return self._filemark
-
-
-class ReactionEntry(object):
-    """Representation of a reaction entry in a native model"""
-
-    def __init__(self, id, properties, filemark=None):
-        self._id = id
-        self._properties = dict(properties)
-        self._name = self._properties.get('name')
-        self._equation = self._properties.get('equation')
-        self._ec = self._properties.get('ec')
-        self._genes = self._properties.get('genes')
-        self._filemark = filemark
-
-    @property
-    def id(self):
-        return self._id
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def equation(self):
-        return self._equation
-
-    @property
-    def ec(self):
-        return self._ec
-
-    @property
-    def genes(self):
-        return self._genes
-
-    @property
-    def properties(self):
-        return self._properties
-
-    @property
-    def filemark(self):
-        return self._filemark
 
 
 class NativeModel(object):
@@ -402,7 +318,7 @@ def parse_compound(compound_def, context=None):
     _check_id(compound_id, 'Compound')
 
     mark = FileMark(context, None, None)
-    return CompoundEntry(compound_id, compound_def, mark)
+    return CompoundEntry(compound_def, mark)
 
 
 def parse_compound_list(path, compounds):
@@ -437,8 +353,12 @@ def parse_compound_table_file(path, f):
             raise ParseError('Expected `id` column in table')
 
         props = {key: value for key, value in iteritems(row) if value != ''}
+
+        if 'charge' in props:
+            props['charge'] = int(props['charge'])
+
         mark = FileMark(context, i + 2, None)
-        yield CompoundEntry(row['id'], props, mark)
+        yield CompoundEntry(props, mark)
 
 
 def parse_compound_yaml_file(path, f):
@@ -574,7 +494,7 @@ def parse_reaction(reaction_def, default_compartment, context=None):
             reaction_def['equation'], default_compartment)
 
     mark = FileMark(context, None, None)
-    return ReactionEntry(reaction_id, reaction_props, mark)
+    return ReactionEntry(reaction_props, mark)
 
 
 def parse_reaction_list(path, reactions, default_compartment=None):
@@ -625,7 +545,7 @@ def parse_reaction_table_file(path, f, default_compartment):
                 props['equation'], default_compartment)
 
         mark = FileMark(context, lineno + 2, 0)
-        yield ReactionEntry(row['id'], props, mark)
+        yield ReactionEntry(props, mark)
 
 
 def parse_reaction_file(path, default_compartment=None):

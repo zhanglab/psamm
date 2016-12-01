@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Parser for SBML model files"""
 
@@ -29,6 +29,9 @@ import json
 
 from six import itervalues, iteritems, text_type
 
+from .context import FileMark
+from .entry import (CompoundEntry as BaseCompoundEntry,
+                    ReactionEntry as BaseReactionEntry)
 from ..reaction import Reaction, Compound, Direction
 from ..expression.boolean import Expression, And, Or, Variable
 from .. import util
@@ -99,10 +102,10 @@ class _SBMLEntry(object):
         return self._root.find(self._reader._sbml_tag('notes'))
 
 
-class SpeciesEntry(_SBMLEntry):
+class SpeciesEntry(_SBMLEntry, BaseCompoundEntry):
     """Species entry in the SBML file"""
 
-    def __init__(self, reader, root):
+    def __init__(self, reader, root, filemark=None):
         super(SpeciesEntry, self).__init__(reader, root)
 
         self._name = root.get('name')
@@ -123,6 +126,8 @@ class SpeciesEntry(_SBMLEntry):
             logger.warning('Species {} was converted to boundary condition'
                            ' because of "_b" suffix'.format(self.id))
             self._boundary = True
+
+        self._filemark = filemark
 
     @property
     def name(self):
@@ -198,11 +203,15 @@ class SpeciesEntry(_SBMLEntry):
 
         return properties
 
+    @property
+    def filemark(self):
+        return self._filemark
 
-class ReactionEntry(_SBMLEntry):
+
+class ReactionEntry(_SBMLEntry, BaseReactionEntry):
     """Reaction entry in SBML file"""
 
-    def __init__(self, reader, root):
+    def __init__(self, reader, root, filemark=None):
         super(ReactionEntry, self).__init__(reader, root)
 
         self._name = self._root.get('name')
@@ -267,6 +276,8 @@ class ReactionEntry(_SBMLEntry):
                         self._upper_flux = bound.value
                     elif bound.operation == 'greaterEqual':
                         self._lower_flux = bound.value
+
+        self._filemark = filemark
 
     def _parse_species_references(self, name):
         """Yield species id and parsed value for a speciesReference list"""
@@ -367,6 +378,10 @@ class ReactionEntry(_SBMLEntry):
             properties['upper_flux'] = self._upper_flux
 
         return properties
+
+    @property
+    def filemark(self):
+        return self._filemark
 
 
 class ObjectiveEntry(object):
@@ -484,13 +499,15 @@ class SBMLReader(object):
     the reaction equations.
     """
 
-    def __init__(self, file, strict=False, ignore_boundary=False):
+    def __init__(self, file, strict=False, ignore_boundary=False,
+                 context=None):
         # Parse SBML file
         tree = ET.parse(file)
         root = tree.getroot()
 
         self._strict = strict
         self._ignore_boundary = ignore_boundary
+        self._context = context
 
         # Parse level and version
         self._sbml_tag = None
@@ -568,14 +585,16 @@ class SBMLReader(object):
         self._model_species = {}
         self._species = self._model.find(self._sbml_tag('listOfSpecies'))
         for species in self._species.iterfind(self._sbml_tag('species')):
-            entry = SpeciesEntry(self, species)
+            filemark = FileMark(self._context, None, None)
+            entry = SpeciesEntry(self, species, filemark=filemark)
             self._model_species[entry.id] = entry
 
         # Reactions
         self._model_reactions = {}
         self._reactions = self._model.find(self._sbml_tag('listOfReactions'))
         for reaction in self._reactions.iterfind(self._sbml_tag('reaction')):
-            entry = ReactionEntry(self, reaction)
+            filemark = FileMark(self._context, None, None)
+            entry = ReactionEntry(self, reaction, filemark=filemark)
             self._model_reactions[entry.id] = entry
 
         # Objectives

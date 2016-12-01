@@ -25,12 +25,6 @@ from psamm.expression.affine import Expression
 from six import StringIO
 
 
-class MockEntryClass(object):
-    def __init__(self, props, filemark=None):
-        self.props = props
-        self.filemark = filemark
-
-
 class TestKEGGEntryParser(unittest.TestCase):
     def setUp(self):
         self.f = StringIO('\n'.join([
@@ -48,16 +42,16 @@ class TestKEGGEntryParser(unittest.TestCase):
         ]))
 
     def test_parse_entries(self):
-        entries = list(kegg._parse_kegg_entries(self.f, MockEntryClass))
+        entries = list(kegg.parse_kegg_entries(self.f))
         self.assertEqual(len(entries), 2)
 
-        self.assertEqual(entries[0].props, {
+        self.assertEqual(entries[0].properties, {
             'entry': ['ID001'],
             'name': ['Test entry'],
             'property': ['This is a multi-line', 'property!']
         })
 
-        self.assertEqual(entries[1].props, {
+        self.assertEqual(entries[1].properties, {
             'entry': ['ID002'],
             'name': ['Another entry'],
             'property': ['Single line property'],
@@ -70,21 +64,16 @@ class TestKEGGEntryParser(unittest.TestCase):
 
 class TestKEGGCompoundEntry(unittest.TestCase):
     def test_minimal_compound_entry(self):
-        c = kegg.CompoundEntry({
+        c = kegg.CompoundEntry(kegg.KEGGEntry({
             'entry': ['C00001        Compound']
-        })
+        }))
 
         self.assertEqual(c.id, 'C00001')
-        self.assertIsNone(c.name)
-        self.assertEqual(list(c.names), [])
-        self.assertIsNone(c.formula)
-        self.assertIsNone(c.exact_mass)
-        self.assertIsNone(c.mol_weight)
-        self.assertIsNone(c.comment)
+        self.assertIsNone(c.properties['name'])
         self.assertIsNone(c.filemark)
 
     def test_complete_compound_entry(self):
-        c = kegg.CompoundEntry({
+        c = kegg.CompoundEntry(kegg.KEGGEntry({
             'entry': ['C00001        Compound'],
             'name': ['H2O;', 'Water'],
             'reaction': ['R00001 R00002', 'R00003'],
@@ -101,25 +90,27 @@ class TestKEGGCompoundEntry(unittest.TestCase):
                 'ChEBI: B2345'
             ],
             'comment': ['This information is purely for testing!']
-        })
+        }))
 
         self.assertEqual(c.id, 'C00001')
-        self.assertEqual(c.name, 'H2O')
-        self.assertEqual(list(c.names), ['H2O', 'Water'])
-        self.assertEqual(list(c.reactions), ['R00001', 'R00002', 'R00003'])
-        self.assertEqual(list(c.enzymes), [
+        self.assertEqual(c.properties['name'], 'H2O')
+        self.assertEqual(c.properties['names'], ['H2O', 'Water'])
+        self.assertEqual(
+            c.properties['reactions'], ['R00001', 'R00002', 'R00003'])
+        self.assertEqual(c.properties['enzymes'], [
             '1.2.3.4', '2.3.4.5', '7.6.50.4', '2.1.-,-'])
-        self.assertEqual(c.formula, 'H2O')
-        self.assertAlmostEqual(c.exact_mass, 18.01)
-        self.assertAlmostEqual(c.mol_weight, 18.01)
-        self.assertEqual(list(c.pathways), [
+        self.assertEqual(c.properties['formula'], 'H2O')
+        self.assertAlmostEqual(c.properties['exact_mass'], 18.01)
+        self.assertAlmostEqual(c.properties['mol_weight'], 18.01)
+        self.assertEqual(c.properties['pathways'], [
             ('map00001', 'First pathway'),
             ('map00002', 'Second pathway')
         ])
-        self.assertEqual(list(c.dblinks), [
+        self.assertEqual(c.properties['dblinks'], [
             ('CAS', '12345'), ('ChEBI', 'B2345')
         ])
-        self.assertEqual(c.comment, 'This information is purely for testing!')
+        self.assertEqual(
+            c.properties['comment'], 'This information is purely for testing!')
 
 
 class TestKEGGReactionParser(unittest.TestCase):
