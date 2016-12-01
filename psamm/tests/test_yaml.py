@@ -165,9 +165,9 @@ class TestYAMLFileSystemData(unittest.TestCase):
                 upper: 100
             '''
         m = native.NativeModel(long_string)
-        self.assertEqual(m.get_name(), 'Test model')
-        self.assertEqual(m.get_biomass_reaction(), 'rxn_1')
-        self.assertEqual(m.get_extracellular_compartment(), 'e')
+        self.assertEqual(m.name, 'Test model')
+        self.assertEqual(m.biomass_reaction, 'rxn_1')
+        self.assertEqual(m.extracellular_compartment, 'e')
         reactions = list(m.parse_reactions())
         self.assertEqual(reactions[0].id, 'rxn_1')
 
@@ -216,9 +216,9 @@ class TestYAMLFileSystemData(unittest.TestCase):
             }
 
         dmodel = native.NativeModel(dict_model)
-        self.assertEqual(dmodel.get_name(), 'Test model')
-        self.assertEqual(dmodel.get_biomass_reaction(), 'rxn_1')
-        self.assertEqual(dmodel.get_extracellular_compartment(), 'e')
+        self.assertEqual(dmodel.name, 'Test model')
+        self.assertEqual(dmodel.biomass_reaction, 'rxn_1')
+        self.assertEqual(dmodel.extracellular_compartment, 'e')
 
     def test_parse_model_file(self):
         path = self.write_model_file('model.yaml', '\n'.join([
@@ -230,10 +230,10 @@ class TestYAMLFileSystemData(unittest.TestCase):
 
         model = native.NativeModel.load_model_from_path(path)
 
-        self.assertEqual(model.get_name(), 'Test model')
-        self.assertEqual(model.get_biomass_reaction(), 'biomass_reaction_id')
-        self.assertEqual(model.get_extracellular_compartment(), 'Extra')
-        self.assertEqual(model.get_default_flux_limit(), 500)
+        self.assertEqual(model.name, 'Test model')
+        self.assertEqual(model.biomass_reaction, 'biomass_reaction_id')
+        self.assertEqual(model.extracellular_compartment, 'Extra')
+        self.assertEqual(model.default_flux_limit, 500)
 
     def test_bad_path(self):
         with self.assertRaises(native.ParseError):

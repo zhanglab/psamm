@@ -41,7 +41,7 @@ class FluxCouplingCommand(MetabolicMixin, SolverCommandMixin,
     def run(self):
         solver = self._get_solver()
 
-        max_reaction = self._model.get_biomass_reaction()
+        max_reaction = self._model.biomass_reaction
         if max_reaction is None:
             self.fail('The biomass reaction was not specified')
 

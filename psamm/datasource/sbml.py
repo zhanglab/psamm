@@ -728,7 +728,7 @@ class SBMLWriter(object):
             if equation.direction == Direction.Forward:
                 lower = 0
             else:
-                lower = -model.get_default_flux_limit()
+                lower = -model.default_flux_limit
         else:
             lower = flux_limits[r_id][0]
 
@@ -736,7 +736,7 @@ class SBMLWriter(object):
             if equation.direction == Direction.Reverse:
                 upper = 0
             else:
-                upper = model.get_default_flux_limit()
+                upper = model.default_flux_limit
         else:
             upper = flux_limits[r_id][1]
 
@@ -840,7 +840,7 @@ class SBMLWriter(object):
 
             reaction_id = self._create_unique_id(
                 reaction_properties, self._make_safe_id(r.id))
-            if r.id == model.get_biomass_reaction():
+            if r.id == model.biomass_reaction:
                 biomass_id = reaction_id
 
             reaction_properties[reaction_id] = r.properties
@@ -862,9 +862,9 @@ class SBMLWriter(object):
             }
 
             if lower is None:
-                lower = -model.get_default_flux_limit()
+                lower = -model.default_flux_limit
             if upper is None:
-                upper = model.get_default_flux_limit()
+                upper = model.default_flux_limit
             flux_limits[reaction_id] = (lower, upper)
 
             # Create a dummy properties dict for undefined compounds
@@ -885,8 +885,8 @@ class SBMLWriter(object):
 
         model_tag = ET.SubElement(root, self._sbml_tag('model'))
         model_tag.set(_tag('strict', FBC_V2), 'true')
-        if model.get_name() is not None:
-            model_tag.set(self._sbml_tag('name'), model.get_name())
+        if model.name is not None:
+            model_tag.set(self._sbml_tag('name'), model.name)
 
         # Build mapping from Compound to species ID
         model_compartments = {}

@@ -119,7 +119,7 @@ class FastGapFillCommand(MetabolicMixin, LoopRemovalMixin, SolverCommandMixin,
         if self._args.reaction is not None:
             maximized_reaction = self._args.reaction
         else:
-            maximized_reaction = self._model.get_biomass_reaction()
+            maximized_reaction = self._model.biomass_reaction
             if maximized_reaction is None:
                 self.argument_error(
                     'The maximized reaction was not specified')

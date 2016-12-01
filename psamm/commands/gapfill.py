@@ -81,10 +81,10 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         core = set(self._mm.reactions)
 
         solver = self._get_solver(integer=True)
-        extracellular_comp = self._model.get_extracellular_compartment()
-        default_comp = self._model.get_default_compartment()
+        extracellular_comp = self._model.extracellular_compartment
+        default_comp = self._model.default_compartment
         epsilon = self._args.epsilon
-        v_max = float(self._model.get_default_flux_limit())
+        v_max = float(self._model.default_flux_limit)
 
         if len(self._args.compound) == 0:
             # Run GapFind on model
@@ -113,7 +113,9 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
                 ', '.join(text_type(c) for c in sorted(blocked))))
 
         if len(blocked) > 0:
-            exclude = {self._model.get_biomass_reaction()}
+            exclude = set()
+            if self._model.biomass_reaction is not None:
+                exclude.add(self._model.biomass_reaction)
 
             # Add exchange and transport reactions to database
             model_complete, weights = create_extended_model(

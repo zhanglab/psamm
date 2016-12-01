@@ -53,7 +53,7 @@ def create_extended_model(model, db_penalty=None, ex_penalty=None,
     # Create metabolic model
     model_extended = model.create_metabolic_model()
     model_compartments = set(model_extended.compartments)
-    extra_compartments = model.get_extracellular_compartment()
+    extra_compartments = model.extracellular_compartment
 
     # Add exchange and transport reactions to database
     logger.info('Adding database, exchange and transport reactions')
