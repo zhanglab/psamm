@@ -235,7 +235,7 @@ class ReactionMapper(Mapping):
 
     def equation(self, raw):
         if 'equation' in raw:
-            return raw['equation'][0]
+            return parse_reaction(raw['equation'][0])
         return None
 
     def enzymes(self, raw):
