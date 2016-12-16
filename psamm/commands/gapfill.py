@@ -24,7 +24,7 @@ from six import text_type
 
 from ..command import (Command, MetabolicMixin, SolverCommandMixin,
                        FilePrefixAppendAction)
-from ..gapfill import gapfind, gapfill, GapFillError
+from ..gapfill import gapfill, GapFillError
 from ..datasource.reaction import parse_compound
 from ..fastgapfill import create_extended_model
 
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
-    """Run the GapFind and GapFill algorithms on the model."""
+    """Run the GapFill algorithms on the model."""
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
@@ -81,77 +81,62 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         core = set(self._mm.reactions)
 
         solver = self._get_solver(integer=True)
-        extracellular_comp = self._model.extracellular_compartment
         default_comp = self._model.default_compartment
         epsilon = self._args.epsilon
         v_max = float(self._model.default_flux_limit)
 
-        if len(self._args.compound) == 0:
-            # Run GapFind on model
-            logger.info('Searching for blocked compounds...')
-            result = gapfind(
-                self._mm, solver=solver, epsilon=epsilon, v_max=v_max)
-
-            try:
-                blocked = set(compound for compound in result
-                              if compound.compartment != extracellular_comp)
-            except GapFillError as e:
-                self._log_epsilon_and_fail(epsilon, e)
-
-            if len(blocked) > 0:
-                logger.info('Blocked compounds: {}'.format(len(blocked)))
-                for compound in sorted(blocked):
-                    name = compound_name.get(compound.name, compound.name)
-                    print('{}\t{}'.format(compound, name))
-        else:
-            blocked = set()
-            for compound in self._args.compound:
-                if compound.compartment is None:
-                    compound = compound.in_compartment(default_comp)
-                blocked.add(compound)
-            logger.info('Filling Compounds: {}...'.format(
-                ', '.join(text_type(c) for c in sorted(blocked))))
+        blocked = set()
+        for compound in self._args.compound:
+            if compound.compartment is None:
+                compound = compound.in_compartment(default_comp)
+            blocked.add(compound)
 
         if len(blocked) > 0:
-            exclude = set()
-            if self._model.biomass_reaction is not None:
-                exclude.add(self._model.biomass_reaction)
-
-            # Add exchange and transport reactions to database
-            model_complete, weights = create_extended_model(
-                self._model,
-                db_penalty=self._args.db_penalty,
-                ex_penalty=self._args.ex_penalty,
-                tp_penalty=self._args.tp_penalty,
-                penalties=penalties)
-
-            logger.info('Searching for reactions to fill gaps')
-            try:
-                added_reactions, no_bounds_reactions = gapfill(
-                    model_complete, core, blocked, exclude, solver=solver,
-                    epsilon=epsilon, v_max=v_max, weights=weights)
-            except GapFillError as e:
-                self._log_epsilon_and_fail(epsilon, e)
-
-            for reaction_id in sorted(self._mm.reactions):
-                rx = self._mm.get_reaction(reaction_id)
-                rxt = rx.translated_compounds(
-                    lambda x: compound_name.get(x, x))
-                print('{}\t{}\t{}'.format(reaction_id, 'Model', rxt))
-
-            for rxnid in sorted(added_reactions):
-                rx = model_complete.get_reaction(rxnid)
-                rxt = rx.translated_compounds(
-                    lambda x: compound_name.get(x, x))
-                print('{}\t{}\t{}'.format(rxnid, 'Add', rxt))
-
-            for rxnid in sorted(no_bounds_reactions):
-                rx = model_complete.get_reaction(rxnid)
-                rxt = rx.translated_compounds(
-                    lambda x: compound_name.get(x, x))
-                print('{}\t{}\t{}'.format(rxnid, 'Remove bounds', rxt))
+            logger.info('Unblocking compounds: {}...'.format(
+                ', '.join(text_type(c) for c in sorted(blocked))))
         else:
-            logger.info('No blocked compounds found')
+            logger.info(
+                'Unblocking all compounds in model. Use --compound option to'
+                ' unblock specific compounds.')
+            blocked = set(self._mm.compounds)
+
+        exclude = set()
+        if self._model.biomass_reaction is not None:
+            exclude.add(self._model.biomass_reaction)
+
+        # Add exchange and transport reactions to database
+        model_complete, weights = create_extended_model(
+            self._model,
+            db_penalty=self._args.db_penalty,
+            ex_penalty=self._args.ex_penalty,
+            tp_penalty=self._args.tp_penalty,
+            penalties=penalties)
+
+        logger.info('Searching for reactions to fill gaps')
+        try:
+            added_reactions, no_bounds_reactions = gapfill(
+                model_complete, core, blocked, exclude, solver=solver,
+                epsilon=epsilon, v_max=v_max, weights=weights)
+        except GapFillError as e:
+            self._log_epsilon_and_fail(epsilon, e)
+
+        for reaction_id in sorted(self._mm.reactions):
+            rx = self._mm.get_reaction(reaction_id)
+            rxt = rx.translated_compounds(
+                lambda x: compound_name.get(x, x))
+            print('{}\t{}\t{}'.format(reaction_id, 'Model', rxt))
+
+        for rxnid in sorted(added_reactions):
+            rx = model_complete.get_reaction(rxnid)
+            rxt = rx.translated_compounds(
+                lambda x: compound_name.get(x, x))
+            print('{}\t{}\t{}'.format(rxnid, 'Add', rxt))
+
+        for rxnid in sorted(no_bounds_reactions):
+            rx = model_complete.get_reaction(rxnid)
+            rxt = rx.translated_compounds(
+                lambda x: compound_name.get(x, x))
+            print('{}\t{}\t{}'.format(rxnid, 'Remove bounds', rxt))
 
     def _log_epsilon_and_fail(self, epsilon, exc):
         msg = ('Finding blocked compounds failed with epsilon set to {}. Try'

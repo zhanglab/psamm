@@ -216,6 +216,10 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command([
             '--model', self._model_dir, 'fva'], {})
 
+    def test_run_gapcheck(self):
+        self.run_solver_command([
+            '--model', self._model_dir, 'gapcheck'], {'integer': True})
+
     def test_run_gapfill(self):
         self.run_solver_command([
             '--model', self._model_dir, 'gapfill'], {'integer': True})
