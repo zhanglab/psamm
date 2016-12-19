@@ -344,27 +344,62 @@ constraints are imposed when considering whether reactions can take a non-zero
 flux. This automatically removes internal flux loops but is also much more
 time-consuming.
 
-GapFind/GapFill (``gapfill``)
------------------------------
+Gap check (``gapcheck``)
+------------------------
 
-The GapFind algorithm can be used to identify the compounds that are needed by
-reactions in the model but cannot be produced in the model. The GapFill
-algorithm will try to compute an extension of the model with reactions from the
-reaction database and try to find a minimal subset that allows all blocked
-compounds to be produced. This command will run GapFind to identify the blocked
-compounds and then uses GapFill to try to reconstruct a model that allows these
-compounds to be produced [Kumar07]_.
+This gap check command will try to identify the compounds in the model
+that cannot be produced. This is useful for identifying incomplete pathways in
+the model. The command will report a list of all compounds in the model that
+are blocked for production.
+
+.. code-block:: shell
+
+    $ psamm-model gapcheck
+
+When checking whether a compound can be produced, it is sufficient for
+production that all precursors can be produced and it is *not* necessary for
+every compound to also be consumed by another reaction (in other words, for
+the purpose of this analysis there are implicit sinks for every compound in
+the model). This means that even if this command reports that no compounds are
+blocked, it may still not be possible for the model to be viable under the
+steady-state assumption of FBA.
+
+GapFill (``gapfill``)
+---------------------
+
+The GapFill algorithm will try to compute an extension of the model with
+reactions from the reaction database and try to find a minimal subset that
+allows all blocked compounds to be produced. In addition to suggesting possible
+database reactions to add to the model, the command will also suggest possible
+transport and exchange reactions. The GapFill algorithm implemented in this
+command is a variant of the gap-filling procedure described in [Kumar07]_.
 
 .. code-block:: shell
 
     $ psamm-model gapfill
 
-The command will first output a list of blocked compounds and then it will list
-the suggested reactions to add the model in order to unblock the blocked
-compounds.
+The command will first list the reactions in the model followed by the
+suggested reactions to add to the model in order to unblock the blocked
+compounds. The procedure may also suggest that existing model reactions have
+their flux bounds widened, e.g. making an existing irreversible reaction
+reversible. To unblock only specific compounds, use the ``--compound`` option:
 
-These algorithms are defined in terms of MILP problems and are therefore
-(particularly GapFill) computationally expensive to run for larger models.
+.. code-block:: shell
+
+    $ psamm-model gapfill --compound leu-L[c] --compound ile-L[c]
+
+In this example, the procedure will try to add reactions so that leucine
+(``leu-L``) and isoleucine (``ile-L``) in the ``c`` compartment can be
+produced. Multiple compounds can be unblocked at the same time and the list of
+compounds to unblock can optionally be specified as a file by prefixing the
+file name with ``@``.
+
+.. code-block:: shell
+
+    $ psamm-model gapfill --compound @list_of_compounds_to_unblock.tsv
+
+The GapFind algorithm is defined in terms of a MILP problem and can therefore
+be computationally expensive to run for larger models.
 
 FastGapFill (``fastgapfill``)
 -----------------------------
