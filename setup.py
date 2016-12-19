@@ -57,6 +57,7 @@ setup(
             'fluxcoupling = psamm.commands.fluxcoupling:FluxCouplingCommand',
             'formulacheck = psamm.commands.formulacheck:FormulaBalanceCommand',
             'fva = psamm.commands.fva:FluxVariabilityCommand',
+            'gapcheck = psamm.commands.gapcheck:GapCheckCommand',
             'gapfill = psamm.commands.gapfill:GapFillCommand',
             'genedelete = psamm.commands.genedelete:GeneDeletionCommand',
             'masscheck = psamm.commands.masscheck:MassConsistencyCommand',
