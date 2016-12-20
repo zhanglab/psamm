@@ -114,6 +114,19 @@ class MetabolicMixin(object):
 
         self._mm = self._model.create_metabolic_model()
 
+    def report_flux_balance_error(self, exc=None):
+        to_check = set()
+        for reaction in self._mm.reactions:
+            lower, upper = self._mm.limits[reaction]
+            if upper < 0 or lower > 0:
+                to_check.add(reaction)
+
+        message = 'Failed to solve flux balance problem!'
+        if len(to_check) > 0:
+            message += ' Please check reactions with forced flux: {}'.format(
+                ', '.join(sorted(to_check)))
+        self.fail(message, exc)
+
 
 class ObjectiveMixin(object):
     """Mixin for commands that use biomass as objective.
