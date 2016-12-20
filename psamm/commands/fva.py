@@ -68,10 +68,14 @@ class FluxVariabilityCommand(MetabolicMixin, SolverCommandMixin,
 
         start_time = time.time()
 
-        threshold = self._args.threshold
-        if threshold.relative:
+        try:
             fba_fluxes = dict(fluxanalysis.flux_balance(
                 self._mm, reaction, tfba=False, solver=solver))
+        except fluxanalysis.FluxBalanceError as e:
+            self.report_flux_balance_error(e)
+
+        threshold = self._args.threshold
+        if threshold.relative:
             threshold.reference = fba_fluxes[reaction]
 
         logger.info('Setting objective threshold to {}'.format(
