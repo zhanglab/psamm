@@ -21,6 +21,8 @@ import time
 import logging
 from itertools import product
 
+from six import text_type
+
 from ..command import (Command, MetabolicMixin, LoopRemovalMixin,
                        SolverCommandMixin, ParallelTaskMixin)
 from .. import fluxanalysis, fastcore
@@ -88,8 +90,11 @@ class FluxConsistencyCommand(MetabolicMixin, LoopRemovalMixin,
 
         if enable_fastcore:
             solver = self._get_solver()
-            inconsistent = set(fastcore.fastcc(
-                self._mm, epsilon, solver=solver))
+            try:
+                inconsistent = set(fastcore.fastcc(
+                    self._mm, epsilon, solver=solver))
+            except fluxanalysis.FluxBalanceError as e:
+                self.report_flux_balance_error(e)
         else:
             if enable_tfba:
                 solver = self._get_solver(integer=True)
@@ -98,14 +103,20 @@ class FluxConsistencyCommand(MetabolicMixin, LoopRemovalMixin,
 
             if self._args.reduce_lp:
                 logger.info('Running with reduced number of LP problems.')
-                inconsistent = set(
-                    fluxanalysis.consistency_check(
-                        self._mm, self._mm.reactions, epsilon,
-                        tfba=enable_tfba, solver=solver))
+                try:
+                    inconsistent = set(
+                        fluxanalysis.consistency_check(
+                            self._mm, self._mm.reactions, epsilon,
+                            tfba=enable_tfba, solver=solver))
+                except fluxanalysis.FluxBalanceError as e:
+                    self.report_flux_balance_error(e)
             else:
                 logger.info('Using flux bounds to determine consistency.')
-                inconsistent = set(self._run_fva_fluxcheck(
-                    self._mm, solver, enable_tfba, epsilon))
+                try:
+                    inconsistent = set(self._run_fva_fluxcheck(
+                        self._mm, solver, enable_tfba, epsilon))
+                except FluxCheckFVATaskError:
+                    self.report_flux_balance_error()
 
         logger.info('Solving took {:.2f} seconds'.format(
             time.time() - start_time))
@@ -175,6 +186,10 @@ class FluxConsistencyCommand(MetabolicMixin, LoopRemovalMixin,
         executor.join()
 
 
+class FluxCheckFVATaskError(Exception):
+    """Error raised from parallel flux check task on failure."""
+
+
 class FluxCheckFVATaskHandler(object):
     def __init__(self, model, solver, enable_tfba):
         self._problem = fluxanalysis.FluxBalanceProblem(model, solver)
@@ -182,4 +197,9 @@ class FluxCheckFVATaskHandler(object):
             self._problem.add_thermodynamic()
 
     def handle_task(self, reaction_id, direction):
-        return self._problem.flux_bound(reaction_id, direction)
+        try:
+            return self._problem.flux_bound(reaction_id, direction)
+        except fluxanalysis.FluxBalanceError as e:
+            # FluxBalanceError is not picklable. Reraise as picklable
+            # exception.
+            raise FluxCheckFVATaskError(text_type(e))
