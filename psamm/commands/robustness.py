@@ -95,6 +95,11 @@ class RobustnessCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
         if loop_removal == 'tfba':
             p.add_thermodynamic()
 
+        try:
+            p.check_constraints()
+        except fluxanalysis.FluxBalanceError as e:
+            self.report_flux_balance_error(e)
+
         # Determine minimum and maximum flux for varying reaction
         if self._args.maximum is None:
             p.maximize(varying_reaction)
