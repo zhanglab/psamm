@@ -45,8 +45,11 @@ class FluxCouplingCommand(MetabolicMixin, SolverCommandMixin,
         if max_reaction is None:
             self.fail('The biomass reaction was not specified')
 
-        fba_fluxes = dict(fluxanalysis.flux_balance(
-            self._mm, max_reaction, tfba=False, solver=solver))
+        try:
+            fba_fluxes = dict(fluxanalysis.flux_balance(
+                self._mm, max_reaction, tfba=False, solver=solver))
+        except fluxanalysis.FluxBalanceError as e:
+            self.report_flux_balance_error(e)
         optimum = fba_fluxes[max_reaction]
 
         handler_args = self._mm, {max_reaction: 0.999 * optimum}, solver
