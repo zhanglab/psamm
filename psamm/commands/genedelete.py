@@ -84,7 +84,10 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         solver = self._get_solver()
         prob = fluxanalysis.FluxBalanceProblem(self._mm, solver)
 
-        prob.maximize(obj_reaction)
+        try:
+            prob.maximize(obj_reaction)
+        except fluxanalysis.FluxBalanceError as e:
+            self.report_flux_balance_error(e)
         wild = prob.get_flux(obj_reaction)
 
         for reaction in deleted_reactions:
