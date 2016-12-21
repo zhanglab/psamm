@@ -30,8 +30,12 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
+            '--method', choices=['gapfind', 'prodcheck, pccheck'],
+            help='Adds implicit sinks for all compounds', action='store_true')
+        parser.add_argument(
             '--epsilon', type=float, default=1e-5,
             help='Threshold for compound production')
+
         super(GapCheckCommand, cls).init_parser(parser)
 
     def run(self):
@@ -47,24 +51,28 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
         extracellular_comp = self._model.extracellular_compartment
         epsilon = self._args.epsilon
         v_max = float(self._model.default_flux_limit)
+        model = self._mm
 
-        # Run GapFind on model
-        logger.info('Searching for blocked compounds...')
-        result = gapfind(self._mm, solver=solver, epsilon=epsilon, v_max=v_max)
+        if self._args.method == 'gapfind':
+            # Run GapFind on model
+            logger.info('Searching for blocked compounds...')
+            result = gapfind(self._mm, solver=solver, epsilon=epsilon, v_max=v_max)
 
-        try:
-            blocked = set(compound for compound in result
-                          if compound.compartment != extracellular_comp)
-        except GapFillError as e:
-            self._log_epsilon_and_fail(epsilon, e)
+            try:
+                blocked = set(compound for compound in result
+                              if compound.compartment != extracellular_comp)
+            except GapFillError as e:
+                self._log_epsilon_and_fail(epsilon, e)
 
-        if len(blocked) > 0:
-            logger.info('Blocked compounds: {}'.format(len(blocked)))
-            for compound in sorted(blocked):
-                name = compound_name.get(compound.name, compound.name)
-                print('{}\t{}'.format(compound, name))
-        else:
-            logger.info('No blocked compounds found')
+            if len(blocked) > 0:
+                logger.info('Blocked compounds: {}'.format(len(blocked)))
+                for compound in sorted(blocked):
+                    name = compound_name.get(compound.name, compound.name)
+                    print('{}\t{}'.format(compound, name))
+            else:
+                logger.info('No blocked compounds found')
+
+
 
     def _log_epsilon_and_fail(self, epsilon, exc):
         msg = ('Finding blocked compounds failed with epsilon set to {}. Try'
