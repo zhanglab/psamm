@@ -72,7 +72,7 @@ setup(
     test_suite='psamm.tests',
 
     install_requires=[
-        'PyYAML>=3.11,<4.0',
+        'PyYAML~=3.11',
         'six'
     ],
     extras_require={
