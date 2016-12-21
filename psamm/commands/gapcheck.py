@@ -34,7 +34,7 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--method', choices=['gapfind', 'prodcheck'],
+            '--method', choices=['gapfind', 'prodcheck', 'sinkcheck'],
             default='prodcheck',
             help='Method to use for gap checking (default: prodcheck)')
         parser.add_argument(
@@ -78,6 +78,12 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
             blocked = self.run_reaction_production_check(
                 self._mm, solver=solver, threshold=self._args.epsilon,
                 implicit_sinks=implicit_sinks)
+        elif self._args.method == 'sinkcheck':
+            # Run sink check on model
+            solver = self._get_solver()
+            blocked = self.run_sink_check(
+                self._mm, solver=solver, threshold=self._args.epsilon,
+                implicit_sinks=implicit_sinks)
         else:
             self.argument_error('Invalid method: {}'.format(self._args.method))
 
@@ -92,6 +98,52 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
             print('{}\t{}'.format(compound, name))
 
         logger.info('Blocked compounds: {}'.format(count))
+
+    def run_sink_check(self, model, solver, threshold, implicit_sinks=True):
+        """Run sink production check method."""
+        prob = solver.create_problem()
+
+        # Create flux variables
+        v = prob.namespace()
+        for reaction_id in model.reactions:
+            lower, upper = model.limits[reaction_id]
+            v.define([reaction_id], lower=lower, upper=upper)
+
+        # Build mass balance constraints
+        massbalance_lhs = {compound: 0 for compound in model.compounds}
+        for spec, value in iteritems(model.matrix):
+            compound, reaction_id = spec
+            massbalance_lhs[compound] += v(reaction_id) * value
+
+        mass_balance_constrs = {}
+        for compound, lhs in iteritems(massbalance_lhs):
+            if implicit_sinks:
+                # The constraint is merely >0 meaning that we have implicit
+                # sinks for all compounds.
+                prob.add_linear_constraints(lhs >= 0)
+            else:
+                # Save these constraints so we can temporarily remove them
+                # to create a sink.
+                c, = prob.add_linear_constraints(lhs == 0)
+                mass_balance_constrs[compound] = c
+
+        for compound, lhs in sorted(iteritems(massbalance_lhs)):
+            if not implicit_sinks:
+                mass_balance_constrs[compound].delete()
+
+            prob.set_objective(lhs)
+            result = prob.solve(lp.ObjectiveSense.Maximize)
+            if not result:
+                logger.warning('Failed to solve for compound: {}'.format(
+                    compound))
+
+            if result.get_value(lhs) < threshold:
+                yield compound
+
+            if not implicit_sinks:
+                # Restore mass balance constraint.
+                c, = prob.add_linear_constraints(lhs == 0)
+                mass_balance_constrs[compound] = c
 
     def run_reaction_production_check(self, model, solver, threshold,
                                       implicit_sinks=True):

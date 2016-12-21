@@ -379,6 +379,14 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command(
             GapCheckCommand, ['--method=prodcheck', '--no-implicit-sinks'])
 
+    def test_run_gapcheck_sinkcheck(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=sinkcheck'])
+
+    def test_run_gapcheck_sinkcheck_without_implicit_sinks(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=sinkcheck', '--no-implicit-sinks'])
+
     def test_run_gapcheck_gapfind(self):
         self.run_solver_command(
             GapCheckCommand, ['--method=gapfind'], {'integer': True})
