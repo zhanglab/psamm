@@ -26,7 +26,7 @@ install:
         export LD_LIBRARY_PATH="$HOME/qsopt_ex-2.5.10.3/lib:$LD_LIBRARY_PATH";
       fi
 
-    - pip install tox 'python-coveralls==2.5.0'
+    - pip install tox coveralls
 
 script: tox -v
 after_success: coveralls
