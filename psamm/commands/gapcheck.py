@@ -18,9 +18,11 @@
 from __future__ import unicode_literals
 
 import logging
+from six import iteritems
 
 from ..command import Command, MetabolicMixin, SolverCommandMixin
 from ..gapfill import gapfind, GapFillError
+from ..lpsolver import lp
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +74,76 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
             else:
                 logger.info('No blocked compounds found')
 
+        if self._args.method == 'pccheck':
+            self.run_prodconcheck(model, solver, compound_name, self._args.epsilon)
 
+    def run_prodcheck(model, solver, compound_name):
+        prob = solver.create_problem()
+
+        v = prob.namespace()
+        for reaction_id in model.reactions:
+            lower, upper = model.limits[reaction_id]
+            v.define([reaction_id], lower=lower, upper=upper)
+
+        massbalance_lhs = {compound: 0 for compound in compound_name.keys()}
+        for spec, value in iteritems(model.matrix):
+            compound, reaction_id = spec
+            massbalance_lhs[compound] += v(reaction_id) * value
+
+        for compound, lhs in iteritems(massbalance_lhs):
+                #This constraint results in implicit sinks being present for each compound
+                prob.add_linear_constraints(lhs >= 0)
+
+        blocked_dict = {}
+        for cpd_id in compound_name.keys():
+            prob_testing = prob
+            prob_testing.set_objective(massbalance_lhs.get(cpd_id))
+            prob_testing.solve(lp.ObjectiveSense.Maximize)
+            if prob_testing.result.get_value(massbalance_lhs.get(cpd_id)) >= 0 + self._args.epsilon:
+                blocked_dict[cpd_id] = 1
+            else:
+                blocked_dict[cpd_id] = 0
+
+        for i, j in blocked_dict.iteritems():
+            if j == 0:
+                print(i)
+
+    def run_prodconcheck(model, solver, compound_names, threshold):
+        prob = solver.create_problem()
+
+        v = prob.namespace()
+        for reaction_id in model.reactions:
+            lower, upper = model.limits[reaction_id]
+            v.define([reaction_id], lower=lower, upper=upper)
+
+        massbalance_lhs = {compound: 0 for compound in compound_names.values()}
+        for spec, value in iteritems(model.matrix):
+            compound, reaction_id = spec
+            massbalance_lhs[compound] += v(reaction_id) * value
+
+        mass_balance_constrs = {}
+        for compound, lhs in iteritems(massbalance_lhs):
+            # The constraint is merely >0 meaning that we have implicit sinks
+            # for all compounds.
+            c, = prob.add_linear_constraints(lhs == 0)
+            mass_balance_constrs[compound] = c
+
+        blocked_dict = {}
+        for cpd_id in compound_names.values():
+            prob_testing = prob
+            mass_balance_constrs.get(cpd_id).delete()
+
+            prob_testing.set_objective(massbalance_lhs.get(cpd_id))
+            prob_testing.solve(lp.ObjectiveSense.Maximize)
+            if prob_testing.result.get_value(massbalance_lhs.get(cpd_id)) >= 0+threshold:
+                blocked_dict[cpd_id] = 1
+            else:
+                blocked_dict[cpd_id] = 0
+            prob.add_linear_constraints(massbalance_lhs.get(cpd_id) == 0)
+
+        for i, j in blocked_dict.iteritems():
+            if j == 0:
+                print(i)
 
     def _log_epsilon_and_fail(self, epsilon, exc):
         msg = ('Finding blocked compounds failed with epsilon set to {}. Try'
