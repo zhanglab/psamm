@@ -46,7 +46,10 @@ class ExcelExportCommand(Command):
             self.fail('Excel export requires the XlsxWriter python module')
         workbook = xlsxwriter.Workbook(self._args.file)
         reaction_sheet = workbook.add_worksheet(name='Reactions')
-        git_version = util.git_try_describe(self._model.context.basepath)
+
+        git_version = None
+        if self._model.context is not None:
+            git_version = util.git_try_describe(self._model.context.basepath)
 
         property_set = set()
         for reaction in model.parse_reactions():

@@ -80,9 +80,10 @@ class Command(object):
             name = text_type(self._model.context)
         logger.info('Model: {}'.format(name))
 
-        version = util.git_try_describe(self._model.context.basepath)
-        if version is not None:
-            logger.info('Model Git version: {}'.format(version))
+        if self._model.context is not None:
+            version = util.git_try_describe(self._model.context.basepath)
+            if version is not None:
+                logger.info('Model Git version: {}'.format(version))
 
     @classmethod
     def init_parser(cls, parser):

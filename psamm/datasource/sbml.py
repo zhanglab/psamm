@@ -817,7 +817,10 @@ class SBMLWriter(object):
         ET.register_namespace('mathml', MATHML_NS)
         ET.register_namespace('xhtml', XHTML_NS)
         ET.register_namespace('fbc', FBC_V2)
-        git_version = util.git_try_describe(model.context.basepath)
+
+        git_version = None
+        if model.context is not None:
+            git_version = util.git_try_describe(model.context.basepath)
 
         # Load compound information
         compound_name = {}
