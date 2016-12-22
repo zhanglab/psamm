@@ -282,11 +282,11 @@ class TestCommandMain(unittest.TestCase):
 
         self.assertEqual(f.getvalue(), '\n'.join('\t'.join(row) for row in [
             ['id', 'equation', 'genes', 'in_model'],
-            ['rxn_1', '|A_\u2206[e]| => |B[c]|', "['gene_1', 'gene_2']",
-             'True'],
+            ['rxn_1', '|A_\u2206[e]| => |B[c]|', '["gene_1", "gene_2"]',
+             'true'],
             ['rxn_2_\u03c0', '|B[c]| => |C[e]|',
-             'gene_3 or (gene_4 and gene_5)', 'True'],
-            ['rxn_3', '|D[c]| => |E[c]|', 'None', 'True'],
+             'gene_3 or (gene_4 and gene_5)', 'true'],
+            ['rxn_3', '|D[c]| => |E[c]|', '', 'true'],
             []
         ]))
 
@@ -296,7 +296,7 @@ class TestCommandMain(unittest.TestCase):
                 '--model', self._model_dir, 'tableexport', 'compounds'])
 
         self.assertEqual(f.getvalue(), '\n'.join([
-            'id\tin_model', 'A_\u2206\tTrue', 'B\tTrue', 'C\tTrue', ''
+            'id\tin_model', 'A_\u2206\ttrue', 'B\ttrue', 'C\ttrue', ''
         ]))
 
     def test_run_tableexport_medium(self):
@@ -306,8 +306,8 @@ class TestCommandMain(unittest.TestCase):
 
         self.assertEqual(f.getvalue(), '\n'.join([
             'Compound ID\tReaction ID\tLower Limit\tUpper Limit',
-            'A_\u2206[e]\tNone\t-1000\t1000',
-            'C[e]\tNone\t-1000\t1000',
+            'A_\u2206[e]\t\t-1000\t1000',
+            'C[e]\t\t-1000\t1000',
             ''
         ]))
 
@@ -318,7 +318,7 @@ class TestCommandMain(unittest.TestCase):
 
         self.assertEqual(f.getvalue(), '\n'.join([
             'Reaction ID\tLower Limits\tUpper Limits',
-            'rxn_2_\u03c0\tNone\t100',
+            'rxn_2_\u03c0\t\t100',
             ''
         ]))
 
@@ -328,9 +328,9 @@ class TestCommandMain(unittest.TestCase):
                 '--model', self._model_dir, 'tableexport', 'metadata'])
 
         self.assertEqual(f.getvalue(), '\n'.join([
-            'Model Name: Test model',
-            'Biomass Reaction: rxn_1',
-            'Default Flux Limits: 1000',
+            'Model Name\tTest model',
+            'Biomass Reaction\trxn_1',
+            'Default Flux Limits\t1000',
             ''
         ]))
 
