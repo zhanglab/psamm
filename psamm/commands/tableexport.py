@@ -24,6 +24,7 @@ import logging
 from six import text_type, string_types, integer_types
 
 from ..command import Command
+from .. import util
 
 logger = logging.getLogger(__name__)
 
@@ -142,9 +143,16 @@ class ExportTableCommand(Command):
                 reaction, lower, upper)))
 
     def _metadata_export(self):
+        git_version = None
+        if self._model.context is not None:
+            git_version = util.git_try_describe(self._model.context.basepath)
+
         print('Model Name\t{}'.format(
             _encode_value(self._model.name)))
         print('Biomass Reaction\t{}'.format(
             _encode_value(self._model.biomass_reaction)))
         print('Default Flux Limits\t{}'.format(
             _encode_value(self._model.default_flux_limit)))
+
+        if git_version is not None:
+            print('Git version\t{}'.format(_encode_value(git_version)))
