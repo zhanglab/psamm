@@ -24,7 +24,7 @@ with open('README.rst') as f:
 
 setup(
     name='psamm',
-    version='0.26',
+    version='0.27',
     description='PSAMM metabolic modeling tools',
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
