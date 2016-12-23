@@ -104,7 +104,10 @@ class FluxBalanceCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
 
         start_time = time.time()
 
-        p.maximize(reaction)
+        try:
+            p.maximize(reaction)
+        except fluxanalysis.FluxBalanceError as e:
+            self.report_flux_balance_error(e)
 
         logger.info('Solving took {:.2f} seconds'.format(
             time.time() - start_time))
@@ -123,7 +126,11 @@ class FluxBalanceCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
         start_time = time.time()
 
         # Maximize reaction flux
-        p.maximize(reaction)
+        try:
+            p.maximize(reaction)
+        except fluxanalysis.FluxBalanceError as e:
+            self.report_flux_balance_error(e)
+
         fluxes = {r: p.get_flux(r) for r in self._mm.reactions}
 
         # Run flux minimization
@@ -151,7 +158,11 @@ class FluxBalanceCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
         start_time = time.time()
 
         p.add_thermodynamic()
-        p.maximize(reaction)
+
+        try:
+            p.maximize(reaction)
+        except fluxanalysis.FluxBalanceError as e:
+            self.report_flux_balance_error(e)
 
         logger.info('Solving took {:.2f} seconds'.format(
             time.time() - start_time))
