@@ -32,8 +32,8 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--method', choices=['gapfind', 'prodcheck, pccheck'],
-            help='Adds implicit sinks for all compounds', action='store_true')
+            '--method', choices=['gapfind', 'prodcheck', 'pccheck'],
+            help='Adds implicit sinks for all compounds',type=str, required=True)
         parser.add_argument(
             '--epsilon', type=float, default=1e-5,
             help='Threshold for compound production')
@@ -43,11 +43,14 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
     def run(self):
         # Load compound information
         compound_name = {}
+        compound_list = []
         for compound in self._model.parse_compounds():
             if 'name' in compound.properties:
                 compound_name[compound.id] = compound.properties['name']
             elif compound.id not in compound_name:
                 compound_name[compound.id] = compound.id
+        for compound in self._mm.compounds:
+            compound_list.append(compound)
 
         solver = self._get_solver(integer=True)
         extracellular_comp = self._model.extracellular_compartment
@@ -73,11 +76,12 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
                     print('{}\t{}'.format(compound, name))
             else:
                 logger.info('No blocked compounds found')
-
+        if self._args.method == 'prodcheck':
+            self.run_prodcheck(model, solver, compound_list, self._args.epsilon)
         if self._args.method == 'pccheck':
-            self.run_prodconcheck(model, solver, compound_name, self._args.epsilon)
+            self.run_prodconcheck(model, solver, compound_list, self._args.epsilon)
 
-    def run_prodcheck(model, solver, compound_name):
+    def run_prodcheck(self, model, solver, compound_name, threshold):
         prob = solver.create_problem()
 
         v = prob.namespace()
@@ -85,30 +89,29 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
             lower, upper = model.limits[reaction_id]
             v.define([reaction_id], lower=lower, upper=upper)
 
-        massbalance_lhs = {compound: 0 for compound in compound_name.keys()}
+        massbalance_lhs = {compound: 0 for compound in compound_name}
         for spec, value in iteritems(model.matrix):
             compound, reaction_id = spec
             massbalance_lhs[compound] += v(reaction_id) * value
 
         for compound, lhs in iteritems(massbalance_lhs):
-                #This constraint results in implicit sinks being present for each compound
-                prob.add_linear_constraints(lhs >= 0)
+            #This constraint results in implicit sinks being present for each compound
+            prob.add_linear_constraints(lhs >= 0)
 
         blocked_dict = {}
-        for cpd_id in compound_name.keys():
+        for cpd_id in compound_name:
             prob_testing = prob
             prob_testing.set_objective(massbalance_lhs.get(cpd_id))
             prob_testing.solve(lp.ObjectiveSense.Maximize)
-            if prob_testing.result.get_value(massbalance_lhs.get(cpd_id)) >= 0 + self._args.epsilon:
+            if prob_testing.result.get_value(massbalance_lhs.get(cpd_id)) >= 0 + threshold:
                 blocked_dict[cpd_id] = 1
             else:
                 blocked_dict[cpd_id] = 0
-
         for i, j in blocked_dict.iteritems():
             if j == 0:
                 print(i)
 
-    def run_prodconcheck(model, solver, compound_names, threshold):
+    def run_prodconcheck(self, model, solver, compound_names, threshold):
         prob = solver.create_problem()
 
         v = prob.namespace()
@@ -116,7 +119,7 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
             lower, upper = model.limits[reaction_id]
             v.define([reaction_id], lower=lower, upper=upper)
 
-        massbalance_lhs = {compound: 0 for compound in compound_names.values()}
+        massbalance_lhs = {compound: 0 for compound in compound_names}
         for spec, value in iteritems(model.matrix):
             compound, reaction_id = spec
             massbalance_lhs[compound] += v(reaction_id) * value
@@ -129,7 +132,7 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
             mass_balance_constrs[compound] = c
 
         blocked_dict = {}
-        for cpd_id in compound_names.values():
+        for cpd_id in compound_names:
             prob_testing = prob
             mass_balance_constrs.get(cpd_id).delete()
 
