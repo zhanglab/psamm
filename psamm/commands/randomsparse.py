@@ -73,9 +73,13 @@ class RandomSparseNetworkCommand(MetabolicMixin, LoopRemovalMixin,
         if enable_tfba:
             p.add_thermodynamic()
 
+        try:
+            p.maximize(reaction)
+        except fluxanalysis.FluxBalanceError as e:
+            self.report_flux_balance_error(e)
+
         threshold = self._args.threshold
         if threshold.relative:
-            p.maximize(reaction)
             threshold.reference = p.get_flux(reaction)
 
         flux_threshold = float(threshold)

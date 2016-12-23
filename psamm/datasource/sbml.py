@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Parser for SBML model files"""
 
@@ -29,8 +29,12 @@ import json
 
 from six import itervalues, iteritems, text_type
 
+from .context import FileMark
+from .entry import (CompoundEntry as BaseCompoundEntry,
+                    ReactionEntry as BaseReactionEntry)
 from ..reaction import Reaction, Compound, Direction
 from ..expression.boolean import Expression, And, Or, Variable
+from .. import util
 
 logger = logging.getLogger(__name__)
 
@@ -98,10 +102,10 @@ class _SBMLEntry(object):
         return self._root.find(self._reader._sbml_tag('notes'))
 
 
-class SpeciesEntry(_SBMLEntry):
+class SpeciesEntry(_SBMLEntry, BaseCompoundEntry):
     """Species entry in the SBML file"""
 
-    def __init__(self, reader, root):
+    def __init__(self, reader, root, filemark=None):
         super(SpeciesEntry, self).__init__(reader, root)
 
         self._name = root.get('name')
@@ -122,6 +126,8 @@ class SpeciesEntry(_SBMLEntry):
             logger.warning('Species {} was converted to boundary condition'
                            ' because of "_b" suffix'.format(self.id))
             self._boundary = True
+
+        self._filemark = filemark
 
     @property
     def name(self):
@@ -197,11 +203,15 @@ class SpeciesEntry(_SBMLEntry):
 
         return properties
 
+    @property
+    def filemark(self):
+        return self._filemark
 
-class ReactionEntry(_SBMLEntry):
+
+class ReactionEntry(_SBMLEntry, BaseReactionEntry):
     """Reaction entry in SBML file"""
 
-    def __init__(self, reader, root):
+    def __init__(self, reader, root, filemark=None):
         super(ReactionEntry, self).__init__(reader, root)
 
         self._name = self._root.get('name')
@@ -266,6 +276,8 @@ class ReactionEntry(_SBMLEntry):
                         self._upper_flux = bound.value
                     elif bound.operation == 'greaterEqual':
                         self._lower_flux = bound.value
+
+        self._filemark = filemark
 
     def _parse_species_references(self, name):
         """Yield species id and parsed value for a speciesReference list"""
@@ -366,6 +378,10 @@ class ReactionEntry(_SBMLEntry):
             properties['upper_flux'] = self._upper_flux
 
         return properties
+
+    @property
+    def filemark(self):
+        return self._filemark
 
 
 class ObjectiveEntry(object):
@@ -483,13 +499,15 @@ class SBMLReader(object):
     the reaction equations.
     """
 
-    def __init__(self, file, strict=False, ignore_boundary=False):
+    def __init__(self, file, strict=False, ignore_boundary=False,
+                 context=None):
         # Parse SBML file
         tree = ET.parse(file)
         root = tree.getroot()
 
         self._strict = strict
         self._ignore_boundary = ignore_boundary
+        self._context = context
 
         # Parse level and version
         self._sbml_tag = None
@@ -567,14 +585,16 @@ class SBMLReader(object):
         self._model_species = {}
         self._species = self._model.find(self._sbml_tag('listOfSpecies'))
         for species in self._species.iterfind(self._sbml_tag('species')):
-            entry = SpeciesEntry(self, species)
+            filemark = FileMark(self._context, None, None)
+            entry = SpeciesEntry(self, species, filemark=filemark)
             self._model_species[entry.id] = entry
 
         # Reactions
         self._model_reactions = {}
         self._reactions = self._model.find(self._sbml_tag('listOfReactions'))
         for reaction in self._reactions.iterfind(self._sbml_tag('reaction')):
-            entry = ReactionEntry(self, reaction)
+            filemark = FileMark(self._context, None, None)
+            entry = ReactionEntry(self, reaction, filemark=filemark)
             self._model_reactions[entry.id] = entry
 
         # Objectives
@@ -708,7 +728,7 @@ class SBMLWriter(object):
             if equation.direction == Direction.Forward:
                 lower = 0
             else:
-                lower = -model.get_default_flux_limit()
+                lower = -model.default_flux_limit
         else:
             lower = flux_limits[r_id][0]
 
@@ -716,7 +736,7 @@ class SBMLWriter(object):
             if equation.direction == Direction.Reverse:
                 upper = 0
             else:
-                upper = model.get_default_flux_limit()
+                upper = model.default_flux_limit
         else:
             upper = flux_limits[r_id][1]
 
@@ -798,6 +818,10 @@ class SBMLWriter(object):
         ET.register_namespace('xhtml', XHTML_NS)
         ET.register_namespace('fbc', FBC_V2)
 
+        git_version = None
+        if model.context is not None:
+            git_version = util.git_try_describe(model.context.basepath)
+
         # Load compound information
         compound_name = {}
         compound_properties = {}
@@ -819,7 +843,7 @@ class SBMLWriter(object):
 
             reaction_id = self._create_unique_id(
                 reaction_properties, self._make_safe_id(r.id))
-            if r.id == model.get_biomass_reaction():
+            if r.id == model.biomass_reaction:
                 biomass_id = reaction_id
 
             reaction_properties[reaction_id] = r.properties
@@ -841,9 +865,9 @@ class SBMLWriter(object):
             }
 
             if lower is None:
-                lower = -model.get_default_flux_limit()
+                lower = -model.default_flux_limit
             if upper is None:
-                upper = model.get_default_flux_limit()
+                upper = model.default_flux_limit
             flux_limits[reaction_id] = (lower, upper)
 
             # Create a dummy properties dict for undefined compounds
@@ -856,11 +880,16 @@ class SBMLWriter(object):
         root.set(self._sbml_tag('level'), '3')
         root.set(self._sbml_tag('version'), '1')
         root.set(_tag('required', FBC_V2), 'false')
+        if git_version is not None:
+            notes_tag = ET.SubElement(root, self._sbml_tag('notes'))
+            body_tag = ET.SubElement(notes_tag, _tag('body', XHTML_NS))
+            self._add_properties_notes(
+                body_tag, {'git version': git_version})
 
         model_tag = ET.SubElement(root, self._sbml_tag('model'))
         model_tag.set(_tag('strict', FBC_V2), 'true')
-        if model.get_name() is not None:
-            model_tag.set(self._sbml_tag('name'), model.get_name())
+        if model.name is not None:
+            model_tag.set(self._sbml_tag('name'), model.name)
 
         # Build mapping from Compound to species ID
         model_compartments = {}

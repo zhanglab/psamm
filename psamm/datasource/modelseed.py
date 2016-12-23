@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Module related to loading ModelSEED database files."""
 
@@ -21,6 +21,7 @@ import csv
 import re
 
 from .context import FileMark
+from .entry import CompoundEntry as BaseCompoundEntry
 
 
 class ParseError(Exception):
@@ -33,7 +34,7 @@ def decode_name(s):
     return re.sub(r'&#(\d+);', lambda x: chr(int(x.group(1))), s)
 
 
-class CompoundEntry(object):
+class CompoundEntry(BaseCompoundEntry):
     """Representation of entry in a ModelSEED compound table"""
 
     def __init__(self, id, names, formula, filemark=None):

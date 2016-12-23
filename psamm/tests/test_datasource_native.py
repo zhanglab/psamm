@@ -22,11 +22,14 @@ import tempfile
 import unittest
 import math
 from decimal import Decimal
+from collections import OrderedDict
 
-from psamm.datasource import native, context
+from psamm.datasource import native, context, entry
 from psamm.reaction import Reaction, Compound, Direction
+from psamm.formula import Formula
 
 from six import StringIO
+import yaml
 
 
 class TestYAMLDataSource(unittest.TestCase):
@@ -165,9 +168,9 @@ class TestYAMLFileSystemData(unittest.TestCase):
                 upper: 100
             '''
         m = native.NativeModel(long_string)
-        self.assertEqual(m.get_name(), 'Test model')
-        self.assertEqual(m.get_biomass_reaction(), 'rxn_1')
-        self.assertEqual(m.get_extracellular_compartment(), 'e')
+        self.assertEqual(m.name, 'Test model')
+        self.assertEqual(m.biomass_reaction, 'rxn_1')
+        self.assertEqual(m.extracellular_compartment, 'e')
         reactions = list(m.parse_reactions())
         self.assertEqual(reactions[0].id, 'rxn_1')
 
@@ -216,9 +219,9 @@ class TestYAMLFileSystemData(unittest.TestCase):
             }
 
         dmodel = native.NativeModel(dict_model)
-        self.assertEqual(dmodel.get_name(), 'Test model')
-        self.assertEqual(dmodel.get_biomass_reaction(), 'rxn_1')
-        self.assertEqual(dmodel.get_extracellular_compartment(), 'e')
+        self.assertEqual(dmodel.name, 'Test model')
+        self.assertEqual(dmodel.biomass_reaction, 'rxn_1')
+        self.assertEqual(dmodel.extracellular_compartment, 'e')
 
     def test_parse_model_file(self):
         path = self.write_model_file('model.yaml', '\n'.join([
@@ -230,10 +233,10 @@ class TestYAMLFileSystemData(unittest.TestCase):
 
         model = native.NativeModel.load_model_from_path(path)
 
-        self.assertEqual(model.get_name(), 'Test model')
-        self.assertEqual(model.get_biomass_reaction(), 'biomass_reaction_id')
-        self.assertEqual(model.get_extracellular_compartment(), 'Extra')
-        self.assertEqual(model.get_default_flux_limit(), 500)
+        self.assertEqual(model.name, 'Test model')
+        self.assertEqual(model.biomass_reaction, 'biomass_reaction_id')
+        self.assertEqual(model.extracellular_compartment, 'Extra')
+        self.assertEqual(model.default_flux_limit, 500)
 
     def test_bad_path(self):
         with self.assertRaises(native.ParseError):
@@ -273,8 +276,8 @@ class TestYAMLFileSystemData(unittest.TestCase):
         self.assertEqual(compounds[0].properties['name'], 'Water')
         self.assertEqual(compounds[0].formula, 'H2O')
         self.assertEqual(compounds[0].charge, 0)
-        self.assertEqual(compounds[0].kegg, 'C00001')
-        self.assertEqual(compounds[0].cas, '7732-18-5')
+        self.assertEqual(compounds[0].properties['kegg'], 'C00001')
+        self.assertEqual(compounds[0].properties['cas'], '7732-18-5')
 
     def test_parse_compound_yaml_file(self):
         path = self.write_model_file('compounds.yaml', '\n'.join([
@@ -307,7 +310,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
         self.assertEqual(reactions[0].properties['name'], 'Reaction 1')
         self.assertEqual(reactions[0].equation, Reaction(
             Direction.Forward, [(Compound('A'), 1)], [(Compound('B'), 2)]))
-        self.assertEqual(reactions[0].ec, None)
+        self.assertEqual(reactions[0].properties.get('ec'), None)
         self.assertEqual(reactions[0].genes, None)
         self.assertEqual(reactions[0].filemark.filecontext.filepath, path)
         self.assertEqual(reactions[0].filemark.line, 2)
@@ -511,5 +514,131 @@ class TestCheckId(unittest.TestCase):
         native._check_id(u'\u222b', 'Compound')
 
 
-if __name__ == '__main__':
-    unittest.main()
+class TestNativeModelWriter(unittest.TestCase):
+    def setUp(self):
+        self.writer = native.ModelWriter()
+
+    def test_convert_compound_entry(self):
+        compound = entry.DictCompoundEntry({
+            'id': 'c1',
+            'name': 'Compound 1',
+            'charge': 2,
+            'formula': None,
+            'custom': 'ABC'
+        })
+        d = self.writer.convert_compound_entry(compound)
+        self.assertIsInstance(d, OrderedDict)
+        self.assertEqual(d['id'], 'c1')
+        self.assertEqual(d['name'], 'Compound 1')
+        self.assertEqual(d['charge'], 2)
+        self.assertEqual(d['custom'], 'ABC')
+        self.assertNotIn('formula', d)
+
+    def test_convert_reaction_entry(self):
+        equation = Reaction(
+            Direction.Both, {Compound('c1', 'c'): -1, Compound('c2', 'c'): 1})
+        reaction = entry.DictReactionEntry({
+            'id': 'rxn01234',
+            'name': 'Test reaction',
+            'equation': equation,
+            'custom_property': -34,
+            'another_custom_property': None
+        })
+        d = self.writer.convert_reaction_entry(reaction)
+        self.assertIsInstance(d, OrderedDict)
+        self.assertEqual(d['id'], 'rxn01234')
+        self.assertEqual(d['name'], 'Test reaction')
+        self.assertEqual(d['equation'], equation)
+        self.assertEqual(d['custom_property'], -34)
+        self.assertNotIn('another_custom_property', d)
+
+    def test_write_compounds(self):
+        stream = StringIO()
+        compounds = [
+            entry.DictCompoundEntry({
+                'id': 'c1',
+                'name': 'Compound 1',
+                'charge': 2,
+                'custom': 34.5
+            }),
+            entry.DictCompoundEntry({
+                'id': 'c2',
+                'name': 'Compound 2',
+                'formula': Formula.parse('H2O')
+            })
+        ]
+        self.writer.write_compounds(stream, compounds)
+
+        self.assertEqual(yaml.safe_load(stream.getvalue()), [
+            {
+                'id': 'c1',
+                'name': 'Compound 1',
+                'charge': 2,
+                'custom': 34.5
+            },
+            {
+                'id': 'c2',
+                'name': 'Compound 2',
+                'formula': 'H2O'
+            }
+        ])
+
+    def test_write_compounds_with_properties(self):
+        stream = StringIO()
+        compounds = [
+            entry.DictCompoundEntry({
+                'id': 'c1',
+                'name': 'Compound 1',
+                'charge': 2
+            }),
+            entry.DictCompoundEntry({
+                'id': 'c2',
+                'name': 'Compound 2',
+                'formula': 'H2O'
+            })
+        ]
+        self.writer.write_compounds(stream, compounds, properties={'name'})
+
+        self.assertEqual(yaml.safe_load(stream.getvalue()), [
+            {
+                'id': 'c1',
+                'name': 'Compound 1'
+            },
+            {
+                'id': 'c2',
+                'name': 'Compound 2'
+            }
+        ])
+
+    def test_write_reactions(self):
+        stream = StringIO()
+        reactions = [
+            entry.DictReactionEntry({
+                'id': 'r1',
+                'name': 'Reaction 1',
+                'equation': Reaction(Direction.Both, {})
+            }),
+            entry.DictReactionEntry({
+                'id': 'r2',
+                'name': 'Reaction 2',
+                'equation': Reaction(Direction.Forward, {
+                    Compound('c1', 'c'): -1,
+                    Compound('c2', 'c'): 2
+                })
+            })
+        ]
+        self.writer.write_reactions(stream, reactions)
+
+        # The reaction equation for r1 is invalid (no compounds) and is
+        # therefore skipped.
+        self.assertEqual(yaml.safe_load(stream.getvalue()), [
+            {
+                'id': 'r1',
+                'name': 'Reaction 1'
+            },
+            {
+                'id': 'r2',
+                'name': 'Reaction 2',
+                'equation': '|c1[c]| => (2) |c2[c]|'
+            }
+        ])

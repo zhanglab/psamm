@@ -32,6 +32,7 @@ import sys
 import argparse
 import logging
 import abc
+import pickle
 from itertools import islice
 import multiprocessing as mp
 
@@ -75,14 +76,15 @@ class Command(object):
         self._model = model
         self._args = args
 
-        name = self._model.get_name()
+        name = self._model.name
         if name is None:
             name = text_type(self._model.context)
         logger.info('Model: {}'.format(name))
 
-        version = util.git_try_describe(self._model.context.basepath)
-        if version is not None:
-            logger.info('Model Git version: {}'.format(version))
+        if self._model.context is not None:
+            version = util.git_try_describe(self._model.context.basepath)
+            if version is not None:
+                logger.info('Model Git version: {}'.format(version))
 
     @classmethod
     def init_parser(cls, parser):
@@ -112,6 +114,19 @@ class MetabolicMixin(object):
 
         self._mm = self._model.create_metabolic_model()
 
+    def report_flux_balance_error(self, exc=None):
+        to_check = set()
+        for reaction in self._mm.reactions:
+            lower, upper = self._mm.limits[reaction]
+            if upper < 0 or lower > 0:
+                to_check.add(reaction)
+
+        message = 'Failed to solve flux balance problem!'
+        if len(to_check) > 0:
+            message += ' Please check reactions with forced flux: {}'.format(
+                ', '.join(sorted(to_check)))
+        self.fail(message, exc)
+
 
 class ObjectiveMixin(object):
     """Mixin for commands that use biomass as objective.
@@ -128,7 +143,7 @@ class ObjectiveMixin(object):
         if self._args.objective is not None:
             reaction = self._args.objective
         else:
-            reaction = self._model.get_biomass_reaction()
+            reaction = self._model.biomass_reaction
             if reaction is None:
                 self.argument_error('The objective reaction was not specified')
 
@@ -299,6 +314,9 @@ class FilePrefixAppendAction(argparse.Action):
 class _ErrorMarker(object):
     """Signals error in the child process."""
 
+    def __init__(self, pickled_exc=None):
+        self.pickled_exception = pickled_exc
+
 
 class ExecutorError(Exception):
     """Error running tasks on executor."""
@@ -320,9 +338,13 @@ class _ExecutorProcess(mp.Process):
                 results = [
                     (task, handler.handle_task(*task)) for task in tasks]
                 self._result_queue.put(results)
-        except BaseException:
-            self._result_queue.put(_ErrorMarker())
-            raise
+        except BaseException as e:
+            try:
+                pickled_exc = pickle.dumps(e, -1)
+            except Exception:
+                logger.warning("Unpicklable exception raised: {}".format(e))
+                pickled_exc = None
+            self._result_queue.put(_ErrorMarker(pickled_exc))
 
 
 class Executor(object):
@@ -361,7 +383,8 @@ class ProcessPoolExecutor(Executor):
         self._task_queue.put([task])
         results = self._result_queue.get()
         if isinstance(results, _ErrorMarker):
-            raise ExecutorError('Child process failed')
+            exception = pickle.loads(results.pickled_exception)
+            raise exception
 
         return next(itervalues(results))
 
@@ -383,10 +406,22 @@ class ProcessPoolExecutor(Executor):
             self._task_queue.put(tasks)
             workers += 1
 
+        exception = None
         while workers > 0:
             results = self._result_queue.get()
             if isinstance(results, _ErrorMarker):
-                raise ExecutorError('Child process failed')
+                if exception is None:
+                    if results.pickled_exception is None:
+                        exception = ExecutorError(
+                            "Unpicklable exception raised by child")
+                    else:
+                        exception = pickle.loads(results.pickled_exception)
+                workers -= 1
+                self._process_count -= 1
+                continue
+
+            if exception is not None:
+                continue
 
             tasks = next(it, None)
             if tasks is None:
@@ -396,6 +431,9 @@ class ProcessPoolExecutor(Executor):
 
             for task, result in results:
                 yield task, result
+
+        if exception is not None:
+            raise exception
 
     def close(self):
         for i in range(self._process_count):

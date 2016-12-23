@@ -24,7 +24,7 @@ with open('README.rst') as f:
 
 setup(
     name='psamm',
-    version='0.26',
+    version='0.27',
     description='PSAMM metabolic modeling tools',
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
@@ -57,6 +57,7 @@ setup(
             'fluxcoupling = psamm.commands.fluxcoupling:FluxCouplingCommand',
             'formulacheck = psamm.commands.formulacheck:FormulaBalanceCommand',
             'fva = psamm.commands.fva:FluxVariabilityCommand',
+            'gapcheck = psamm.commands.gapcheck:GapCheckCommand',
             'gapfill = psamm.commands.gapfill:GapFillCommand',
             'genedelete = psamm.commands.genedelete:GeneDeletionCommand',
             'masscheck = psamm.commands.masscheck:MassConsistencyCommand',
@@ -71,7 +72,7 @@ setup(
     test_suite='psamm.tests',
 
     install_requires=[
-        'PyYAML>=3.11,<4.0',
+        'PyYAML~=3.11',
         'six'
     ],
     extras_require={

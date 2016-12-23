@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Module for reading and writing native formats.
 
@@ -29,15 +29,21 @@ import os
 import logging
 import re
 import csv
+import math
+from collections import OrderedDict
 
 import yaml
-from six import string_types, iteritems
+from six import string_types, text_type, iteritems, PY3
 from decimal import Decimal
 
 from ..reaction import Reaction, Compound, Direction
+from ..expression import boolean
+from ..formula import Formula
 from ..metabolicmodel import MetabolicModel
 from ..database import DictDatabase
 from .context import FilePathContext, FileMark
+from .entry import (DictCompoundEntry as CompoundEntry,
+                    DictReactionEntry as ReactionEntry)
 from .reaction import ReactionParser
 from . import modelseed
 
@@ -94,92 +100,6 @@ def yaml_load(stream):
     return loader.get_data()
 
 
-class CompoundEntry(object):
-    """Representation of a compound entry in a native model"""
-
-    def __init__(self, compound_id, properties, filemark=None):
-        self._id = compound_id
-        self._properties = dict(properties)
-        self._filemark = filemark
-
-    @property
-    def id(self):
-        return self._id
-
-    @property
-    def name(self):
-        return self._properties.get('name')
-
-    @property
-    def formula(self):
-        return self._properties.get('formula')
-
-    @property
-    def charge(self):
-        return whendefined(int, self._properties.get('charge'))
-
-    @property
-    def kegg(self):
-        return self._properties.get('kegg')
-
-    @property
-    def cas(self):
-        return self._properties.get('cas')
-
-    @property
-    def zeromass(self):
-        return self._properties.get('zeromass')
-
-    @property
-    def properties(self):
-        return self._properties
-
-    @property
-    def filemark(self):
-        return self._filemark
-
-
-class ReactionEntry(object):
-    """Representation of a reaction entry in a native model"""
-
-    def __init__(self, id, properties, filemark=None):
-        self._id = id
-        self._properties = dict(properties)
-        self._name = self._properties.get('name')
-        self._equation = self._properties.get('equation')
-        self._ec = self._properties.get('ec')
-        self._genes = self._properties.get('genes')
-        self._filemark = filemark
-
-    @property
-    def id(self):
-        return self._id
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def equation(self):
-        return self._equation
-
-    @property
-    def ec(self):
-        return self._ec
-
-    @property
-    def genes(self):
-        return self._genes
-
-    @property
-    def properties(self):
-        return self._properties
-
-    @property
-    def filemark(self):
-        return self._filemark
-
-
 class NativeModel(object):
     """Represents a model specified using the native data formats
 
@@ -229,24 +149,42 @@ class NativeModel(object):
         raise ParseError('No model file could be found ({})'.format(
             ', '.join(DEFAULT_MODEL)))
 
-    def get_name(self):
-        """Return the name specified by the model"""
+    @property
+    def name(self):
+        """Name specified by the model."""
         return self._model.get('name', None)
 
-    def get_biomass_reaction(self):
-        """Return the biomass reaction specified by the model"""
+    @property
+    def biomass_reaction(self):
+        """Biomass reaction specified by the model."""
         return self._model.get('biomass', None)
 
-    def get_extracellular_compartment(self):
-        """Return the extracellular compartment specified by the model."""
+    @property
+    def extracellular_compartment(self):
+        """Extracellular compartment specified by the model.
+
+        Defaults to 'e'.
+        """
         return self._model.get('extracellular', 'e')
 
-    def get_default_compartment(self):
-        """Return the compartment to use when unspecified."""
+    @property
+    def default_compartment(self):
+        """Default compartment specified by the model.
+
+        The compartment that is implied when not specified. In some contexts
+        (e.g. medium) the extracellular compartment may be implied instead.
+        Defaults to 'c'.
+        """
         return self._model.get('default_compartment', 'c')
 
-    def get_default_flux_limit(self):
-        """Return the default flux limit specified by the model"""
+    @property
+    def default_flux_limit(self):
+        """Default flux limit specified by the model.
+
+        When flux limits on reactions are not specified, this value will be
+        used. Flux limit of [0;x] will be implied for irreversible reactions
+        and [-x;x] for reversible reactions, where x is this value.
+        Defaults to 1000."""
         return self._model.get('default_flux_limit', 1000)
 
     def parse_reactions(self):
@@ -256,7 +194,7 @@ class NativeModel(object):
         if 'reactions' in self._model:
             for reaction in parse_reaction_list(
                     self._context, self._model['reactions'],
-                    self.get_default_compartment()):
+                    self.default_compartment):
                 yield reaction
 
     def has_model_definition(self):
@@ -289,7 +227,7 @@ class NativeModel(object):
         upper flux limits.
         """
 
-        extracellular = self.get_extracellular_compartment()
+        extracellular = self.extracellular_compartment
         if 'media' in self._model:
             if not isinstance(self._model['media'], list):
                 raise ParseError('Expected media to be a list')
@@ -325,7 +263,7 @@ class NativeModel(object):
 
         undefined_compounds = set()
         extracellular_compounds = set()
-        extracellular = self.get_extracellular_compartment()
+        extracellular = self.extracellular_compartment
         for reaction in database.reactions:
             for compound, _ in database.get_reaction_values(reaction):
                 if compound.name not in compounds:
@@ -358,11 +296,11 @@ class NativeModel(object):
 
         return MetabolicModel.load_model(
             database, model_definition, self.parse_medium(),
-            self.parse_limits(),
-            v_max=self.get_default_flux_limit())
+            self.parse_limits(), v_max=self.default_flux_limit)
 
     @property
     def context(self):
+        """Model file loading context (or None, if undefined)."""
         return self._context
 
 
@@ -402,7 +340,7 @@ def parse_compound(compound_def, context=None):
     _check_id(compound_id, 'Compound')
 
     mark = FileMark(context, None, None)
-    return CompoundEntry(compound_id, compound_def, mark)
+    return CompoundEntry(compound_def, mark)
 
 
 def parse_compound_list(path, compounds):
@@ -437,8 +375,12 @@ def parse_compound_table_file(path, f):
             raise ParseError('Expected `id` column in table')
 
         props = {key: value for key, value in iteritems(row) if value != ''}
+
+        if 'charge' in props:
+            props['charge'] = int(props['charge'])
+
         mark = FileMark(context, i + 2, None)
-        yield CompoundEntry(row['id'], props, mark)
+        yield CompoundEntry(props, mark)
 
 
 def parse_compound_yaml_file(path, f):
@@ -574,7 +516,7 @@ def parse_reaction(reaction_def, default_compartment, context=None):
             reaction_def['equation'], default_compartment)
 
     mark = FileMark(context, None, None)
-    return ReactionEntry(reaction_id, reaction_props, mark)
+    return ReactionEntry(reaction_props, mark)
 
 
 def parse_reaction_list(path, reactions, default_compartment=None):
@@ -625,7 +567,7 @@ def parse_reaction_table_file(path, f, default_compartment):
                 props['equation'], default_compartment)
 
         mark = FileMark(context, lineno + 2, 0)
-        yield ReactionEntry(row['id'], props, mark)
+        yield ReactionEntry(props, mark)
 
 
 def parse_reaction_file(path, default_compartment=None):
@@ -950,3 +892,210 @@ def parse_model_file(path):
         with context.open('r') as f:
             for reaction_id in parse_model_yaml_file(context, f):
                 yield reaction_id
+
+
+# Threshold for converting reactions into dictionary representation.
+_MAX_REACTION_LENGTH = 10
+
+
+# Create wrapper representer for text_type for Py2/3 compatibility.
+if PY3:
+    def _represent_text_type(dumper, data):
+        return dumper.represent_str(data)
+else:
+    def _represent_text_type(dumper, data):
+        return dumper.represent_unicode(data)
+
+
+# Define custom dict representers for YAML
+# This allows reading/writing Python OrderedDicts in the correct order.
+# See: https://stackoverflow.com/questions/5121931/in-python-how-can-you-load-yaml-mappings-as-ordereddicts  # noqa
+def _dict_representer(dumper, data):
+    return dumper.represent_dict(iteritems(data))
+
+
+def _set_representer(dumper, data):
+    return dumper.represent_list(iter(data))
+
+
+def _boolean_expression_representer(dumper, data):
+    return _represent_text_type(dumper, text_type(data))
+
+
+def _reaction_representer(dumper, data):
+    """Generate a parsable reaction representation to the YAML parser.
+
+    Check the number of compounds in the reaction, if it is larger than 10,
+    then transform the reaction data into a list of directories with all
+    attributes in the reaction; otherwise, just return the text_type format
+    of the reaction data.
+    """
+    if len(data.compounds) > _MAX_REACTION_LENGTH:
+        def dict_make(compounds):
+            for compound, value in compounds:
+                yield OrderedDict([
+                    ('id', text_type(compound.name)),
+                    ('compartment', compound.compartment),
+                    ('value', value)])
+
+        left = list(dict_make(data.left))
+        right = list(dict_make(data.right))
+
+        direction = data.direction == Direction.Both
+
+        reaction = OrderedDict()
+        reaction['reversible'] = direction
+        if data.direction == Direction.Reverse:
+            reaction['left'] = right
+            reaction['right'] = left
+        else:
+            reaction['left'] = left
+            reaction['right'] = right
+
+        return dumper.represent_data(reaction)
+    else:
+        return _represent_text_type(dumper, text_type(data))
+
+
+def _formula_representer(dumper, data):
+    return _represent_text_type(dumper, text_type(data))
+
+
+def _decimal_representer(dumper, data):
+    # Code from float_representer in PyYAML.
+    if data % 1 == 0:
+        return dumper.represent_int(int(data))
+    elif math.isnan(data):
+        value = '.nan'
+    elif data == float('inf'):
+        value = '.inf'
+    elif data == float('-inf'):
+        value = '-.inf'
+    else:
+        value = text_type(data).lower()
+        if '.' not in value and 'e' in value:
+            value = value.replace('e', '.0e', 1)
+    return dumper.represent_scalar('tag:yaml.org,2002:float', value)
+
+
+class ModelWriter(object):
+    """Writer for native (YAML) format."""
+
+    def __init__(self):
+        self._yaml_args = {
+            'default_flow_style': False,
+            'encoding': 'utf-8',
+            'allow_unicode': True,
+            'width': 79
+        }
+
+    def _dump(self, stream, data):
+        if hasattr(yaml, 'CSafeDumper'):
+            dumper = yaml.CSafeDumper(stream, **self._yaml_args)
+        else:
+            dumper = yaml.SafeDumper(stream, **self._yaml_args)
+
+        dumper.add_representer(OrderedDict, _dict_representer)
+        dumper.add_representer(set, _set_representer)
+        dumper.add_representer(frozenset, _set_representer)
+        dumper.add_representer(
+            boolean.Expression, _boolean_expression_representer)
+        dumper.add_representer(Reaction, _reaction_representer)
+        dumper.add_representer(Formula, _formula_representer)
+        dumper.add_representer(Decimal, _decimal_representer)
+
+        dumper.ignore_aliases = lambda *args: True
+
+        try:
+            dumper.open()
+            dumper.represent(data)
+            dumper.close()
+        finally:
+            dumper.dispose()
+
+    def convert_compound_entry(self, compound):
+        """Convert compound entry to YAML dict."""
+        d = OrderedDict()
+        d['id'] = compound.id
+
+        order = {
+            key: i for i, key in enumerate(
+                ['name', 'formula', 'formula_neutral', 'charge', 'kegg',
+                 'cas'])}
+        prop_keys = (
+            set(compound.properties) - {'boundary', 'compartment'})
+        for prop in sorted(prop_keys,
+                           key=lambda x: (order.get(x, 1000), x)):
+            if compound.properties[prop] is not None:
+                d[prop] = compound.properties[prop]
+
+        return d
+
+    def convert_reaction_entry(self, reaction):
+        """Convert reaction entry to YAML dict."""
+        d = OrderedDict()
+        d['id'] = reaction.id
+
+        def is_equation_valid(equation):
+            # If the equation is a Reaction object, it must have non-zero
+            # number of compounds.
+            return (equation is not None and (
+                    not isinstance(equation, Reaction) or
+                    len(equation.compounds) > 0))
+
+        order = {
+            key: i for i, key in enumerate(
+                ['name', 'genes', 'equation', 'subsystem', 'ec'])}
+        prop_keys = (set(reaction.properties) -
+                     {'lower_flux', 'upper_flux', 'reversible'})
+        for prop in sorted(prop_keys, key=lambda x: (order.get(x, 1000), x)):
+            if reaction.properties[prop] is not None:
+                d[prop] = reaction.properties[prop]
+            if prop == 'equation' and not is_equation_valid(d[prop]):
+                del d[prop]
+
+        return d
+
+    def write_compounds(self, stream, compounds, properties=None):
+        """Write iterable of compounds as YAML object to stream.
+
+        Args:
+            stream: File-like object.
+            compounds: Iterable of compound entries.
+            properties: Set of compound properties to output (or None to output
+                all).
+        """
+        def iter_entries():
+            for c in compounds:
+                entry = self.convert_compound_entry(c)
+                if entry is None:
+                    continue
+                if properties is not None:
+                    entry = OrderedDict(
+                        (key, value) for key, value in iteritems(entry)
+                        if key == 'id' or key in properties)
+                yield entry
+
+        self._dump(stream, list(iter_entries()))
+
+    def write_reactions(self, stream, reactions, properties=None):
+        """Write iterable of reactions as YAML object to stream.
+
+        Args:
+            stream: File-like object.
+            compounds: Iterable of reaction entries.
+            properties: Set of reaction properties to output (or None to output
+                all).
+        """
+        def iter_entries():
+            for r in reactions:
+                entry = self.convert_reaction_entry(r)
+                if entry is None:
+                    continue
+                if properties is not None:
+                    entry = OrderedDict(
+                        (key, value) for key, value in iteritems(entry)
+                        if key == 'id' or key in properties)
+                yield entry
+
+        self._dump(stream, list(iter_entries()))

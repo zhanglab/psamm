@@ -1,4 +1,19 @@
 
+v0.27 (2016-12-23)
+------------------
+
+- When exporting a model with `excelexport`, `sbmlexport` or `tableexport`, the
+  current Git commit ID of the model is now part of the export.
+- The `gapfill` command has been split into two separate commands. The new
+  command `gapcheck` only reports which compounds are blocked without
+  trying to fill gaps. The `gapfill` command now only reports the suggested
+  reactions for gap-filling.
+- The `tableexport` command has been made more robust when the model properties
+  contain special characters or structured data. Strings containing tabs or
+  newline characters are now quoted in the output.
+- Improved error messages for multiple commands when reactions with forced
+  flux (e.g. ATP maintenance reactions) impose impossible constraints.
+
 v0.26 (2016-11-17)
 ------------------
 

@@ -71,7 +71,7 @@ class FilePathContext(object):
         return open(self.filepath, mode)
 
     def __str__(self):
-        return self._filepath
+        return text_type(self._filepath)
 
 
 @six.python_2_unicode_compatible

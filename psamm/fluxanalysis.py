@@ -250,6 +250,14 @@ class FluxBalanceProblem(object):
 
         self.minimize_l1(weights)
 
+    def check_constraints(self):
+        """Optimize without objective to check that solution is possible.
+
+        Raises :class:`FluxBalanceError` if no flux solution is possible.
+        """
+        self._prob.set_objective(0)
+        self._solve()
+
     def _solve(self):
         """Solve the problem with the current objective."""
 
