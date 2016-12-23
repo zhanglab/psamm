@@ -300,6 +300,7 @@ class NativeModel(object):
 
     @property
     def context(self):
+        """Model file loading context (or None, if undefined)."""
         return self._context
 
 

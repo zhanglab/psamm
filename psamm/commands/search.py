@@ -19,6 +19,8 @@ from __future__ import print_function, unicode_literals
 
 import re
 
+from six import text_type
+
 from ..command import Command, FilePrefixAppendAction
 from ..datasource.reaction import parse_compound
 
@@ -41,11 +43,11 @@ class SearchCommand(Command):
         parser_compound.set_defaults(which='compound')
         parser_compound.add_argument(
             '--id', '-i', dest='id', metavar='id',
-            action=FilePrefixAppendAction, type=str, default=[],
+            action=FilePrefixAppendAction, type=text_type, default=[],
             help='Compound ID')
         parser_compound.add_argument(
             '--name', '-n', dest='name', metavar='name',
-            action=FilePrefixAppendAction, type=str, default=[],
+            action=FilePrefixAppendAction, type=text_type, default=[],
             help='Name of compound')
 
         # Reaction subcommand
