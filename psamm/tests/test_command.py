@@ -160,6 +160,22 @@ class TestCommandMain(unittest.TestCase):
             ]
         })
 
+        self._infeasible_model = NativeModel({
+            'biomass': 'rxn_1',
+            'reactions': [
+                {
+                    'id': 'rxn_1',
+                    'equation': 'A[c] => B[c]'
+                }
+            ],
+            'limits': [
+                {
+                    'reaction': 'rxn_1',
+                    'fixed': 10
+                }
+            ]
+        })
+
     def assertTableOutputEqual(self, output, table):
         self.assertEqual(
             output, '\n'.join('\t'.join(row) for row in table) + '\n')
@@ -172,11 +188,19 @@ class TestCommandMain(unittest.TestCase):
 
         return True
 
-    def run_command(self, command_class, args=[], target=None):
+    def skip_test_if_no_solver(self, **kwargs):
+        if not self.is_solver_available(**kwargs):
+            self.skipTest('No solver available')
+
+    def run_command(self, command_class, args=[], target=None, model=None):
         parser = argparse.ArgumentParser()
         command_class.init_parser(parser)
         parsed_args = parser.parse_args(args)
-        command = command_class(self._model, parsed_args)
+
+        if model is None:
+            model = self._model
+
+        command = command_class(model, parsed_args)
 
         with redirected_stdout(target=target) as f:
             command.run()
@@ -226,6 +250,12 @@ class TestCommandMain(unittest.TestCase):
     def test_run_fba(self):
         self.run_solver_command(FluxBalanceCommand)
 
+    def test_run_fba_with_infeasible(self):
+        self.skip_test_if_no_solver()
+        with self.assertRaises(SystemExit):
+            self.run_solver_command(
+                FluxBalanceCommand, model=self._infeasible_model)
+
     def test_run_fba_show_all_reactions(self):
         self.run_solver_command(FluxBalanceCommand, ['--all-reactions'])
 
@@ -233,18 +263,45 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command(
             FluxBalanceCommand, ['--loop-removal', 'tfba'], {'integer': True})
 
+    def test_run_fba_with_tfba_infeasible(self):
+        self.skip_test_if_no_solver(integer=True)
+        with self.assertRaises(SystemExit):
+            self.run_solver_command(
+                FluxBalanceCommand, ['--loop-removal=tfba'], {'integer': True},
+                model=self._infeasible_model)
+
     def test_run_fba_with_l1min(self):
         self.run_solver_command(
-            FluxBalanceCommand, ['--loop-removal', 'l1min'], {})
+            FluxBalanceCommand, ['--loop-removal', 'l1min'])
+
+    def test_run_fba_with_l1min_infeasible(self):
+        self.skip_test_if_no_solver()
+        with self.assertRaises(SystemExit):
+            self.run_solver_command(
+                FluxBalanceCommand, ['--loop-removal=l1min'],
+                model=self._infeasible_model)
 
     def test_run_fluxcheck(self):
         self.run_solver_command(FluxConsistencyCommand)
+
+    def test_run_fluxcheck_with_infeasible(self):
+        self.skip_test_if_no_solver()
+        with self.assertRaises(SystemExit):
+            self.run_solver_command(
+                FluxConsistencyCommand, model=self._infeasible_model)
 
     def test_run_fluxcheck_with_unrestricted(self):
         self.run_solver_command(FluxConsistencyCommand, ['--unrestricted'])
 
     def test_run_fluxcheck_with_fastcore(self):
         self.run_solver_command(FluxConsistencyCommand, ['--fastcore'])
+
+    def test_run_fluxcheck_with_fastcore_infeasible(self):
+        self.skip_test_if_no_solver()
+        with self.assertRaises(SystemExit):
+            self.run_solver_command(
+                FluxConsistencyCommand, ['--fastcore'],
+                model=self._infeasible_model)
 
     def test_run_fluxcheck_with_tfba(self):
         self.run_solver_command(
@@ -253,7 +310,15 @@ class TestCommandMain(unittest.TestCase):
     def test_run_fluxcheck_with_reduce_lp(self):
         self.run_solver_command(FluxConsistencyCommand, ['--reduce-lp'])
 
+    def test_run_fluxcheck_with_reduce_lp_infeasible(self):
+            self.skip_test_if_no_solver()
+            with self.assertRaises(SystemExit):
+                self.run_solver_command(
+                    FluxConsistencyCommand, ['--reduce-lp'],
+                    model=self._infeasible_model)
+
     def test_run_fluxcheck_with_both_tfba_and_fastcore(self):
+        self.skip_test_if_no_solver()
         with self.assertRaises(CommandError):
             self.run_solver_command(
                 FluxConsistencyCommand, ['--loop-removal=tfba', '--fastcore'],
@@ -262,11 +327,23 @@ class TestCommandMain(unittest.TestCase):
     def test_run_fluxcoupling(self):
         self.run_solver_command(FluxCouplingCommand)
 
+    def test_run_fluxcoupling_with_infeasible(self):
+        self.skip_test_if_no_solver()
+        with self.assertRaises(SystemExit):
+            self.run_solver_command(
+                FluxCouplingCommand, model=self._infeasible_model)
+
     def test_run_formulacheck(self):
         self.run_command(FormulaBalanceCommand)
 
     def test_run_fva(self):
         self.run_solver_command(FluxVariabilityCommand)
+
+    def test_run_fva_with_infeasible(self):
+        self.skip_test_if_no_solver()
+        with self.assertRaises(SystemExit):
+            self.run_solver_command(
+                FluxVariabilityCommand, model=self._infeasible_model)
 
     def test_run_fva_with_tfba(self):
         self.run_solver_command(
@@ -286,6 +363,13 @@ class TestCommandMain(unittest.TestCase):
 
     def test_run_genedelete(self):
         self.run_solver_command(GeneDeletionCommand, ['--gene', 'gene_1'])
+
+    def test_run_genedelete_with_infeasible(self):
+        self.skip_test_if_no_solver()
+        with self.assertRaises(SystemExit):
+            self.run_solver_command(
+                GeneDeletionCommand, ['--gene=gene_1'],
+                model=self._infeasible_model)
 
     def test_run_masscheck_compounds(self):
         self.run_solver_command(MassConsistencyCommand, ['--type', 'compound'])
@@ -309,6 +393,13 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command(
             RandomSparseNetworkCommand, ['--type=exchange', '50%'])
 
+    def test_run_randomsparse_reactions_with_infeasible(self):
+        self.skip_test_if_no_solver()
+        with self.assertRaises(SystemExit):
+            self.run_solver_command(
+                RandomSparseNetworkCommand, ['--type=reactions', '50%'],
+                model=self._infeasible_model)
+
     def test_run_robustness(self):
         self.run_solver_command(RobustnessCommand, ['rxn_2_\u03c0'])
 
@@ -320,6 +411,17 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command(
             RobustnessCommand, ['--loop-removal=tfba', 'rxn_2_\u03c0'],
             {'integer': True})
+
+    def test_run_robustness_with_l1min(self):
+        self.run_solver_command(
+            RobustnessCommand, ['--loop-removal=l1min', 'rxn_2_\u03c0'])
+
+    def test_run_robustness_with_infeasible(self):
+        self.skip_test_if_no_solver()
+        with self.assertRaises(SystemExit):
+            self.run_solver_command(
+                RobustnessCommand, ['rxn_2_\u03c0'],
+                model=self._infeasible_model)
 
     def test_run_sbmlexport(self):
         self.run_command(SBMLExport, target=BytesIO())
