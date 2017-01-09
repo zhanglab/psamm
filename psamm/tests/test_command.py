@@ -365,19 +365,24 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command(GeneDeletionCommand, ['--gene', 'gene_1'])
 
     def test_run_genedelete_with_fba(self):
-        self.run_solver_command(GeneDeletionCommand, ['--gene', 'gene_1', '--method=fba'])
+        self.run_solver_command(
+            GeneDeletionCommand, ['--gene=gene_1', '--method=fba'])
 
     def test_run_genedelete_with_lp2(self):
-        self.run_solver_command(GeneDeletionCommand, ['--gene', 'gene_1', '--method=lp2'])
+        self.run_solver_command(
+            GeneDeletionCommand, ['--gene=gene_1', '--method=lp2'])
 
     def test_run_genedelete_with_lp3(self):
-        self.run_solver_command(GeneDeletionCommand, ['--gene', 'gene_1', '--method=lp3'])
+        self.run_solver_command(
+            GeneDeletionCommand, ['--gene=gene_1', '--method=lp3'])
 
     def test_run_genedelete_with_qlp2(self):
-        self.run_solver_command(GeneDeletionCommand, ['--gene', 'gene_1', '--method=qlp2'])
+        self.run_solver_command(
+            GeneDeletionCommand, ['--gene=gene_1', '--method=qlp2'])
 
     def test_run_genedelete_with_qlp3(self):
-        self.run_solver_command(GeneDeletionCommand, ['--gene', 'gene_1', '--method=qlp3'])
+        self.run_solver_command(
+            GeneDeletionCommand, ['--gene=gene_1', '--method=qlp3'])
 
     def test_run_genedelete_with_infeasible(self):
         self.skip_test_if_no_solver()
