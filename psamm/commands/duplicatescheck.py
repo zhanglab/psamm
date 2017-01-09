@@ -15,11 +15,11 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-# File originally based on import from fastgapfill.py @ commit db72df89a7c0007d2392584e94385987e374164e
+# File originally based on import from:
+#   fastgapfill.py @ commit db72df89a7c0007d2392584e94385987e374164e
 
 from __future__ import unicode_literals
 
-import argparse
 import logging
 
 from ..command import (Command)
@@ -27,18 +27,17 @@ from ..command import (Command)
 logger = logging.getLogger(__name__)
 
 
-
-
-# This function is from Keith's script, "reaction_signature.py". Eventually it should be moved to a tools module or a stand-alone module.
+# This function is from Keith's script, "reaction_signature.py".
+#   Eventually it should be moved to a tools module or a stand-alone module.
 def reaction_signature(eq):
     return (tuple(sorted(str(compound) for compound, _ in eq.left)),
             tuple(sorted(str(compound) for compound, _ in eq.right)))
 
 
-
-
 class DuplicatesCheck(Command):
-    """Run duplicate checking algorithm on model. This finds any reactions that are duplicates. It does not remove them however."""
+    """Run duplicate checking algorithm on model.
+        This finds any reactions that are duplicates.
+        It does not remove them however."""
 
 # Assumptions: Reactions are balenced correctly.
 
@@ -53,30 +52,37 @@ class DuplicatesCheck(Command):
         """Run DuplicatesCheck command"""
 
         database_signatures = {}
-        # Reading reaction entries from model. Model is passed into self, but in not yet parsed.
+        # Reading reaction entries from model. Model is passed into self,
+        #   but in not yet parsed.
         for entry in self._model.parse_reactions():
             signature = reaction_signature(entry.equation)
-            database_signatures.setdefault(signature, set()).add((entry.id,entry.equation))
+            database_signatures.setdefault(signature, set()).add(
+                (entry.id, entry.equation))
 
-        ## R_48: A C B -> X Y Z
-        ## R_56: A C B -> X Y Z
+        # Notes from Jon and Josh's discussion on how this function might work
 
-        ## A C B -> X Y Z
-        ## Z Y X -> A B C
-
-        # ABC->XYZ
-        # XYZ->ABC
-
-        # ABC,l -> XYZ,r
-        # XYZ,l -> ABC,r
-
-        # ABC,l -> XYZ,r
-        # ABC,r -> XYZ,l
-
-        # sort both sides
-        # label each side list, such that it is a tuple of list+{left-side reaction|right-side reaction}
-        # sort the two lists
-        #loss = arrangment on each side
+        # Example:
+        #   R_48: A C B -> X Y Z
+        #   R_56: A C B -> X Y Z
+        # Process:
+        #   1)
+        #       A C B -> X Y Z
+        #       Z Y X -> A B C
+        #   2)
+        #       ABC->XYZ
+        #       XYZ->ABC
+        #   3)
+        #       ABC,l -> XYZ,r
+        #       XYZ,l -> ABC,r
+        #   4)
+        #       ABC,l -> XYZ,r
+        #       ABC,r -> XYZ,l
+        # Such that:
+        #   sort both sides
+        #   label each side list, such that it is a tuple of
+        #      list+{left-side reaction|right-side reaction}
+        #    sort the two lists
+        #    loss = arrangment on each side
 
         for reaction_set in database_signatures.itervalues():
             if len(reaction_set) > 1:
@@ -85,6 +91,5 @@ class DuplicatesCheck(Command):
                 for reaction, equation in reaction_set:
                     print(' - {}: {}'.format(
                         reaction, equation))
-
 
     ###
