@@ -44,8 +44,10 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             '--gene', metavar='genes', action=FilePrefixAppendAction,
             type=str, default=[], help='Delete multiple genes from model')
         parser.add_argument(
-            '--method', metavar='method', choices=['fba', 'lp2', 'lp3', 'qlp2', 'qlp3'],
-            type=str, default='fba', help='Select which method to solve the problem with')
+            '--method', metavar='method',
+            choices=['fba', 'lp2', 'lp3', 'qlp2', 'qlp3'],
+            type=str, default='fba',
+            help='Select which method to solve the problem with')
         super(GeneDeletionCommand, cls).init_parser(parser)
 
     def run(self):
@@ -102,7 +104,8 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             # Get the wildtype flux
             wild = prob.get_flux(obj_reaction)
 
-            # Add linear constraints to the reactions for the genes that the user specifies
+            # Add linear constraints to the reactions for the genes that the
+            # user specifies
             for reaction in deleted_reactions:
                 flux_var = prob.get_flux_var(reaction)
                 prob.prob.add_linear_constraints(flux_var == 0)
@@ -111,15 +114,16 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             prob.maximize(obj_reaction)
             deleteflux = prob.get_flux(obj_reaction)
 
-
             if wild != 0:
                 logger.info(
-                    'Objective reaction has {:.2%} flux of wild type flux'.format(
-                        abs(deleteflux / wild)))
+                    '''Objective reaction has {:.2%}
+                    flux of wild type flux'''.format(abs(deleteflux / wild)))
                 logger.info(
-                    'Solving took {:.2f} seconds'.format(time.time() - start_time))
+                    'Solving took {:.2f} seconds'.format(
+                    time.time() - start_time))
                 logger.info(
-                    'Objective reaction after gene deletion has flux {}'.format(
+                    '''Objective reaction after gene deletion
+                    has flux {}'''.format(
                         abs(deleteflux) if deleteflux == 0 else deleteflux))
 
         # Solve with MOMA LP3
@@ -131,12 +135,14 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             # Get the wildtype biomass for comparison later
             wild = p.get_fba_biomass(obj_reaction)
 
-            # Get the wildtype fluxes that we are going to constrain are model with
+            # Get the wildtype fluxes that we are going to constrain are
+            # model with
             wt_fluxes = p.get_fba_flux(obj_reaction)
-            #print(deleted_reactions)
+
             constr = []
 
-            # Set all the reactions assiciated to the gene to a flux state of 0
+            # Set all the reactions assiciated to the gene to a flux
+            # state of 0
             for reaction in deleted_reactions:
                 constr.extend(p.prob.add_linear_constraints(
                     p.get_flux_var(reaction) == 0))
@@ -157,12 +163,14 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             try:
                 deleteflux = p.get_flux(obj_reaction)
                 logger.info(
-                    'Objective reaction has {:.2%} flux of wild type flux'.format(
-                        abs(deleteflux / wild)))
+                    '''Objective reaction has {:.2%} flux of wild
+                    type flux'''.format(abs(deleteflux / wild)))
                 logger.info(
-                    'Solving took {:.2f} seconds'.format(time.time() - start_time))
+                    'Solving took {:.2f} seconds'.format(
+                    time.time() - start_time))
                 logger.info(
-                    'Objective reaction after gene deletion has flux {}'.format(
+                    '''Objective reaction after gene deletion
+                    has flux {}'''.format(
                         abs(deleteflux) if deleteflux == 0 else deleteflux))
             except moma.MOMAError:
                 logger.info('Error computing the flux')
