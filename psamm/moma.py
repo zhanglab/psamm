@@ -190,8 +190,8 @@ class MOMAProblem(object):
                 # that the difference between the wildtype flux is similar
                 # to the knockout flux.
                 constr.add(
-                z(f_reaction) >= f_value - v(f_reaction),
-                f_value - v(f_reaction) >= -z(f_reaction))
+                    z(f_reaction) >= f_value - v(f_reaction),
+                    f_value - v(f_reaction) >= -z(f_reaction))
 
         # If we minimize the sum of the z vector then we will minimize
         # the |vs_wt - vs| from above
@@ -243,8 +243,8 @@ class MOMAProblem(object):
                 # that the difference between the wildtype flux
                 # is similar to the knockout flux.
                 constr.add(
-                z(f_reaction) >= v_wt(f_reaction) - v(f_reaction),
-                v_wt(f_reaction) - v(f_reaction) >= -z(f_reaction))
+                    z(f_reaction) >= v_wt(f_reaction) - v(f_reaction),
+                    v_wt(f_reaction) - v(f_reaction) >= -z(f_reaction))
 
         # Set the objective for the sum of z
         self._prob.set_objective(z.sum(self._adjustment_reactions()))
