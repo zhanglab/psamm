@@ -257,11 +257,13 @@ class MOMAProblem(object):
         if not result:
             raise MOMAError('Unable to solve L1 MOMA: {}'.format(
                 result.status))
+
     # Implemetnation of the QLP2 MOMA algorithm
     # We try to maximize biomass, by keeping the fluxes relitively the same
     # as the wildtype. This helps avoid the assumption that an organism will
     # perform optimally directly after removing a gene.
     # Minimizes sum of (wild type - knockout)^2
+
     def minimize_qlp2(self, objective, wt_fluxes):
         # These are all of our non eachange reactions
         reactions = set(self._adjustment_reactions())
