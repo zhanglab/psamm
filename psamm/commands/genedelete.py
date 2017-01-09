@@ -153,6 +153,7 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             elif self._args.method == 'qlp3':
                 logger.info('Solving using MOMA QLP3...')
                 p.test_minimize_l2(obj_reaction)
+
             try:
                 deleteflux = p.get_flux(obj_reaction)
                 logger.info(
