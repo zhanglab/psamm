@@ -54,10 +54,6 @@ class ConstraintGroup(object):
 class MOMAProblem(object):
     def __init__(self, model, solver):
         self._prob = solver.create_problem()
-        self._prob._cp.set_log_stream(None)
-        self._prob._cp.set_error_stream(None)
-        self._prob._cp.set_warning_stream(None)
-        self._prob._cp.set_results_stream(None)
         self._model = model
 
         self._remove_constr = []
