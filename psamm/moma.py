@@ -190,7 +190,7 @@ class MOMAProblem(object):
                 # that the difference between the wildtype flux is similar
                 # to the knockout flux.
                 constr.add(z(f_reaction) >= f_value - v(f_reaction),
-                f_value - v(f_reaction) >= -z(f_reaction))
+                    f_value - v(f_reaction) >= -z(f_reaction))
 
         # If we minimize the sum of the z vector then we will minimize
         # the |vs_wt - vs| from above
@@ -212,7 +212,7 @@ class MOMAProblem(object):
     # as the wildtype. This helps avoid the assumption that an organism will
     # perform optimally directly after removing a gene.
     # Creates the constraint that the we select the optimal flux vector that
-    #is closest to the wildtype.
+    # is closest to the wildtype.
     # Minimizes sum of |wild type - knockout|
     def minimize_l1(self, objective, wt_obj, wt_fluxes):
         # These are all of our non eachange reactions
@@ -242,7 +242,7 @@ class MOMAProblem(object):
                 # that the difference between the wildtype flux
                 # is similar to the knockout flux.
                 constr.add(z(f_reaction) >= v_wt(f_reaction) - v(f_reaction),
-                v_wt(f_reaction) - v(f_reaction) >= -z(f_reaction))
+                    v_wt(f_reaction) - v(f_reaction) >= -z(f_reaction))
 
         # Set the objective for the sum of z
         self._prob.set_objective(z.sum(self._adjustment_reactions()))
@@ -257,7 +257,6 @@ class MOMAProblem(object):
         if not result:
             raise MOMAError('Unable to solve L1 MOMA: {}'.format(
                 result.status))
-                
     # Implemetnation of the QLP2 MOMA algorithm
     # We try to maximize biomass, by keeping the fluxes relitively the same
     # as the wildtype. This helps avoid the assumption that an organism will
@@ -297,7 +296,7 @@ class MOMAProblem(object):
         # Need to make sure we catch any problems that occur in the solver
         if not result:
             raise MOMAError('Unable to solve QLP2 MOMA: {}'.format(
-            result.status))
+                result.status))
 
     # Implemetnation of the QLP3 MOMA algorithm
     # We try to maximize biomass, by keeping the fluxes relitively the same
@@ -332,7 +331,7 @@ class MOMAProblem(object):
             # Need to make sure we catch any problems that occur in the solver
             if not result:
                 raise MOMAError('Unable to solve QLP3 MOMA: {}'.format(
-                result.status))
+                    result.status))
 
     # Get the flux of the knockout model
     def get_flux(self, reaction):

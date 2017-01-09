@@ -120,7 +120,7 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                     flux of wild type flux'''.format(abs(deleteflux / wild)))
                 logger.info(
                     'Solving took {:.2f} seconds'.format(
-                    time.time() - start_time))
+                        time.time() - start_time))
                 logger.info(
                     '''Objective reaction after gene deletion
                     has flux {}'''.format(
@@ -167,7 +167,7 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                     type flux'''.format(abs(deleteflux / wild)))
                 logger.info(
                     'Solving took {:.2f} seconds'.format(
-                    time.time() - start_time))
+                        time.time() - start_time))
                 logger.info(
                     '''Objective reaction after gene deletion
                     has flux {}'''.format(
