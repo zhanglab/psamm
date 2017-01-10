@@ -233,21 +233,21 @@ There are four different implementation of MOMA inside of PSAMM:
 lin MOMA (``--method lin_moma``)
   Finds the maximum biomass after a gene deletions, such that the change in
   the flux system is minimized when compared to the wild type. Minimization
-  is done by minimizing the |wild type fluxes - knockout fluxes|. This helps
+  is done by minimizing the \|wild type fluxes - knockout fluxes|. This helps
   avoid the assumption that an organism will perform optimally directly after
   removing a gene.
 
 MOMA (``--method moma``)
   Finds the maximum biomass after a gene deletions, such that the change in
   the flux system is minimized when compared to the wild type. Minimization
-  is done by minimizing the (wild type fluxes - knockout fluxes) :sup:`2` .
+  is done by minimizing the (wild type fluxes - knockout fluxes):sup:`2` .
   This helps avoid the assumption that an organism will perform optimally
   directly after removing a gene.
 
 lin MOMA 2 (``--method lin_moma2``)
   Finds the maximum biomass after a gene deletions, such that the change in
   the flux system is minimized when compared to the wild type. Minimization
-  is done by minimizing the |wild type fluxes - knockout fluxes|. This
+  is done by minimizing the \|wild type fluxes - knockout fluxes|. This
   implementation solves for the wild type fluxes after the gene deletion by
   adding the constraint that states the wild type biomasses must be equal.
   This will find a more optimal solution to the problem than the original MOMA.
@@ -255,7 +255,7 @@ lin MOMA 2 (``--method lin_moma2``)
 MOMA 2 (``--method moma2``)
   Finds the maximum biomass after a gene deletions, such that the change in
   the flux system is minimized when compared to the wild type. Minimization
-  is done by minimizing the (wild type fluxes - knockout fluxes):sup: `2`.
+  is done by minimizing the (wild type fluxes - knockout fluxes):sup:`2` .
   This implementation solves for the wild type fluxes after the gene deletion
   by adding the constraint that states the wild type biomasses must be equal.
   This will find a more optimal solution to the problem than the original MOMA.
