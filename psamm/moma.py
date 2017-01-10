@@ -86,7 +86,7 @@ class MOMAProblem(object):
     # Creates a constraints object
     def constraints(self, *args):
         return ConstraintGroup(self, *args)
-        
+
     # Returns a generator of all the non exchange reactions in the model
     def _adjustment_reactions(self):
         for reaction_id in self._model.reactions:
