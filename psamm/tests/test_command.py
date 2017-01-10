@@ -376,9 +376,9 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command(
             GeneDeletionCommand, ['--gene=gene_1', '--method=lp3'])
 
-    def test_run_genedelete_with_qlp2(self):
-        self.run_solver_command(
-            GeneDeletionCommand, ['--gene=gene_1', '--method=qlp2'])
+#    def test_run_genedelete_with_qlp2(self):
+#        self.run_solver_command(
+#            GeneDeletionCommand, ['--gene=gene_1', '--method=qlp2'])
 
 #    def test_run_genedelete_with_qlp3(self):
 #        self.run_solver_command(
