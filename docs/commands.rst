@@ -240,7 +240,7 @@ lin MOMA (``--method lin_moma``)
 MOMA (``--method moma``)
   Finds the maximum biomass after a gene deletions, such that the change in
   the flux system is minimized when compared to the wild type. Minimization
-  is done by minimizing the (wild type fluxes - knockout fluxes):sup: `2`.
+  is done by minimizing the (wild type fluxes - knockout fluxes) :sup:`2` .
   This helps avoid the assumption that an organism will perform optimally
   directly after removing a gene.
 
