@@ -18,6 +18,7 @@
 
 import math
 import unittest
+from six import iteritems
 
 from psamm.lpsolver import lp
 
@@ -187,20 +188,30 @@ class TestExpression(unittest.TestCase):
     def test_multiply_expression_and_simple_expression(self):
         e1 = lp.Expression({'x1': -5, 'x2': 3}, offset=10)
         e2 = lp.Expression({'x1': 1})
-        e = e1 * e2
-        self.assertEqual(e.offset, 0)
-        self.assertEqual(dict(e.values()), {
+        e1 = e1 * e2
+        e2 = {
             lp.Product(['x1', 'x1']): -5,
             lp.Product(['x1', 'x2']): 3,
             'x1': 10
-        })
+        }
+        e1_test = {}
+        if len(e1.values()) == len(e2.values()):
+            for key, value in iteritems(dict(e1.values())):
+                if key in e2:
+                    if value == e2[key]:
+                        e1_test[key] = value
+                else:
+                    for key2, value2 in iteritems(e2):
+                        if sorted(key) == sorted(key2) and value == value2:
+                            e1_test[key2] = value
+        self.assertEqual(e1.offset, 0)
+        self.assertEqual(e1_test, e2)
 
     def test_multiply_expression_and_expression(self):
         e1 = lp.Expression({'x1': 1, 'x2': 2, 'x3': 3}, offset=4)
         e2 = lp.Expression({'x2': 4, 'x4': 5}, offset=-5)
-        e = e1 * e2
-        self.assertEqual(e.offset, -20)
-        self.assertEqual(dict(e.values()), {
+        e1 = e1 * e2
+        e2 = {
             lp.Product(['x1', 'x2']): 4,
             lp.Product(['x2', 'x2']): 8,
             lp.Product(['x2', 'x3']): 12,
@@ -211,17 +222,44 @@ class TestExpression(unittest.TestCase):
             'x2': 6,
             'x3': -15,
             'x4': 20
-        })
+        }
+
+        e1_test = {}
+        if len(e1.values()) == len(e2.values()):
+            for key, value in iteritems(dict(e1.values())):
+                if key in e2:
+                    if value == e2[key]:
+                        e1_test[key] = value
+                else:
+                    for key2, value2 in iteritems(e2):
+                        if sorted(key) == sorted(key2) and value == value2:
+                            e1_test[key2] = value
+
+        self.assertEqual(e1.offset, -20)
+        self.assertEqual(e1_test, e2)
 
     def test_multiply_expression_and_expression_in_place(self):
         e = lp.Expression({'x1': -5, 'x2': 3}, offset=10)
         e *= lp.Expression({'x1': 1})
-        self.assertEqual(e.offset, 0)
-        self.assertEqual(dict(e.values()), {
+        e1 = e
+        e2 = {
             lp.Product(['x1', 'x1']): -5,
             lp.Product(['x1', 'x2']): 3,
             'x1': 10
-        })
+        }
+        e1_test = {}
+        if len(e1.values()) == len(e2.values()):
+            for key, value in iteritems(dict(e1.values())):
+                if key in e2:
+                    if value == e2[key]:
+                        e1_test[key] = value
+                else:
+                    for key2, value2 in iteritems(e2):
+                        if sorted(key) == sorted(key2) and value == value2:
+                            e1_test[key2] = value
+
+        self.assertEqual(e.offset, 0)
+        self.assertEqual(e1_test, e2)
 
     def test_expression_pow_negative(self):
         e = lp.Expression({'x1': -5, 'x2': 3}, offset=10)
@@ -264,29 +302,43 @@ class TestExpression(unittest.TestCase):
 
         e1_test = {}
         if len(e1.values()) == len(e2.values()):
-            for key, value in iteritems(e1.values()):
-                if key in e2.values():
-                    if value == e2.values()[key]:
+            for key, value in iteritems(dict(e1.values())):
+                if key in dict(e2.values()):
+                    if value == dict(e2.values())[key]:
                         e1_test[key] = value
                 else:
-                    for key2, value2 in iteritems(e2.values()):
+                    for key2, value2 in iteritems(dict(e2.values())):
                         if sorted(key) == sorted(key2) and value == value2:
                             e1_test[key2] = value
 
         self.assertEqual(e1.offset, e2.offset)
-        self.assertEqual(dict(e1_test), dict(e2.values()))
+        self.assertEqual(e1_test, dict(e2.values()))
 
     def test_expression_pow_two_in_place(self):
         e = lp.Expression({'x1': -5, 'x2': 3}, offset=10)
-        e **= 2
-        self.assertEqual(e.offset, 100)
-        self.assertEqual(dict(e.values()), {
+        e1 = e**2
+
+        e2 = {
             lp.Product(['x1', 'x1']): 25,
             lp.Product(['x1', 'x2']): -30,
             lp.Product(['x2', 'x2']): 9,
             'x1': -100,
             'x2': 60
-        })
+        }
+
+        e1_test = {}
+        if len(e1.values()) == len(e2.values()):
+            for key, value in iteritems(dict(e1.values())):
+                if key in e2:
+                    if value == e2[key]:
+                        e1_test[key] = value
+                else:
+                    for key2, value2 in iteritems(e2):
+                        if sorted(key) == sorted(key2) and value == value2:
+                            e1_test[key2] = value
+
+        self.assertEqual(e1.offset, 100)
+        self.assertEqual(e1_test, e2)
 
     def test_negate_expression(self):
         e = lp.Expression({'x1': 52}, -32)
