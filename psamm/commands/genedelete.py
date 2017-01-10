@@ -86,8 +86,11 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                 if new_assoc.has_value() and not new_assoc.value:
                     logger.info('Deletion reaction {}...'.format(reaction))
                     deleted_reactions.add(reaction)
-
-        solver = self._get_solver()
+                    
+        if self._args.method in ['qlp2', 'qlp3']:
+            solver = self._get_solver(quadratic=True)
+        else:
+            solver = self._get_solver()
 
         # Solve with FBA
         if self._args.method == 'fba':

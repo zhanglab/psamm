@@ -1,0 +1,2 @@
+export CPLEX_PYTHON2_PACKAGE=/Applications/IBM/ILOG/CPLEX_Studio1262/cplex/python/2.7/x86-64_osx
+export CPLEX_PYTHON3_PACKAGE=/Applications/IBM/ILOG/CPLEX_Studio1262/cplex/python/3.4/x86-64_osx
