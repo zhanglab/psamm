@@ -244,8 +244,7 @@ MOMA (``--method moma``)
   This helps avoid the assumption that an organism will perform optimally
   directly after removing a gene.
 
-lin MOMA 2 (``--method lin_moma2``)
-.. warning:: This algorithm is not fully tested and may break
+lin MOMA 2 (``--method lin_moma2``) : Experimental 
   Finds the maximum biomass after a gene deletions, such that the change in
   the flux system is minimized when compared to the wild type. Minimization
   is done by minimizing the \|wild type fluxes - knockout fluxes|. This
@@ -253,8 +252,7 @@ lin MOMA 2 (``--method lin_moma2``)
   adding the constraint that states the wild type biomasses must be equal.
   This will find a more optimal solution to the problem than the original MOMA.
 
-MOMA 2 (``--method moma2``)
-.. warning:: This algorithm is not fully tested and may break 
+MOMA 2 (``--method moma2``) : Experimental
   Finds the maximum biomass after a gene deletions, such that the change in
   the flux system is minimized when compared to the wild type. Minimization
   is done by minimizing the (wild type fluxes - knockout fluxes) :sup:`2` .
