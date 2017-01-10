@@ -261,8 +261,20 @@ class TestExpression(unittest.TestCase):
         e = lp.Expression({'x1': -5, 'x2': 3}, offset=10)
         e1 = e**2
         e2 = e*e
+
+        e1_test = {}
+        if len(e1) == len(e2):
+            for key, value in iteritems(e1):
+                if key in e2:
+                    if value == e2[key]:
+                        e1_test[key] = value
+                else:
+                    for key2, value2 in iteritems(e2):
+                        if sorted(key) == sorted(key2) and value == value2:
+                            e1_test[key2] = value
+
         self.assertEqual(e1.offset, e2.offset)
-        self.assertEqual(dict(e1.values()), dict(e2.values()))
+        self.assertEqual(dict(e1_test.values()), dict(e2.values()))
 
     def test_expression_pow_two_in_place(self):
         e = lp.Expression({'x1': -5, 'x2': 3}, offset=10)
