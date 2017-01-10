@@ -45,9 +45,10 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             type=str, default=[], help='Delete multiple genes from model')
         parser.add_argument(
             '--method', metavar='method',
-            choices=['fba', 'lp2', 'lp3', 'qlp2', 'qlp3'],
+            choices=['fba', 'lin_moma', 'lin_moma2', 'moma', 'moma2'],
             type=str, default='fba',
-            help='Select which method to solve the problem with')
+            help='Select which method to use. (fba, lin_moma, lin_moma2, '
+                 'moma, moma2)')
         super(GeneDeletionCommand, cls).init_parser(parser)
 
     def run(self):
@@ -86,7 +87,7 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                 if new_assoc.has_value() and not new_assoc.value:
                     logger.info('Deletion reaction {}...'.format(reaction))
                     deleted_reactions.add(reaction)
-        if self._args.method in ['qlp2', 'qlp3']:
+        if self._args.method in ['moma', 'moma2']:
             solver = self._get_solver(quadratic=True)
         else:
             solver = self._get_solver()
@@ -118,18 +119,18 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
 
             if wild != 0:
                 logger.info(
-                    '''Objective reaction has {:.2%}
-                    flux of wild type flux'''.format(abs(deleteflux / wild)))
+                    'Objective reaction has {:.2%} '
+                    'flux of wild type flux'.format(abs(deleteflux / wild)))
                 logger.info(
                     'Solving took {:.2f} seconds'.format(
                         time.time() - start_time))
                 logger.info(
-                    '''Objective reaction after gene deletion
-                    has flux {}'''.format(
+                    'Objective reaction after gene deletion '
+                    'has flux {}'.format(
                         abs(deleteflux) if deleteflux == 0 else deleteflux))
 
         # Solve with MOMA LP3
-        elif self._args.method in ['lp2', 'lp3', 'qlp2', 'qlp3']:
+        elif self._args.method in ['lin_moma', 'lin_moma2', 'moma', 'moma2']:
 
             # Set up the MOMA solver
             p = moma.MOMAProblem(self._mm, solver)
@@ -149,16 +150,16 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                 constr.extend(p.prob.add_linear_constraints(
                     p.get_flux_var(reaction) == 0))
 
-            if self._args.method == 'lp3':
+            if self._args.method == 'lin_moma2':
                 logger.info('Solving using MOMA LP3...')
                 p.minimize_l1(obj_reaction, wild, wt_fluxes)
-            elif self._args.method == 'lp2':
+            elif self._args.method == 'lin_moma':
                 logger.info('Solving using MOMA LP2...')
                 p.minimize_lp2(obj_reaction, wt_fluxes)
-            elif self._args.method == 'qlp2':
+            elif self._args.method == 'moma':
                 logger.info('Solving using MOMA QLP2...')
                 p.minimize_qlp2(obj_reaction, wt_fluxes)
-            elif self._args.method == 'qlp3':
+            elif self._args.method == 'moma2':
                 logger.info('Solving using MOMA QLP3...')
                 p.minimize_l2(obj_reaction)
 
@@ -171,8 +172,8 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                     'Solving took {:.2f} seconds'.format(
                         time.time() - start_time))
                 logger.info(
-                    '''Objective reaction after gene deletion
-                    has flux {}'''.format(
+                    'Objective reaction after gene deletion '
+                    'has flux {}'.format(
                         abs(deleteflux) if deleteflux == 0 else deleteflux))
             except moma.MOMAError:
                 logger.info('Error computing the flux')

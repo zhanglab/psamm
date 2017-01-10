@@ -209,6 +209,57 @@ The file gene_file.txt would contain the following lines::
     ExGene1
     ExGene2
 
+To delete genes using different algorithms use the ``--method`` to specify
+which algorithm for the solver to use. The default implementation for this
+command is FBA. The two examples below will yield the same result.
+
+.. code-block:: shell
+
+    $ psamm-model genedelete --gene ExGene1
+
+.. code-block:: shell
+
+    $ psamm-model genedelete --gene ExGene1 --method fba
+
+To delete genes using the Minimization of Metabolic Adjustment (MOMA)
+algorithm use the command line argument ``--method moma``.
+
+.. code-block:: shell
+
+    $ psamm-model genedelete --gene ExGene1 --method moma
+
+There are four different implementation of MOMA inside of PSAMM:
+
+lin MOMA (``--method lin_moma``)
+  Finds the maximum biomass after a gene deletions, such that the change in
+  the flux system is minimized when compared to the wild type. Minimization
+  is done by minimizing the |wild type fluxes - knockout fluxes|. This helps
+  avoid the assumption that an organism will perform optimally directly after
+  removing a gene.
+
+MOMA (``--method moma``)
+  Finds the maximum biomass after a gene deletions, such that the change in
+  the flux system is minimized when compared to the wild type. Minimization
+  is done by minimizing the (wild type fluxes - knockout fluxes):sup: `2`.
+  This helps avoid the assumption that an organism will perform optimally
+  directly after removing a gene.
+
+lin MOMA 2 (``--method lin_moma2``)
+  Finds the maximum biomass after a gene deletions, such that the change in
+  the flux system is minimized when compared to the wild type. Minimization
+  is done by minimizing the |wild type fluxes - knockout fluxes|. This
+  implementation solves for the wild type fluxes after the gene deletion by
+  adding the constraint that states the wild type biomasses must be equal.
+  This will find a more optimal solution to the problem than the original MOMA.
+
+MOMA 2 (``--method moma2``)
+  Finds the maximum biomass after a gene deletions, such that the change in
+  the flux system is minimized when compared to the wild type. Minimization
+  is done by minimizing the (wild type fluxes - knockout fluxes):sup: `2`.
+  This implementation solves for the wild type fluxes after the gene deletion
+  by adding the constraint that states the wild type biomasses must be equal.
+  This will find a more optimal solution to the problem than the original MOMA.
+
 Flux coupling analysis (``fluxcoupling``)
 -----------------------------------------
 
