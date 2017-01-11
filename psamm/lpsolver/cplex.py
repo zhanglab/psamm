@@ -323,12 +323,16 @@ class Problem(BaseProblem):
         # for QP/MIQP problems to avoid the warnings generated for other
         # problem types when this parameter is set.
         quad_obj = self._cp.objective.get_num_quadratic_variables() > 0
-        if quad_obj:
-            self._cp.parameters.solutiontarget.set(
-                self._cp.parameters.solutiontarget.values.optimal_global)
+
+        if hasattr(self._cp.parameters, 'optimalitytarget'):
+            target_param = self._cp.parameters.optimalitytarget
         else:
-            self._cp.parameters.solutiontarget.set(
-                self._cp.parameters.solutiontarget.values.auto)
+            target_param = self._cp.parameters.solutiontarget
+
+        if quad_obj:
+            target_param.set(target_param.values.optimal_global)
+        else:
+            target_param.set(target_param.values.auto)
 
     def _solve(self):
         self._reset_problem_type()
