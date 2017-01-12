@@ -1,3 +1,4 @@
+sudo: false
 language: python
 cache:
     directories:
@@ -30,12 +31,32 @@ install:
 
 script: tox -v
 after_success: coveralls
-env:
-    - TOXENV=py27-nosolver,py34-nosolver,coverage
-    - TOXENV=py27-qsoptex,py34-qsoptex,coverage
-    - TOXENV=py27-glpk,py34-glpk,coverage
-    - TOXENV=docs
-    - TOXENV=flake
+matrix:
+    include:
+        - env: TOXENV=flake
+
+        - env: TOXENV=py27-nosolver,coverage
+          python: '2.7'
+        - env: TOXENV=py27-glpk,coverage
+          python: '2.7'
+        - env: TOXENV=py27-qsoptex,coverage
+          python: '2.7'
+
+        - env: TOXENV=py35-nosolver,coverage
+          python: '3.5'
+        - env: TOXENV=py35-glpk,coverage
+          python: '3.5'
+        - env: TOXENV=py35-qsoptex,coverage
+          python: '3.5'
+
+        - env: TOXENV=py36-nosolver,coverage
+          python: '3.6'
+        - env: TOXENV=py36-glpk,coverage
+          python: '3.6'
+        - env: TOXENV=py36-qsoptex,coverage
+          python: '3.6'
+
+        - env: TOXENV=docs
 
 deploy:
     provider: pypi
