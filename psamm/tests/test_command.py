@@ -424,7 +424,7 @@ class TestCommandMain(unittest.TestCase):
                 model=self._infeasible_model)
 
     def test_run_sbmlexport(self):
-        self.run_command(SBMLExport, target=BytesIO())
+        self.run_command(SBMLExport)
 
     def test_run_search_compound(self):
         self.run_command(SearchCommand, ['compound', '--id', 'A_\u2206'])
