@@ -811,7 +811,22 @@ class SBMLWriter(object):
                 s = json.dumps(text_type(value))
             p_tag.text = '{}: {}'.format(prop, s)
 
-    def write_model(self, file, model):
+    def _indent(self, elem, level=0):
+        i = "\n" + level*"  "
+        if len(elem):
+            if not elem.text or not elem.text.strip():
+                elem.text = i + "  "
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+            for elem in elem:
+                self._indent(elem, level+1)
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+        else:
+            if level and (not elem.tail or not elem.tail.strip()):
+                elem.tail = i
+
+    def write_model(self, file, model, pretty=False):
         """Write a given model to file"""
 
         ET.register_namespace('mathml', MATHML_NS)
@@ -1049,4 +1064,6 @@ class SBMLWriter(object):
         self._add_gene_list(model_tag, gene_ids)
 
         tree = ET.ElementTree(root)
+        if pretty:
+            self._indent(root)
         tree.write(file, default_namespace=self._namespace)
