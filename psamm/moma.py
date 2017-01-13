@@ -32,6 +32,12 @@ class MOMAError(Exception):
 
 
 class ConstraintGroup(object):
+    """Constraints that will be imposed on the model when solving.
+
+    Args:
+        moma: MOMAProblem for the gene deletion problem.
+        *args: The constraints that are imposed on the model.
+    """
     def __init__(self, moma, *args):
         self._moma = moma
         self._constrs = []
@@ -45,13 +51,28 @@ class ConstraintGroup(object):
         self.delete()
 
     def add(self, *args):
+        """Add a constraint to the model."""
         self._constrs.extend(self._moma._prob.add_linear_constraints(*args))
 
     def delete(self):
+        """Set up the constraints to get deleted on the next solve."""
         self._moma._remove_constr.extend(self._constrs)
 
 
 class MOMAProblem(object):
+    """Model as a flux optimization problem with steady state assumption.
+
+    Create a representation of the model as an LP optimization problem with
+    steady state assumption, i.e. the concentrations of compounds are always
+    zero.
+
+    The problem can be modified and solved as many times as needed. The flux
+    of a reaction can be obtained after solving using :meth:`.get_flux`.
+
+    Args:
+        model: :class:`MetabolicModel` to solve.
+        solver: LP solver instance to use.
+    """
     def __init__(self, model, solver):
         self._prob = solver.create_problem()
         self._model = model
@@ -79,67 +100,308 @@ class MOMAProblem(object):
             mass_balance.add(lhs == 0)
 
     @property
+    # Returns the problem that we are working on
     def prob(self):
+        """Returns the underlying LP problem."""
         return self._prob
 
+    # Creates a constraints object
     def constraints(self, *args):
+        """Returns a constraint object that is used to constrain the model
+        for solving."""
         return ConstraintGroup(self, *args)
 
+    # Returns a generator of all the non exchange reactions in the model
     def _adjustment_reactions(self):
+        """Returns a generator of all the non exchange reactions
+        in the model."""
         for reaction_id in self._model.reactions:
             if not self._model.is_exchange(reaction_id):
                 yield reaction_id
 
+    # Returns a generator of all the reactions ids
+    def _all_reactions(self):
+        """Reaturns a generator of all the reactions in the model."""
+        for reaction_id in self._model.reactions:
+            yield reaction_id
+
+    # Solve the linear programming problem
+    # Sense tells the solver to minimize or maximize the result
     def _solve(self, sense=None):
+        """Solves the current problem.
+
+        Args:
+            sense: Tells the solver to either minimize or maximize the
+                objective.
+        """
         # Remove temporary constraints
         while len(self._remove_constr) > 0:
             self._remove_constr.pop().delete()
 
+        # Try to solve the problem
         try:
             return self._prob.solve(sense=sense)
+        # Reset the remove constraints list before the next solve
         finally:
             self._remove_constr = []
 
+    # Solves for the standard FBA of the problem
+    # Objective is the biomass
     def _solve_fba(self, objective):
+        """Solves the problem using FBA."""
         self._prob.set_objective(self._v_wt(objective))
 
+        # Solve and store the result
         result = self._solve(lp.ObjectiveSense.Maximize)
+
+        # If no solution was found an error is raised and told to the user
         if not result:
             raise MOMAError('Unable to solve initial FBA: {}'.format(
                 result.status))
 
-        return result.get_value(self._v_wt(objective))
+        # Return the result object
+        return result
 
-    def minimize_l1(self, objective):
-        wt_obj = self._solve_fba(objective)
+    # Returns all the flux values for each of the reactions. This is used in
+    # MOMA LP2 and QLP2 to minimize the change in the flux flow following a
+    # gene deletion.
+    def _get_fba_flux(self, objective):
+        """Returns a dictionary of all the solved fluxes for each reaction
+        in the model."""
+        # Get the result of the wild type FBA problem
+        flux_result = self._solve_fba(objective)
 
+        # Creat a dictionary of all the reaction ids and their fluxes.
+        # {'reaction1': 1000, 'reaction2': 2000, ...}
+        fba_fluxes = {}
+
+        # Place all the flux values in a dictionary
+        for key in self._model.reactions:
+            fba_fluxes[key] = flux_result.get_value(self._v_wt(key))
+
+        # Return the dictionary with all of the fluxes associated with the
+        # reaction id
+        # {'reaction1': 1000, 'reaction2': 2000, ...}
+        return fba_fluxes
+
+    def _get_minimal_flux_fba(self, wt_biomass, objective):
+        """Finds the FBA solution that minimizes all the flux values, while
+        still maximizing the biomass. This still might not find a unique
+        solution."""
+        wt_obj = self._v_wt(objective)
+        with self.constraints(wt_biomass == wt_obj):
+            self._prob.set_objective(self._v_wt.sum(self._all_reactions()))
+            result = self._solve(lp.ObjectiveSense.Minimize)
+        return result
+
+    # Solves for the FBA biomass. Uses the result returned by _solve_fba and
+    # finds the value of the objective (biomass) function.
+    def _get_fba_biomass(self, objective):
+        """Returns the flux for the max biomass found by FBA."""
+        # Run FBA and store the result
+        flux_result = self._solve_fba(objective)
+        # Pull out the biomass value
+        return flux_result.get_value(self._v_wt(objective))
+
+    def minimize_lp2(self, objective, wt_fluxes):
+        """Implemetnation of the lin_MOMA algorithm.
+
+        We try to maximize biomass, by keeping the fluxes relitively the same
+        as the wildtype. This helps avoid the assumption that an organism will
+        perform optimally directly after removing a gene.
+
+        This might not be the optimal minimization solution for the wild type
+        and the knockout vectors.
+
+        Minimizes sum of |wild type - knockout|
+
+        Args:
+            objective: Biomass reaction for the model.
+            wt_fluxes: All the wt_fluxes found by FBA in the form of a
+                dictionary. Use :meth: _get_fba_flux(objective) to return
+                a dictionary.
+        """
+        # These are all of our non eachange reactions
+        reactions = set(self._adjustment_reactions())
+
+        # First times in the loop
         if self._z is None:
             self._z = z = self._prob.namespace()
-            reactions = set(self._adjustment_reactions())
             z.define(reactions, lower=0)
 
-            zs = z.set(reactions)
-            vs_wt = self._v_wt.set(reactions)
-            vs = self._v.set(reactions)
-
-            self.constraints(zs >= vs_wt - vs, vs_wt - vs >= -zs)
+        # After the first time, we can just use the same z object as before
         else:
             z = self._z
 
+        # Get the v model and all the reactions 'variables' associated with it
+        v = self._v
+
+        # Create a constraints object for this model
+        constr = self.constraints()
+
+        # Loop through all the flux reactions
+        for f_reaction, f_value in iteritems(wt_fluxes):
+            # Makes sure the reaction we are trying to put a constraint on is
+            # a non exchange reaction
+            if f_reaction in reactions:
+                # Add the constraint that finds the optimal solution, such
+                # that the difference between the wildtype flux is similar
+                # to the knockout flux.
+                constr.add(
+                    z(f_reaction) >= f_value - v(f_reaction),
+                    f_value - v(f_reaction) >= -z(f_reaction))
+
+        # If we minimize the sum of the z vector then we will minimize
+        # the |vs_wt - vs| from above
         self._prob.set_objective(z.sum(self._adjustment_reactions()))
 
+        # Store the result of minimizing the sum of z
+        result = self._solve(lp.ObjectiveSense.Minimize)
+
+        # Need to make sure we catch any problems that occur in the solver
+        if not result:
+            raise MOMAError('Unable to solve LP2 MOMA: {}'.format(
+                result.status))
+
+        # Go back and manually delete all the constaints
+        constr.delete()
+
+    def minimize_l1(self, objective, wt_obj, wt_fluxes):
+        """Implemetnation of the lin_MOMA2 algorithm.
+
+        We try to maximize biomass, by keeping the fluxes relitively the same
+        as the wildtype. This helps avoid the assumption that an organism will
+        perform optimally directly after removing a gene.
+
+        Creates the constraint that the we select the optimal flux vector that
+        is closest to the wildtype.
+
+        Minimizes sum of |wild type - knockout|
+
+        Args:
+            objective: Biomass reaction for the model.
+            wt_obj: The wild type biomass value found using FBA.
+            wt_fluxes: All the wt_fluxes found by FBA in the form of a
+                dictionary. Use :meth: _get_fba_flux(objective) to return
+                a dictionary.
+        """
+        # These are all of our non eachange reactions
+        reactions = set(self._adjustment_reactions())
+        # First times in the loop
+        if self._z is None:
+            self._z = z = self._prob.namespace()
+            z.define(reactions, lower=0)
+        # After the first time, we can just use the same z object as before
+        else:
+            z = self._z
+
+        # Get the v (knockout) and v_wt (wild type) model and all the
+        # reactions 'variables' associated with it
+        v = self._v
+        v_wt = self._v_wt
+
+        # Create a constraints object for this model
+        constr = self.constraints()
+
+        # Loop through all the flux reactions
+        for f_reaction, f_value in iteritems(wt_fluxes):
+            # Makes sure the reaction we are trying to put a constraint on
+            # is a non exchange reaction
+            if f_reaction in reactions:
+                # Add the constraint that finds the optimal solution, such
+                # that the difference between the wildtype flux
+                # is similar to the knockout flux.
+                constr.add(
+                    z(f_reaction) >= v_wt(f_reaction) - v(f_reaction),
+                    v_wt(f_reaction) - v(f_reaction) >= -z(f_reaction))
+
+        # Set the objective for the sum of z
+        self._prob.set_objective(z.sum(self._adjustment_reactions()))
+
+        # Set a constraint that says the biomass flux of the wild type is
+        # the same as the FBA analysis
         v_wt_obj = self._v_wt(objective)
         with self.constraints(v_wt_obj == wt_obj):
             result = self._solve(lp.ObjectiveSense.Minimize)
 
+        # Raise any errors
         if not result:
             raise MOMAError('Unable to solve L1 MOMA: {}'.format(
                 result.status))
 
-    def minimize_l2(self, objective):
-        wt_obj = self._solve_fba(objective)
+    def minimize_qlp2(self, objective, wt_fluxes):
+        """Implemetnation of the MOMA algorithm.
+
+        We try to maximize biomass, by keeping the fluxes relitively the same
+        as the wildtype. This helps avoid the assumption that an organism will
+        perform optimally directly after removing a gene.
+
+        Minimizes sum of (wild type - knockout)^2
+
+        Args:
+            objective: Biomass reaction for the model.
+            wt_fluxes: All the wt_fluxes found by FBA in the form of a
+                dictionary. Use :meth: _get_fba_flux(objective) to return
+                a dictionary.
+        """
+        # These are all of our non eachange reactions
+        reactions = set(self._adjustment_reactions())
+
+        # Get the v model and all the reactions 'variables' associated with it
+        v = self._v
+
+        # Create a constraints object for this model
+        constr = self.constraints()
 
         obj_expr = 0
+        # Loop through all the flux reactions
+        for f_reaction, f_value in iteritems(wt_fluxes):
+            # Makes sure the reaction we are trying to put a constraint on is
+            # a non exchange reaction
+            if f_reaction in reactions:
+                # Add the constraint that finds the optimal solution, such
+                # that the differenct between the wildtype flux
+                # is similar to the knockout flux.
+                obj_expr += (f_value - v(f_reaction))**2
+
+        # Set the objective
+        self._prob.set_objective(obj_expr)
+
+        # Minimize the squared distance between the wild type flux values and
+        # the knockout values
+        result = self._solve(lp.ObjectiveSense.Minimize)
+
+        # We need to go back and manually delete all the constaints
+        constr.delete()
+
+        # Need to make sure we catch any problems that occur in the solver
+        if not result:
+            raise MOMAError('Unable to solve QLP2 MOMA: {}'.format(
+                result.status))
+
+    def minimize_l2(self, objective):
+        """Implemetnation of the MOMA2 algorithm.
+
+        We try to maximize biomass, by keeping the fluxes relitively the same
+        as the wildtype. This helps avoid the assumption that an organism will
+        perform optimally directly after removing a gene.
+
+        Minimizes sum of (wild type - knockout)^2
+
+        Args:
+            objective: Biomass reaction for the model.
+        """
+        # Solve using FBA
+        wt_result = self._solve_fba(objective)
+
+        # Extract the result of the FBA biomass
+        wt_obj = wt_result.get_value(self._v_wt(objective))
+
+        obj_expr = 0
+
+        # Loop through all the non exchange reactions and add a constraint
+        # to reduce the squared difference between the wild type and
+        # the knockout
         for reaction in self._adjustment_reactions():
             v_wt = self._v_wt(reaction)
             v = self._v(reaction)
@@ -147,16 +409,23 @@ class MOMAProblem(object):
 
         self._prob.set_objective(obj_expr)
 
+        # Set a constraint that says the biomass flux of the wild type is
+        # the same as the FBA analysis
         v_wt_obj = self._v_wt(objective)
         with self.constraints(v_wt_obj == wt_obj):
             result = self._solve(lp.ObjectiveSense.Minimize)
 
+        # Need to make sure we catch any problems that occur in the solver
         if not result:
-            raise MOMAError('Unable to solve L2 MOMA: {}'.format(
+            raise MOMAError('Unable to solve QLP3 MOMA: {}'.format(
                 result.status))
 
+    # Get the flux of the knockout model
     def get_flux(self, reaction):
+        """Return the knockout flux for a specific reaction."""
         return self._prob.result.get_value(self._v(reaction))
 
+    # Get the variable object for a specific reaction
     def get_flux_var(self, reaction):
+        """Return the lp variable for a specific reaction."""
         return self._v(reaction)
