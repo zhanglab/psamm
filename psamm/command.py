@@ -516,6 +516,7 @@ def main(command_class=None, args=None):
             title, _, _ = command_class.__doc__.partition('\n\n')
             subparser = subparsers.add_parser(
                 name, help=title.rstrip('.'),
+                formatter_class=argparse.RawDescriptionHelpFormatter,
                 description=command_class.__doc__)
             subparser.set_defaults(command=command_class)
             command_class.init_parser(subparser)
