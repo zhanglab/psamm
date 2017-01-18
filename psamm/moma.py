@@ -52,7 +52,7 @@ class ConstraintGroup(object):
         self.delete()
 
     def add(self, *args):
-        """Add constraints to the model."""
+        """Add a constraints to the model."""
         self._constrs.extend(self._moma._prob.add_linear_constraints(*args))
 
     def delete(self):
