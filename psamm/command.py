@@ -459,6 +459,34 @@ class SequentialExecutor(Executor):
         pass
 
 
+def _trim(docstring):
+    """Return a trimmed docstring.
+
+    Code taken from 'PEP 257 -- Docstring Conventions' article.
+    """
+    if not docstring:
+        return ''
+    # Convert tabs to spaces (following the normal Python rules)
+    # and split into a list of lines:
+    lines = docstring.expandtabs().splitlines()
+    # Determine minimum indentation (first line doesn't count):
+    for line in lines[1:]:
+        stripped = line.lstrip()
+        if stripped:
+            indent = len(line) - len(stripped)
+    # Remove indentation (first line is special):
+    trimmed = [lines[0].strip()]
+    for line in lines[1:]:
+        trimmed.append(line[indent:].rstrip())
+    # Strip off trailing and leading blank lines:
+    while trimmed and not trimmed[-1]:
+        trimmed.pop()
+    while trimmed and not trimmed[0]:
+        trimmed.pop(0)
+    # Return a single string:
+    return '\n'.join(trimmed)
+
+
 def main(command_class=None, args=None):
     """Run the command line interface with the given :class:`Command`.
 
@@ -517,7 +545,7 @@ def main(command_class=None, args=None):
             subparser = subparsers.add_parser(
                 name, help=title.rstrip('.'),
                 formatter_class=argparse.RawDescriptionHelpFormatter,
-                description=command_class.__doc__)
+                description=_trim(command_class.__doc__))
             subparser.set_defaults(command=command_class)
             command_class.init_parser(subparser)
 
