@@ -72,6 +72,10 @@ class ReactionEntry(ModelEntry):
         return self.properties.get('genes')
 
 
+class CompartmentEntry(ModelEntry):
+    """Abstract compartment entry."""
+
+
 class _BaseDictEntry(ModelEntry):
     """Base class for concrete entries based on dictionary."""
     def __init__(self, abstract_type, properties={}, filemark=None):
@@ -105,7 +109,7 @@ class DictCompoundEntry(CompoundEntry, _BaseDictEntry):
     """Compound entry backed by dictionary.
 
     The given properties dictionary must contain a key 'id' with the
-    identified.
+    identifier.
 
     Args:
         properties: dict or :class:`CompoundEntry` to construct from.
@@ -119,7 +123,7 @@ class DictReactionEntry(ReactionEntry, _BaseDictEntry):
     """Reaction entry backed by dictionary.
 
     The given properties dictionary must contain a key 'id' with the
-    identified.
+    identifier.
 
     Args:
         properties: dict or :class:`ReactionEntry` to construct from.
@@ -127,3 +131,18 @@ class DictReactionEntry(ReactionEntry, _BaseDictEntry):
     """
     def __init__(self, *args, **kwargs):
         super(DictReactionEntry, self).__init__(ReactionEntry, *args, **kwargs)
+
+
+class DictCompartmentEntry(CompartmentEntry, _BaseDictEntry):
+    """Compartment entry backed by dictionary.
+
+    The given properties dictionary must contain a key 'id' with the
+    identifier.
+
+    Args:
+        properties: dict or :class:`CompartmentEntry` to construct from.
+        filemark: Where the entry was parsed from (optional)
+    """
+    def __init__(self, *args, **kwargs):
+        super(DictCompartmentEntry, self).__init__(
+            CompartmentEntry, *args, **kwargs)
