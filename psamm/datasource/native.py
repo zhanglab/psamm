@@ -301,11 +301,18 @@ class NativeModel(object):
             if reaction.equation is not None:
                 database.set_reaction(reaction.id, reaction.equation)
 
+        # Warn about undefined compartments
+        compartments = set()
+        compartments_iter, boundaries = self.parse_compartments()
+        for compartment in compartments_iter:
+            compartments.add(compartment.id)
+
         # Warn about undefined compounds
         compounds = set()
         for compound in self.parse_compounds():
             compounds.add(compound.id)
 
+        undefined_compartments = set()
         undefined_compounds = set()
         extracellular_compounds = set()
         extracellular = self.extracellular_compartment
@@ -315,6 +322,13 @@ class NativeModel(object):
                     undefined_compounds.add(compound.name)
                 if compound.compartment == extracellular:
                     extracellular_compounds.add(compound.name)
+                if compound.compartment not in compartments:
+                    undefined_compartments.add(compound.compartment)
+
+        for compartment in sorted(undefined_compartments):
+            logger.warning(
+                'The compartment {} was not defined in the list'
+                ' of compartments'.format(compartment))
 
         for compound in sorted(undefined_compounds):
             logger.warning(
