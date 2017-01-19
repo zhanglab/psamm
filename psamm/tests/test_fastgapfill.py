@@ -75,8 +75,6 @@ class TestCreateExtendedModel(unittest.TestCase):
             'rxn_4',
             'rxn_5',
             'rxn_6',
-            ('rxntp', Compound('B', 'c')),
-            ('rxntp', Compound('C', 'c')),
             ('rxnex', Compound('A', 'e')),
             ('rxnex', Compound('B', 'e')),
             ('rxnex', Compound('C', 'e')),
@@ -86,8 +84,6 @@ class TestCreateExtendedModel(unittest.TestCase):
         expected_weights = {
             'rxn_3': 5.6,
             'rxn_4': 1.0,
-            ('rxntp', Compound('B', 'c')): 3.0,
-            ('rxntp', Compound('C', 'c')): 3.0,
             ('rxnex', Compound('A', 'e')): 2.0,
             ('rxnex', Compound('B', 'e')): 2.0,
             ('rxnex', Compound('C', 'e')): 2.0,

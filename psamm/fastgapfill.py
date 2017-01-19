@@ -55,13 +55,15 @@ def create_extended_model(model, db_penalty=None, ex_penalty=None,
     model_compartments = set(model_extended.compartments)
     extra_compartments = model.extracellular_compartment
 
+    _, boundaries = model.parse_compartments()
+
     # Add exchange and transport reactions to database
     logger.info('Adding database, exchange and transport reactions')
     db_added = model_extended.add_all_database_reactions(model_compartments)
     ex_added = model_extended.add_all_exchange_reactions(
         extra_compartments, allow_duplicates=True)
     tp_added = model_extended.add_all_transport_reactions(
-        extra_compartments, allow_duplicates=True)
+        boundaries, allow_duplicates=True)
 
     # Add penalty weights on reactions
     weights = {}

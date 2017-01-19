@@ -137,7 +137,7 @@ class TestMetabolicModel(unittest.TestCase):
             'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6'})
 
     def test_add_all_transport_reactions(self):
-        added = self.model.add_all_transport_reactions('e')
+        added = self.model.add_all_transport_reactions({('e', 'c')})
         for reaction in added:
             compartments = tuple(c.compartment for c, _ in
                                  self.model.get_reaction_values(reaction))
