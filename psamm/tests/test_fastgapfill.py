@@ -78,8 +78,8 @@ class TestCreateExtendedModel(unittest.TestCase):
             ('rxntp', Compound('B', 'c')),
             ('rxntp', Compound('C', 'c')),
             ('rxnex', Compound('A', 'e')),
-            ('rxnex', Compound('B', 'c')),
-            ('rxnex', Compound('C', 'c')),
+            ('rxnex', Compound('B', 'e')),
+            ('rxnex', Compound('C', 'e')),
             ('rxnex', Compound('D', 'e'))
         ])
 
@@ -89,8 +89,8 @@ class TestCreateExtendedModel(unittest.TestCase):
             ('rxntp', Compound('B', 'c')): 3.0,
             ('rxntp', Compound('C', 'c')): 3.0,
             ('rxnex', Compound('A', 'e')): 2.0,
-            ('rxnex', Compound('B', 'c')): 2.0,
-            ('rxnex', Compound('C', 'c')): 2.0,
+            ('rxnex', Compound('B', 'e')): 2.0,
+            ('rxnex', Compound('C', 'e')): 2.0,
             ('rxnex', Compound('D', 'e')): 2.0
         }
         penalties = {'rxn_3': 5.6}

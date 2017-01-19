@@ -282,12 +282,15 @@ class MetabolicModel(MetabolicDatabase):
                 all_reactions[rx] = rxnid
 
         added = set()
-        for compound in sorted(self.compounds):
+        initial_compounds = set(self.compounds)
+        for model_compound in initial_compounds:
+            compound = model_compound.in_compartment(compartment)
             rxnid_ex = ('rxnex', compound)
+            if rxnid_ex in added:
+                continue
+
             if not self._database.has_reaction(rxnid_ex):
-                reaction_ex = Reaction(Direction.Both, {
-                    compound.in_compartment(compartment): -1
-                })
+                reaction_ex = Reaction(Direction.Both, {compound: -1})
                 if reaction_ex not in all_reactions:
                     self._database.set_reaction(rxnid_ex, reaction_ex)
                 else:

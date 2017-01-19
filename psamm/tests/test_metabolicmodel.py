@@ -120,9 +120,12 @@ class TestMetabolicModel(unittest.TestCase):
         self.assertFalse(self.model.is_exchange('rxn_7'))
 
     def test_add_all_database_reactions(self):
-        self.database.set_reaction('rxn_7', parse_reaction('|D[c]| => |E[e]|'))
+        # Should get added
+        self.database.set_reaction('rxn_7', parse_reaction('D[c] => E[c]'))
+        # Not added because of compartment
+        self.database.set_reaction('rxn_8', parse_reaction('D[c] => E[p]'))
         added = self.model.add_all_database_reactions({'c', 'e'})
-        self.assertEqual(added, { 'rxn_7' })
+        self.assertEqual(added, {'rxn_7'})
         self.assertEqual(set(self.model.reactions), {
             'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6', 'rxn_7'
         })
