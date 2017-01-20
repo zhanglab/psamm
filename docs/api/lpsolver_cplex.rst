@@ -1,5 +1,5 @@
 
-``psamm.lpsolver.cplex`` -- Cplex LP solver
+``psamm.lpsolver.cplex`` -- CPLEX LP solver
 ============================================
 
 .. automodule:: psamm.lpsolver.cplex
