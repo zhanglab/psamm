@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.abspath('extensions'))
 
 # Mock optional modules to allow autodoc to run even in the absense of these
 # modules.
-MOCK_MODULES = ['cplex', 'qsoptex', 'gurobipy']
+MOCK_MODULES = ['cplex', 'gurobipy', 'qsoptex', 'swiglpk']
 for module in MOCK_MODULES:
     sys.modules[module] = mock.Mock()
 
