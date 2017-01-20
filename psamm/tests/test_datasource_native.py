@@ -33,6 +33,52 @@ import yaml
 
 
 class TestYAMLDataSource(unittest.TestCase):
+    def test_parse_compartments(self):
+        model_dict = {
+            'compartments': [
+                {
+                    'id': 'e',
+                    'name': 'Extracellular'
+                },
+                {
+                    'id': 'p',
+                    'name': 'Periplasm',
+                    'adjacent_to': ['e', 'c']
+                },
+                {
+                    'id': 'c',
+                    'name': 'Cytosol',
+                    'adjacent_to': 'p'
+                },
+                {
+                    'id': 'internal',
+                    'name': 'Internal compartment',
+                    'adjacent_to': 'c'
+                }
+            ]
+        }
+        model = native.NativeModel(model_dict)
+        compartment_iter, boundaries = model.parse_compartments()
+        compartments = list(compartment_iter)
+
+        self.assertEqual(len(compartments), 4)
+        self.assertEqual(compartments[0].id, 'e')
+        self.assertEqual(compartments[0].name, 'Extracellular')
+        self.assertEqual(compartments[1].id, 'p')
+        self.assertEqual(compartments[1].name, 'Periplasm')
+        self.assertEqual(compartments[2].id, 'c')
+        self.assertEqual(compartments[2].name, 'Cytosol')
+        self.assertEqual(compartments[3].id, 'internal')
+        self.assertEqual(compartments[3].name, 'Internal compartment')
+
+        normalized_boundaries = set(
+            tuple(sorted((c1, c2))) for c1, c2 in boundaries)
+        self.assertSetEqual(normalized_boundaries, {
+            ('c', 'internal'),
+            ('c', 'p'),
+            ('e', 'p')
+        })
+
     def test_parse_reaction(self):
         reaction = native.parse_reaction({
             'id': 'reaction_123',

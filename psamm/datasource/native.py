@@ -33,7 +33,7 @@ import math
 from collections import OrderedDict
 
 import yaml
-from six import string_types, text_type, iteritems, PY3
+from six import string_types, text_type, iteritems, itervalues, PY3
 from decimal import Decimal
 
 from ..reaction import Reaction, Compound, Direction
@@ -43,7 +43,8 @@ from ..metabolicmodel import MetabolicModel
 from ..database import DictDatabase
 from .context import FilePathContext, FileMark
 from .entry import (DictCompoundEntry as CompoundEntry,
-                    DictReactionEntry as ReactionEntry)
+                    DictReactionEntry as ReactionEntry,
+                    DictCompartmentEntry as CompartmentEntry)
 from .reaction import ReactionParser
 from . import modelseed
 
@@ -148,6 +149,50 @@ class NativeModel(object):
         # No model could be loaded
         raise ParseError('No model file could be found ({})'.format(
             ', '.join(DEFAULT_MODEL)))
+
+    def parse_compartments(self):
+        """Parse compartment information from model.
+
+        Return tuple of: 1) iterator of :class:`.CompartmentEntry`; 2)
+        Set of pairs defining the compartment boundaries of the model.
+        """
+
+        compartments = OrderedDict()
+        boundaries = set()
+
+        if 'compartments' in self._model:
+            boundary_map = {}
+            for compartment_def in self._model['compartments']:
+                compartment_id = compartment_def.get('id')
+                _check_id(compartment_id, 'Compartment')
+                if compartment_id in compartments:
+                    raise ParseError('Duplicate compartment ID: {}'.format(
+                        compartment_id))
+
+                props = dict(compartment_def)
+                adjacent_to = props.pop('adjacent_to', None)
+                if adjacent_to is not None:
+                    if not isinstance(adjacent_to, list):
+                        adjacent_to = [adjacent_to]
+                    for other in adjacent_to:
+                        boundary_map.setdefault(other, set()).add(
+                            compartment_id)
+
+                mark = FileMark(self._context, None, None)
+                compartment = CompartmentEntry(props, mark)
+                compartments[compartment_id] = compartment
+
+            # Check boundaries from boundary_map
+            for source, dest_set in iteritems(boundary_map):
+                if source not in compartments:
+                    raise ParseError(
+                        'Invalid compartment {} referenced'
+                        ' by compartment {}'.format(
+                            source, ', '.join(dest_set)))
+                for dest in dest_set:
+                    boundaries.add(tuple(sorted((source, dest))))
+
+        return itervalues(compartments), frozenset(boundaries)
 
     @property
     def name(self):
@@ -256,11 +301,18 @@ class NativeModel(object):
             if reaction.equation is not None:
                 database.set_reaction(reaction.id, reaction.equation)
 
+        # Warn about undefined compartments
+        compartments = set()
+        compartments_iter, boundaries = self.parse_compartments()
+        for compartment in compartments_iter:
+            compartments.add(compartment.id)
+
         # Warn about undefined compounds
         compounds = set()
         for compound in self.parse_compounds():
             compounds.add(compound.id)
 
+        undefined_compartments = set()
         undefined_compounds = set()
         extracellular_compounds = set()
         extracellular = self.extracellular_compartment
@@ -270,6 +322,13 @@ class NativeModel(object):
                     undefined_compounds.add(compound.name)
                 if compound.compartment == extracellular:
                     extracellular_compounds.add(compound.name)
+                if compound.compartment not in compartments:
+                    undefined_compartments.add(compound.compartment)
+
+        for compartment in sorted(undefined_compartments):
+            logger.warning(
+                'The compartment {} was not defined in the list'
+                ' of compartments'.format(compartment))
 
         for compound in sorted(undefined_compounds):
             logger.warning(

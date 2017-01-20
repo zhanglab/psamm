@@ -109,6 +109,18 @@ class TestCommandMain(unittest.TestCase):
         self._model = NativeModel({
             'name': 'Test model',
             'biomass': 'rxn_1',
+            'compartments': [
+                {
+                    'id': 'e',
+                    'name': 'Extracellular',
+                    'adjacent_to': ['c']
+                },
+                {
+                    'id': 'c',
+                    'name': 'Cytosol',
+                    'adjacent_to': 'e'
+                }
+            ],
             'reactions': [
                 {
                     'id': 'rxn_1',
