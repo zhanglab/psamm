@@ -18,6 +18,7 @@
 """Representation of compound/reaction entries in models."""
 
 import abc
+from collections import Mapping
 
 from six import add_metaclass
 
@@ -84,11 +85,13 @@ class _BaseDictEntry(ModelEntry):
             self._properties = dict(properties.properties)
             if filemark is None:
                 filemark = properties.filemark
-        else:
+        elif isinstance(properties, Mapping):
             if 'id' not in properties:
                 raise ValueError('id not defined in properties')
             self._id = properties['id']
             self._properties = dict(properties)
+        else:
+            raise ValueError('Invalid type of properties object')
 
         self._filemark = filemark
 
