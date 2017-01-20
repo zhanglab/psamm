@@ -12,16 +12,30 @@ used as a template:
     name: Escherichia coli test model
     biomass: Biomass
     extracellular: e
+
+    compartments:
+      - id: e
+        name: Extracellular
+      - id: p
+        name: Periplasm
+        adjacent_to: [e, c]
+      - id: c
+        name: Cytosol
+        adjacent_to: p
+
     compounds:
       - include: ../path/to/ModelSEED_cpds.tsv
         format: modelseed
+
     reactions:
       - include: reactions/reactions.tsv
       - include: reactions/biomass.yaml
+
     media:
       - include: medium.yaml
     limits:
       - include: limits.yaml
+
     model:
       - include: model_def.tsv
 
@@ -47,6 +61,17 @@ compartment.  For example, the reaction ``|x[e]| + |atp| => |x| + |adp| + |pi|``
 does not specify a compartment on four of the compounds so those four would
 automatically be presumed to be in the default compartment (or ``c`` if no default
 compartment is specified).
+
+Compartments
+------------
+
+The ``compartments`` key is a list of compartment information for the model.
+Compartments must always have an ``id`` but can also have additional user
+defined properties. The ``adjacent_to`` property is used to define the
+boundaries between compartments. Notice that the adjacency can be specified as
+a single compartment or a list of compartments. Note that it is sufficient to
+specify that ``p`` is adjacent to ``e``. It is then inferred that ``e`` is
+adjacent to ``p`` so it is optional to specify both directions of adjacency.
 
 Compounds
 ---------
