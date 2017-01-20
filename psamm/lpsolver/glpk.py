@@ -57,7 +57,7 @@ class GLPKError(Exception):
 
 
 class Solver(BaseSolver):
-    """Represents an LP-solver using Gurobi."""
+    """Represents an LP-solver using GLPK."""
 
     def __init__(self):
         super(Solver, self).__init__()
@@ -69,7 +69,7 @@ class Solver(BaseSolver):
 
 
 class Problem(BaseProblem):
-    """Represents an LP-problem of a gurobi.Solver."""
+    """Represents an LP-problem of a :class:`.Solver`."""
 
     VARTYPE_MAP = {
         VariableType.Continuous: swiglpk.GLP_CV,
@@ -345,7 +345,7 @@ class Problem(BaseProblem):
 
 
 class Constraint(BaseConstraint):
-    """Represents a constraint in a gurobi.Problem."""
+    """Represents a constraint in a :class:`.Problem`."""
 
     def __init__(self, prob, name):
         self._prob = prob
@@ -358,11 +358,11 @@ class Constraint(BaseConstraint):
 
 
 class Result(BaseResult):
-    """Represents the solution to a gurobi.Problem.
+    """Represents the solution to a :class:`.Problem`.
 
-    This object will be returned from the gurobi.Problem.solve() method or by
-    accessing the gurobi.Problem.result property after solving a problem. This
-    class should not be instantiated manually.
+    This object will be returned from the solve() method on :class:`.Problem`
+    or by accessing the result property on :class:`.Problem` after solving a
+    problem. This class should not be instantiated manually.
 
     Result will evaluate to a boolean according to the success of the
     solution, so checking the truth value of the result will immediately
