@@ -49,7 +49,7 @@ def _find_integer_tolerance(epsilon, v_max, min_tol):
     return int_tol
 
 
-def gapfind(model, solver, epsilon=0.001, v_max=1000):
+def gapfind(model, solver, epsilon=0.001, v_max=1000, implicit_sinks=True):
     """Identify compounds in the model that cannot be produced.
 
     Yields all compounds that cannot be produced. This method
@@ -62,6 +62,16 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000):
 
     This method is implemented as a MILP-program. Therefore it may
     not be efficient for larger models.
+
+    Args:
+        model: :class:`MetabolicModel` containing core reactions and reactions
+            that can be added for gap-filling.
+        solver: MILP solver instance.
+        epsilon: Threshold amount of a compound produced for it to not be
+            considered blocked.
+        v_max: Maximum flux.
+        implicit_sinks: Whether implicit sinks for all compounds are included
+            when gap-filling (traditional GapFill uses implicit sinks).
     """
     prob = solver.create_problem()
 
@@ -112,9 +122,12 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000):
         compound, reaction_id = spec
         massbalance_lhs[compound] += v(reaction_id) * value
     for compound, lhs in iteritems(massbalance_lhs):
-        # The constraint is merely >0 meaning that we have implicit sinks
-        # for all compounds.
-        prob.add_linear_constraints(lhs >= 0)
+        if implicit_sinks:
+            # The constraint is merely >0 meaning that we have implicit sinks
+            # for all compounds.
+            prob.add_linear_constraints(lhs >= 0)
+        else:
+            prob.add_linear_constraints(lhs == 0)
 
     # Solve
     result = prob.solve(lp.ObjectiveSense.Maximize)
@@ -128,28 +141,42 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000):
 
 def gapfill(
         model, core, blocked, exclude, solver, epsilon=0.001, v_max=1000,
-        weights={}):
+        weights={}, implicit_sinks=True, allow_bounds_expansion=False):
     """Find a set of reactions to add such that no compounds are blocked.
 
     Returns two iterators: first an iterator of reactions not in
     core, that were added to resolve the model. Second, an
     iterator of reactions in core that had flux bounds expanded (i.e.
     irreversible reactions become reversible). Similarly to
-    GapFind, this method assumes implicit sinks for all compounds in
-    the model so the only factor that influences whether a compound
+    GapFind, this method assumes, by default, implicit sinks for all compounds
+    in the model so the only factor that influences whether a compound
     can be produced is the presence of the compounds needed to produce
     it. This means that the resulting model will not necessarily be
     flux consistent.
 
-    Core indicates the core set of reactions in the model. GapFill will
-    minimize the number of added reactions that are not in core. Blocked
-    indicates the set of compounds to be resolved. Exclude is a set of
-    reactions that cannot be changed used for gap-filling. Epsilon indicates
-    the threshold amount of a compound produced for it to not be considered
-    blocked. V_max indicates the maximum flux.
-
     This method is implemented as a MILP-program. Therefore it may
     not be efficient for larger models.
+
+    Args:
+        model: :class:`MetabolicModel` containing core reactions and reactions
+            that can be added for gap-filling.
+        core: The set of core (already present) reactions in the model.
+        blocked: The compounds to unblock.
+        exclude: Set of reactions in core to be excluded from gap-filling (e.g.
+            biomass reaction).
+        solver: MILP solver instance.
+        epsilon: Threshold amount of a compound produced for it to not be
+            considered blocked.
+        v_max: Maximum flux.
+        weights: Dictionary of weights for reactions. Weight is the penalty
+            score for adding the reaction (non-core reactions) or expanding the
+            flux bounds (all reactions).
+        implicit_sinks: Whether implicit sinks for all compounds are included
+            when gap-filling (traditional GapFill uses implicit sinks).
+        allow_bounds_expansion: Allow flux bounds to be expanded at the cost
+            of a penalty which can be specified using weights (traditional
+            GapFill does not allow this). This includes turning irreversible
+            reactions reversible.
     """
     prob = solver.create_problem()
 
@@ -177,7 +204,7 @@ def gapfill(
     for reaction_id in model.reactions:
         lower, upper = (float(x) for x in model.limits[reaction_id])
 
-        if reaction_id in exclude:
+        if reaction_id in exclude or not allow_bounds_expansion:
             prob.add_linear_constraints(
                 upper >= v(reaction_id), v(reaction_id) >= lower)
         else:
@@ -219,9 +246,12 @@ def gapfill(
         if reaction_id not in exclude:
             massbalance_lhs[compound] += v(reaction_id) * value
     for compound, lhs in iteritems(massbalance_lhs):
-        # The constraint is merely >0 meaning that we have implicit sinks
-        # for all compounds.
-        prob.add_linear_constraints(lhs >= 0)
+        if implicit_sinks:
+            # The constraint is merely >0 meaning that we have implicit sinks
+            # for all compounds.
+            prob.add_linear_constraints(lhs >= 0)
+        else:
+            prob.add_linear_constraints(lhs == 0)
 
     # Solve
     result = prob.solve(lp.ObjectiveSense.Minimize)

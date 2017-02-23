@@ -380,9 +380,10 @@ command is a variant of the gap-filling procedure described in [Kumar07]_.
 
 The command will first list the reactions in the model followed by the
 suggested reactions to add to the model in order to unblock the blocked
-compounds. The procedure may also suggest that existing model reactions have
-their flux bounds widened, e.g. making an existing irreversible reaction
-reversible. To unblock only specific compounds, use the ``--compound`` option:
+compounds. If ``--allow-bounds-expansion`` is specified, the procedure may also
+suggest that existing model reactions have their flux bounds widened, e.g.
+making an existing irreversible reaction reversible. To unblock only specific
+compounds, use the ``--compound`` option:
 
 .. code-block:: shell
 
@@ -400,6 +401,12 @@ file name with ``@``.
 
 The GapFind algorithm is defined in terms of a MILP problem and can therefore
 be computationally expensive to run for larger models.
+
+The original GapFill algorithm uses a solution procedure which implicitly
+assumes that the model contains implicit sinks for all compounds. This means
+that even with the reactions proposed by GapFill the model may need to produce
+compounds that cannot be used anywhere. The implicit sinks can be disabled
+with the ``--no-implicit-sinks`` option.
 
 FastGapFill (``fastgapfill``)
 -----------------------------
