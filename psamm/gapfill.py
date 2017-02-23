@@ -141,7 +141,7 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000, implicit_sinks=True):
 
 def gapfill(
         model, core, blocked, exclude, solver, epsilon=0.001, v_max=1000,
-        weights={}, implicit_sinks=True):
+        weights={}, implicit_sinks=True, allow_bounds_expansion=False):
     """Find a set of reactions to add such that no compounds are blocked.
 
     Returns two iterators: first an iterator of reactions not in
@@ -173,6 +173,10 @@ def gapfill(
             flux bounds (all reactions).
         implicit_sinks: Whether implicit sinks for all compounds are included
             when gap-filling (traditional GapFill uses implicit sinks).
+        allow_bounds_expansion: Allow flux bounds to be expanded at the cost
+            of a penalty which can be specified using weights (traditional
+            GapFill does not allow this). This includes turning irreversible
+            reactions reversible.
     """
     prob = solver.create_problem()
 
@@ -200,7 +204,7 @@ def gapfill(
     for reaction_id in model.reactions:
         lower, upper = (float(x) for x in model.limits[reaction_id])
 
-        if reaction_id in exclude:
+        if reaction_id in exclude or not allow_bounds_expansion:
             prob.add_linear_constraints(
                 upper >= v(reaction_id), v(reaction_id) >= lower)
         else:

@@ -57,6 +57,10 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         parser.add_argument(
             '--no-implicit-sinks', action='store_true',
             help='Do not include implicit sinks when gap-filling')
+        parser.add_argument(
+            '--allow-bounds-expansion', action='store_true',
+            help=('Allow GapFill to propose expansion of flux bounds. This'
+                  ' includes turning irreversible reactions reversible.'))
         super(GapFillCommand, cls).init_parser(parser)
 
     def run(self):
@@ -122,7 +126,8 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             added_reactions, no_bounds_reactions = gapfill(
                 model_complete, core, blocked, exclude, solver=solver,
                 epsilon=epsilon, v_max=v_max, weights=weights,
-                implicit_sinks=implicit_sinks)
+                implicit_sinks=implicit_sinks,
+                allow_bounds_expansion=self._args.allow_bounds_expansion)
         except GapFillError as e:
             self._log_epsilon_and_fail(epsilon, e)
 
