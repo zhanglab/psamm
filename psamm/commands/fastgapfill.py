@@ -13,26 +13,21 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from __future__ import unicode_literals
 
 import argparse
 import logging
 
-from ..command import (Command, MetabolicMixin, LoopRemovalMixin,
-                       SolverCommandMixin)
-from .. import fastcore, fluxanalysis
+from ..command import Command, MetabolicMixin, SolverCommandMixin
 from ..fastgapfill import create_extended_model, fastgapfill
 
 logger = logging.getLogger(__name__)
 
 
-class FastGapFillCommand(MetabolicMixin, LoopRemovalMixin, SolverCommandMixin,
-                         Command):
+class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
     """Run the FastGapFill gap-filling algorithm on model."""
-
-    _supported_loop_removal = ['none', 'tfba']
 
     @classmethod
     def init_parser(cls, parser):
@@ -54,21 +49,13 @@ class FastGapFillCommand(MetabolicMixin, LoopRemovalMixin, SolverCommandMixin,
         parser.add_argument(
             '--epsilon', type=float, help='Threshold for Fastcore',
             default=1e-5)
-        parser.add_argument(
-            'reaction', help='Reaction to maximize', nargs='?')
         super(FastGapFillCommand, cls).init_parser(parser)
 
     def run(self):
         """Run FastGapFill command"""
 
-        loop_removal = self._get_loop_removal_option()
-
         # Create solver
-        enable_tfba = loop_removal == 'tfba'
-        if enable_tfba:
-            solver = self._get_solver(integer=True)
-        else:
-            solver = self._get_solver()
+        solver = self._get_solver()
 
         # Load compound information
         compound_name = {}
@@ -116,42 +103,17 @@ class FastGapFillCommand(MetabolicMixin, LoopRemovalMixin, SolverCommandMixin,
         induced = fastgapfill(model_extended, core, weights=weights,
                               epsilon=epsilon, solver=solver)
 
-        if self._args.reaction is not None:
-            maximized_reaction = self._args.reaction
-        else:
-            maximized_reaction = self._model.biomass_reaction
-            if maximized_reaction is None:
-                self.argument_error(
-                    'The maximized reaction was not specified')
+        for reaction_id in sorted(self._mm.reactions):
+            rx = self._mm.get_reaction(reaction_id)
+            rxt = rx.translated_compounds(
+                lambda x: compound_name.get(x, x))
+            print('{}\t{}\t{}\t{}'.format(reaction_id, 'Model', 0, rxt))
 
-        if not self._mm.has_reaction(maximized_reaction):
-            self.fail('The biomass reaction is not a valid model'
-                      ' reaction: {}'.format(maximized_reaction))
-
-        logger.info('Flux balance on induced model maximizing {}'.format(
-            maximized_reaction))
-        model_induced = model_extended.copy()
-        for rxnid in model_extended.reactions:
-            if not self._mm.has_reaction(rxnid) and rxnid not in induced:
-                model_induced.remove_reaction(rxnid)
-        for rxnid, flux in sorted(fluxanalysis.flux_balance(
-                model_induced, maximized_reaction, tfba=enable_tfba,
-                solver=solver), key=lambda x: (reaction_key(x[0]), x[1])):
-            reaction_class = 'Dbase'
-            penalty = weights.get(rxnid, 1)
+        for rxnid in sorted(induced, key=reaction_key):
             if self._mm.has_reaction(rxnid):
-                reaction_class = 'Model'
-                penalty = 0
-            rx = model_induced.get_reaction(rxnid)
-            rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
-            print('{}\t{}\t{}\t{}\t{}'.format(
-                rxnid, reaction_class, penalty, flux, rxt))
-
-        logger.info('Calculating Fastcc consistent subset of induced model')
-        consistent_core = fastcore.fastcc_consistent_subset(
-            model_induced, epsilon, solver=solver)
-        logger.info('Result: |A| = {}, A = {}'.format(
-            len(consistent_core), consistent_core))
-        removed_reactions = set(model_induced.reactions) - consistent_core
-        logger.info('Removed: |R| = {}, R = {}'.format(
-            len(removed_reactions), removed_reactions))
+                continue
+            rx = model_extended.get_reaction(rxnid)
+            rxt = rx.translated_compounds(
+                lambda x: compound_name.get(x, x))
+            print('{}\t{}\t{}\t{}'.format(
+                rxnid, 'Add', weights.get(rxnid, 1), rxt))
