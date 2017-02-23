@@ -62,6 +62,14 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000):
 
     This method is implemented as a MILP-program. Therefore it may
     not be efficient for larger models.
+
+    Args:
+        model: :class:`MetabolicModel` containing core reactions and reactions
+            that can be added for gap-filling.
+        solver: MILP solver instance.
+        epsilon: Threshold amount of a compound produced for it to not be
+            considered blocked.
+        v_max: Maximum flux.
     """
     prob = solver.create_problem()
 
@@ -141,15 +149,23 @@ def gapfill(
     it. This means that the resulting model will not necessarily be
     flux consistent.
 
-    Core indicates the core set of reactions in the model. GapFill will
-    minimize the number of added reactions that are not in core. Blocked
-    indicates the set of compounds to be resolved. Exclude is a set of
-    reactions that cannot be changed used for gap-filling. Epsilon indicates
-    the threshold amount of a compound produced for it to not be considered
-    blocked. V_max indicates the maximum flux.
-
     This method is implemented as a MILP-program. Therefore it may
     not be efficient for larger models.
+
+    Args:
+        model: :class:`MetabolicModel` containing core reactions and reactions
+            that can be added for gap-filling.
+        core: The set of core (already present) reactions in the model.
+        blocked: The compounds to unblock.
+        exclude: Set of reactions in core to be excluded from gap-filling (e.g.
+            biomass reaction).
+        solver: MILP solver instance.
+        epsilon: Threshold amount of a compound produced for it to not be
+            considered blocked.
+        v_max: Maximum flux.
+        weights: Dictionary of weights for reactions. Weight is the penalty
+            score for adding the reaction (non-core reactions) or expanding the
+            flux bounds (all reactions).
     """
     prob = solver.create_problem()
 
