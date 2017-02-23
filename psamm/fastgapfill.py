@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2016  Chao Liu <lcddzyx@gmail.com>
 
 """Implementation of fastGapFill.
@@ -100,8 +100,8 @@ def fastgapfill(model_extended, core, solver, weights={}, epsilon=1e-5):
     logger.info('Calculating Fastcore induced set on model')
     induced = fastcore(
         model_extended, core, epsilon=1e-5, weights=weights, solver=solver)
-    logger.info('Result: |A| = {}, A = {}'.format(len(induced), induced))
+    logger.debug('Result: |A| = {}, A = {}'.format(len(induced), induced))
     added_reactions = induced - core
-    logger.info('Extended: |E| = {}, E = {}'.format(
+    logger.debug('Extended: |E| = {}, E = {}'.format(
         len(added_reactions), added_reactions))
     return induced
