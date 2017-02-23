@@ -401,6 +401,12 @@ file name with ``@``.
 The GapFind algorithm is defined in terms of a MILP problem and can therefore
 be computationally expensive to run for larger models.
 
+The original GapFill algorithm uses a solution procedure which implicitly
+assumes that the model contains implicit sinks for all compounds. This means
+that even with the reactions proposed by GapFill the model may need to produce
+compounds that cannot be used anywhere. The implicit sinks can be disabled
+with the ``--no-implicit-sinks`` option.
+
 FastGapFill (``fastgapfill``)
 -----------------------------
 

@@ -54,6 +54,9 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         parser.add_argument(
             '--epsilon', type=float, default=1e-5,
             help='Threshold for reaction flux')
+        parser.add_argument(
+            '--no-implicit-sinks', action='store_true',
+            help='Do not include implicit sinks when gap-filling')
         super(GapFillCommand, cls).init_parser(parser)
 
     def run(self):
@@ -112,11 +115,14 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             tp_penalty=self._args.tp_penalty,
             penalties=penalties)
 
+        implicit_sinks = not self._args.no_implicit_sinks
+
         logger.info('Searching for reactions to fill gaps')
         try:
             added_reactions, no_bounds_reactions = gapfill(
                 model_complete, core, blocked, exclude, solver=solver,
-                epsilon=epsilon, v_max=v_max, weights=weights)
+                epsilon=epsilon, v_max=v_max, weights=weights,
+                implicit_sinks=implicit_sinks)
         except GapFillError as e:
             self._log_epsilon_and_fail(epsilon, e)
 

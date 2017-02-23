@@ -49,7 +49,7 @@ def _find_integer_tolerance(epsilon, v_max, min_tol):
     return int_tol
 
 
-def gapfind(model, solver, epsilon=0.001, v_max=1000):
+def gapfind(model, solver, epsilon=0.001, v_max=1000, implicit_sinks=True):
     """Identify compounds in the model that cannot be produced.
 
     Yields all compounds that cannot be produced. This method
@@ -70,6 +70,8 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000):
         epsilon: Threshold amount of a compound produced for it to not be
             considered blocked.
         v_max: Maximum flux.
+        implicit_sinks: Whether implicit sinks for all compounds are included
+            when gap-filling (traditional GapFill uses implicit sinks).
     """
     prob = solver.create_problem()
 
@@ -120,9 +122,12 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000):
         compound, reaction_id = spec
         massbalance_lhs[compound] += v(reaction_id) * value
     for compound, lhs in iteritems(massbalance_lhs):
-        # The constraint is merely >0 meaning that we have implicit sinks
-        # for all compounds.
-        prob.add_linear_constraints(lhs >= 0)
+        if implicit_sinks:
+            # The constraint is merely >0 meaning that we have implicit sinks
+            # for all compounds.
+            prob.add_linear_constraints(lhs >= 0)
+        else:
+            prob.add_linear_constraints(lhs == 0)
 
     # Solve
     result = prob.solve(lp.ObjectiveSense.Maximize)
@@ -136,15 +141,15 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000):
 
 def gapfill(
         model, core, blocked, exclude, solver, epsilon=0.001, v_max=1000,
-        weights={}):
+        weights={}, implicit_sinks=True):
     """Find a set of reactions to add such that no compounds are blocked.
 
     Returns two iterators: first an iterator of reactions not in
     core, that were added to resolve the model. Second, an
     iterator of reactions in core that had flux bounds expanded (i.e.
     irreversible reactions become reversible). Similarly to
-    GapFind, this method assumes implicit sinks for all compounds in
-    the model so the only factor that influences whether a compound
+    GapFind, this method assumes, by default, implicit sinks for all compounds
+    in the model so the only factor that influences whether a compound
     can be produced is the presence of the compounds needed to produce
     it. This means that the resulting model will not necessarily be
     flux consistent.
@@ -166,6 +171,8 @@ def gapfill(
         weights: Dictionary of weights for reactions. Weight is the penalty
             score for adding the reaction (non-core reactions) or expanding the
             flux bounds (all reactions).
+        implicit_sinks: Whether implicit sinks for all compounds are included
+            when gap-filling (traditional GapFill uses implicit sinks).
     """
     prob = solver.create_problem()
 
@@ -235,9 +242,12 @@ def gapfill(
         if reaction_id not in exclude:
             massbalance_lhs[compound] += v(reaction_id) * value
     for compound, lhs in iteritems(massbalance_lhs):
-        # The constraint is merely >0 meaning that we have implicit sinks
-        # for all compounds.
-        prob.add_linear_constraints(lhs >= 0)
+        if implicit_sinks:
+            # The constraint is merely >0 meaning that we have implicit sinks
+            # for all compounds.
+            prob.add_linear_constraints(lhs >= 0)
+        else:
+            prob.add_linear_constraints(lhs == 0)
 
     # Solve
     result = prob.solve(lp.ObjectiveSense.Minimize)
