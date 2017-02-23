@@ -124,19 +124,21 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             rx = self._mm.get_reaction(reaction_id)
             rxt = rx.translated_compounds(
                 lambda x: compound_name.get(x, x))
-            print('{}\t{}\t{}'.format(reaction_id, 'Model', rxt))
+            print('{}\t{}\t{}\t{}'.format(reaction_id, 'Model', 0, rxt))
 
         for rxnid in sorted(added_reactions):
             rx = model_complete.get_reaction(rxnid)
             rxt = rx.translated_compounds(
                 lambda x: compound_name.get(x, x))
-            print('{}\t{}\t{}'.format(rxnid, 'Add', rxt))
+            print('{}\t{}\t{}\t{}'.format(
+                rxnid, 'Add', weights.get(rxnid, 1), rxt))
 
         for rxnid in sorted(no_bounds_reactions):
             rx = model_complete.get_reaction(rxnid)
             rxt = rx.translated_compounds(
                 lambda x: compound_name.get(x, x))
-            print('{}\t{}\t{}'.format(rxnid, 'Remove bounds', rxt))
+            print('{}\t{}\t{}\t{}'.format(
+                rxnid, 'Remove bounds', weights.get(rxnid, 1), rxt))
 
     def _log_epsilon_and_fail(self, epsilon, exc):
         msg = ('Finding blocked compounds failed with epsilon set to {}. Try'
