@@ -100,10 +100,12 @@ class FileMark(object):
         return self._column
 
     def __str__(self):
-        return '{}:{}:{}'.format(
-            text_type(self._filecontext),
-            '?' if self._line is None else self._line,
-            '?' if self._column is None else self._column)
+        result = text_type(self._filecontext)
+        if self._line is not None:
+            result += ':{}'.format(self._line)
+            if self._column is not None:
+                result += ':{}'.format(self._column)
+        return result
 
     def __repr__(self):
         return str('{}({}, {}, {})').format(
