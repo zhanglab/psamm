@@ -344,6 +344,20 @@ constraints are imposed when considering whether reactions can take a non-zero
 flux. This automatically removes internal flux loops but is also much more
 time-consuming.
 
+Reaction duplicates check (``duplicatescheck``)
+-----------------------------------------------
+
+This command simply checks whether multiple reactions exist in the model that
+have the same or similar reaction equations. By default, this check will ignore
+reaction directionality and stoichiometric values when considering whether
+reactions are identical. The options ``--compare-direction`` and
+``--compare-stoichiometry`` can be used to make the command consider these
+properties as well.
+
+.. code-block:: shell
+
+    $ psamm-model duplicatescheck
+
 Gap check (``gapcheck``)
 ------------------------
 

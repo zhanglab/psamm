@@ -34,6 +34,7 @@ from psamm.lpsolver import generic
 from psamm.datasource.native import NativeModel
 
 from psamm.commands.chargecheck import ChargeBalanceCommand
+from psamm.commands.duplicatescheck import DuplicatesCheck
 from psamm.commands.excelexport import ExcelExportCommand
 from psamm.commands.fastgapfill import FastGapFillCommand
 from psamm.commands.fba import FluxBalanceCommand
@@ -238,6 +239,15 @@ class TestCommandMain(unittest.TestCase):
 
     def test_run_chargecheck(self):
         self.run_command(ChargeBalanceCommand)
+
+    def test_run_duplicatescheck(self):
+        self.run_command(DuplicatesCheck)
+
+    def test_run_duplicatescheck_compare_stoichiometry(self):
+        self.run_command(DuplicatesCheck, ['--compare-stoichiometry'])
+
+    def test_run_duplicatescheck_compare_direction(self):
+        self.run_command(DuplicatesCheck, ['--compare-direction'])
 
     def test_run_excelexport(self):
         dest = tempfile.mkdtemp()
