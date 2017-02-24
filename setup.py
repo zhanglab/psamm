@@ -63,6 +63,7 @@ setup(
             'gapcheck = psamm.commands.gapcheck:GapCheckCommand',
             'gapfill = psamm.commands.gapfill:GapFillCommand',
             'genedelete = psamm.commands.genedelete:GeneDeletionCommand',
+            'made = psamm.commands.made:MadeFluxBalance',
             'masscheck = psamm.commands.masscheck:MassConsistencyCommand',
             'randomsparse = psamm.commands.randomsparse:RandomSparseNetworkCommand',
             'robustness = psamm.commands.robustness:RobustnessCommand',
