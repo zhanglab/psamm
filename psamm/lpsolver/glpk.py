@@ -253,9 +253,9 @@ class Problem(BaseProblem):
 
         for variable, value in expression.values():
             var_index = self._variables[variable]
-            swiglpk.glp_set_obj_coef(self._p, var_index, value)
+            swiglpk.glp_set_obj_coef(self._p, var_index, float(value))
 
-        swiglpk.glp_set_obj_coef(self._p, 0, expression.offset)
+        swiglpk.glp_set_obj_coef(self._p, 0, float(expression.offset))
 
     set_linear_objective = set_objective
     """Set objective of the problem.
@@ -408,21 +408,19 @@ class Result(BaseResult):
             return 'No dual feasible solution'
         return str(swiglpk.glp_get_status(self._problem._p))
 
-    def _get_var_value(self, variable):
-        self._check_valid()
-        if variable not in self._problem._variables:
-            raise ValueError('Unknown variable: {}'.format(variable))
+    def _has_variable(self, variable):
+        """Whether variable exists in the solution."""
+        return self._problem.has_variable(variable)
+
+    def _get_value(self, variable):
+        """Return value of variable in solution."""
         return swiglpk.glp_get_col_prim(
             self._problem._p, self._problem._variables[variable])
 
     def get_value(self, expression):
         """Return value of expression."""
-
         self._check_valid()
-        if isinstance(expression, Expression):
-            return sum(self._get_var_value(var) * value
-                       for var, value in expression.values())
-        return self._get_var_value(expression)
+        return super(Result, self).get_value(expression)
 
 
 class MIPResult(Result):
@@ -438,9 +436,7 @@ class MIPResult(Result):
         self._check_valid()
         return str(swiglpk.glp_mip_status(self._problem._p))
 
-    def _get_var_value(self, variable):
-        self._check_valid()
-        if variable not in self._problem._variables:
-            raise ValueError('Unknown variable: {}'.format(variable))
+    def _get_value(self, variable):
+        """Return value of variable in solution."""
         return swiglpk.glp_mip_col_val(
             self._problem._p, self._problem._variables[variable])
