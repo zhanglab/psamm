@@ -545,6 +545,9 @@ class VariableNamespace(object):
         self._problem.define(
             *((self, name) for name in names), **define_kwargs)
 
+    def has_variable(self, name):
+        return self._problem.has_variable((self, name))
+
     def __call__(self, name):
         return self._problem.var((self, name))
 
@@ -576,7 +579,16 @@ class Problem(object):
 
     @abc.abstractmethod
     def define(self, *names, **kwargs):
-        """Define a variable in the problem"""
+        """Define a variable in the problem.
+
+        Variables must be defined before they can be accessed by var() or
+        set(). This function takes keyword arguments lower and upper to define
+        the bounds of the variable (default: -inf to inf). The keyword argument
+        types can be used to select the type of the variable (Continuous
+        (default), Binary or Integer). Setting any variables different than
+        Continuous will turn the problem into an MILP problem. Raises
+        ValueError if a name is already defined.
+        """
 
     @abc.abstractmethod
     def has_variable(self, name):
