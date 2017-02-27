@@ -245,7 +245,7 @@ class Problem(BaseProblem):
         for var, value in expression.values():
             if not isinstance(var, Product):
                 self._non_zero_objective.add(var)
-                linear.append((self._variables[var], value))
+                linear.append((self._variables[var], float(value)))
             else:
                 if len(var) > 2:
                     raise ValueError('Invalid objective: {}'.format(var))
@@ -254,7 +254,7 @@ class Problem(BaseProblem):
                 var2 = self._variables[var[1]]
                 if var1 == var2:
                     value *= 2
-                quad.append((var1, var2, value))
+                quad.append((var1, var2, float(value)))
 
         # We have to build the set of variables to
         # update so that we can avoid calling set_linear if the set is empty.
@@ -266,7 +266,7 @@ class Problem(BaseProblem):
             self._cp.objective.set_quadratic_coefficients(quad)
 
         if hasattr(self._cp.objective, 'set_offset'):
-            self._cp.objective.set_offset(expression.offset)
+            self._cp.objective.set_offset(float(expression.offset))
 
     set_linear_objective = set_objective
     """Set objective of the problem.
