@@ -62,6 +62,16 @@ class TestVariable(unittest.TestCase):
         self.assertEqual(hash(Variable('xyz')), hash(Variable('xyz')))
 
 
+class TestTerm(unittest.TestCase):
+    def test_length_of_and(self):
+        term = And(Variable('b1'), Variable('b2'))
+        self.assertEqual(len(term), 2)
+
+    def test_length_of_or(self):
+        term = Or(Variable('b1'), And(Variable('b2'), Variable('b3')))
+        self.assertEqual(len(term), 2)
+
+
 class TestExpression(unittest.TestCase):
     def test_expression_substitute_existing(self):
         e = Expression('b1')
