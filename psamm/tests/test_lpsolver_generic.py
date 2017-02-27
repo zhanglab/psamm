@@ -22,6 +22,33 @@ import unittest
 from psamm.lpsolver import generic
 
 
+class TestSolverProblem(unittest.TestCase):
+    """Test the current solver chosen by generic.
+
+    To test all solvers, run this test multiple times with the PSAMM_SOLVER
+    environment variable set to the solver to test.
+    """
+    def setUp(self):
+        try:
+            self.solver = generic.Solver()
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an LP solver for tests')
+
+    def test_redefine_variable(self):
+        """Test that redefining a variable fails."""
+        prob = self.solver.create_problem()
+        prob.define('x', lower=3, upper=100)
+        with self.assertRaises(ValueError):
+            prob.define('x', lower=3, upper=100)
+
+    def test_has_variable(self):
+        """Test whether has_variable() works."""
+        prob = self.solver.create_problem()
+        self.assertFalse(prob.has_variable('x'))
+        prob.define('x', lower=-400)
+        self.assertTrue(prob.has_variable('x'))
+
+
 class TestListSolversCommand(unittest.TestCase):
     def test_list_lpsolvers(self):
         if os.environ.get('PSAMM_SOLVER') in ('nosolver', None):

@@ -104,16 +104,21 @@ class Problem(BaseProblem):
         return self._p
 
     def define(self, *names, **kwargs):
-        """Define variable in the problem.
+        """Define a variable in the problem.
 
         Variables must be defined before they can be accessed by var() or
         set(). This function takes keyword arguments lower and upper to define
         the bounds of the variable (default: -inf to inf). The keyword argument
         types can be used to select the type of the variable (Continuous
         (default), Binary or Integer). Setting any variables different than
-        Continuous will turn the problem into an MILP problem.
+        Continuous will turn the problem into an MILP problem. Raises
+        ValueError if a name is already defined.
         """
         names = tuple(names)
+        for name in names:
+            if name in self._variables:
+                raise ValueError('Variable already defined: {!r}'.format(name))
+
         lower = kwargs.get('lower', None)
         upper = kwargs.get('upper', None)
         vartype = kwargs.get('types', None)
