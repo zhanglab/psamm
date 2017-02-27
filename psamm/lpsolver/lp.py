@@ -37,6 +37,8 @@ import operator
 from collections import Counter, defaultdict
 import abc
 import enum
+from fractions import Fraction
+from decimal import Decimal
 
 import six
 from six import add_metaclass, iteritems, viewkeys, viewitems, text_type
@@ -755,8 +757,19 @@ class Result(object):
 
     def _evaluate_expression(self, expr):
         """Evaluate an :class:`.Expression` using :meth:`_get_value`."""
-        total = expr.offset
+        def cast_value(v):
+            # Convert Decimal to Fraction to allow successful multiplication
+            # by either float (most solvers) or Fraction (exact solver).
+            # Multiplying Fraction and float results in a float, and
+            # multiplying Fraction and Fraction result in Fraction, which are
+            # exactly the types of results we want.
+            if isinstance(v, Decimal):
+                return Fraction(v)
+            return v
+
+        total = cast_value(expr.offset)
         for var, value in expr.values():
+            value = cast_value(value)
             if not isinstance(var, Product):
                 total += self._get_value(var) * value
             else:
