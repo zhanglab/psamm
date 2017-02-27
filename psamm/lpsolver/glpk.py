@@ -253,9 +253,9 @@ class Problem(BaseProblem):
 
         for variable, value in expression.values():
             var_index = self._variables[variable]
-            swiglpk.glp_set_obj_coef(self._p, var_index, value)
+            swiglpk.glp_set_obj_coef(self._p, var_index, float(value))
 
-        swiglpk.glp_set_obj_coef(self._p, 0, expression.offset)
+        swiglpk.glp_set_obj_coef(self._p, 0, float(expression.offset))
 
     set_linear_objective = set_objective
     """Set objective of the problem.
