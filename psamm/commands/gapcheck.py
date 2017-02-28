@@ -44,6 +44,9 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
             '--unrestricted-medium', action='store_true',
             help='Remove all limits on exchange reactions while gap checking')
         parser.add_argument(
+            '--exclude-extracellular', action='store_true',
+            help='Exclude extracellular compounds from the result')
+        parser.add_argument(
             '--epsilon', type=float, default=1e-5,
             help='Threshold for compound production')
 
@@ -99,7 +102,8 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
         # Show result
         count = 0
         for compound in blocked:
-            if compound.compartment == extracellular_comp:
+            if (self._args.exclude_extracellular and
+                    compound.compartment == extracellular_comp):
                 continue
 
             count += 1
