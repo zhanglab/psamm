@@ -379,6 +379,10 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command(
             GapCheckCommand, ['--method=prodcheck', '--no-implicit-sinks'])
 
+    def test_run_gapcheck_prodcheck_with_unrestricted_medium(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=prodcheck', '--unrestricted-medium'])
+
     def test_run_gapcheck_sinkcheck(self):
         self.run_solver_command(
             GapCheckCommand, ['--method=sinkcheck'])

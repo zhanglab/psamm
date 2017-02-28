@@ -41,6 +41,9 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
             '--no-implicit-sinks', action='store_true',
             help='Do not include implicit sinks when gap-filling')
         parser.add_argument(
+            '--unrestricted-medium', action='store_true',
+            help='Remove all limits on exchange reactions while gap checking')
+        parser.add_argument(
             '--epsilon', type=float, default=1e-5,
             help='Threshold for compound production')
 
@@ -60,6 +63,12 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
         v_max = float(self._model.default_flux_limit)
 
         implicit_sinks = not self._args.no_implicit_sinks
+
+        if self._args.unrestricted_medium:
+            # Allow all exchange reactions with no flux limits
+            for reaction in self._mm.reactions:
+                if self._mm.is_exchange(reaction):
+                    del self._mm.limits[reaction].bounds
 
         logger.info('Searching for blocked compounds...')
 
