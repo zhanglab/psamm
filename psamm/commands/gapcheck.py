@@ -46,11 +46,10 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
         solver = self._get_solver(integer=True)
         extracellular_comp = self._model.extracellular_compartment
         epsilon = self._args.epsilon
-        v_max = float(self._model.default_flux_limit)
 
         # Run GapFind on model
         logger.info('Searching for blocked compounds...')
-        result = gapfind(self._mm, solver=solver, epsilon=epsilon, v_max=v_max)
+        result = gapfind(self._mm, solver=solver, epsilon=epsilon)
 
         try:
             blocked = set(compound for compound in result
