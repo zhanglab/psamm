@@ -13,9 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Parser for SBML model files"""
+"""Parser for SBML model files."""
 
 from __future__ import unicode_literals
 
@@ -33,6 +33,7 @@ from .context import FileMark
 from .entry import (CompoundEntry as BaseCompoundEntry,
                     ReactionEntry as BaseReactionEntry)
 from ..reaction import Reaction, Compound, Direction
+from ..metabolicmodel import create_exchange_id
 from ..expression.boolean import Expression, And, Or, Variable
 from .. import util
 
@@ -851,8 +852,7 @@ class SBMLWriter(object):
         for compound, reaction_id, lower, upper in model.parse_medium():
             # Create exchange reaction
             if reaction_id is None:
-                reaction_id = 'EX_{}_{}'.format(
-                    compound.name, compound.compartment)
+                reaction_id = create_exchange_id(reaction_properties, compound)
             reaction_id = util.create_unique_id(
                 self._make_safe_id(reaction_id), reaction_properties)
 

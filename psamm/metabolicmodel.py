@@ -414,8 +414,8 @@ class MetabolicModel(MetabolicDatabase):
             for compound, reaction_id, lower, upper in medium:
                 # Create exchange reaction
                 if reaction_id is None:
-                    reaction_id = 'EX_{}_{}'.format(
-                        compound.name, compound.compartment)
+                    reaction_id = create_exchange_id(
+                        model.database.reactions, compound)
                 model.database.set_reaction(
                     reaction_id, Reaction(Direction.Both, {compound: -1}))
                 model.add_reaction(reaction_id)
