@@ -47,7 +47,11 @@ class FilePathContext(object):
                 self._filepath = arg
             else:
                 self._filepath = arg.filepath
-            self._basepath = os.path.dirname(self._filepath)
+
+            if self._filepath is not None:
+                self._basepath = os.path.dirname(self._filepath)
+            else:
+                self._basepath = None
         else:
             self._filepath = None
             self._basepath = None

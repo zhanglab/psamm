@@ -52,16 +52,44 @@ def create_extended_model(model, db_penalty=None, ex_penalty=None,
 
     # Create metabolic model
     model_extended = model.create_metabolic_model()
-    model_compartments = set(model_extended.compartments)
-    extra_compartments = model.extracellular_compartment
+    extra_compartment = model.extracellular_compartment
+    compartments, boundaries = model.parse_compartments()
 
-    # Add exchange and transport reactions to database
-    logger.info('Adding database, exchange and transport reactions')
-    db_added = model_extended.add_all_database_reactions(model_compartments)
+    compartment_ids = set(c.id for c in compartments)
+
+    # Add database reactions to extended model
+    if len(compartment_ids) > 0:
+        logger.info(
+            'Using all database reactions in compartments: {}...'.format(
+                ', '.join('{}'.format(c) for c in compartment_ids)))
+        db_added = model_extended.add_all_database_reactions(compartment_ids)
+    else:
+        logger.warning(
+            'No compartments specified in the model; database reactions will'
+            ' not be used! Add compartment specification to model to include'
+            ' database reactions for those compartments.')
+        db_added = set()
+
+    # Add exchange reactions to extended model
+    logger.info(
+        'Using artificial exchange reactions for compartment: {}...'.format(
+            extra_compartment))
     ex_added = model_extended.add_all_exchange_reactions(
-        extra_compartments, allow_duplicates=True)
-    tp_added = model_extended.add_all_transport_reactions(
-        extra_compartments, allow_duplicates=True)
+        extra_compartment, allow_duplicates=True)
+
+    # Add transport reactions to extended model
+    if len(boundaries) > 0:
+        logger.info(
+            'Using artificial transport reactions for the compartment'
+            ' boundaries: {}...'.format(
+                '; '.join('{}<->{}'.format(c1, c2) for c1, c2 in boundaries)))
+        tp_added = model_extended.add_all_transport_reactions(
+            boundaries, allow_duplicates=True)
+    else:
+        logger.warning(
+            'No compartment boundaries specified in the model;'
+            ' artificial transport reactions will not be used!')
+        tp_added = set()
 
     # Add penalty weights on reactions
     weights = {}

@@ -32,40 +32,56 @@ from psamm.datasource.reaction import parse_reaction
 
 class TestCreateExtendedModel(unittest.TestCase):
     def setUp(self):
-        self._model_dir = tempfile.mkdtemp()
-        with open(os.path.join(self._model_dir, 'model.yaml'), 'w') as f:
-            f.write('\n'.join([
-                '---',
-                'reactions:',
-                '  - id: rxn_1',
-                '    equation: A[e] <=> B[c]',
-                '  - id: rxn_2',
-                '    equation: A[e] => C[c]',
-                '  - id: rxn_3',
-                '    equation: A[e] => D[e]',
-                '  - id: rxn_4',
-                '    equation: C[c] => D[e]',
-                'compounds:',
-                '  - id: A',
-                '  - id: B',
-                '  - id: C',
-                '  - id: D',
-                'media:',
-                '  - compartment: e',
-                '    compounds:',
-                '      - id: A',
-                '        reaction: rxn_5',
-                '      - id: D',
-                '        reaction: rxn_6',
-                'model:',
-                '  - reactions:',
-                '     - rxn_1',
-                '     - rxn_2',
-            ]))
-        self._model = NativeModel.load_model_from_path(self._model_dir)
-
-    def tearDown(self):
-        shutil.rmtree(self._model_dir)
+        self._model = NativeModel({
+            'compartments': [
+                {
+                    'id': 'c',
+                    'adjacent_to': 'e'
+                }, {
+                    'id': 'e'
+                }
+            ],
+            'reactions': [
+                {
+                    'id': 'rxn_1',
+                    'equation': 'A[e] <=> B[c]'
+                }, {
+                    'id': 'rxn_2',
+                    'equation': 'A[e] => C[c]'
+                }, {
+                    'id': 'rxn_3',
+                    'equation': 'A[e] => D[e]'
+                }, {
+                    'id': 'rxn_4',
+                    'equation': 'C[c] => D[e]'
+                }
+            ],
+            'compounds': [
+                {'id': 'A'},
+                {'id': 'B'},
+                {'id': 'C'},
+                {'id': 'D'}
+            ],
+            'media': [{
+                'compartment': 'e',
+                'compounds': [
+                    {
+                        'id': 'A',
+                        'reaction': 'rxn_5'
+                    },
+                    {
+                        'id': 'D',
+                        'reaction': 'rxn_6'
+                    }
+                ]
+            }],
+            'model': [{
+                'reactions': [
+                    'rxn_1',
+                    'rxn_2'
+                ]
+            }]
+        })
 
     def test_create_model_extended(self):
         expected_reactions = set([
@@ -75,22 +91,26 @@ class TestCreateExtendedModel(unittest.TestCase):
             'rxn_4',
             'rxn_5',
             'rxn_6',
-            ('rxntp', Compound('B', 'c')),
-            ('rxntp', Compound('C', 'c')),
+            ('rxntp', Compound('A', 'c'), Compound('A', 'e')),
+            ('rxntp', Compound('B', 'c'), Compound('B', 'e')),
+            ('rxntp', Compound('C', 'c'), Compound('C', 'e')),
+            ('rxntp', Compound('D', 'c'), Compound('D', 'e')),
             ('rxnex', Compound('A', 'e')),
-            ('rxnex', Compound('B', 'c')),
-            ('rxnex', Compound('C', 'c')),
+            ('rxnex', Compound('B', 'e')),
+            ('rxnex', Compound('C', 'e')),
             ('rxnex', Compound('D', 'e'))
         ])
 
         expected_weights = {
             'rxn_3': 5.6,
             'rxn_4': 1.0,
-            ('rxntp', Compound('B', 'c')): 3.0,
-            ('rxntp', Compound('C', 'c')): 3.0,
+            ('rxntp', Compound('A', 'c'), Compound('A', 'e')): 3.0,
+            ('rxntp', Compound('B', 'c'), Compound('B', 'e')): 3.0,
+            ('rxntp', Compound('C', 'c'), Compound('C', 'e')): 3.0,
+            ('rxntp', Compound('D', 'c'), Compound('D', 'e')): 3.0,
             ('rxnex', Compound('A', 'e')): 2.0,
-            ('rxnex', Compound('B', 'c')): 2.0,
-            ('rxnex', Compound('C', 'c')): 2.0,
+            ('rxnex', Compound('B', 'e')): 2.0,
+            ('rxnex', Compound('C', 'e')): 2.0,
             ('rxnex', Compound('D', 'e')): 2.0
         }
         penalties = {'rxn_3': 5.6}
