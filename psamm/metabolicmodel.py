@@ -294,23 +294,25 @@ class MetabolicModel(MetabolicDatabase):
                 all_reactions[rx] = rxnid
 
         added = set()
+        added_compounds = set()
         initial_compounds = set(self.compounds)
         for model_compound in initial_compounds:
             compound = model_compound.in_compartment(compartment)
-            rxnid_ex = ('rxnex', compound)
-            if rxnid_ex in added:
+            if compound in added_compounds:
                 continue
 
-            if not self._database.has_reaction(rxnid_ex):
-                reaction_ex = Reaction(Direction.Both, {compound: -1})
-                if reaction_ex not in all_reactions:
-                    self._database.set_reaction(rxnid_ex, reaction_ex)
-                else:
-                    rxnid_ex = all_reactions[reaction_ex]
+            rxnid_ex = create_exchange_id(self._database.reactions, compound)
+
+            reaction_ex = Reaction(Direction.Both, {compound: -1})
+            if reaction_ex not in all_reactions:
+                self._database.set_reaction(rxnid_ex, reaction_ex)
+            else:
+                rxnid_ex = all_reactions[reaction_ex]
 
             if rxnid_ex not in self._reaction_set:
                 added.add(rxnid_ex)
             self.add_reaction(rxnid_ex)
+            added_compounds.add(compound)
 
         return added
 
@@ -343,30 +345,32 @@ class MetabolicModel(MetabolicDatabase):
                 boundary_pairs.add(tuple(sorted((source, dest))))
 
         added = set()
+        added_pairs = set()
         initial_compounds = set(self.compounds)
         for compound in initial_compounds:
             for c1, c2 in boundary_pairs:
                 compound1 = compound.in_compartment(c1)
                 compound2 = compound.in_compartment(c2)
                 pair = compound1, compound2
-
-                rxnid_tp = ('rxntp',) + pair
-                if rxnid_tp in added:
+                if pair in added_pairs:
                     continue
 
-                if not self._database.has_reaction(rxnid_tp):
-                    reaction_tp = Reaction(Direction.Both, {
-                        compound1: -1,
-                        compound2: 1
-                    })
-                    if reaction_tp not in all_reactions:
-                        self._database.set_reaction(rxnid_tp, reaction_tp)
-                    else:
-                        rxnid_tp = all_reactions[reaction_tp]
+                rxnid_tp = create_transport_id(
+                    self._database.reactions, compound1, compound2)
+
+                reaction_tp = Reaction(Direction.Both, {
+                    compound1: -1,
+                    compound2: 1
+                })
+                if reaction_tp not in all_reactions:
+                    self._database.set_reaction(rxnid_tp, reaction_tp)
+                else:
+                    rxnid_tp = all_reactions[reaction_tp]
 
                 if rxnid_tp not in self._reaction_set:
                     added.add(rxnid_tp)
                 self.add_reaction(rxnid_tp)
+                added_pairs.add(pair)
 
         return added
 

@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2016-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2016  Chao liu <lcddzyx@gmail.com>
 
 import os
@@ -91,27 +91,27 @@ class TestCreateExtendedModel(unittest.TestCase):
             'rxn_4',
             'rxn_5',
             'rxn_6',
-            ('rxntp', Compound('A', 'c'), Compound('A', 'e')),
-            ('rxntp', Compound('B', 'c'), Compound('B', 'e')),
-            ('rxntp', Compound('C', 'c'), Compound('C', 'e')),
-            ('rxntp', Compound('D', 'c'), Compound('D', 'e')),
-            ('rxnex', Compound('A', 'e')),
-            ('rxnex', Compound('B', 'e')),
-            ('rxnex', Compound('C', 'e')),
-            ('rxnex', Compound('D', 'e'))
+            'TP_A[c]_A[e]',
+            'TP_B[c]_B[e]',
+            'TP_C[c]_C[e]',
+            'TP_D[c]_D[e]',
+            'EX_A[e]',
+            'EX_B[e]',
+            'EX_C[e]',
+            'EX_D[e]'
         ])
 
         expected_weights = {
             'rxn_3': 5.6,
             'rxn_4': 1.0,
-            ('rxntp', Compound('A', 'c'), Compound('A', 'e')): 3.0,
-            ('rxntp', Compound('B', 'c'), Compound('B', 'e')): 3.0,
-            ('rxntp', Compound('C', 'c'), Compound('C', 'e')): 3.0,
-            ('rxntp', Compound('D', 'c'), Compound('D', 'e')): 3.0,
-            ('rxnex', Compound('A', 'e')): 2.0,
-            ('rxnex', Compound('B', 'e')): 2.0,
-            ('rxnex', Compound('C', 'e')): 2.0,
-            ('rxnex', Compound('D', 'e')): 2.0
+            'TP_A[c]_A[e]': 3.0,
+            'TP_B[c]_B[e]': 3.0,
+            'TP_C[c]_C[e]': 3.0,
+            'TP_D[c]_D[e]': 3.0,
+            'EX_A[e]': 2.0,
+            'EX_B[e]': 2.0,
+            'EX_C[e]': 2.0,
+            'EX_D[e]': 2.0
         }
         penalties = {'rxn_3': 5.6}
 
