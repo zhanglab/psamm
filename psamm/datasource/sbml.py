@@ -703,24 +703,6 @@ class SBMLWriter(object):
         id = re.sub(r'[^a-zA-Z0-9_]', '', id)
         return id
 
-    def _create_unique_id(self, in_dict, orig_id):
-        """Creates and returns a unique ID for reaction or compound.
-
-        Looks at the ID the thing would have and checks if it is a duplicate
-        of another in the dictionary and makes a new ID if so.
-        """
-
-        if orig_id in in_dict:
-            suffix = 1
-            while True:
-                new_id = '{}_{}'.format(
-                    orig_id, suffix)
-                if new_id not in in_dict:
-                    orig_id = new_id
-                    break
-                suffix += 1
-        return orig_id
-
     def _get_flux_bounds(self, r_id, model, flux_limits, equation):
         """Read reaction's limits to set up strings for limits in the output file.
         """
@@ -768,8 +750,8 @@ class SBMLWriter(object):
                 gene_tag = ET.SubElement(parent, _tag(
                     'geneProductRef', FBC_V2))
                 if current.symbol not in gene_ids:
-                    id = 'g_' + self._create_unique_id(
-                        gene_ids, self._make_safe_id(current.symbol))
+                    id = 'g_' + util.create_unique_id(
+                        self._make_safe_id(current.symbol), gene_ids)
                     gene_ids[id] = current.symbol
                     gene_tag.set(_tag('geneProduct', FBC_V2), id)
             if isinstance(current, (Or, And)):
@@ -856,8 +838,8 @@ class SBMLWriter(object):
                     r.id not in model_reactions):
                 continue
 
-            reaction_id = self._create_unique_id(
-                reaction_properties, self._make_safe_id(r.id))
+            reaction_id = util.create_unique_id(
+                self._make_safe_id(r.id), reaction_properties)
             if r.id == model.biomass_reaction:
                 biomass_id = reaction_id
 
@@ -871,8 +853,8 @@ class SBMLWriter(object):
             if reaction_id is None:
                 reaction_id = 'EX_{}_{}'.format(
                     compound.name, compound.compartment)
-            reaction_id = self._create_unique_id(
-                reaction_properties, self._make_safe_id(reaction_id))
+            reaction_id = util.create_unique_id(
+                self._make_safe_id(reaction_id), reaction_properties)
 
             reaction_properties[reaction_id] = {
                 'id': reaction_id,
@@ -921,15 +903,15 @@ class SBMLWriter(object):
                         'id': compound.name
                     }
 
-                compound_id = self._create_unique_id(
-                    species_ids, self._make_safe_id(compound.name))
+                compound_id = util.create_unique_id(
+                    self._make_safe_id(compound.name), species_ids)
                 model_species[compound] = compound_id
                 species_ids.add(compound_id)
                 if compound.compartment not in model_compartments:
                     model_compartments[
-                        compound.compartment] = 'C_' + self._create_unique_id(
-                            model_compartments, self._make_safe_id(
-                                compound.compartment))
+                        compound.compartment] = 'C_' + util.create_unique_id(
+                            self._make_safe_id(compound.compartment),
+                            model_compartments)
 
         # Create list of compartments
         compartments = ET.SubElement(
