@@ -204,7 +204,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
               - id: A_\u2206
               - id: B
               - id: C
-            media:
+            exchange:
               - compartment: e
                 compounds:
                   - id: A_\u2206
@@ -252,7 +252,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
                 {'id': 'B'},
                 {'id': 'C'}
               ],
-            'media': [
+            'exchange': [
                 {'compartment': 'e',
                  'compounds':[
                     {'id': 'A_\u2206'},
@@ -292,7 +292,24 @@ class TestYAMLFileSystemData(unittest.TestCase):
         with self.assertRaises(ValueError):
             native.NativeModel(42.2)
 
+    def test_parse_model_file_with_exchange(self):
+        path = self.write_model_file('model.yaml', '\n'.join([
+            'extracellular: Ex',
+            'exchange:',
+            ' - compounds:',
+            '    - id: A',
+            '    - id: B',
+            '      compartment: c'
+        ]))
+
+        model = native.NativeModel.load_model_from_path(path)
+
+        medium = list(model.parse_medium())
+        self.assertEqual(medium[0][0], Compound('A', 'Ex'))
+        self.assertEqual(medium[1][0], Compound('B', 'c'))
+
     def test_parse_model_file_with_media(self):
+        """Test parsing model with the deprecated media key."""
         path = self.write_model_file('model.yaml', '\n'.join([
             'extracellular: Ex',
             'media:',
@@ -307,6 +324,26 @@ class TestYAMLFileSystemData(unittest.TestCase):
         medium = list(model.parse_medium())
         self.assertEqual(medium[0][0], Compound('A', 'Ex'))
         self.assertEqual(medium[1][0], Compound('B', 'c'))
+
+    def test_parse_model_file_with_media_and_exchange(self):
+        """Test that parsing model with both media and exchange fails."""
+        path = self.write_model_file('model.yaml', '\n'.join([
+            'extracellular: Ex',
+            'media:',
+            ' - compounds:',
+            '    - id: A',
+            '    - id: B',
+            '      compartment: c',
+            'exchange:',
+            ' - compounds:',
+            '    - id: C',
+            '    - id: D'
+        ]))
+
+        model = native.NativeModel.load_model_from_path(path)
+
+        with self.assertRaises(native.ParseError):
+            medium = list(model.parse_medium())
 
     def test_parse_compound_tsv_file(self):
         path = self.write_model_file('compounds.tsv', '\n'.join([

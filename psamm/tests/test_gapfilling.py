@@ -97,7 +97,7 @@ class TestCreateExtendedModel(unittest.TestCase):
                 {'id': 'C'},
                 {'id': 'D'}
             ],
-            'media': [{
+            'exchange': [{
                 'compartment': 'e',
                 'compounds': [
                     {

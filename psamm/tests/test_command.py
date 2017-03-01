@@ -156,7 +156,7 @@ class TestCommandMain(unittest.TestCase):
                     'formula': 'O2'
                 }
             ],
-            'media': [
+            'exchange': [
                 {
                     'compartment': 'e',
                     'compounds': [

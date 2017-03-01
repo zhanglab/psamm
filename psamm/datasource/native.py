@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Module for reading and writing native formats.
 
@@ -272,13 +272,23 @@ class NativeModel(object):
         upper flux limits.
         """
 
-        extracellular = self.extracellular_compartment
         if 'media' in self._model:
-            if not isinstance(self._model['media'], list):
-                raise ParseError('Expected media to be a list')
+            if 'exchange' in self._model:
+                raise ParseError('Both "media" and "exchange" are specified')
+            logger.warning(
+                'The "media" key is deprecated! Please use "exchange" instead:'
+                ' https://psamm.readthedocs.io/en/stable/file_format.html')
+            exchange_list = self._model['media']
+        else:
+            exchange_list = self._model.get('exchange')
+
+        extracellular = self.extracellular_compartment
+        if exchange_list is not None:
+            if not isinstance(exchange_list, list):
+                raise ParseError('Expected "exchange" to be a list')
 
             for medium_compound in parse_medium_list(
-                    self._context, self._model['media'], extracellular):
+                    self._context, exchange_list, extracellular):
                 compound, reaction_id, lower, upper = medium_compound
                 if compound.compartment is None:
                     compound = compound.in_compartment(extracellular)
