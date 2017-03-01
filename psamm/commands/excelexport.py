@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from __future__ import unicode_literals
 
@@ -33,12 +34,13 @@ logger = logging.getLogger(__name__)
 
 
 class ExcelExportCommand(Command):
-    """Export the metabolic model as an Excel workbook"""
+    """Export the metabolic model as an Excel workbook."""
 
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            'file', type=str, help='File path for writing the Excel workbook')
+            'file', type=text_type,
+            help='File path for writing the Excel workbook')
 
     def run(self):
         model = self._model
