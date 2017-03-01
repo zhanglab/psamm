@@ -294,6 +294,13 @@ class NativeModel(object):
                     compound = compound.in_compartment(extracellular)
                 yield compound, reaction_id, lower, upper
 
+    parse_medium = parse_exchange
+    """Yield tuples of exchange compounds.
+
+    .. deprecated:: 0.28
+       Use :meth:`parse_exchange` instead.
+    """
+
     def parse_compounds(self):
         """Yield CompoundEntries for defined compounds"""
 
@@ -698,6 +705,14 @@ def parse_exchange(exchange_def, default_compartment):
         yield compound, reaction, lower, upper
 
 
+parse_medium = parse_exchange
+"""Parse a structured exchange definition as obtained from a YAML file.
+
+.. deprecated:: 0.28
+   Use :func:`parse_exchange` instead.
+"""
+
+
 def parse_exchange_list(path, exchange, default_compartment):
     """Parse a structured exchange list as obtained from a YAML file.
 
@@ -719,6 +734,14 @@ def parse_exchange_list(path, exchange, default_compartment):
                 yield exchange_compound
 
 
+parse_medium_list = parse_exchange_list
+"""Parse a structured exchange list as obtained from a YAML file.
+
+.. deprecated:: 0.28
+   Use :func:`parse_exchange_list` instead.
+"""
+
+
 def parse_exchange_yaml_file(path, f, default_compartment):
     """Parse a file as a YAML-format exchange definition.
 
@@ -728,8 +751,16 @@ def parse_exchange_yaml_file(path, f, default_compartment):
     return parse_exchange(yaml_load(f), default_compartment)
 
 
+parse_medium_yaml_file = parse_exchange_yaml_file
+"""Parse a file as a YAML-format exchange definition.
+
+.. deprecated:: 0.28
+   Use :func:`parse_exchange_yaml_file` instead.
+"""
+
+
 def parse_exchange_table_file(f):
-    """Parse a space-separated file containing exchange compound flux limits
+    """Parse a space-separated file containing exchange compound flux limits.
 
     The first two columns contain compound IDs and compartment while the
     third column contains the lower flux limits. The fourth column is
@@ -759,6 +790,14 @@ def parse_exchange_table_file(f):
         yield compound, None, lower, upper
 
 
+parse_medium_table_file = parse_exchange_table_file
+"""Parse a space-separated file containing exchange compound flux limits.
+
+.. deprecated:: 0.28
+   Use :func:`parse_exchange_table_file` instead.
+"""
+
+
 def parse_exchange_file(path, default_compartment):
     """Parse a file as a list of exchange compounds with flux limits.
 
@@ -785,6 +824,14 @@ def parse_exchange_file(path, default_compartment):
     else:
         raise ParseError('Unable to detect format of exchange file {}'.format(
             context.filepath))
+
+
+parse_medium_file = parse_exchange_file
+"""Parse a file as a list of exchange compounds with flux limits.
+
+.. deprecated:: 0.28
+   Use :func:`parse_exchange_file` instead.
+"""
 
 
 def parse_limit(limit_def):
