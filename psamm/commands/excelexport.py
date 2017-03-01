@@ -101,7 +101,7 @@ class ExcelExportCommand(Command):
                 compound_sheet.write_string(
                     x+1, len(compound_list_sorted), 'False')
 
-        media_sheet = workbook.add_worksheet(name='Medium')
+        media_sheet = workbook.add_worksheet(name='Exchange')
 
         media_sheet.write_string(0, 0, 'Compound ID')
         media_sheet.write_string(0, 1, 'Reaction ID')
