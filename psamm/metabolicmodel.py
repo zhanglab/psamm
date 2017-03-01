@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Representation of metabolic network models."""
 
@@ -23,6 +23,18 @@ from collections import Mapping
 
 from .database import MetabolicDatabase, StoichiometricMatrixView
 from .reaction import Reaction, Direction
+from .util import create_unique_id
+
+
+def create_exchange_id(existing_ids, compound):
+    """Create unique ID for exchange of compound."""
+    return create_unique_id('EX_{}'.format(compound), existing_ids)
+
+
+def create_transport_id(existing_ids, compound_1, compound_2):
+    """Create unique ID for transport reaction of compounds."""
+    return create_unique_id(
+        'TP_{}_{}'.format(compound_1, compound_2), existing_ids)
 
 
 class FluxBounds(object):
