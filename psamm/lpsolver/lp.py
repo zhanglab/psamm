@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Base objects for representation of LP problems.
 
@@ -166,6 +166,12 @@ class Expression(object):
     >>> rel = Expression({'x': 2}) >= Expression({'y': 3})
     >>> str(rel)
     '2*x - 3*y >= 0'
+
+    .. warning::
+
+        Chained relations cannot be converted to multiple
+        relations, e.g. ``4 <= e <= 10`` will fail to produce the intended
+        relations!
     """
 
     def __init__(self, variables={}, offset=0):
@@ -491,6 +497,17 @@ class Relation(object):
 
     def __repr__(self):
         return str('<{} {}>').format(self.__class__.__name__, repr(str(self)))
+
+    def __nonzero__(self):
+        # Override __nonzero__ (and __bool__) here so we can avoid bugs when a
+        # user mistakenly thinks that "4 <= x <= 100" should work.
+        # This kind of expression expands to "4 <= x and x <= 100" and since we
+        # cannot override the "and" operator, the relation "4 <= x" is
+        # converted to a bool. Override here to raise an error to make sure
+        # that this syntax always fails.
+        raise ValueError('Unable to convert relation to bool')
+
+    __bool__ = __nonzero__
 
 
 @enum.unique

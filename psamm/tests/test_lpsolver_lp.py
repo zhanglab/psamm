@@ -330,6 +330,11 @@ class TestRelation(unittest.TestCase):
         r = lp.Relation(lp.RelationSense.Equals, e)
         self.assertEqual(str(r), 'x1 == 0')
 
+    def test_chained_relation(self):
+        e = lp.Expression({'x1': 1})
+        with self.assertRaises(ValueError):
+            self.assertFalse(4 <= e <= 10)
+
 
 class MockResult(lp.Result):
     def __init__(self, values):
