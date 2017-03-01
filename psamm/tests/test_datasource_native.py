@@ -127,21 +127,22 @@ class TestYAMLDataSource(unittest.TestCase):
                 }
             ]))
 
-    def test_parse_medium_table(self):
+    def test_parse_exchange_table(self):
         table = '''
 ac      e
 glcD    e       -10
 co2     e       -       50
 '''
 
-        medium = list(native.parse_medium_table_file(StringIO(table.strip())))
-        self.assertEqual(len(medium), 3)
-        self.assertEqual(medium[0], (Compound('ac', 'e'), None, None, None))
-        self.assertEqual(medium[1], (Compound('glcD', 'e'), None, -10, None))
-        self.assertEqual(medium[2], (Compound('co2', 'e'), None, None, 50))
+        exchange = list(
+            native.parse_exchange_table_file(StringIO(table.strip())))
+        self.assertEqual(len(exchange), 3)
+        self.assertEqual(exchange[0], (Compound('ac', 'e'), None, None, None))
+        self.assertEqual(exchange[1], (Compound('glcD', 'e'), None, -10, None))
+        self.assertEqual(exchange[2], (Compound('co2', 'e'), None, None, 50))
 
-    def test_parse_medium(self):
-        medium = list(native.parse_medium({
+    def test_parse_exchange(self):
+        exchange = list(native.parse_exchange({
             'compartment': 'e',
             'compounds': [
                 {'id': 'ac'},
@@ -152,14 +153,14 @@ co2     e       -       50
             ]
         }, 'e'))
 
-        self.assertEqual(len(medium), 5)
-        self.assertEqual(medium[0], (Compound('ac', 'e'), None, None, None))
-        self.assertEqual(medium[1], (Compound('glcD', 'e'), None, -10, None))
-        self.assertEqual(medium[2], (Compound('co2', 'e'), None, None, 50))
+        self.assertEqual(len(exchange), 5)
+        self.assertEqual(exchange[0], (Compound('ac', 'e'), None, None, None))
+        self.assertEqual(exchange[1], (Compound('glcD', 'e'), None, -10, None))
+        self.assertEqual(exchange[2], (Compound('co2', 'e'), None, None, 50))
         self.assertEqual(
-            medium[3], (Compound('compound_x', 'c'), None, None, None))
+            exchange[3], (Compound('compound_x', 'c'), None, None, None))
         self.assertEqual(
-            medium[4], (Compound('compound_y', 'e'), 'EX_cpdy', None, None))
+            exchange[4], (Compound('compound_y', 'e'), 'EX_cpdy', None, None))
 
     def test_parse_normal_float(self):
         v = native.yaml_load('-23.456')
@@ -225,7 +226,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
             name: Test model
             biomass: rxn_1
             reactions:
-              - include: medium.yaml
+              - include: exchange.yaml
             '''
         m = native.NativeModel(longString)
         with self.assertRaises(context.ContextError):
@@ -304,9 +305,9 @@ class TestYAMLFileSystemData(unittest.TestCase):
 
         model = native.NativeModel.load_model_from_path(path)
 
-        medium = list(model.parse_medium())
-        self.assertEqual(medium[0][0], Compound('A', 'Ex'))
-        self.assertEqual(medium[1][0], Compound('B', 'c'))
+        exchange = list(model.parse_exchange())
+        self.assertEqual(exchange[0][0], Compound('A', 'Ex'))
+        self.assertEqual(exchange[1][0], Compound('B', 'c'))
 
     def test_parse_model_file_with_media(self):
         """Test parsing model with the deprecated media key."""
@@ -321,9 +322,9 @@ class TestYAMLFileSystemData(unittest.TestCase):
 
         model = native.NativeModel.load_model_from_path(path)
 
-        medium = list(model.parse_medium())
-        self.assertEqual(medium[0][0], Compound('A', 'Ex'))
-        self.assertEqual(medium[1][0], Compound('B', 'c'))
+        exchange = list(model.parse_exchange())
+        self.assertEqual(exchange[0][0], Compound('A', 'Ex'))
+        self.assertEqual(exchange[1][0], Compound('B', 'c'))
 
     def test_parse_model_file_with_media_and_exchange(self):
         """Test that parsing model with both media and exchange fails."""
@@ -343,7 +344,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
         model = native.NativeModel.load_model_from_path(path)
 
         with self.assertRaises(native.ParseError):
-            medium = list(model.parse_medium())
+            medium = list(model.parse_exchange())
 
     def test_parse_compound_tsv_file(self):
         path = self.write_model_file('compounds.tsv', '\n'.join([
@@ -426,8 +427,8 @@ class TestYAMLFileSystemData(unittest.TestCase):
         self.assertEqual(reactions[0].id, 'rxn_1')
         self.assertEqual(reactions[1].id, 'rxn_2')
 
-    def test_parse_medium_table_file(self):
-        path = self.write_model_file('medium.tsv', '\n'.join([
+    def test_parse_exchange_table_file(self):
+        path = self.write_model_file('exchange.tsv', '\n'.join([
             '',
             '# comment',
             'cpd_A\tc',
@@ -436,8 +437,8 @@ class TestYAMLFileSystemData(unittest.TestCase):
             'cpd_D\te\t-100\t-10'
         ]))
 
-        medium = list(native.parse_medium_file(path, 'e'))
-        self.assertEqual(medium, [
+        exchange = list(native.parse_exchange_file(path, 'e'))
+        self.assertEqual(exchange, [
             (Compound('cpd_A', 'c'), None, None, None),
             (Compound('cpd_B', 'e'), None, -1000, None),
             (Compound('cpd_C', 'e'), None, None, 20),
@@ -452,8 +453,8 @@ class TestYAMLFileSystemData(unittest.TestCase):
         with self.assertRaises(native.ParseError):
             native.get_limits(d)
 
-    def test_parse_medium_yaml_file(self):
-        path = self.write_model_file('medium.yaml', '\n'.join([
+    def test_parse_exchange_yaml_file(self):
+        path = self.write_model_file('exchange.yaml', '\n'.join([
             'compartment: e',
             'compounds:',
             '  - id: cpd_A',
@@ -470,8 +471,8 @@ class TestYAMLFileSystemData(unittest.TestCase):
             '    fixed: 100.0',
         ]))
 
-        medium = list(native.parse_medium_file(path, 'e'))
-        self.assertEqual(medium, [
+        exchange = list(native.parse_exchange_file(path, 'e'))
+        self.assertEqual(exchange, [
             (Compound('cpd_A', 'e'), 'EX_A', -40, None),
             (Compound('cpd_B', 'e'), None, None, 100),
             (Compound('cpd_C', 'e'), None, -100, 500),
@@ -479,8 +480,8 @@ class TestYAMLFileSystemData(unittest.TestCase):
             (Compound('cpd_E', 'e'), None, 100, 100)
         ])
 
-    def test_parse_medium_yaml_list(self):
-        self.write_model_file('medium.yaml', '\n'.join([
+    def test_parse_exchange_yaml_list(self):
+        self.write_model_file('exchange.yaml', '\n'.join([
             'compartment: e',
             'compounds:',
             '  - id: cpd_A',
@@ -488,8 +489,8 @@ class TestYAMLFileSystemData(unittest.TestCase):
         ]))
 
         path = os.path.join(self._model_dir, 'fake.yaml')
-        medium = list(native.parse_medium_list(path, [
-            {'include': 'medium.yaml'},
+        exchange = list(native.parse_exchange_list(path, [
+            {'include': 'exchange.yaml'},
             {
                 'compartment': 'e',
                 'compounds': [
@@ -498,7 +499,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
             }
         ], 'e'))
 
-        self.assertEqual(medium, [
+        self.assertEqual(exchange, [
             (Compound('cpd_A', 'e'), None, -42, None),
             (Compound('cpd_B', 'e'), None, None, 767)
         ])
