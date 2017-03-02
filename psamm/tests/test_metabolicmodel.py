@@ -119,32 +119,6 @@ class TestMetabolicModel(unittest.TestCase):
         self.model.add_reaction('rxn_7')
         self.assertFalse(self.model.is_exchange('rxn_7'))
 
-    def test_add_all_database_reactions(self):
-        # Should get added
-        self.database.set_reaction('rxn_7', parse_reaction('D[c] => E[c]'))
-        # Not added because of compartment
-        self.database.set_reaction('rxn_8', parse_reaction('D[c] => E[p]'))
-        added = self.model.add_all_database_reactions({'c', 'e'})
-        self.assertEqual(added, {'rxn_7'})
-        self.assertEqual(set(self.model.reactions), {
-            'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6', 'rxn_7'
-        })
-
-    def test_add_all_database_reactions_none(self):
-        added = self.model.add_all_database_reactions({'c', 'e'})
-        self.assertEqual(added, set())
-        self.assertEqual(set(self.model.reactions), {
-            'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6'})
-
-    def test_add_all_transport_reactions(self):
-        added = self.model.add_all_transport_reactions({('e', 'c')})
-        for reaction in added:
-            compartments = tuple(c.compartment for c, _ in
-                                 self.model.get_reaction_values(reaction))
-            self.assertEqual(len(compartments), 2)
-            self.assertTrue('e' in compartments)
-            self.assertTrue(compartments[0] != compartments[1])
-
     def test_limits_get_item(self):
         self.assertEqual(self.model.limits['rxn_1'].bounds, (0, 1000))
         self.assertEqual(self.model.limits['rxn_2'].bounds, (-1000, 1000))

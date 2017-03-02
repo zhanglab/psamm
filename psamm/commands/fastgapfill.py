@@ -21,7 +21,8 @@ import argparse
 import logging
 
 from ..command import Command, MetabolicMixin, SolverCommandMixin
-from ..fastgapfill import create_extended_model, fastgapfill
+from ..fastgapfill import fastgapfill
+from ..gapfilling import create_extended_model
 
 logger = logging.getLogger(__name__)
 

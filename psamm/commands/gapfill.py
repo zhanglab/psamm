@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from __future__ import unicode_literals
 
@@ -26,7 +26,7 @@ from ..command import (Command, MetabolicMixin, SolverCommandMixin,
                        FilePrefixAppendAction)
 from ..gapfill import gapfill, GapFillError
 from ..datasource.reaction import parse_compound
-from ..fastgapfill import create_extended_model
+from ..gapfilling import create_extended_model
 
 logger = logging.getLogger(__name__)
 
