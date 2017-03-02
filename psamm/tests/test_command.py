@@ -371,9 +371,38 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command(
             FluxVariabilityCommand, ['--loop-removal=tfba'], {'integer': True})
 
-    def test_run_gapcheck(self):
+    def test_run_gapcheck_prodcheck(self):
         self.run_solver_command(
-            GapCheckCommand, requirements={'integer': True})
+            GapCheckCommand, ['--method=prodcheck'])
+
+    def test_run_gapcheck_prodcheck_without_implicit_sinks(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=prodcheck', '--no-implicit-sinks'])
+
+    def test_run_gapcheck_prodcheck_without_extracellular(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=prodcheck', '--exclude-extracellular'])
+
+    def test_run_gapcheck_prodcheck_with_unrestricted_medium(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=prodcheck', '--unrestricted-medium'])
+
+    def test_run_gapcheck_sinkcheck(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=sinkcheck'])
+
+    def test_run_gapcheck_sinkcheck_without_implicit_sinks(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=sinkcheck', '--no-implicit-sinks'])
+
+    def test_run_gapcheck_gapfind(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=gapfind'], {'integer': True})
+
+    def test_run_gapcheck_gapfind_without_implicit_sinks(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=gapfind', '--no-implicit-sinks'],
+            {'integer': True})
 
     def test_run_gapfill(self):
         self.run_solver_command(

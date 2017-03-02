@@ -376,7 +376,25 @@ every compound to also be consumed by another reaction (in other words, for
 the purpose of this analysis there are implicit sinks for every compound in
 the model). This means that even if this command reports that no compounds are
 blocked, it may still not be possible for the model to be viable under the
-steady-state assumption of FBA.
+steady-state assumption of FBA. The option ``--no-implicit-sinks`` can be used
+to perform the gap check without implicit sinks.
+
+The gap check is performed with the medium that is defined in the model. It
+may be useful to run the gap check with every compound in the medium available.
+This can easily be done by specifying the ``--unrestricted-medium`` option
+which removes all limits on the exchange reactions during the check.
+
+There are some additional gap checking methods that can be enabled with the
+``--method`` option. The method ``sinkcheck`` can be used to find compounds
+that cannot be synthesized from scratch. The standard gap check will report
+compounds as produced if they can participate in a reaction, even if the
+compound itself cannot be synthesized from precursors in the medium. To find
+such compounds use the ``sinkcheck``. This check will generally indicate more
+compounds as blocked. Lastly, the method ``gapfind`` can be used. This method
+should produce the same result as the default method but is implemented in an
+alternative way that is specified in [Kumar07]_. This method is *not* used by
+default because it tends to result in difficulties for the solver when used
+with larger models.
 
 GapFill (``gapfill``)
 ---------------------
