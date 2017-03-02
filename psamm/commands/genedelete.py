@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 from __future__ import unicode_literals
@@ -78,7 +78,7 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                 new_assoc = assoc.substitute(
                     lambda v: v if v.symbol not in testing_genes else False)
                 if new_assoc.has_value() and not new_assoc.value:
-                    logger.info('Deletion reaction {}...'.format(reaction))
+                    logger.info('Deleting reaction {}...'.format(reaction))
                     deleted_reactions.add(reaction)
 
         solver = self._get_solver()
