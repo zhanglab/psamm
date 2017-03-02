@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Various utilities."""
 
@@ -162,6 +162,24 @@ class DictView(collections.Mapping):
 
     def __len__(self):
         return len(self.__d)
+
+
+def create_unique_id(prefix, existing_ids):
+    """Return a unique string ID from the prefix.
+
+    First check if the prefix is itself a unique ID in the set-like parameter
+    existing_ids. If not, try integers in ascending order appended to the
+    prefix until a unique ID is found.
+    """
+    if prefix in existing_ids:
+        suffix = 1
+        while True:
+            new_id = '{}_{}'.format(prefix, suffix)
+            if new_id not in existing_ids:
+                return new_id
+            suffix += 1
+
+    return prefix
 
 
 def git_try_describe(repo_path):
