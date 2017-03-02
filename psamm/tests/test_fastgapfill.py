@@ -16,113 +16,13 @@
 # Copyright 2016-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2016  Chao liu <lcddzyx@gmail.com>
 
-import os
 import unittest
-import tempfile
-import shutil
 
-from psamm.datasource.native import NativeModel
 from psamm.metabolicmodel import MetabolicModel
 from psamm.database import DictDatabase
-from psamm.reaction import Compound
 from psamm import fastgapfill
 from psamm.lpsolver import generic
 from psamm.datasource.reaction import parse_reaction
-
-
-class TestCreateExtendedModel(unittest.TestCase):
-    def setUp(self):
-        self._model = NativeModel({
-            'compartments': [
-                {
-                    'id': 'c',
-                    'adjacent_to': 'e'
-                }, {
-                    'id': 'e'
-                }
-            ],
-            'reactions': [
-                {
-                    'id': 'rxn_1',
-                    'equation': 'A[e] <=> B[c]'
-                }, {
-                    'id': 'rxn_2',
-                    'equation': 'A[e] => C[c]'
-                }, {
-                    'id': 'rxn_3',
-                    'equation': 'A[e] => D[e]'
-                }, {
-                    'id': 'rxn_4',
-                    'equation': 'C[c] => D[e]'
-                }
-            ],
-            'compounds': [
-                {'id': 'A'},
-                {'id': 'B'},
-                {'id': 'C'},
-                {'id': 'D'}
-            ],
-            'media': [{
-                'compartment': 'e',
-                'compounds': [
-                    {
-                        'id': 'A',
-                        'reaction': 'rxn_5'
-                    },
-                    {
-                        'id': 'D',
-                        'reaction': 'rxn_6'
-                    }
-                ]
-            }],
-            'model': [{
-                'reactions': [
-                    'rxn_1',
-                    'rxn_2'
-                ]
-            }]
-        })
-
-    def test_create_model_extended(self):
-        expected_reactions = set([
-            'rxn_1',
-            'rxn_2',
-            'rxn_3',
-            'rxn_4',
-            'rxn_5',
-            'rxn_6',
-            'TP_A[c]_A[e]',
-            'TP_B[c]_B[e]',
-            'TP_C[c]_C[e]',
-            'TP_D[c]_D[e]',
-            'EX_A[e]',
-            'EX_B[e]',
-            'EX_C[e]',
-            'EX_D[e]'
-        ])
-
-        expected_weights = {
-            'rxn_3': 5.6,
-            'rxn_4': 1.0,
-            'TP_A[c]_A[e]': 3.0,
-            'TP_B[c]_B[e]': 3.0,
-            'TP_C[c]_C[e]': 3.0,
-            'TP_D[c]_D[e]': 3.0,
-            'EX_A[e]': 2.0,
-            'EX_B[e]': 2.0,
-            'EX_C[e]': 2.0,
-            'EX_D[e]': 2.0
-        }
-        penalties = {'rxn_3': 5.6}
-
-        model_extended, weights = fastgapfill.create_extended_model(
-            self._model,
-            db_penalty=1.0,
-            ex_penalty=2.0,
-            tp_penalty=3.0,
-            penalties=penalties)
-        self.assertEqual(set(model_extended.reactions), expected_reactions)
-        self.assertEqual(weights, expected_weights)
 
 
 class TestFastGapFill(unittest.TestCase):
