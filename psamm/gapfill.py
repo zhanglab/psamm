@@ -49,7 +49,7 @@ def _find_integer_tolerance(epsilon, v_max, min_tol):
     return int_tol
 
 
-def gapfind(model, solver, epsilon=0.001, v_max=1000, implicit_sinks=True):
+def gapfind(model, solver, epsilon=0.001, implicit_sinks=True):
     """Identify compounds in the model that cannot be produced.
 
     Yields all compounds that cannot be produced. This method
@@ -58,7 +58,9 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000, implicit_sinks=True):
     produced is the presence of the compounds needed to produce it.
 
     Epsilon indicates the threshold amount of reaction flux for the products
-    to be considered non-blocked. V_max indicates the maximum flux.
+    to be considered non-blocked. The method respects the reversibility of
+    reactions but does not consider flux bounds of reactions i.e. every
+    reaction is assumed to be able to run at maximum flux.
 
     This method is implemented as a MILP-program. Therefore it may
     not be efficient for larger models.
@@ -74,6 +76,8 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000, implicit_sinks=True):
             when gap-filling (traditional GapFill uses implicit sinks).
     """
     prob = solver.create_problem()
+
+    v_max = 1
 
     # Set integrality tolerance such that w constraints are correct
     min_tol = prob.integrality_tolerance.min
@@ -96,7 +100,12 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000, implicit_sinks=True):
             w.define([spec])
             w_var = w(spec)
 
-            lower, upper = (float(x) for x in model.limits[reaction_id])
+            lower, upper = 0, 0
+            if model.limits[reaction_id].lower < 0:
+                lower = -v_max
+            if model.limits[reaction_id].upper > 0:
+                upper = v_max
+
             if value > 0:
                 dv = v(reaction_id)
             else:
