@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2016-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Representation of compound/reaction entries in models."""
 

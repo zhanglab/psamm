@@ -31,7 +31,8 @@ from six import itervalues, iteritems, text_type, PY3
 
 from .context import FileMark
 from .entry import (CompoundEntry as BaseCompoundEntry,
-                    ReactionEntry as BaseReactionEntry)
+                    ReactionEntry as BaseReactionEntry,
+                    CompartmentEntry as BaseCompartmentEntry)
 from ..reaction import Reaction, Compound, Direction
 from ..metabolicmodel import create_exchange_id
 from ..expression.boolean import Expression, And, Or, Variable
@@ -385,6 +386,29 @@ class ReactionEntry(_SBMLEntry, BaseReactionEntry):
         return self._filemark
 
 
+class CompartmentEntry(_SBMLEntry, BaseCompartmentEntry):
+    """Compartment entry in the SBML file"""
+
+    def __init__(self, reader, root, filemark=None):
+        super(CompartmentEntry, self).__init__(reader, root)
+
+        self._name = self._root.get('name')
+        self._filemark = filemark
+
+    @property
+    def properties(self):
+        """All compartment properties as a dict."""
+        properties = {'id': self._id}
+        if self._name is not None:
+            properties['name'] = self._name
+
+        return properties
+
+    @property
+    def filemark(self):
+        return self._filemark
+
+
 class ObjectiveEntry(object):
     """Flux objective defined with FBC"""
 
@@ -582,6 +606,16 @@ class SBMLReader(object):
                         entry.reaction, [])
                     entries.append(entry)
 
+        # Compartments
+        self._model_compartments = {}
+        self._compartments = self._model.find(
+            self._sbml_tag('listOfCompartments'))
+        for compartment in self._compartments.iterfind(
+                self._sbml_tag('compartment')):
+            filemark = FileMark(self._context, None, None)
+            entry = CompartmentEntry(self, compartment, filemark=filemark)
+            self._model_compartments[entry.id] = entry
+
         # Species
         self._model_species = {}
         self._species = self._model.find(self._sbml_tag('listOfSpecies'))
@@ -621,6 +655,10 @@ class SBMLReader(object):
 
                 self._active_objective = self._model_objectives[active]
 
+    def get_compartment(self, compartment_id):
+        """Return :class:`.CompartmentEntry` corresponding to id."""
+        return self._model_compartments[compartment_id]
+
     def get_reaction(self, reaction_id):
         """Return :class:`.ReactionEntry` corresponding to reaction_id"""
         return self._model_reactions[reaction_id]
@@ -635,6 +673,11 @@ class SBMLReader(object):
 
     def get_active_objective(self):
         return self._active_objective
+
+    @property
+    def compartments(self):
+        """Iterator over :class:`.CompartmentEntry` entries."""
+        return itervalues(self._model_compartments)
 
     @property
     def reactions(self):
