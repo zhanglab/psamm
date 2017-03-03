@@ -348,7 +348,7 @@ give the basic statistics of the model and should look like this:
     - Genes: 137
     INFO: e is extracellular compartment
     INFO: Using default flux limit of 1000.0
-    INFO: Converting exchange reactions to medium definition
+    INFO: Converting exchange reactions to exchange definition
 
 ``psamm-import`` will produce some warnings if there are any aspects of the
 model that are going to be changed during import. In this case the warnings are
@@ -417,11 +417,11 @@ in which there will be a number of files that stores the information of the
 model and specifies the simulation conditions. The entry point of the YAML
 model is a file named ``model.yaml``, which points to additional files that
 store the information of the model components, including compounds, reactions,
-flux limits, medium conditions, etc. While we recommend that you use the name
+flux limits, exchange compounds, etc. While we recommend that you use the name
 ``model.yaml`` for the central reference file, the file names for the included
 files are flexible and can be customized as you prefer. In this tutorial, we
 simply used the names: ``compounds.yaml``, ``reactions.yaml``, ``limits.yaml``,
-and ``medium.yaml`` for the included files.
+and ``exchange.yaml`` for the included files.
 
 First change directory into ``E_coli_yaml``:
 
@@ -436,8 +436,8 @@ files:
 
     (psamm-env) $ ls
     compounds.yaml
+    exchange.yaml
     limits.yaml
-    medium.yaml
     model.yaml
     reactions.yaml
 
@@ -467,8 +467,8 @@ model should look like the following:
     - include: compounds.yaml
     reactions:
     - include: reactions.yaml
-    media:
-    - include: medium.yaml
+    exchange:
+    - include: exchange.yaml
     limits:
     - include: limits.yaml
 
@@ -476,10 +476,10 @@ The ``model.yaml`` file defines the basic components of a metabolic model,
 including the model name (`Ecoli_core_model`), the biomass function
 (`Biomass_Ecoli_core_w_GAM`), the compound files (``compounds.yaml``), the
 reaction files (``reactions.yaml``), the flux boundaries (``limits.yaml``), and
-the medium conditions (``medium.yaml``). The additional files are defined using
-include functions. This organization allows you to easily change
+the exchange compounds (``exchange.yaml``). The additional files are defined
+using include functions. This organization allows you to easily change
 aspects of the model like the exchange reactions by simply referencing a
-different media file in the central ``model.yaml`` definition.
+different exchange file in the central ``model.yaml`` definition.
 
 This format can also be used to include multiple files in the list of
 reactions and compounds. This feature can be useful, for example, if you
@@ -503,8 +503,8 @@ in the additional files folder in the file ``complex_model.yaml``.
     - include: reactions/periplasm.yaml
     - include: reactions/transporters.yaml
     - include: reactions/extracellular.yaml
-    media:
-    - include: medium.yaml
+    exchange:
+    - include: exchange.yaml
     limits:
     - include: limits.yaml
 
@@ -532,8 +532,8 @@ An example of how to include a model definition file can be found below.
     - include: compounds.yaml
     reactions:
     - include: reactions.yaml
-    media:
-    - include: medium.yaml
+    exchange:
+    - include: exchange.yaml
     limits:
     - include: limits.yaml
 
@@ -602,7 +602,7 @@ formatted reaction could be as follows:
 
 .. code-block:: shell
 
-    '|ac_c[c]| + |atp_c[c]| <=> |actp_c[c]| + |adp_c[c]|'
+    '|ac[c]| + |atp[c]| <=> |actp[c]| + |adp[c]|'
 
 For longer reactions the YAML format
 provides a way to list each reaction component on a single line. For example a
@@ -616,14 +616,14 @@ reaction could be represented as follows:
         compartment: c
         reversible: yes
         left:
-          - id: ac_c
+          - id: ac
             value: 1
-          - id: atp_c
+          - id: atp
             value: 1
         right:
-          - id: actp_c
+          - id: actp
             value: 1
-          - id: adp_c
+          - id: adp
             value: 1
       subsystem: Pyruvate Metabolism
 
@@ -709,17 +709,22 @@ non-default limit. This reaction is an ATP maintenance reaction and the
 modelers chose to force a certain level of flux through it to simulate the
 general energy cost of cellular maintenance.
 
-Medium
-~~~~~~
+Exchange compounds
+~~~~~~~~~~~~~~~~~~
 
-The medium file is where you can designate the boundary conditions for the
-model. The compartment of the medium compounds can be designated using the
+The exchange file is where you can designate the boundary conditions for the
+model. This includes both compounds that are allowed to enter the model system
+(*the medium*) as well as compounds that are allowed to exit the model, like
+metabolic byproducts.
+
+Setting a negative lower limit on an exchange compound allows an uptake of
+that compound thereby making the compound part of the medium. The
+compartment of the exchange compounds can be designated using the
 ``compartment`` tag, and if omitted, the extracellular compartment (`e`) will
-be assumed. An example of the medium file can be seen below.
+be assumed. An example of the exchange file can be seen below.
 
 .. code-block:: yaml
 
-    name: Default medium
     compounds:
     - id: ac_e
       reaction: EX_ac_e
@@ -741,7 +746,7 @@ metabolic models. Additional properties can be designated for the exchange
 reactions including an ID for the reaction, the compartment for the reaction,
 and lower and upper flux bounds for the reaction. In the same way that only
 non-standard limits need to be specified in the limits file, only non-standard
-exchange limits need to be specified in the media file.
+exchange limits need to be specified in the exchange file.
 
 
 Model Format Customization
@@ -1015,28 +1020,29 @@ would provide mannitol.
     MANNIPTS	0.0	|manni[e]| + |Phosphoenolpyruvate[c]| => |manni1p[c]| + |Pyruvate[c]|
     ...
 
-Changing the Boundary Definitions Through the Medium File
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Changing the Boundary Definitions Through the Exchange File
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To add new exchange reactions to the model a modified ``medium.yaml`` file has
-been included in the additional files. This new boundary condition could be
-added by creating a new entry in the existing ``medium.yaml`` file but for this
-tutorial the media can be changed by running the following command:
-
-.. code-block:: shell
-
-    (psamm-env) $ cp ../additional_files/medium.yaml .
-
-This will simulate adding in the new mannitol compound into the media file as
-well as setting the uptake of glucose to be zero.
-
-Now you can track changes to the medium file using the Git command:
+To add new exchange reactions to the model a modified ``exchange.yaml`` file
+has been included in the additional files. This new boundary condition could be
+added by creating a new entry in the existing ``exchange.yaml`` file but for
+this tutorial the exchange compounds can be changed by running the following
+command:
 
 .. code-block:: shell
 
-    (psamm-env) $ git diff medium.yaml
+    (psamm-env) $ cp ../additional_files/exchange.yaml .
 
-From the output, it can be seen that a new entry was added in the medium file
+This will simulate adding in the new mannitol compound into the exchange file
+as well as setting the uptake of glucose to be zero.
+
+Now you can track changes to the exchange file using the Git command:
+
+.. code-block:: shell
+
+    (psamm-env) $ git diff exchange.yaml
+
+From the output, it can be seen that a new entry was added in the exchange file
 to add the mannitol exchange reaction and that the lower flux limit for glucose
 uptake was changed to zero. This will ensure that any future simulations
 done with the model in these conditions will only have mannitol available as a
@@ -1045,7 +1051,6 @@ carbon source.
 .. code-block:: diff
 
     @@ -1,5 +1,7 @@
-     name: Default medium
      compounds:
     +- id: manni
     +  lower: -10
@@ -1211,7 +1216,7 @@ files that have changed can be viewed by using the following Git command:
     (psamm-env) $ git status
 
 
-The output of this command should show that the medium, compound, and
+The output of this command should show that the exchange, compound, and
 ``model.yaml`` files have changed and that there is a new file that is not
 being tracked named ``mannitol_pathway.yaml``. First the new mannitol pathway
 file can be added to the Git repository so that future changes can be tracked
@@ -1238,17 +1243,17 @@ The output should look like the following:
        reactions:
        - include: reactions.yaml
     +  - include: mannitol_pathway.yaml
-       media:
-       - include: medium.yaml
+       exchange:
+       - include: exchange.yaml
        limits:
 
 This can be done with any file that had changes to make sure that no
 accidental changes are added in along with whatever the desired changes are.
 In this example there should be one line added in the ``model.yaml`` file,
 three compounds added into the ``compounds.yaml`` file, and one exchange
-reaction added into the ``media.yaml`` file along with one change that removed
-glucose from the list of carbon sources in the medium (by changing the lower
-bound of its exchange reaction to zero).
+reaction added into the ``exchange.yaml`` file along with one change that
+removed glucose from the list of carbon sources in the exchange (by changing
+the lower bound of its exchange reaction to zero).
 
 Once the changes are confirmed these files can be added with the Git add
 command.
@@ -1256,7 +1261,7 @@ command.
 .. code-block:: shell
 
     (psamm-env) $ git add compounds.yaml
-    (psamm-env) $ git add medium.yaml
+    (psamm-env) $ git add exchange.yaml
     (psamm-env) $ git add model.yaml
 
 These changes can then be committed to the repository using the following
@@ -1573,10 +1578,10 @@ To run a flux consistency check on the model use the ``fluxcheck`` command:
 The unrestricted option with the command will tell PSAMM to
 remove any limits on the exchange reactions. This will tell you which
 reactions in the model can carry flux if the model is given all compounds in
-the media freely. This can be helpful for identifying which reactions may not
-be linked to other parts of the metabolism and can be helpful in identifying
-gaps in the model. In this case it can be seen that no reactions were identified
-as being inconsistent.
+from exchange set freely. This can be helpful for identifying which reactions
+may not be linked to other parts of the metabolism and can be helpful in
+identifying gaps in the model. In this case it can be seen that no reactions
+were identified as being inconsistent.
 
 In some situations there are pathways that might be
 modeled but not necessarily connected to the other aspects of metabolism.
@@ -1593,9 +1598,9 @@ these reactions easier.
 
 Above the fluxcheck command was used with the --unrestricted option which
 allowed the exchange reactions to all be active. This command can also be
-used to see what reactions cannot carry flux when specific media are
-supplied. To run this command on the network with the media that is
-specified in the media file run the following command:
+used to see what reactions cannot carry flux when specific compounds are
+supplied in the medium. To run this command on the network with the medium that
+is specified in the exchange file run the following command:
 
 .. code-block:: shell
 
@@ -1746,7 +1751,8 @@ equations. With the current conditions the flux is not variable through
 the equations in the model. It can be seen that the upper and lower bounds
 of each reaction are the same. If another carbon source was added in though
 it would allow for more reactions to be variable. For example if glucose was
-added into the media along with mannitol then the results might appear as follows:
+added into the medium along with mannitol then the results might appear as
+follows:
 
 .. code-block:: shell
 

@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from __future__ import unicode_literals
 
@@ -33,12 +34,13 @@ logger = logging.getLogger(__name__)
 
 
 class ExcelExportCommand(Command):
-    """Export the metabolic model as an Excel workbook"""
+    """Export the metabolic model as an Excel workbook."""
 
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            'file', type=str, help='File path for writing the Excel workbook')
+            'file', type=text_type,
+            help='File path for writing the Excel workbook')
 
     def run(self):
         model = self._model
@@ -99,27 +101,27 @@ class ExcelExportCommand(Command):
                 compound_sheet.write_string(
                     x+1, len(compound_list_sorted), 'False')
 
-        media_sheet = workbook.add_worksheet(name='Medium')
+        exchange_sheet = workbook.add_worksheet(name='Exchange')
 
-        media_sheet.write_string(0, 0, 'Compound ID')
-        media_sheet.write_string(0, 1, 'Reaction ID')
-        media_sheet.write_string(0, 2, 'Lower Limit')
-        media_sheet.write_string(0, 3, 'Upper Limit')
+        exchange_sheet.write_string(0, 0, 'Compound ID')
+        exchange_sheet.write_string(0, 1, 'Reaction ID')
+        exchange_sheet.write_string(0, 2, 'Lower Limit')
+        exchange_sheet.write_string(0, 3, 'Upper Limit')
 
         default_flux = model.default_flux_limit
 
         for x, (compound, reaction, lower, upper) in enumerate(
-                model.parse_medium()):
+                model.parse_exchange()):
             if lower is None:
                 lower = -1 * default_flux
 
             if upper is None:
                 upper = default_flux
 
-            media_sheet.write(x+1, 0, text_type(compound))
-            media_sheet.write(x+1, 1, text_type(reaction))
-            media_sheet.write(x+1, 2, text_type(lower))
-            media_sheet.write(x+1, 3, text_type(upper))
+            exchange_sheet.write(x+1, 0, text_type(compound))
+            exchange_sheet.write(x+1, 1, text_type(reaction))
+            exchange_sheet.write(x+1, 2, text_type(lower))
+            exchange_sheet.write(x+1, 3, text_type(upper))
 
         limits_sheet = workbook.add_worksheet(name='Limits')
 

@@ -156,7 +156,7 @@ class TestCommandMain(unittest.TestCase):
                     'formula': 'O2'
                 }
             ],
-            'media': [
+            'exchange': [
                 {
                     'compartment': 'e',
                     'compounds': [
@@ -511,8 +511,8 @@ class TestCommandMain(unittest.TestCase):
             ['C', '', '-1', 'O2', 'true']
         ])
 
-    def test_run_tableexport_medium(self):
-        f = self.run_command(ExportTableCommand, ['medium'])
+    def test_run_tableexport_exchange(self):
+        f = self.run_command(ExportTableCommand, ['exchange'])
 
         self.assertTableOutputEqual(f.getvalue(), [
             ['Compound ID', 'Reaction ID', 'Lower Limit', 'Upper Limit'],

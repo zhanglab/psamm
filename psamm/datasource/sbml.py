@@ -849,7 +849,7 @@ class SBMLWriter(object):
         # Add exchange reactions to reaction_properties,
         # also add flux limit info to flux_limits
         flux_limits = {}
-        for compound, reaction_id, lower, upper in model.parse_medium():
+        for compound, reaction_id, lower, upper in model.parse_exchange():
             # Create exchange reaction
             if reaction_id is None:
                 reaction_id = create_exchange_id(reaction_properties, compound)
