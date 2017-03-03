@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 import os
 import shutil
@@ -564,6 +564,19 @@ class TestNativeModelWriter(unittest.TestCase):
     def setUp(self):
         self.writer = native.ModelWriter()
 
+    def test_convert_compartment_entry(self):
+        compartment = entry.DictCompartmentEntry({
+            'id': 'cytosol',
+            'name': 'Cytosol',
+            'custom': 456
+        })
+        d = self.writer.convert_compartment_entry(compartment, 'periplasm')
+        self.assertIsInstance(d, OrderedDict)
+        self.assertEqual(d['id'], 'cytosol')
+        self.assertEqual(d['name'], 'Cytosol')
+        self.assertEqual(d['custom'], 456)
+        self.assertEqual(d['adjacent_to'], 'periplasm')
+
     def test_convert_compound_entry(self):
         compound = entry.DictCompoundEntry({
             'id': 'c1',
@@ -597,6 +610,41 @@ class TestNativeModelWriter(unittest.TestCase):
         self.assertEqual(d['equation'], equation)
         self.assertEqual(d['custom_property'], -34)
         self.assertNotIn('another_custom_property', d)
+
+    def test_write_compartments(self):
+        stream = StringIO()
+        compartments = [
+            entry.DictCompartmentEntry({
+                'id': 'cytosol',
+                'name': 'Cytosol',
+                'custom': 456
+            }),
+            entry.DictCompartmentEntry({
+                'id': 'periplasm',
+                'name': 'Periplasm',
+                'test': 'abc'
+            })
+        ]
+        adjacencies = {
+            'cytosol': 'periplasm',
+            'periplasm': ['cytosol', 'e']
+        }
+        self.writer.write_compartments(stream, compartments, adjacencies)
+
+        self.assertEqual(yaml.safe_load(stream.getvalue()), [
+            {
+                'id': 'cytosol',
+                'adjacent_to': 'periplasm',
+                'name': 'Cytosol',
+                'custom': 456
+            },
+            {
+                'id': 'periplasm',
+                'adjacent_to': ['cytosol', 'e'],
+                'name': 'Periplasm',
+                'test': 'abc'
+            }
+        ])
 
     def test_write_compounds(self):
         stream = StringIO()
