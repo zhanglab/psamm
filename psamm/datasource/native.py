@@ -1072,6 +1072,28 @@ class ModelWriter(object):
         finally:
             dumper.dispose()
 
+    def convert_compartment_entry(self, compartment, adjacencies):
+        """Convert compartment entry to YAML dict.
+
+        Args:
+            compartment: :class:`psamm.datasource.entry.CompartmentEntry`.
+            adjacencies: Sequence of IDs or a single ID of adjacent
+                compartments (or None).
+        """
+        d = OrderedDict()
+        d['id'] = compartment.id
+        if adjacencies is not None:
+            d['adjacent_to'] = adjacencies
+
+        order = {key: i for i, key in enumerate(['name'])}
+        prop_keys = set(compartment.properties)
+        for prop in sorted(prop_keys,
+                           key=lambda x: (order.get(x, 1000), x)):
+            if compartment.properties[prop] is not None:
+                d[prop] = compartment.properties[prop]
+
+        return d
+
     def convert_compound_entry(self, compound):
         """Convert compound entry to YAML dict."""
         d = OrderedDict()
@@ -1108,12 +1130,53 @@ class ModelWriter(object):
         prop_keys = (set(reaction.properties) -
                      {'lower_flux', 'upper_flux', 'reversible'})
         for prop in sorted(prop_keys, key=lambda x: (order.get(x, 1000), x)):
-            if reaction.properties[prop] is not None:
-                d[prop] = reaction.properties[prop]
+            if reaction.properties[prop] is None:
+                continue
+            d[prop] = reaction.properties[prop]
             if prop == 'equation' and not is_equation_valid(d[prop]):
                 del d[prop]
 
         return d
+
+    def _write_entries(self, stream, entries, converter, properties=None):
+        """Write iterable of entries as YAML object to stream.
+
+        Args:
+            stream: File-like object.
+            entries: Iterable of entries.
+            converter: Conversion function from entry to YAML object.
+            properties: Set of compartment properties to output (or None to
+                output all).
+        """
+        def iter_entries():
+            for c in entries:
+                entry = converter(c)
+                if entry is None:
+                    continue
+                if properties is not None:
+                    entry = OrderedDict(
+                        (key, value) for key, value in iteritems(entry)
+                        if key == 'id' or key in properties)
+                yield entry
+
+        self._dump(stream, list(iter_entries()))
+
+    def write_compartments(self, stream, compartments, adjacencies,
+                           properties=None):
+        """Write iterable of compartments as YAML object to stream.
+
+        Args:
+            stream: File-like object.
+            compartments: Iterable of compartment entries.
+            adjacencies: Dictionary mapping IDs to adjacent compartment IDs.
+            properties: Set of compartment properties to output (or None to
+                output all).
+        """
+        def convert(entry):
+            return self.convert_compartment_entry(
+                entry, adjacencies.get(entry.id))
+
+        self._write_entries(stream, compartments, convert, properties)
 
     def write_compounds(self, stream, compounds, properties=None):
         """Write iterable of compounds as YAML object to stream.
@@ -1124,18 +1187,8 @@ class ModelWriter(object):
             properties: Set of compound properties to output (or None to output
                 all).
         """
-        def iter_entries():
-            for c in compounds:
-                entry = self.convert_compound_entry(c)
-                if entry is None:
-                    continue
-                if properties is not None:
-                    entry = OrderedDict(
-                        (key, value) for key, value in iteritems(entry)
-                        if key == 'id' or key in properties)
-                yield entry
-
-        self._dump(stream, list(iter_entries()))
+        self._write_entries(
+            stream, compounds, self.convert_compound_entry, properties)
 
     def write_reactions(self, stream, reactions, properties=None):
         """Write iterable of reactions as YAML object to stream.
@@ -1146,15 +1199,5 @@ class ModelWriter(object):
             properties: Set of reaction properties to output (or None to output
                 all).
         """
-        def iter_entries():
-            for r in reactions:
-                entry = self.convert_reaction_entry(r)
-                if entry is None:
-                    continue
-                if properties is not None:
-                    entry = OrderedDict(
-                        (key, value) for key, value in iteritems(entry)
-                        if key == 'id' or key in properties)
-                yield entry
-
-        self._dump(stream, list(iter_entries()))
+        self._write_entries(
+            stream, reactions, self.convert_reaction_entry, properties)
