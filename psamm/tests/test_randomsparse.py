@@ -54,7 +54,7 @@ class TestGetGeneAssociation(unittest.TestCase):
                 '  - id: B',
                 '  - id: C',
                 '  - id: D',
-                'media:',
+                'exchange:',
                 '  - compartment: e',
                 '    compounds:',
                 '      - id: A',

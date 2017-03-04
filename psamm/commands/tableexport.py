@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edi>
 
 from __future__ import unicode_literals
 
@@ -54,7 +55,7 @@ class ExportTableCommand(Command):
 
     - reactions: Export reactions and reaction metadata
     - compounds: Export compounds and compound metadata
-    - medium: Export the list of exchange compounds/reactions
+    - exchange: Export the list of exchange compounds/reactions
     - limits: Export list of internal flux limits
     - metadata: Export general model metadata
     """
@@ -63,7 +64,8 @@ class ExportTableCommand(Command):
     def init_parser(cls, parser):
         parser.add_argument(
             'export', metavar='export_type',
-            choices=['reactions', 'compounds', 'medium', 'limits', 'metadata'],
+            choices=['reactions', 'compounds', 'medium', 'exchange', 'limits',
+                     'metadata'],
             help='Type of model data to export')
 
     def run(self):
@@ -72,8 +74,8 @@ class ExportTableCommand(Command):
             self._reaction_export()
         elif export_type == 'compounds':
             self._compound_export()
-        elif export_type == 'medium':
-            self._media_export()
+        elif export_type == 'exchange' or export_type == 'medium':
+            self._exchange_export()
         elif export_type == 'limits':
             self._limits_export()
         elif export_type == 'metadata':
@@ -120,12 +122,12 @@ class ExportTableCommand(Command):
             line_content.append(in_model)
             print('\t'.join(_encode_value(value) for value in line_content))
 
-    def _media_export(self):
+    def _exchange_export(self):
         print('{}\t{}\t{}\t{}'.format('Compound ID', 'Reaction ID',
                                       'Lower Limit', 'Upper Limit'))
         default_flux = self._model.default_flux_limit
 
-        for compound, reaction, lower, upper in self._model.parse_medium():
+        for compound, reaction, lower, upper in self._model.parse_exchange():
             if lower is None:
                 lower = -1 * default_flux
 

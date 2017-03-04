@@ -13,9 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-"""Parser for SBML model files"""
+"""Parser for SBML model files."""
 
 from __future__ import unicode_literals
 
@@ -27,12 +27,14 @@ import logging
 import re
 import json
 
-from six import itervalues, iteritems, text_type
+from six import itervalues, iteritems, text_type, PY3
 
 from .context import FileMark
 from .entry import (CompoundEntry as BaseCompoundEntry,
-                    ReactionEntry as BaseReactionEntry)
+                    ReactionEntry as BaseReactionEntry,
+                    CompartmentEntry as BaseCompartmentEntry)
 from ..reaction import Reaction, Compound, Direction
+from ..metabolicmodel import create_exchange_id
 from ..expression.boolean import Expression, And, Or, Variable
 from .. import util
 
@@ -384,6 +386,29 @@ class ReactionEntry(_SBMLEntry, BaseReactionEntry):
         return self._filemark
 
 
+class CompartmentEntry(_SBMLEntry, BaseCompartmentEntry):
+    """Compartment entry in the SBML file"""
+
+    def __init__(self, reader, root, filemark=None):
+        super(CompartmentEntry, self).__init__(reader, root)
+
+        self._name = self._root.get('name')
+        self._filemark = filemark
+
+    @property
+    def properties(self):
+        """All compartment properties as a dict."""
+        properties = {'id': self._id}
+        if self._name is not None:
+            properties['name'] = self._name
+
+        return properties
+
+    @property
+    def filemark(self):
+        return self._filemark
+
+
 class ObjectiveEntry(object):
     """Flux objective defined with FBC"""
 
@@ -581,6 +606,16 @@ class SBMLReader(object):
                         entry.reaction, [])
                     entries.append(entry)
 
+        # Compartments
+        self._model_compartments = {}
+        self._compartments = self._model.find(
+            self._sbml_tag('listOfCompartments'))
+        for compartment in self._compartments.iterfind(
+                self._sbml_tag('compartment')):
+            filemark = FileMark(self._context, None, None)
+            entry = CompartmentEntry(self, compartment, filemark=filemark)
+            self._model_compartments[entry.id] = entry
+
         # Species
         self._model_species = {}
         self._species = self._model.find(self._sbml_tag('listOfSpecies'))
@@ -620,6 +655,10 @@ class SBMLReader(object):
 
                 self._active_objective = self._model_objectives[active]
 
+    def get_compartment(self, compartment_id):
+        """Return :class:`.CompartmentEntry` corresponding to id."""
+        return self._model_compartments[compartment_id]
+
     def get_reaction(self, reaction_id):
         """Return :class:`.ReactionEntry` corresponding to reaction_id"""
         return self._model_reactions[reaction_id]
@@ -634,6 +673,11 @@ class SBMLReader(object):
 
     def get_active_objective(self):
         return self._active_objective
+
+    @property
+    def compartments(self):
+        """Iterator over :class:`.CompartmentEntry` entries."""
+        return itervalues(self._model_compartments)
 
     @property
     def reactions(self):
@@ -703,24 +747,6 @@ class SBMLWriter(object):
         id = re.sub(r'[^a-zA-Z0-9_]', '', id)
         return id
 
-    def _create_unique_id(self, in_dict, orig_id):
-        """Creates and returns a unique ID for reaction or compound.
-
-        Looks at the ID the thing would have and checks if it is a duplicate
-        of another in the dictionary and makes a new ID if so.
-        """
-
-        if orig_id in in_dict:
-            suffix = 1
-            while True:
-                new_id = '{}_{}'.format(
-                    orig_id, suffix)
-                if new_id not in in_dict:
-                    orig_id = new_id
-                    break
-                suffix += 1
-        return orig_id
-
     def _get_flux_bounds(self, r_id, model, flux_limits, equation):
         """Read reaction's limits to set up strings for limits in the output file.
         """
@@ -768,8 +794,8 @@ class SBMLWriter(object):
                 gene_tag = ET.SubElement(parent, _tag(
                     'geneProductRef', FBC_V2))
                 if current.symbol not in gene_ids:
-                    id = 'g_' + self._create_unique_id(
-                        gene_ids, self._make_safe_id(current.symbol))
+                    id = 'g_' + util.create_unique_id(
+                        self._make_safe_id(current.symbol), gene_ids)
                     gene_ids[id] = current.symbol
                     gene_tag.set(_tag('geneProduct', FBC_V2), id)
             if isinstance(current, (Or, And)):
@@ -811,7 +837,22 @@ class SBMLWriter(object):
                 s = json.dumps(text_type(value))
             p_tag.text = '{}: {}'.format(prop, s)
 
-    def write_model(self, file, model):
+    def _indent(self, elem, level=0):
+        i = "\n" + level*"  "
+        if len(elem):
+            if not elem.text or not elem.text.strip():
+                elem.text = i + "  "
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+            for elem in elem:
+                self._indent(elem, level+1)
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = i
+        else:
+            if level and (not elem.tail or not elem.tail.strip()):
+                elem.tail = i
+
+    def write_model(self, file, model, pretty=False):
         """Write a given model to file"""
 
         ET.register_namespace('mathml', MATHML_NS)
@@ -841,8 +882,8 @@ class SBMLWriter(object):
                     r.id not in model_reactions):
                 continue
 
-            reaction_id = self._create_unique_id(
-                reaction_properties, self._make_safe_id(r.id))
+            reaction_id = util.create_unique_id(
+                self._make_safe_id(r.id), reaction_properties)
             if r.id == model.biomass_reaction:
                 biomass_id = reaction_id
 
@@ -851,13 +892,12 @@ class SBMLWriter(object):
         # Add exchange reactions to reaction_properties,
         # also add flux limit info to flux_limits
         flux_limits = {}
-        for compound, reaction_id, lower, upper in model.parse_medium():
+        for compound, reaction_id, lower, upper in model.parse_exchange():
             # Create exchange reaction
             if reaction_id is None:
-                reaction_id = 'EX_{}_{}'.format(
-                    compound.name, compound.compartment)
-            reaction_id = self._create_unique_id(
-                reaction_properties, self._make_safe_id(reaction_id))
+                reaction_id = create_exchange_id(reaction_properties, compound)
+            reaction_id = util.create_unique_id(
+                self._make_safe_id(reaction_id), reaction_properties)
 
             reaction_properties[reaction_id] = {
                 'id': reaction_id,
@@ -906,15 +946,15 @@ class SBMLWriter(object):
                         'id': compound.name
                     }
 
-                compound_id = self._create_unique_id(
-                    species_ids, self._make_safe_id(compound.name))
+                compound_id = util.create_unique_id(
+                    self._make_safe_id(compound.name), species_ids)
                 model_species[compound] = compound_id
                 species_ids.add(compound_id)
                 if compound.compartment not in model_compartments:
                     model_compartments[
-                        compound.compartment] = 'C_' + self._create_unique_id(
-                            model_compartments, self._make_safe_id(
-                                compound.compartment))
+                        compound.compartment] = 'C_' + util.create_unique_id(
+                            self._make_safe_id(compound.compartment),
+                            model_compartments)
 
         # Create list of compartments
         compartments = ET.SubElement(
@@ -1049,4 +1089,12 @@ class SBMLWriter(object):
         self._add_gene_list(model_tag, gene_ids)
 
         tree = ET.ElementTree(root)
-        tree.write(file, default_namespace=self._namespace)
+        if pretty:
+            self._indent(root)
+
+        write_options = dict(
+            encoding='utf-8',
+            default_namespace=self._namespace)
+        if PY3:
+            write_options['encoding'] = 'unicode'
+        tree.write(file, **write_options)

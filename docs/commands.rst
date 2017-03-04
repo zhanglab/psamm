@@ -344,6 +344,20 @@ constraints are imposed when considering whether reactions can take a non-zero
 flux. This automatically removes internal flux loops but is also much more
 time-consuming.
 
+Reaction duplicates check (``duplicatescheck``)
+-----------------------------------------------
+
+This command simply checks whether multiple reactions exist in the model that
+have the same or similar reaction equations. By default, this check will ignore
+reaction directionality and stoichiometric values when considering whether
+reactions are identical. The options ``--compare-direction`` and
+``--compare-stoichiometry`` can be used to make the command consider these
+properties as well.
+
+.. code-block:: shell
+
+    $ psamm-model duplicatescheck
+
 Gap check (``gapcheck``)
 ------------------------
 
@@ -362,7 +376,25 @@ every compound to also be consumed by another reaction (in other words, for
 the purpose of this analysis there are implicit sinks for every compound in
 the model). This means that even if this command reports that no compounds are
 blocked, it may still not be possible for the model to be viable under the
-steady-state assumption of FBA.
+steady-state assumption of FBA. The option ``--no-implicit-sinks`` can be used
+to perform the gap check without implicit sinks.
+
+The gap check is performed with the medium that is defined in the model. It
+may be useful to run the gap check with every compound in the medium available.
+This can easily be done by specifying the ``--unrestricted-exchange`` option
+which removes all limits on the exchange reactions during the check.
+
+There are some additional gap checking methods that can be enabled with the
+``--method`` option. The method ``sinkcheck`` can be used to find compounds
+that cannot be synthesized from scratch. The standard gap check will report
+compounds as produced if they can participate in a reaction, even if the
+compound itself cannot be synthesized from precursors in the medium. To find
+such compounds use the ``sinkcheck``. This check will generally indicate more
+compounds as blocked. Lastly, the method ``gapfind`` can be used. This method
+should produce the same result as the default method but is implemented in an
+alternative way that is specified in [Kumar07]_. This method is *not* used by
+default because it tends to result in difficulties for the solver when used
+with larger models.
 
 GapFill (``gapfill``)
 ---------------------
@@ -380,9 +412,10 @@ command is a variant of the gap-filling procedure described in [Kumar07]_.
 
 The command will first list the reactions in the model followed by the
 suggested reactions to add to the model in order to unblock the blocked
-compounds. The procedure may also suggest that existing model reactions have
-their flux bounds widened, e.g. making an existing irreversible reaction
-reversible. To unblock only specific compounds, use the ``--compound`` option:
+compounds. If ``--allow-bounds-expansion`` is specified, the procedure may also
+suggest that existing model reactions have their flux bounds widened, e.g.
+making an existing irreversible reaction reversible. To unblock only specific
+compounds, use the ``--compound`` option:
 
 .. code-block:: shell
 
@@ -400,6 +433,12 @@ file name with ``@``.
 
 The GapFind algorithm is defined in terms of a MILP problem and can therefore
 be computationally expensive to run for larger models.
+
+The original GapFill algorithm uses a solution procedure which implicitly
+assumes that the model contains implicit sinks for all compounds. This means
+that even with the reactions proposed by GapFill the model may need to produce
+compounds that cannot be used anywhere. The implicit sinks can be disabled
+with the ``--no-implicit-sinks`` option.
 
 FastGapFill (``fastgapfill``)
 -----------------------------
@@ -425,7 +464,11 @@ Exports the model to the SBML file format.
 
 .. code-block:: shell
 
-    $ psamm-model sbmlexport > model.xml
+    $ psamm-model sbmlexport model.xml
+
+If the file name is omitted, the file contents will be output directly to the
+screen. Using the ``--pretty`` option makes the output formatted for
+readability.
 
 Excel Export (``excelexport``)
 ------------------------------

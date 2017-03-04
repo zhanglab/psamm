@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Representation of metabolic network models."""
 
@@ -23,6 +23,18 @@ from collections import Mapping
 
 from .database import MetabolicDatabase, StoichiometricMatrixView
 from .reaction import Reaction, Direction
+from .util import create_unique_id
+
+
+def create_exchange_id(existing_ids, compound):
+    """Create unique ID for exchange of compound."""
+    return create_unique_id('EX_{}'.format(compound), existing_ids)
+
+
+def create_transport_id(existing_ids, compound_1, compound_2):
+    """Create unique ID for transport reaction of compounds."""
+    return create_unique_id(
+        'TP_{}_{}'.format(compound_1, compound_2), existing_ids)
 
 
 class FluxBounds(object):
@@ -256,83 +268,6 @@ class MetabolicModel(MetabolicDatabase):
                    for other_reaction in reactions):
                 self._compound_set.remove(compound)
 
-    def add_all_database_reactions(self, compartments):
-        """Add all reactions from database that occur in given compartments"""
-
-        added = set()
-        for rxnid in self._database.reactions:
-            reaction = self._database.get_reaction(rxnid)
-            if all(compound.compartment in compartments
-                   for compound, _ in reaction.compounds):
-                if rxnid not in self._reaction_set:
-                    added.add(rxnid)
-                self.add_reaction(rxnid)
-
-        return added
-
-    def add_all_exchange_reactions(self, compartment, allow_duplicates=False):
-        """Add all exchange reactions to database and to model"""
-
-        all_reactions = {}
-        if not allow_duplicates:
-            # TODO: Avoid adding reactions that already exist in the database.
-            # This should be integrated in the database.
-            for rxnid in self._database.reactions:
-                rx = self._database.get_reaction(rxnid)
-                all_reactions[rx] = rxnid
-
-        added = set()
-        for compound in sorted(self.compounds):
-            rxnid_ex = ('rxnex', compound)
-            if not self._database.has_reaction(rxnid_ex):
-                reaction_ex = Reaction(Direction.Both, {
-                    compound.in_compartment(compartment): -1
-                })
-                if reaction_ex not in all_reactions:
-                    self._database.set_reaction(rxnid_ex, reaction_ex)
-                else:
-                    rxnid_ex = all_reactions[reaction_ex]
-
-            if rxnid_ex not in self._reaction_set:
-                added.add(rxnid_ex)
-            self.add_reaction(rxnid_ex)
-
-        return added
-
-    def add_all_transport_reactions(self, compartment, allow_duplicates=False):
-        """Add all transport reactions to database and to model"""
-
-        all_reactions = {}
-        if not allow_duplicates:
-            # TODO: Avoid adding reactions that already exist in the database.
-            # This should be integrated in the database.
-            for rxnid in self._database.reactions:
-                rx = self._database.get_reaction(rxnid)
-                all_reactions[rx] = rxnid
-
-        added = set()
-        for compound in sorted(self.compounds):
-            if compound.compartment == compartment:
-                # A transport reaction with exchange would not be valid
-                continue
-
-            rxnid_tp = ('rxntp', compound)
-            if not self._database.has_reaction(rxnid_tp):
-                reaction_tp = Reaction(Direction.Both, {
-                    compound.in_compartment(compartment): -1,
-                    compound: 1
-                })
-                if reaction_tp not in all_reactions:
-                    self._database.set_reaction(rxnid_tp, reaction_tp)
-                else:
-                    rxnid_tp = all_reactions[reaction_tp]
-
-            if rxnid_tp not in self._reaction_set:
-                added.add(rxnid_tp)
-            self.add_reaction(rxnid_tp)
-
-        return added
-
     def copy(self):
         """Return copy of model"""
 
@@ -344,9 +279,9 @@ class MetabolicModel(MetabolicDatabase):
         return model
 
     @classmethod
-    def load_model(cls, database, reaction_iter=None, medium=None, limits=None,
-                   v_max=None):
-        """Get model from reaction name iterator
+    def load_model(cls, database, reaction_iter=None, exchange=None,
+                   limits=None, v_max=None):
+        """Get model from reaction name iterator.
 
         The model will contain all reactions of the iterator.
         """
@@ -373,12 +308,12 @@ class MetabolicModel(MetabolicDatabase):
         # database and add it to the model. Ideally, we should not modify
         # the database. The exchange reaction could be created on the
         # fly when required.
-        if medium is not None:
-            for compound, reaction_id, lower, upper in medium:
+        if exchange is not None:
+            for compound, reaction_id, lower, upper in exchange:
                 # Create exchange reaction
                 if reaction_id is None:
-                    reaction_id = 'EX_{}_{}'.format(
-                        compound.name, compound.compartment)
+                    reaction_id = create_exchange_id(
+                        model.database.reactions, compound)
                 model.database.set_reaction(
                     reaction_id, Reaction(Direction.Both, {compound: -1}))
                 model.add_reaction(reaction_id)

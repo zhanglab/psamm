@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from __future__ import unicode_literals
 
@@ -26,7 +26,7 @@ from ..command import (Command, MetabolicMixin, SolverCommandMixin,
                        FilePrefixAppendAction)
 from ..gapfill import gapfill, GapFillError
 from ..datasource.reaction import parse_compound
-from ..fastgapfill import create_extended_model
+from ..gapfilling import create_extended_model
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,13 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         parser.add_argument(
             '--epsilon', type=float, default=1e-5,
             help='Threshold for reaction flux')
+        parser.add_argument(
+            '--no-implicit-sinks', action='store_true',
+            help='Do not include implicit sinks when gap-filling')
+        parser.add_argument(
+            '--allow-bounds-expansion', action='store_true',
+            help=('Allow GapFill to propose expansion of flux bounds. This'
+                  ' includes turning irreversible reactions reversible.'))
         super(GapFillCommand, cls).init_parser(parser)
 
     def run(self):
@@ -112,11 +119,15 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             tp_penalty=self._args.tp_penalty,
             penalties=penalties)
 
+        implicit_sinks = not self._args.no_implicit_sinks
+
         logger.info('Searching for reactions to fill gaps')
         try:
             added_reactions, no_bounds_reactions = gapfill(
                 model_complete, core, blocked, exclude, solver=solver,
-                epsilon=epsilon, v_max=v_max, weights=weights)
+                epsilon=epsilon, v_max=v_max, weights=weights,
+                implicit_sinks=implicit_sinks,
+                allow_bounds_expansion=self._args.allow_bounds_expansion)
         except GapFillError as e:
             self._log_epsilon_and_fail(epsilon, e)
 
@@ -124,19 +135,21 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             rx = self._mm.get_reaction(reaction_id)
             rxt = rx.translated_compounds(
                 lambda x: compound_name.get(x, x))
-            print('{}\t{}\t{}'.format(reaction_id, 'Model', rxt))
+            print('{}\t{}\t{}\t{}'.format(reaction_id, 'Model', 0, rxt))
 
         for rxnid in sorted(added_reactions):
             rx = model_complete.get_reaction(rxnid)
             rxt = rx.translated_compounds(
                 lambda x: compound_name.get(x, x))
-            print('{}\t{}\t{}'.format(rxnid, 'Add', rxt))
+            print('{}\t{}\t{}\t{}'.format(
+                rxnid, 'Add', weights.get(rxnid, 1), rxt))
 
         for rxnid in sorted(no_bounds_reactions):
             rx = model_complete.get_reaction(rxnid)
             rxt = rx.translated_compounds(
                 lambda x: compound_name.get(x, x))
-            print('{}\t{}\t{}'.format(rxnid, 'Remove bounds', rxt))
+            print('{}\t{}\t{}\t{}'.format(
+                rxnid, 'Remove bounds', weights.get(rxnid, 1), rxt))
 
     def _log_epsilon_and_fail(self, epsilon, exc):
         msg = ('Finding blocked compounds failed with epsilon set to {}. Try'

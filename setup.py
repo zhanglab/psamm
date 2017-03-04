@@ -24,7 +24,7 @@ with open('README.rst') as f:
 
 setup(
     name='psamm',
-    version='0.27',
+    version='0.28',
     description='PSAMM metabolic modeling tools',
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
@@ -38,7 +38,9 @@ setup(
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4'
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6'
     ],
 
     packages=find_packages(),
@@ -50,6 +52,7 @@ setup(
         'psamm.commands': [
             'chargecheck = psamm.commands.chargecheck:ChargeBalanceCommand',
             'console = psamm.commands.console:ConsoleCommand',
+            'duplicatescheck = psamm.commands.duplicatescheck:DuplicatesCheck',
             'excelexport = psamm.commands.excelexport:ExcelExportCommand',
             'fastgapfill = psamm.commands.fastgapfill:FastGapFillCommand',
             'fba = psamm.commands.fba:FluxBalanceCommand',

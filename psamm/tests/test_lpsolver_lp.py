@@ -14,12 +14,15 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 import math
 import unittest
 
 from psamm.lpsolver import lp
+
+# Beware: Expressions cannot be tested for equality using normal
+# assertEqual because the equality operator is overloaded!
 
 
 class DummyRangedPropertyContainer(object):
@@ -306,10 +309,15 @@ class TestExpression(unittest.TestCase):
 
 
 class TestRelation(unittest.TestCase):
+    def assertExpressionEqual(self, e1, e2):
+        """Assert that expressions are equal."""
+        self.assertEqual(e1.offset, e2.offset)
+        self.assertEqual(dict(e1.values()), dict(e2.values()))
+
     def test_create_relation(self):
         e = lp.Expression({'x1': 4})
         r = lp.Relation(lp.RelationSense.Greater, e)
-        self.assertEqual(r.expression, e)
+        self.assertExpressionEqual(r.expression, e)
         self.assertEqual(r.sense, lp.RelationSense.Greater)
 
     def test_relation_with_offset_to_string(self):
@@ -321,6 +329,11 @@ class TestRelation(unittest.TestCase):
         e = lp.Expression({'x1': 1})
         r = lp.Relation(lp.RelationSense.Equals, e)
         self.assertEqual(str(r), 'x1 == 0')
+
+    def test_chained_relation(self):
+        e = lp.Expression({'x1': 1})
+        with self.assertRaises(ValueError):
+            self.assertFalse(4 <= e <= 10)
 
 
 class MockResult(lp.Result):

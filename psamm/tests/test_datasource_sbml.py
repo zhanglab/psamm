@@ -75,6 +75,12 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
     def test_model_name(self):
         self.assertEqual(self.reader.name, 'Test model')
 
+    def test_compartment_exists(self):
+        compartments = {entry.id: entry for entry in self.reader.compartments}
+        self.assertEqual(len(compartments), 1)
+        self.assertEqual(compartments['cell'].id, 'cell')
+        self.assertEqual(compartments['cell'].name, 'cell')
+
     def test_compounds_exist(self):
         species = {entry.id: entry for entry in self.reader.species}
         self.assertEqual(len(species), 5)
@@ -189,6 +195,12 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         self.assertEqual(self.reader.id, 'test_model')
         self.assertEqual(self.reader.name, 'Test model')
 
+    def test_compartment_exists(self):
+        compartments = {entry.id: entry for entry in self.reader.compartments}
+        self.assertEqual(len(compartments), 1)
+        self.assertEqual(compartments['C_c'].id, 'C_c')
+        self.assertEqual(compartments['C_c'].name, 'cell')
+
     def test_compounds_exist(self):
         species = {entry.id: entry for entry in self.reader.species}
         self.assertEqual(len(species), 5)
@@ -302,6 +314,12 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
     def test_model_name(self):
         self.assertEqual(self.reader.id, 'test_model')
         self.assertEqual(self.reader.name, 'Test model')
+
+    def test_compartment_exists(self):
+        compartments = {entry.id: entry for entry in self.reader.compartments}
+        self.assertEqual(len(compartments), 1)
+        self.assertEqual(compartments['C_c'].id, 'C_c')
+        self.assertEqual(compartments['C_c'].name, 'cell')
 
     def test_compounds_exist(self):
         species = {entry.id: entry for entry in self.reader.species}
@@ -428,6 +446,12 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
     def test_model_name(self):
         self.assertEqual(self.reader.id, 'test_model')
         self.assertEqual(self.reader.name, 'Test model')
+
+    def test_compartment_exists(self):
+        compartments = {entry.id: entry for entry in self.reader.compartments}
+        self.assertEqual(len(compartments), 1)
+        self.assertEqual(compartments['C_c'].id, 'C_c')
+        self.assertEqual(compartments['C_c'].name, 'cell')
 
     def test_compounds_exist(self):
         species = {entry.id: entry for entry in self.reader.species}
@@ -582,6 +606,12 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
     def test_model_name(self):
         self.assertEqual(self.reader.id, 'test_model')
         self.assertEqual(self.reader.name, 'Test model')
+
+    def test_compartment_exists(self):
+        compartments = {entry.id: entry for entry in self.reader.compartments}
+        self.assertEqual(len(compartments), 1)
+        self.assertEqual(compartments['C_c'].id, 'C_c')
+        self.assertEqual(compartments['C_c'].name, 'cell')
 
     def test_compounds_exist(self):
         species = {entry.id: entry for entry in self.reader.species}

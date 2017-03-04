@@ -57,7 +57,7 @@ class GLPKError(Exception):
 
 
 class Solver(BaseSolver):
-    """Represents an LP-solver using Gurobi."""
+    """Represents an LP-solver using GLPK."""
 
     def __init__(self):
         super(Solver, self).__init__()
@@ -69,7 +69,7 @@ class Solver(BaseSolver):
 
 
 class Problem(BaseProblem):
-    """Represents an LP-problem of a gurobi.Solver."""
+    """Represents an LP-problem of a :class:`.Solver`."""
 
     VARTYPE_MAP = {
         VariableType.Continuous: swiglpk.GLP_CV,
@@ -112,16 +112,21 @@ class Problem(BaseProblem):
         return self._p
 
     def define(self, *names, **kwargs):
-        """Define variable in the problem.
+        """Define a variable in the problem.
 
         Variables must be defined before they can be accessed by var() or
         set(). This function takes keyword arguments lower and upper to define
         the bounds of the variable (default: -inf to inf). The keyword argument
         types can be used to select the type of the variable (Continuous
         (default), Binary or Integer). Setting any variables different than
-        Continuous will turn the problem into an MILP problem.
+        Continuous will turn the problem into an MILP problem. Raises
+        ValueError if a name is already defined.
         """
         names = tuple(names)
+        for name in names:
+            if name in self._variables:
+                raise ValueError('Variable already defined: {!r}'.format(name))
+
         lower = kwargs.get('lower', None)
         upper = kwargs.get('upper', None)
         vartype = kwargs.get('types', None)
@@ -248,9 +253,9 @@ class Problem(BaseProblem):
 
         for variable, value in expression.values():
             var_index = self._variables[variable]
-            swiglpk.glp_set_obj_coef(self._p, var_index, value)
+            swiglpk.glp_set_obj_coef(self._p, var_index, float(value))
 
-        swiglpk.glp_set_obj_coef(self._p, 0, expression.offset)
+        swiglpk.glp_set_obj_coef(self._p, 0, float(expression.offset))
 
     set_linear_objective = set_objective
     """Set objective of the problem.
@@ -345,7 +350,7 @@ class Problem(BaseProblem):
 
 
 class Constraint(BaseConstraint):
-    """Represents a constraint in a gurobi.Problem."""
+    """Represents a constraint in a :class:`.Problem`."""
 
     def __init__(self, prob, name):
         self._prob = prob
@@ -358,11 +363,11 @@ class Constraint(BaseConstraint):
 
 
 class Result(BaseResult):
-    """Represents the solution to a gurobi.Problem.
+    """Represents the solution to a :class:`.Problem`.
 
-    This object will be returned from the gurobi.Problem.solve() method or by
-    accessing the gurobi.Problem.result property after solving a problem. This
-    class should not be instantiated manually.
+    This object will be returned from the solve() method on :class:`.Problem`
+    or by accessing the result property on :class:`.Problem` after solving a
+    problem. This class should not be instantiated manually.
 
     Result will evaluate to a boolean according to the success of the
     solution, so checking the truth value of the result will immediately
@@ -403,21 +408,19 @@ class Result(BaseResult):
             return 'No dual feasible solution'
         return str(swiglpk.glp_get_status(self._problem._p))
 
-    def _get_var_value(self, variable):
-        self._check_valid()
-        if variable not in self._problem._variables:
-            raise ValueError('Unknown variable: {}'.format(variable))
+    def _has_variable(self, variable):
+        """Whether variable exists in the solution."""
+        return self._problem.has_variable(variable)
+
+    def _get_value(self, variable):
+        """Return value of variable in solution."""
         return swiglpk.glp_get_col_prim(
             self._problem._p, self._problem._variables[variable])
 
     def get_value(self, expression):
         """Return value of expression."""
-
         self._check_valid()
-        if isinstance(expression, Expression):
-            return sum(self._get_var_value(var) * value
-                       for var, value in expression.values())
-        return self._get_var_value(expression)
+        return super(Result, self).get_value(expression)
 
 
 class MIPResult(Result):
@@ -433,9 +436,7 @@ class MIPResult(Result):
         self._check_valid()
         return str(swiglpk.glp_mip_status(self._problem._p))
 
-    def _get_var_value(self, variable):
-        self._check_valid()
-        if variable not in self._problem._variables:
-            raise ValueError('Unknown variable: {}'.format(variable))
+    def _get_value(self, variable):
+        """Return value of variable in solution."""
         return swiglpk.glp_mip_col_val(
             self._problem._p, self._problem._variables[variable])

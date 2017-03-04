@@ -34,6 +34,7 @@ from psamm.lpsolver import generic
 from psamm.datasource.native import NativeModel
 
 from psamm.commands.chargecheck import ChargeBalanceCommand
+from psamm.commands.duplicatescheck import DuplicatesCheck
 from psamm.commands.excelexport import ExcelExportCommand
 from psamm.commands.fastgapfill import FastGapFillCommand
 from psamm.commands.fba import FluxBalanceCommand
@@ -109,6 +110,18 @@ class TestCommandMain(unittest.TestCase):
         self._model = NativeModel({
             'name': 'Test model',
             'biomass': 'rxn_1',
+            'compartments': [
+                {
+                    'id': 'e',
+                    'name': 'Extracellular',
+                    'adjacent_to': ['c']
+                },
+                {
+                    'id': 'c',
+                    'name': 'Cytosol',
+                    'adjacent_to': 'e'
+                }
+            ],
             'reactions': [
                 {
                     'id': 'rxn_1',
@@ -143,7 +156,7 @@ class TestCommandMain(unittest.TestCase):
                     'formula': 'O2'
                 }
             ],
-            'media': [
+            'exchange': [
                 {
                     'compartment': 'e',
                     'compounds': [
@@ -226,6 +239,15 @@ class TestCommandMain(unittest.TestCase):
 
     def test_run_chargecheck(self):
         self.run_command(ChargeBalanceCommand)
+
+    def test_run_duplicatescheck(self):
+        self.run_command(DuplicatesCheck)
+
+    def test_run_duplicatescheck_compare_stoichiometry(self):
+        self.run_command(DuplicatesCheck, ['--compare-stoichiometry'])
+
+    def test_run_duplicatescheck_compare_direction(self):
+        self.run_command(DuplicatesCheck, ['--compare-direction'])
 
     def test_run_excelexport(self):
         dest = tempfile.mkdtemp()
@@ -349,9 +371,38 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command(
             FluxVariabilityCommand, ['--loop-removal=tfba'], {'integer': True})
 
-    def test_run_gapcheck(self):
+    def test_run_gapcheck_prodcheck(self):
         self.run_solver_command(
-            GapCheckCommand, requirements={'integer': True})
+            GapCheckCommand, ['--method=prodcheck'])
+
+    def test_run_gapcheck_prodcheck_without_implicit_sinks(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=prodcheck', '--no-implicit-sinks'])
+
+    def test_run_gapcheck_prodcheck_without_extracellular(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=prodcheck', '--exclude-extracellular'])
+
+    def test_run_gapcheck_prodcheck_with_unrestricted_exchange(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=prodcheck', '--unrestricted-exchange'])
+
+    def test_run_gapcheck_sinkcheck(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=sinkcheck'])
+
+    def test_run_gapcheck_sinkcheck_without_implicit_sinks(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=sinkcheck', '--no-implicit-sinks'])
+
+    def test_run_gapcheck_gapfind(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=gapfind'], {'integer': True})
+
+    def test_run_gapcheck_gapfind_without_implicit_sinks(self):
+        self.run_solver_command(
+            GapCheckCommand, ['--method=gapfind', '--no-implicit-sinks'],
+            {'integer': True})
 
     def test_run_gapfill(self):
         self.run_solver_command(
@@ -424,7 +475,7 @@ class TestCommandMain(unittest.TestCase):
                 model=self._infeasible_model)
 
     def test_run_sbmlexport(self):
-        self.run_command(SBMLExport, target=BytesIO())
+        self.run_command(SBMLExport)
 
     def test_run_search_compound(self):
         self.run_command(SearchCommand, ['compound', '--id', 'A_\u2206'])
@@ -460,8 +511,8 @@ class TestCommandMain(unittest.TestCase):
             ['C', '', '-1', 'O2', 'true']
         ])
 
-    def test_run_tableexport_medium(self):
-        f = self.run_command(ExportTableCommand, ['medium'])
+    def test_run_tableexport_exchange(self):
+        f = self.run_command(ExportTableCommand, ['exchange'])
 
         self.assertTableOutputEqual(f.getvalue(), [
             ['Compound ID', 'Reaction ID', 'Lower Limit', 'Upper Limit'],

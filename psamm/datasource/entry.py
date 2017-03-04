@@ -13,11 +13,12 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2016-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Representation of compound/reaction entries in models."""
 
 import abc
+from collections import Mapping
 
 from six import add_metaclass
 
@@ -72,6 +73,10 @@ class ReactionEntry(ModelEntry):
         return self.properties.get('genes')
 
 
+class CompartmentEntry(ModelEntry):
+    """Abstract compartment entry."""
+
+
 class _BaseDictEntry(ModelEntry):
     """Base class for concrete entries based on dictionary."""
     def __init__(self, abstract_type, properties={}, filemark=None):
@@ -80,11 +85,13 @@ class _BaseDictEntry(ModelEntry):
             self._properties = dict(properties.properties)
             if filemark is None:
                 filemark = properties.filemark
-        else:
+        elif isinstance(properties, Mapping):
             if 'id' not in properties:
                 raise ValueError('id not defined in properties')
             self._id = properties['id']
             self._properties = dict(properties)
+        else:
+            raise ValueError('Invalid type of properties object')
 
         self._filemark = filemark
 
@@ -105,7 +112,7 @@ class DictCompoundEntry(CompoundEntry, _BaseDictEntry):
     """Compound entry backed by dictionary.
 
     The given properties dictionary must contain a key 'id' with the
-    identified.
+    identifier.
 
     Args:
         properties: dict or :class:`CompoundEntry` to construct from.
@@ -119,7 +126,7 @@ class DictReactionEntry(ReactionEntry, _BaseDictEntry):
     """Reaction entry backed by dictionary.
 
     The given properties dictionary must contain a key 'id' with the
-    identified.
+    identifier.
 
     Args:
         properties: dict or :class:`ReactionEntry` to construct from.
@@ -127,3 +134,18 @@ class DictReactionEntry(ReactionEntry, _BaseDictEntry):
     """
     def __init__(self, *args, **kwargs):
         super(DictReactionEntry, self).__init__(ReactionEntry, *args, **kwargs)
+
+
+class DictCompartmentEntry(CompartmentEntry, _BaseDictEntry):
+    """Compartment entry backed by dictionary.
+
+    The given properties dictionary must contain a key 'id' with the
+    identifier.
+
+    Args:
+        properties: dict or :class:`CompartmentEntry` to construct from.
+        filemark: Where the entry was parsed from (optional)
+    """
+    def __init__(self, *args, **kwargs):
+        super(DictCompartmentEntry, self).__init__(
+            CompartmentEntry, *args, **kwargs)

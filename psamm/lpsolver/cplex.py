@@ -128,16 +128,21 @@ class Problem(BaseProblem):
         return self._cp
 
     def define(self, *names, **kwargs):
-        """Define variable in the problem.
+        """Define a variable in the problem.
 
         Variables must be defined before they can be accessed by var() or
         set(). This function takes keyword arguments lower and upper to define
         the bounds of the variable (default: -inf to inf). The keyword argument
         types can be used to select the type of the variable (Continuous
         (default), Binary or Integer). Setting any variables different than
-        Continuous will turn the problem into an MILP problem.
+        Continuous will turn the problem into an MILP problem. Raises
+        ValueError if a name is already defined.
         """
         names = tuple(names)
+        for name in names:
+            if name in self._variables:
+                raise ValueError('Variable already defined: {!r}'.format(name))
+
         lower = kwargs.get('lower', None)
         upper = kwargs.get('upper', None)
         vartype = kwargs.get('types', None)
@@ -240,7 +245,7 @@ class Problem(BaseProblem):
         for var, value in expression.values():
             if not isinstance(var, Product):
                 self._non_zero_objective.add(var)
-                linear.append((self._variables[var], value))
+                linear.append((self._variables[var], float(value)))
             else:
                 if len(var) > 2:
                     raise ValueError('Invalid objective: {}'.format(var))
@@ -249,7 +254,7 @@ class Problem(BaseProblem):
                 var2 = self._variables[var[1]]
                 if var1 == var2:
                     value *= 2
-                quad.append((var1, var2, value))
+                quad.append((var1, var2, float(value)))
 
         # We have to build the set of variables to
         # update so that we can avoid calling set_linear if the set is empty.
@@ -261,7 +266,7 @@ class Problem(BaseProblem):
             self._cp.objective.set_quadratic_coefficients(quad)
 
         if hasattr(self._cp.objective, 'set_offset'):
-            self._cp.objective.set_offset(expression.offset)
+            self._cp.objective.set_offset(float(expression.offset))
 
     set_linear_objective = set_objective
     """Set objective of the problem.
@@ -323,12 +328,16 @@ class Problem(BaseProblem):
         # for QP/MIQP problems to avoid the warnings generated for other
         # problem types when this parameter is set.
         quad_obj = self._cp.objective.get_num_quadratic_variables() > 0
-        if quad_obj:
-            self._cp.parameters.solutiontarget.set(
-                self._cp.parameters.solutiontarget.values.optimal_global)
+
+        if hasattr(self._cp.parameters, 'optimalitytarget'):
+            target_param = self._cp.parameters.optimalitytarget
         else:
-            self._cp.parameters.solutiontarget.set(
-                self._cp.parameters.solutiontarget.values.auto)
+            target_param = self._cp.parameters.solutiontarget
+
+        if quad_obj:
+            target_param.set(target_param.values.optimal_global)
+        else:
+            target_param.set(target_param.values.auto)
 
     def _solve(self):
         self._reset_problem_type()

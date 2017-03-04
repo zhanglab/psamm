@@ -47,7 +47,11 @@ class FilePathContext(object):
                 self._filepath = arg
             else:
                 self._filepath = arg.filepath
-            self._basepath = os.path.dirname(self._filepath)
+
+            if self._filepath is not None:
+                self._basepath = os.path.dirname(self._filepath)
+            else:
+                self._basepath = None
         else:
             self._filepath = None
             self._basepath = None
@@ -100,10 +104,12 @@ class FileMark(object):
         return self._column
 
     def __str__(self):
-        return '{}:{}:{}'.format(
-            text_type(self._filecontext),
-            '?' if self._line is None else self._line,
-            '?' if self._column is None else self._column)
+        result = text_type(self._filecontext)
+        if self._line is not None:
+            result += ':{}'.format(self._line)
+            if self._column is not None:
+                result += ':{}'.format(self._column)
+        return result
 
     def __repr__(self):
         return str('{}({}, {}, {})').format(

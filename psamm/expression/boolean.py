@@ -78,6 +78,9 @@ class _OperatorTerm(object):
     def __hash__(self):
         return hash(self._terms)
 
+    def __len__(self):
+        return len(self._terms)
+
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and
                 self._terms == other._terms)

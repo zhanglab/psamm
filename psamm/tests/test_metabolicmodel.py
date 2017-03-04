@@ -47,12 +47,12 @@ class TestLoadMetabolicModel(unittest.TestCase):
 class TestMetabolicModel(unittest.TestCase):
     def setUp(self):
         self.database = DictDatabase()
-        self.database.set_reaction('rxn_1', parse_reaction('=> (2) |A|'))
-        self.database.set_reaction('rxn_2', parse_reaction('|A| <=> |B|'))
-        self.database.set_reaction('rxn_3', parse_reaction('|A| => |D[e]|'))
-        self.database.set_reaction('rxn_4', parse_reaction('|A| => |C|'))
-        self.database.set_reaction('rxn_5', parse_reaction('|C| => |D[e]|'))
-        self.database.set_reaction('rxn_6', parse_reaction('|D[e]| =>'))
+        self.database.set_reaction('rxn_1', parse_reaction('=> (2) A[c]'))
+        self.database.set_reaction('rxn_2', parse_reaction('A[c] <=> B[c]'))
+        self.database.set_reaction('rxn_3', parse_reaction('A[c] => D[e]'))
+        self.database.set_reaction('rxn_4', parse_reaction('A[c] => C[c]'))
+        self.database.set_reaction('rxn_5', parse_reaction('C[c] => D[e]'))
+        self.database.set_reaction('rxn_6', parse_reaction('D[e] =>'))
         self.model = MetabolicModel.load_model(
             self.database, self.database.reactions)
 
@@ -66,14 +66,14 @@ class TestMetabolicModel(unittest.TestCase):
 
     def test_compound_set(self):
         self.assertEqual(set(self.model.compounds),
-                        {Compound('A'), Compound('B'),
-                         Compound('C'), Compound('D', 'e')})
+                        {Compound('A', 'c'), Compound('B', 'c'),
+                         Compound('C', 'c'), Compound('D', 'e')})
 
     def test_compartments(self):
-        self.assertEqual(set(self.model.compartments), {None, 'e'})
+        self.assertEqual(set(self.model.compartments), {'c', 'e'})
 
     def test_add_reaction_new(self):
-        self.database.set_reaction('rxn_7', parse_reaction('|D[e]| => |E[e]|'))
+        self.database.set_reaction('rxn_7', parse_reaction('D[e] => E[e]'))
         self.model.add_reaction('rxn_7')
         self.assertIn('rxn_7', set(self.model.reactions))
         self.assertIn(Compound('E', 'e'), set(self.model.compounds))
@@ -83,9 +83,9 @@ class TestMetabolicModel(unittest.TestCase):
         self.assertEqual(
             set(self.model.reactions),
             {'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6'})
-        self.assertEqual(
-            set(self.model.compounds),
-            {Compound('A'), Compound('B'), Compound('C'), Compound('D', 'e')})
+        self.assertEqual(set(self.model.compounds), {
+            Compound('A', 'c'), Compound('B', 'c'), Compound('C', 'c'),
+            Compound('D', 'e')})
 
     def test_add_reaction_invalid(self):
         with self.assertRaises(Exception):
@@ -96,9 +96,8 @@ class TestMetabolicModel(unittest.TestCase):
         self.assertEqual(
             set(self.model.reactions),
             {'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6'})
-        self.assertEqual(
-            set(self.model.compounds),
-            {Compound('A'), Compound('C'), Compound('D', 'e')})
+        self.assertEqual(set(self.model.compounds), {
+            Compound('A', 'c'), Compound('C', 'c'), Compound('D', 'e')})
 
     def test_is_reversible_on_reversible(self):
         self.assertTrue(self.model.is_reversible('rxn_2'))
@@ -119,28 +118,6 @@ class TestMetabolicModel(unittest.TestCase):
         self.database.set_reaction('rxn_7', Reaction(Direction.Both, [], []))
         self.model.add_reaction('rxn_7')
         self.assertFalse(self.model.is_exchange('rxn_7'))
-
-    def test_add_all_database_reactions(self):
-        self.database.set_reaction('rxn_7', parse_reaction('|D| => |E|'))
-        added = self.model.add_all_database_reactions({None, 'e'})
-        self.assertEqual(added, { 'rxn_7' })
-        self.assertEqual(set(self.model.reactions), {
-            'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6', 'rxn_7'
-        })
-
-    def test_add_all_database_reactions_none(self):
-        added = self.model.add_all_database_reactions({None, 'e'})
-        self.assertEqual(added, set())
-        self.assertEqual(set(self.model.reactions), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
-
-    def test_add_all_transport_reactions(self):
-        added = self.model.add_all_transport_reactions('e')
-        for reaction in added:
-            compartments = tuple(c.compartment for c, _ in
-                                 self.model.get_reaction_values(reaction))
-            self.assertEqual(len(compartments), 2)
-            self.assertTrue('e' in compartments)
-            self.assertTrue(compartments[0] != compartments[1])
 
     def test_limits_get_item(self):
         self.assertEqual(self.model.limits['rxn_1'].bounds, (0, 1000))
@@ -215,7 +192,8 @@ class TestMetabolicModel(unittest.TestCase):
         self.assertEqual(self.model.limits['rxn_2'].bounds, (-10, 1000))
 
     def test_limits_iter(self):
-        self.assertEqual(set(iter(self.model.limits)), { 'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6' })
+        self.assertEqual(set(iter(self.model.limits)), {
+            'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4', 'rxn_5', 'rxn_6'})
 
     def test_limits_len(self):
         self.assertEqual(len(self.model.limits), 6)
