@@ -381,7 +381,7 @@ to perform the gap check without implicit sinks.
 
 The gap check is performed with the medium that is defined in the model. It
 may be useful to run the gap check with every compound in the medium available.
-This can easily be done by specifying the ``--unrestricted-medium`` option
+This can easily be done by specifying the ``--unrestricted-exchange`` option
 which removes all limits on the exchange reactions during the check.
 
 There are some additional gap checking methods that can be enabled with the

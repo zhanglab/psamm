@@ -383,9 +383,9 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command(
             GapCheckCommand, ['--method=prodcheck', '--exclude-extracellular'])
 
-    def test_run_gapcheck_prodcheck_with_unrestricted_medium(self):
+    def test_run_gapcheck_prodcheck_with_unrestricted_exchange(self):
         self.run_solver_command(
-            GapCheckCommand, ['--method=prodcheck', '--unrestricted-medium'])
+            GapCheckCommand, ['--method=prodcheck', '--unrestricted-exchange'])
 
     def test_run_gapcheck_sinkcheck(self):
         self.run_solver_command(

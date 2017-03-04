@@ -41,7 +41,7 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
             '--no-implicit-sinks', action='store_true',
             help='Do not include implicit sinks when gap-filling')
         parser.add_argument(
-            '--unrestricted-medium', action='store_true',
+            '--unrestricted-exchange', action='store_true',
             help='Remove all limits on exchange reactions while gap checking')
         parser.add_argument(
             '--exclude-extracellular', action='store_true',
@@ -67,7 +67,7 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         implicit_sinks = not self._args.no_implicit_sinks
 
-        if self._args.unrestricted_medium:
+        if self._args.unrestricted_exchange:
             # Allow all exchange reactions with no flux limits
             for reaction in self._mm.reactions:
                 if self._mm.is_exchange(reaction):
