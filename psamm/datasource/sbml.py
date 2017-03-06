@@ -521,7 +521,7 @@ class SBMLReader(object):
 
     If ``ignore_boundary`` is ``True``, the species that are marked as
     boundary conditions will simply be dropped from the species list and from
-    the reaction equations.
+    the reaction equations, and any boundary compartment will be dropped too.
     """
 
     def __init__(self, file, strict=False, ignore_boundary=False,
@@ -631,6 +631,23 @@ class SBMLReader(object):
             filemark = FileMark(self._context, None, None)
             entry = ReactionEntry(self, reaction, filemark=filemark)
             self._model_reactions[entry.id] = entry
+
+        if self._ignore_boundary:
+            # Remove compartments that only contain boundary compounds
+            empty_compartments = set(self._model_compartments)
+            valid_compartments = set()
+            for species in itervalues(self._model_species):
+                empty_compartments.discard(species.compartment)
+                if not species.boundary:
+                    valid_compartments.add(species.compartment)
+
+            boundary_compartments = (
+                set(self._model_compartments) - empty_compartments -
+                valid_compartments)
+            for compartment in boundary_compartments:
+                logger.info('Ignoring boundary compartment: {}'.format(
+                    compartment))
+                del self._model_compartments[compartment]
 
         # Objectives
         self._model_objectives = {}
