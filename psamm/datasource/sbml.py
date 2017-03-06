@@ -425,8 +425,8 @@ class ObjectiveEntry(object):
         self._type = self._root.get(_tag('type', self._namespace))
 
         if self._type is None:
-            raise ParseError('Missing "type" attribute on objective: {}'.formt(
-                self.id))
+            raise ParseError(
+                'Missing "type" attribute on objective: {}'.format(self.id))
 
         # Find flux objectives
         self._reactions = {}
