@@ -193,15 +193,13 @@ class SpeciesEntry(_SBMLEntry, BaseCompoundEntry):
         if 'compartment' in self._root.attrib:
             properties['compartment'] = self._root.get('compartment')
 
-        charge_tag = _tag('charge', FBC_V2)
-        if (charge_tag in self._root.attrib and
-                self._root.get(charge_tag) != ''):
-            properties['charge'] = int(self._root.get(charge_tag))
+        charge = self.charge
+        if charge is not None:
+            properties['charge'] = charge
 
-        formula_tag = _tag('chemicalFormula', FBC_V2)
-        if (formula_tag in self._root.attrib and
-                self._root.get(formula_tag) != ''):
-            properties['formula'] = self._root.get(formula_tag)
+        formula = self.formula
+        if formula is not None:
+            properties['formula'] = formula
 
         return properties
 
@@ -425,8 +423,8 @@ class ObjectiveEntry(object):
         self._type = self._root.get(_tag('type', self._namespace))
 
         if self._type is None:
-            raise ParseError('Missing "type" attribute on objective: {}'.formt(
-                self.id))
+            raise ParseError(
+                'Missing "type" attribute on objective: {}'.format(self.id))
 
         # Find flux objectives
         self._reactions = {}
