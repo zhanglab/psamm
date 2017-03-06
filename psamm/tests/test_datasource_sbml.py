@@ -40,9 +40,9 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
    <compartment name="cell"/>
   </listOfCompartments>
   <listOfSpecies>
-   <species name="Glucose" compartment="cell" initialAmount="1"/>
-   <species name="Glucose_6_P" compartment="cell" initialAmount="1"/>
-   <species name="H2O" compartment="cell" initialAmount="1"/>
+   <species name="Glucose" compartment="cell" initialAmount="1" charge="0"/>
+   <species name="Glucose_6_P" compartment="cell" initialAmount="1" charge="-2"/>
+   <species name="H2O" compartment="cell" initialAmount="1" charge="0"/>
    <species name="Phosphate" compartment="cell" initialAmount="1" boundaryCondition="false"/>
    <species name="Biomass" compartment="boundary" initialAmount="1" boundaryCondition="true"/>
   </listOfSpecies>
@@ -101,16 +101,19 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
         self.assertEqual(species['Glucose'].name, 'Glucose')
         self.assertEqual(species['Glucose'].compartment, 'cell')
         self.assertFalse(species['Glucose'].boundary)
+        self.assertEqual(species['Glucose'].charge, 0)
 
         self.assertEqual(species['Glucose_6_P'].id, 'Glucose_6_P')
         self.assertEqual(species['Glucose_6_P'].name, 'Glucose_6_P')
         self.assertEqual(species['Glucose_6_P'].compartment, 'cell')
         self.assertFalse(species['Glucose_6_P'].boundary)
+        self.assertEqual(species['Glucose_6_P'].charge, -2)
 
         self.assertEqual(species['H2O'].id, 'H2O')
         self.assertEqual(species['H2O'].name, 'H2O')
         self.assertEqual(species['H2O'].compartment, 'cell')
         self.assertFalse(species['H2O'].boundary)
+        self.assertEqual(species['H2O'].charge, 0)
 
         self.assertFalse(species['Phosphate'].boundary)
         self.assertTrue(species['Biomass'].boundary)
@@ -176,9 +179,9 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
    <compartment id="C_b" name="boundary"/>
   </listOfCompartments>
   <listOfSpecies>
-   <species id="M_Glucose" name="Glucose" compartment="C_c"/>
-   <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c"/>
-   <species id="M_H2O" name="H2O" compartment="C_c"/>
+   <species id="M_Glucose" name="Glucose" compartment="C_c" charge="0"/>
+   <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c" charge="-2"/>
+   <species id="M_H2O" name="H2O" compartment="C_c" charge="0"/>
    <species id="M_Phosphate" name="Phosphate" compartment="C_c" boundaryCondition="false"/>
    <species id="M_Biomass" name="Biomass" compartment="C_b" boundaryCondition="true"/>
   </listOfSpecies>
@@ -238,16 +241,19 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         self.assertEqual(species['M_Glucose'].name, 'Glucose')
         self.assertEqual(species['M_Glucose'].compartment, 'C_c')
         self.assertFalse(species['M_Glucose'].boundary)
+        self.assertEqual(species['M_Glucose'].charge, 0)
 
         self.assertEqual(species['M_Glucose_6_P'].id, 'M_Glucose_6_P')
         self.assertEqual(species['M_Glucose_6_P'].name, 'Glucose-6-P')
         self.assertEqual(species['M_Glucose_6_P'].compartment, 'C_c')
         self.assertFalse(species['M_Glucose_6_P'].boundary)
+        self.assertEqual(species['M_Glucose_6_P'].charge, -2)
 
         self.assertEqual(species['M_H2O'].id, 'M_H2O')
         self.assertEqual(species['M_H2O'].name, 'H2O')
         self.assertEqual(species['M_H2O'].compartment, 'C_c')
         self.assertFalse(species['M_H2O'].boundary)
+        self.assertEqual(species['M_H2O'].charge, 0)
 
         self.assertFalse(species['M_Phosphate'].boundary)
         self.assertTrue(species['M_Biomass'].boundary)
