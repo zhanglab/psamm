@@ -771,6 +771,6 @@ class TestNativeModelWriter(unittest.TestCase):
             {
                 'id': 'r2',
                 'name': 'Reaction 2',
-                'equation': '|c1[c]| => (2) |c2[c]|'
+                'equation': 'c1[c] => (2) c2[c]'
             }
         ])

@@ -13,12 +13,13 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Definitions related to reaction equations and parsing of such equations."""
 
 from __future__ import unicode_literals
 
+import re
 import functools
 import enum
 import numbers
@@ -338,9 +339,11 @@ class Reaction(object):
         def format_compound(compound, count):
             """Format compound"""
             cpdspec = text_type(compound)
+            if re.search(r'\s', cpdspec):
+                cpdspec = '|{}|'.format(cpdspec)
             if count != 1:
-                return '({}) |{}|'.format(count, cpdspec)
-            return '|{}|'.format(cpdspec)
+                return '({}) {}'.format(count, cpdspec)
+            return cpdspec
 
         def format_compound_list(cmpds):
             """Format compound list"""

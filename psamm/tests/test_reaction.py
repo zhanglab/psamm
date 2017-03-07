@@ -297,15 +297,21 @@ class TestReaction(unittest.TestCase):
     def test_reaction_format_simple(self):
         r = Reaction(
             Direction.Forward, [(Compound('Pb'), 1)], [(Compound('Au'), 1)])
-        self.assertEqual(str(r), '|Pb| => |Au|')
+        self.assertEqual(text_type(r), 'Pb => Au')
+
+    def test_reaction_format_with_space(self):
+        r = Reaction(
+            Direction.Forward, [(Compound('A thing'), 1)],
+            [(Compound('Another thing'), 2), (Compound('B'), 1)])
+        self.assertEqual(text_type(r), '|A thing| => (2) |Another thing| + B')
 
     def test_reaction_format_with_empty_right_side(self):
         r = Reaction(Direction.Forward, [(Compound('A'), 1)], [])
-        self.assertEqual(text_type(r), '|A| =>')
+        self.assertEqual(text_type(r), 'A =>')
 
     def test_reaction_format_with_empty_left_side(self):
         r = Reaction(Direction.Forward, [], [(Compound('A'), 1)])
-        self.assertEqual(text_type(r), '=> |A|')
+        self.assertEqual(text_type(r), '=> A')
 
     def test_reaction_format_with_arguments(self):
         pp1 = Compound('Polyphosphate', arguments=[4])
@@ -313,7 +319,7 @@ class TestReaction(unittest.TestCase):
         r = Reaction(Direction.Forward, [(Compound('ATP'), 1), (pp1, 1)],
                      [(Compound('ADP'), 1), (pp2, 1)])
         self.assertEqual(
-            str(r), '|ATP| + |Polyphosphate(4)| => |ADP| + |Polyphosphate(5)|')
+            text_type(r), 'ATP + Polyphosphate(4) => ADP + Polyphosphate(5)')
 
     def test_reaction_equals_other(self):
         r = Reaction(Direction.Forward, [(Compound('Pb'), 1)],
