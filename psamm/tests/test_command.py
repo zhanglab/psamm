@@ -45,6 +45,7 @@ from psamm.commands.gapcheck import GapCheckCommand
 from psamm.commands.gapfill import GapFillCommand
 from psamm.commands.genedelete import GeneDeletionCommand
 from psamm.commands.masscheck import MassConsistencyCommand
+from psamm.commands.primarypairs import PrimaryPairsCommand
 from psamm.commands.randomsparse import RandomSparseNetworkCommand
 from psamm.commands.robustness import RobustnessCommand
 from psamm.commands.sbmlexport import SBMLExport
@@ -477,6 +478,26 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
     def test_run_masscheck_reaction_with_checked(self):
         self.run_solver_command(
             MassConsistencyCommand, ['--type=reaction', '--checked=rxn_3'])
+
+    def test_run_primarypairs_with_fpp(self):
+        self.run_command(PrimaryPairsCommand, ['--method', 'fpp'])
+
+    def test_run_primarypairs_with_fpp_and_report_element(self):
+        self.run_command(
+            PrimaryPairsCommand, ['--method', 'fpp', '--report-element', 'C'])
+
+    def test_run_primarypairs_with_fpp_and_report_all_transfers(self):
+        self.run_command(
+            PrimaryPairsCommand, ['--method', 'fpp', '--report-all-transfers'])
+
+    def test_run_primarypairs_with_fpp_and_weight(self):
+        self.run_command(
+            PrimaryPairsCommand, [
+                '--method', 'fpp', '--weights', 'C=1,H=0,R=0.5,*=0.4'])
+
+    def test_run_primarypairs_with_mapmaker(self):
+        self.run_solver_command(
+            PrimaryPairsCommand, ['--method', 'mapmaker'], {'integer': True})
 
     def test_run_randomsparse_reactions(self):
         self.run_solver_command(
