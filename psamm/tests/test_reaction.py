@@ -14,9 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 import unittest
+
+from six import text_type
 
 from psamm.reaction import Reaction, Compound, Direction
 
@@ -104,16 +106,18 @@ class TestCompound(unittest.TestCase):
                               Compound('A', arguments=[10]), Compound('A', 'e'), Compound('B')])
 
     def test_compound_str_basic(self):
-        self.assertEqual(str(Compound('Phosphate')), 'Phosphate')
+        self.assertEqual(text_type(Compound('Phosphate')), 'Phosphate')
 
     def test_compound_str_with_compartment(self):
-        self.assertEqual(str(Compound('Phosphate', 'e')), 'Phosphate[e]')
+        self.assertEqual(text_type(Compound('Phosphate', 'e')), 'Phosphate[e]')
 
     def test_compound_str_with_argument(self):
-        self.assertEqual(str(Compound('Polyphosphate', arguments=[3])), 'Polyphosphate(3)')
+        self.assertEqual(text_type(
+            Compound('Polyphosphate', arguments=[3])), 'Polyphosphate(3)')
 
     def test_compound_str_with_compartment_and_argument(self):
-        self.assertEqual(str(Compound('Polyphosphate', 'p', [3])), 'Polyphosphate(3)[p]')
+        self.assertEqual(text_type(
+            Compound('Polyphosphate', 'p', [3])), 'Polyphosphate(3)[p]')
 
 
 class TestReaction(unittest.TestCase):
@@ -294,6 +298,14 @@ class TestReaction(unittest.TestCase):
         r = Reaction(
             Direction.Forward, [(Compound('Pb'), 1)], [(Compound('Au'), 1)])
         self.assertEqual(str(r), '|Pb| => |Au|')
+
+    def test_reaction_format_with_empty_right_side(self):
+        r = Reaction(Direction.Forward, [(Compound('A'), 1)], [])
+        self.assertEqual(text_type(r), '|A| =>')
+
+    def test_reaction_format_with_empty_left_side(self):
+        r = Reaction(Direction.Forward, [], [(Compound('A'), 1)])
+        self.assertEqual(text_type(r), '=> |A|')
 
     def test_reaction_format_with_arguments(self):
         pp1 = Compound('Polyphosphate', arguments=[4])

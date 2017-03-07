@@ -347,10 +347,13 @@ class Reaction(object):
             return ' + '.join(format_compound(compound, count)
                               for compound, count in cmpds)
 
-        return '{} {} {}'.format(
-            format_compound_list(self._left),
-            self._direction.symbol,
-            format_compound_list(self._right))
+        s = text_type(self._direction.symbol)
+        if len(self._left) > 0:
+            s = format_compound_list(self._left) + ' ' + s
+        if len(self._right) > 0:
+            s += ' ' + format_compound_list(self._right)
+
+        return s
 
     def __repr__(self):
         return str('Reaction({}, {}, {})').format(
