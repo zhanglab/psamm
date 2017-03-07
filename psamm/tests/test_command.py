@@ -494,11 +494,11 @@ class TestCommandMain(unittest.TestCase):
 
         self.assertTableOutputEqual(f.getvalue(), [
             ['id', 'equation', 'genes', 'name', 'in_model'],
-            ['rxn_1', '|A_\u2206[e]| => |B[c]|', '["gene_1", "gene_2"]',
+            ['rxn_1', 'A_\u2206[e] => B[c]', '["gene_1", "gene_2"]',
                 'Reaction 1', 'true'],
-            ['rxn_2_\u03c0', '|B[c]| <=> |C[e]|',
+            ['rxn_2_\u03c0', 'B[c] <=> C[e]',
                 'gene_3 or (gene_4 and gene_5)', 'Reaction 2', 'true'],
-            ['rxn_3', '|D[c]| => |E[c]|', '', '', 'true'],
+            ['rxn_3', 'D[c] => E[c]', '', '', 'true'],
         ])
 
     def test_run_tableexport_compounds(self):
