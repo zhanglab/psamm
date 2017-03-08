@@ -11,10 +11,8 @@ accurate representations of the metabolism of an organism.
    :local:
 
 
-Import Functions in PSAMM
-_________________________
-
 {{{Reference to the installation tutorial}}}
+
 
 
 Common Errors in Metabolic Reconstructions
@@ -407,9 +405,9 @@ The ``gapcheck`` function allows the use of three methods for the identification
 within a metabolic network. These are the ``prodcheck``, ``concheck``, and ``gapfind`` methods.
 
 The ``prodcheck`` method is the most straightforward of these methods and can be used to identify any
-compounds that cannot be produced in the metabolic network. This method will introduce an artificial sink
-for a metabolites in the model and then maximize the production of that metabolite through FBA to see if it can
-be produced from the supplied exchange nutrients.
+compounds that cannot be produced in the metabolic network. Will iterate through the reactions in a network
+and maximize each one. If the reaction can carry a flux then the metabolites involved in the reaction
+are not considered to be blocked.
 
 To use this function the following command can be run:
 
@@ -439,11 +437,64 @@ gap-checking in this condition will allow for the identification of gaps that ar
 and may instead be the result of incomplete pathways and knowledge gaps.
 
 
-The second method implemented in the ``gapcheck`` function is the ``sinkcheck`` method.
+The second method implemented in the ``gapcheck`` function is the ``sinkcheck`` method. This method is similar to
+``prodcheck`` but is implemented in a way where the flux through each introduced sink for a compound is maximized.
+This ensures that the metabolite can be produced in excess from the network for it to not be considered a dead end
+metabolite.
 
 .. code-block:: shell
 
     (psamm-env) $ psamm-model gapcheck --method sinkcheck --unrestricted-exchange
 
 
-The last method implemented in the ``gapcheck`` function is the ``gapfind`` method.
+The last method implemented in the ``gapcheck`` function is the ``gapfind`` method. This method is an implementation
+of a previously published method to identify gaps in metabolic networks "Include CITATION HERE". This method will use
+a network based optimization to identify metabolites with no production pathways present.
+
+.. code-block:: shell
+
+    (psamm-env) $ psamm-model gapcheck --method gapfind --unrestricted-exchange
+
+
+
+
+Search Functions in PSAMM
+-------------------------
+
+``psamm-model`` includes a search function that can be used to search the model
+information for specific compounds or reactions. To do this the search function
+can be used. This can be used for various search methods. For example to search
+for the compound named fructose the following command can be used:
+
+.. code-block:: shell
+
+    (psamm-env) $ psamm-model search compound --name 'Fructose'
+    INFO: Model: Ecoli_core_model
+    INFO: Model Git version: db22229
+    id: fru_c
+    formula: C6H12O6
+    name: Fructose
+    Defined in ./compounds.yaml:?:?
+
+To do the same search but instead use the compound ID the following command can
+be used:
+
+.. code-block:: shell
+
+    (psamm-env) $ psamm-model search compound --id 'fru_c'
+
+These searches will result in a printout of the relevant information contained
+within the model about these compounds. In a similar way reactions can also be
+searched. For example to search for a reaction by a specific ID the following
+command can be used:
+
+.. code-block:: shell
+
+    (psamm-env) $ psamm-model search reaction --id 'FRUKIN'
+
+Or to search for all reactions that include a specific compound the following
+command can be used:
+
+.. code-block:: shell
+
+    (psamm-env) $ psamm-model search reaction --compound 'manni[c]'

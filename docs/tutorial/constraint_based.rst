@@ -101,7 +101,7 @@ The options for a specific function can be viewed by using the command:
     (psamm-env) $ psamm-model <command> --help
 
 FBA in PSAMM
-______________
+____________
 
 PSAMM allows for the integration of the model development and curation process
 with the simulation process. In this way changes to a metabolic model can be
@@ -110,6 +110,9 @@ PSAMM. In this tutorial, aspects of the `E. coli` core model [1]_ will be
 expanded to demonstrate the various functions available in PSAMM and throughout
 these changes the model will be analyzed with PSAMM's simulation functions to
 make sure that these changes are resulting in a functional model.
+
+Flux Balance Analysis
+~~~~~~~~~~~~~~~~~~~~~
 
 Flux Balance Analysis (FBA) is one of the basic methods that allows you
 to quickly examine if the model is viable (i.e. can produce biomass). PSAMM
@@ -180,8 +183,6 @@ Flux balance analysis will be used throughout this tutorial as both a checking
 tool during model curation and an analysis tool. PSAMM allows you to easily
 integrate analysis tools like this into the various steps during model
 development.
-
-
 
 
 Flux Variability Analysis
@@ -266,8 +267,42 @@ with low oxygen uptake.
 
 .. image:: Robustness_chart.png
 
-Random Minimal Network
-~~~~~~~~~~~~~~~~~~~~~~
+
+
+Gene Deletion
+~~~~~~~~~~~~~
+
+The ``genedelete`` command can be used to perform gene deletions in a model and test what effects those
+deletions have. This command can be used to quickly test if certain genes are essential in the network. The
+command will take a list of genes in a separate file and will then go through all of the gene associations in
+the model to determine what reactions require that gene to be present. This uses the gene association logic
+to determine if the removal of the specified genes would knock out that function. For example if we had the
+following two reactions:
+
+.. code-block:: yaml
+
+    - id: RXN_1
+      genes: g0001 and g0002
+      equation: '|cpd_a[c]| <=> |cpd_b[c]|'
+
+    - id: RXN_2
+      genes: g0001 or g0003
+      equation: '|cpd_a[c]| <=> |cpd_c[c]|'
+
+Both reactions are associated with the gene 'g0001' but RXN_1 has an 'and' association while RXN_2 has an 'or'
+association. If the gene 'g0001' were to be deleted from the network RXN_1 would no longer have the required genes
+for it to be present since both genes are required. RXN_2 would still be satisfied since it would only require one
+of the two genes to be present. The gene delete command will do this automatically and for the entire network making
+it much easier to do these kinds of simulations. The gene delete command can be run with the following command.
+
+.. code-block:: shell
+
+    (psamm-env) $ psamm-model genedelete --gene b0118
+
+This will delete 
+
+Random Minimal Network Analysis
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``randomsparse`` command can
 be used to look at gene essentiality in the metabolic network. To use this function
@@ -382,16 +417,3 @@ essential to the network:
     EX_pyr_e	0
     EX_succ_e	0
 
-Using PSAMM to export the model to other Software
-___________________________________________________
-
-If you want to export the model in a format to use with other
-software, that is also possible using PSAMM. The YAML formatted model can be
-easily exported as an SBML file using the following command:
-
-.. code-block:: shell
-
-    (psamm-env) $ psamm-model sbmlexport > Modified_core_ecoli.xml
-
-This will export the model in SBML level 3 version 1 format which can then
-be used in other software that support this format.
