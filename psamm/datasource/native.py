@@ -153,8 +153,9 @@ class NativeModel(object):
     def parse_compartments(self):
         """Parse compartment information from model.
 
-        Return tuple of: 1) iterator of :class:`.CompartmentEntry`; 2)
-        Set of pairs defining the compartment boundaries of the model.
+        Return tuple of: 1) iterator of
+        :class:`psamm.datasource.entry.CompartmentEntry`; 2) Set of pairs
+        defining the compartment boundaries of the model.
         """
 
         compartments = OrderedDict()
