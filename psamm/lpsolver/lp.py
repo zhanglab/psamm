@@ -554,12 +554,29 @@ class Constraint(object):
 
 
 class VariableNamespace(object):
+    """Namespace for defining variables.
+
+    Namespaces are always unique even if two namespaces have the same name.
+    Variables defined within a namespace will never clash with a global
+    variable name or a name defined in another namespace. Namespaces should
+    be created using the :meth:`.Problem.namespace`.
+
+    >>> v = prob.namespace(name='v')
+    >>> v.define([1, 2, 5], lower=0, upper=10)
+    >>> prob.set_objective(v[1] + 3*v[2] - 5 * v[5])
+    """
     def __init__(self, problem, **kwargs):
         self._name = kwargs.pop('name', None)
         self._problem = problem
         self._define_kwargs = kwargs
 
     def define(self, names, **kwargs):
+        """Define variables within the namespace.
+
+        This is similar to :meth:`.Problem.define` except that names must be
+        given as an iterable. This method accepts the same keyword arguments
+        as :meth:`.Problem.define`.
+        """
         define_kwargs = dict(self._define_kwargs)
         define_kwargs.update(kwargs)
         self._problem.define(
@@ -578,15 +595,40 @@ class VariableNamespace(object):
         return self._problem.var((self, name))
 
     def set(self, names):
+        """Return a variable set of the given names in the namespace.
+
+        >>> v = prob.namespace(name='v')
+        >>> v.define([1, 2, 5], lower=0, upper=10)
+        >>> prob.add_linear_constraints(v.set([1, 2]) >= 4)
+        """
         return self._problem.set((self, name) for name in names)
 
     def sum(self, names):
+        """Return the sum of the given names in the namespace.
+
+        >>> v = prob.namespace(name='v')
+        >>> v.define([1, 2, 5], lower=0, upper=10)
+        >>> prob.set_objective(v.sum([2, 5]))  # v[2] + v[5]
+        """
         return Expression({(self, name): 1 for name in names})
 
     def expr(self, items):
+        """Return the sum of each name multiplied by a coefficient.
+
+        >>> v = prob.namespace(name='v')
+        >>> v.define(['a', 'b', 'c'], lower=0, upper=10)
+        >>> prob.set_objective(v.expr([('a', 2), ('b', 1)]))
+        """
         return Expression({(self, name): value for name, value in items})
 
     def value(self, name):
+        """Return value of given variable in namespace.
+
+        >>> v = prob.namespace(name='v')
+        >>> v.define([1, 2, 5], lower=0, upper=10)
+        >>> prob.solve()
+        >>> print(v.value(2))
+        """
         return self._problem.result.get_value((self, name))
 
     def __repr__(self):
@@ -621,6 +663,17 @@ class Problem(object):
         """Check whether a variable is defined in the problem."""
 
     def namespace(self, names=None, **kwargs):
+        """Return namespace for this problem.
+
+        If names is given it should be an iterable of names to define in the
+        namespace. Other keyword arguments can be specified which will be
+        used to define the names given as well as being used as default
+        parameters for names that are defined later.
+
+        >>> v = prob.namespace(name='v')
+        >>> v.define([1, 2, 5], lower=0, upper=10)
+        >>> prob.set_objective(v[1] + 3*v[2] - 5 * v[5])
+        """
         ns = VariableNamespace(self, **kwargs)
         if names is not None:
             ns.define(names)
