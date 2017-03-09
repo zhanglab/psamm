@@ -460,7 +460,9 @@ minimal solution.
 SBML Export (``sbmlexport``)
 ----------------------------
 
-Exports the model to the SBML file format.
+Exports the model to the SBML file format. This command exports the model as
+an `SBML level 3`_ file with flux bounds, objective and gene information
+encoded with `Flux Balance Constraints version 2`_.
 
 .. code-block:: shell
 
@@ -469,6 +471,9 @@ Exports the model to the SBML file format.
 If the file name is omitted, the file contents will be output directly to the
 screen. Using the ``--pretty`` option makes the output formatted for
 readability.
+
+.. _`SBML level 3`: http://sbml.org/Documents/Specifications
+.. _`Flux Balance Constraints version 2`: http://sbml.org/Documents/Specifications/SBML_Level_3/Packages/fbc
 
 Excel Export (``excelexport``)
 ------------------------------
