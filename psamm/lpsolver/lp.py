@@ -555,6 +555,7 @@ class Constraint(object):
 
 class VariableNamespace(object):
     def __init__(self, problem, **kwargs):
+        self._name = kwargs.pop('name', None)
         self._problem = problem
         self._define_kwargs = kwargs
 
@@ -583,8 +584,8 @@ class VariableNamespace(object):
         return self._problem.result.get_value((self, name))
 
     def __repr__(self):
-        return '<{} of {} ({})>'.format(
-            self.__class__.__name__, repr(self._problem), id(self))
+        name = repr(self._name) if self._name is not None else 'Unnamed'
+        return str('<{}: {}>').format(self.__class__.__name__, name)
 
 
 @add_metaclass(abc.ABCMeta)
