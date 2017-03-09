@@ -565,6 +565,12 @@ class VariableNamespace(object):
         self._problem.define(
             *((self, name) for name in names), **define_kwargs)
 
+    def __getitem__(self, key):
+        return self._problem.var((self, key))
+
+    def __contains__(self, key):
+        return self._problem.has_variable((self, key))
+
     def has_variable(self, name):
         return self._problem.has_variable((self, name))
 
