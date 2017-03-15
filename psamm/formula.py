@@ -269,6 +269,16 @@ class Formula(FormulaElement):
     def __contains__(self, element):
         return element in self._values
 
+    def get(self, element, default=None):
+        """Return value for element or default if not in the formula."""
+        return self._values.get(element, default)
+
+    def __getitem__(self, element):
+        return self._values[element]
+
+    def __len__(self):
+        return len(self._values)
+
     def __str__(self):
         """Return formula represented using Hill notation system
 
