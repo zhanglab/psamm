@@ -45,7 +45,10 @@ class ExcelExportCommand(Command):
     def run(self):
         model = self._model
         if xlsxwriter is None:
-            self.fail('Excel export requires the XlsxWriter python module')
+            self.fail(
+                'Excel export requires the XlsxWriter python module'
+                ' ("pip install xlsxwriter")')
+
         workbook = xlsxwriter.Workbook(self._args.file)
         reaction_sheet = workbook.add_worksheet(name='Reactions')
 
