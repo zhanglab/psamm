@@ -129,10 +129,17 @@ class ExcelExportCommand(Command):
         limits_sheet.write_string(0, 1, 'Lower Limit')
         limits_sheet.write_string(0, 2, 'Upper Limit')
 
-        for x, i in enumerate(model.parse_limits()):
-            limits_sheet.write(x, 0, (i[0]))
-            limits_sheet.write(x, 1, (i[1]))
-            limits_sheet.write(x, 2, (i[2]))
+        for x, limit in enumerate(model.parse_limits()):
+            reaction_id, lower, upper = limit
+            if lower is None:
+                lower = -default_flux
+
+            if upper is None:
+                upper = default_flux
+
+            limits_sheet.write(x+1, 0, reaction_id)
+            limits_sheet.write(x+1, 1, lower)
+            limits_sheet.write(x+1, 2, upper)
 
         model_info = workbook.add_worksheet(name='Model Info')
 
