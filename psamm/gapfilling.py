@@ -36,7 +36,11 @@ logger = logging.getLogger(__name__)
 
 
 def add_all_database_reactions(model, compartments):
-    """Add all reactions from database that occur in given compartments."""
+    """Add all reactions from database that occur in given compartments.
+
+    Args:
+        model: :class:`psamm.metabolicmodel.MetabolicModel`.
+    """
 
     added = set()
     for rxnid in model.database.reactions:
@@ -51,7 +55,11 @@ def add_all_database_reactions(model, compartments):
 
 
 def add_all_exchange_reactions(model, compartment, allow_duplicates=False):
-    """Add all exchange reactions to database and to model."""
+    """Add all exchange reactions to database and to model.
+
+    Args:
+        model: :class:`psamm.metabolicmodel.MetabolicModel`.
+    """
 
     all_reactions = {}
     if not allow_duplicates:
@@ -94,6 +102,7 @@ def add_all_transport_reactions(model, boundaries, allow_duplicates=False):
     two boundary compartments.
 
     Args:
+        model: :class:`psamm.metabolicmodel.MetabolicModel`.
         boundaries: Set of compartment boundary pairs.
 
     Returns:
