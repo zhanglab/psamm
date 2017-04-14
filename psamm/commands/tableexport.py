@@ -22,10 +22,9 @@ import re
 import json
 import logging
 
-from six import text_type, string_types, integer_types
+from six import text_type, string_types, integer_types, itervalues
 
 from ..command import Command
-from .. import util
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +82,7 @@ class ExportTableCommand(Command):
 
     def _reaction_export(self):
         property_set = set()
-        for reaction in self._model.parse_reactions():
+        for reaction in self._model.reactions:
             property_set.update(reaction.properties)
 
         property_list_sorted = sorted(
@@ -92,18 +91,17 @@ class ExportTableCommand(Command):
         print('\t'.join(
             [text_type(x) for x in property_list_sorted] + ['in_model']))
 
-        model_reactions = set(self._model.parse_model())
-        for reaction in self._model.parse_reactions():
+        model_reactions = set(self._model.model)
+        for reaction in self._model.reactions:
             line_content = [reaction.properties.get(property)
                             for property in property_list_sorted]
-            in_model = (not self._model.has_model_definition() or
-                        reaction.id in model_reactions)
+            in_model = reaction.id in model_reactions
             line_content.append(in_model)
             print('\t'.join(_encode_value(value) for value in line_content))
 
     def _compound_export(self):
         compound_set = set()
-        for compound in self._model.parse_compounds():
+        for compound in self._model.compounds:
             compound_set.update(compound.properties)
 
         compound_list_sorted = sorted(
@@ -114,11 +112,10 @@ class ExportTableCommand(Command):
 
         metabolic_model = self._model.create_metabolic_model()
         model_compounds = set(x.name for x in metabolic_model.compounds)
-        for compound in self._model.parse_compounds():
+        for compound in self._model.compounds:
             line_content = [compound.properties.get(property)
                             for property in compound_list_sorted]
-            in_model = (not self._model.has_model_definition() or
-                        compound.id in model_compounds)
+            in_model = compound.id in model_compounds
             line_content.append(in_model)
             print('\t'.join(_encode_value(value) for value in line_content))
 
@@ -127,7 +124,8 @@ class ExportTableCommand(Command):
                                       'Lower Limit', 'Upper Limit'))
         default_flux = self._model.default_flux_limit
 
-        for compound, reaction, lower, upper in self._model.parse_exchange():
+        for compound, reaction, lower, upper in itervalues(
+                self._model.exchange):
             if lower is None:
                 lower = -1 * default_flux
 
@@ -140,15 +138,11 @@ class ExportTableCommand(Command):
     def _limits_export(self):
         print('{}\t{}\t{}'.format(
             'Reaction ID', 'Lower Limits', 'Upper Limits'))
-        for reaction, lower, upper in self._model.parse_limits():
+        for reaction, lower, upper in itervalues(self._model.limits):
             print('\t'.join(_encode_value(value) for value in (
                 reaction, lower, upper)))
 
     def _metadata_export(self):
-        git_version = None
-        if self._model.context is not None:
-            git_version = util.git_try_describe(self._model.context.basepath)
-
         print('Model Name\t{}'.format(
             _encode_value(self._model.name)))
         print('Biomass Reaction\t{}'.format(
@@ -156,5 +150,6 @@ class ExportTableCommand(Command):
         print('Default Flux Limits\t{}'.format(
             _encode_value(self._model.default_flux_limit)))
 
-        if git_version is not None:
-            print('Git version\t{}'.format(_encode_value(git_version)))
+        if self._model.version_string is not None:
+            print('Model version\t{}'.format(
+                _encode_value(self._model.version_string)))

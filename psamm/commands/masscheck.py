@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from __future__ import unicode_literals
 
@@ -51,16 +51,15 @@ class MassConsistencyCommand(MetabolicMixin, SolverCommandMixin, Command):
             default='compound', help='Type of check to perform')
         super(MassConsistencyCommand, cls).init_parser(parser)
 
+    def _compound_name(self, id):
+        if id not in self._model.compounds:
+            return id
+        return self._model.compounds[id].properties.get('name', id)
+
     def run(self):
         # Load compound information
-        self._compound_name = {}
         zeromass = set()
-        for compound in self._model.parse_compounds():
-            if 'name' in compound.properties:
-                self._compound_name[compound.id] = compound.properties['name']
-            elif compound.id not in self._compound_name:
-                self._compound_name[compound.id] = compound.id
-
+        for compound in self._model.compounds:
             if compound.properties.get('zeromass', False):
                 zeromass.add(Compound(compound.id))
 
@@ -111,8 +110,7 @@ class MassConsistencyCommand(MetabolicMixin, SolverCommandMixin, Command):
                 good += 1
             total += 1
             print('{}\t{}\t{}'.format(
-                compound, mass, compound.translate(
-                    lambda x: self._compound_name.get(x, x))))
+                compound, mass, compound.translate(self._compound_name)))
         logger.info('Consistent compounds: {}/{}'.format(good, total))
 
     def _check_reactions(self, known_inconsistent, zeromass, solver):
@@ -140,8 +138,7 @@ class MassConsistencyCommand(MetabolicMixin, SolverCommandMixin, Command):
             total += 1
             if abs(residual) >= epsilon:
                 reaction = self._mm.get_reaction(reaction_id)
-                rxt = reaction.translated_compounds(
-                    lambda x: self._compound_name.get(x, x))
+                rxt = reaction.translated_compounds(self._compound_name)
                 print('{}\t{}\t{}'.format(reaction_id, residual, rxt))
             else:
                 good += 1

@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Command line interface.
 
@@ -40,9 +40,8 @@ import pkg_resources
 from six import add_metaclass, iteritems, itervalues, text_type
 
 from . import __version__ as package_version
-from .datasource.native import NativeModel
+from .datasource import native
 from .lpsolver import generic
-from . import util
 
 logger = logging.getLogger(__name__)
 
@@ -76,15 +75,11 @@ class Command(object):
         self._model = model
         self._args = args
 
-        name = self._model.name
-        if name is None:
-            name = text_type(self._model.context)
-        logger.info('Model: {}'.format(name))
+        if self._model.name is not None:
+            logger.info('Model: {}'.format(self._model.name))
 
-        if self._model.context is not None:
-            version = util.git_try_describe(self._model.context.basepath)
-            if version is not None:
-                logger.info('Model Git version: {}'.format(version))
+        if self._model.version_string is not None:
+            logger.info('Model version: {}'.format(self._model.version_string))
 
     @classmethod
     def init_parser(cls, parser):
@@ -552,10 +547,10 @@ def main(command_class=None, args=None):
     parsed_args = parser.parse_args(args)
 
     # Load model definition
-    model = NativeModel.load_model_from_path(parsed_args.model)
+    reader = native.ModelReader.reader_from_path(parsed_args.model)
 
     # Instantiate command with model and run
-    command = parsed_args.command(model, parsed_args)
+    command = parsed_args.command(reader.create_model(), parsed_args)
     try:
         command.run()
     except CommandError as e:

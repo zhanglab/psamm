@@ -18,7 +18,7 @@
 
 import unittest
 
-from psamm.datasource.native import NativeModel
+from psamm.datasource import native
 from psamm.metabolicmodel import MetabolicModel
 from psamm.database import DictDatabase
 from psamm.datasource.reaction import parse_reaction
@@ -67,7 +67,7 @@ class TestAddReactions(unittest.TestCase):
 
 class TestCreateExtendedModel(unittest.TestCase):
     def setUp(self):
-        self._model = NativeModel({
+        reader = native.ModelReader({
             'compartments': [
                 {
                     'id': 'c',
@@ -117,6 +117,7 @@ class TestCreateExtendedModel(unittest.TestCase):
                 ]
             }]
         })
+        self._model = reader.create_model()
 
     def test_create_model_extended(self):
         expected_reactions = set([
