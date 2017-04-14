@@ -17,10 +17,10 @@
 
 from __future__ import unicode_literals
 
-from ..command import Command, MetabolicMixin
+from ..command import Command
 
 
-class ConsoleCommand(MetabolicMixin, Command):
+class ConsoleCommand(Command):
     """Start an interactive Python console with the model loaded."""
 
     @classmethod
@@ -55,9 +55,10 @@ class ConsoleCommand(MetabolicMixin, Command):
         embed_kernel(local_ns=namespace)
 
     def run(self):
-        message = ('Native model has been loaded into: "model"\n' +
-                   'Metabolic model has been loaded into: "mm"')
-        namespace = {'model': self._model, 'mm': self._mm}
+        message = ('Model has been loaded into: "model"\n' +
+                   'Use "model.create_metabolic_model() to create the'
+                   ' low-level metabolic model representation.')
+        namespace = {'model': self._model}
         console_type = self._args.type
 
         if console_type == 'python':
