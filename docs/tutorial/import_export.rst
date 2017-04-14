@@ -19,8 +19,8 @@ _________________________
 Importing Existing Models (psamm-import)
 ________________________________________
 
-In order to work with a metabolic model in PSAMM the model must be converted
-to the PSAMM-specific YAML format. This format allows for a human readable
+In order to work with a metabolic model in PSAMM the model must be in
+the PSAMM-specific YAML format. This format allows for a human readable
 representation of the model components and allows for enhanced customization
 with respect to the organization of the metabolic model. This enhanced
 organization will allow for a more direct interaction with the metabolic
@@ -30,8 +30,8 @@ biologists.
 Import Formats
 ~~~~~~~~~~~~~~
 
-``psamm-import`` supports the import of models in various formats. For the SBML
-format, it supports the COBRA-compliant SBML specifications, the FBC
+The ``psamm-import`` program supports the import of models in various formats.
+For the SBML format, it supports the COBRA-compliant SBML specifications, the FBC
 specifications, and the basic SBML specifications in levels 1, 2, and 3;
 for the JSON format, it supports the import of JSON files directly from the
 `BiGG`_ database or from locally downloaded versions;
@@ -53,7 +53,7 @@ PSAMM:
 .. code-block:: shell
 
     Generic importers:
-    json          COBRA JSON
+    json          COBRApy JSON
     modelseed     ModelSEED model (Excel format)
     sbml          SBML model (non-strict)
     sbml-strict   SBML model (strict)
@@ -82,13 +82,13 @@ the ``psamm-tutorial`` folder if you have left it using the following command:
 
 .. code-block:: shell
 
-    (psamm-env) $ cd <PATH>/psamm-tutorial
+    (psamm-env) $ cd <PATH>/tutorial-part-1
 
 Importing an SBML Model
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 In this tutorial, we will use the `E. coli` textbook core model [1]_ as an
-example to demonstrate the functions in PSAMM. The model should be imported
+example to demonstrate these functions in PSAMM. First, we will convert the model
 from the SBML model. To import the ``E_coli_core.xml`` model to YAML format run
 the following command:
 
@@ -103,25 +103,30 @@ give the basic statistics of the model and should look like this:
 .. code-block:: shell
 
     ...
+    WARNING: Species M_pyr_b was converted to boundary condition because of "_b" suffix
+    WARNING: Species M_succ_b was converted to boundary condition because of "_b" suffix
     INFO: Detected biomass reaction: R_Biomass_Ecoli_core_w_GAM
     INFO: Removing compound prefix 'M_'
     INFO: Removing reaction prefix 'R_'
     INFO: Removing compartment prefix 'C_'
     Model: Ecoli_core_model
     - Biomass reaction: Biomass_Ecoli_core_w_GAM
+    - Compartments: 2
     - Compounds: 72
     - Reactions: 95
     - Genes: 137
     INFO: e is extracellular compartment
     INFO: Using default flux limit of 1000.0
-    INFO: Converting exchange reactions to medium definition
+    INFO: Converting exchange reactions to exchange file
 
 ``psamm-import`` will produce some warnings if there are any aspects of the
 model that are going to be changed during import. In this case the warnings are
-notifying you that the species with a ``_b`` suffix have been converted to a
-boundary condition. You should also see information on whether the biomass
-reaction was identified, as well as some basic information on the model name,
-size and the default flux settings.
+notifying you that the metabolites with a ``_b`` suffix have been converted to the
+boundary conditions of the model. There will also be information on what prefixes
+were removed from the metabolite IDs and if the importer was able to identify the
+Biomass Reaction in the model. This information is important to check to make sure
+that the model was imported correctly. After the import the model will be available
+and ready to use for any other PSAMM functions.
 
 Importing an Excel Model
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -140,8 +145,8 @@ This will produce a YAML version of the Excel model in the
 
 Since the Excel models are not in a standardized format these parsers need to
 be developed on a model-by-model basis in order to parse all of the relevant
-information out of the model. Future support may be added for more Excel-based
-models as the parsers are developed.
+information out of the model. This means that the parser can only be used for the
+listed models and not for a general import.
 
 Importing a JSON Model
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -172,14 +177,16 @@ command to import the `E. coli` iJO1366 [2]_ model from the BiGG database:
     (psamm-env) $ psamm-import-bigg iJO1366 --dest converted_json_model_bigg/
 
 .. note::
-    To use ``psamm-import-bigg`` you must have internet access so
-    that the models can be downloaded from the online BiGG database.
+    To use ``psamm-import-bigg`` you must have internet access to download the
+    models remotely.
 
 
 
 YAML Format and Model Organization
 __________________________________
 
+Now that we have imported the models into the YAML format we can take a look
+at what the different files are and what information they contain.
 The PSAMM YAML format stores individual models under a designated directory,
 in which there will be a number of files that stores the information of the
 model and specifies the simulation conditions. The entry point of the YAML
@@ -189,7 +196,7 @@ flux limits, medium conditions, etc. While we recommend that you use the name
 ``model.yaml`` for the central reference file, the file names for the included
 files are flexible and can be customized as you prefer. In this tutorial, we
 simply used the names: ``compounds.yaml``, ``reactions.yaml``, ``limits.yaml``,
-and ``medium.yaml`` for the included files.
+and ``exchange.yaml`` for the included files.
 
 First change directory into ``E_coli_yaml``:
 
@@ -197,23 +204,24 @@ First change directory into ``E_coli_yaml``:
 
     (psamm-env) $ cd E_coli_yaml/
 
-The directory contains the main ``model.yaml`` file as well as the included
-files:
+The directory contains the main ``model.yaml`` file as well as the other files
+that contain the model data:
 
 .. code-block:: shell
 
     (psamm-env) $ ls
     compounds.yaml
+    exchange.yaml
     limits.yaml
-    medium.yaml
     model.yaml
     reactions.yaml
 
 These files can be opened using any standard text editor. We highly recommend
-using an editor that includes syntax highlighting for the YAML language (we
-recommend the Atom_ editor which includes built-in support for YAML and is
-available for macOS, Linux and Windows). You can also use a command like
-``less`` to quickly inspect the files:
+using an editor that includes syntax highlighting for the YAML language (one such
+editor is the Atom_ editor which includes built-in support for YAML and is
+available for macOS, Linux and Windows). You can also use commands like
+``less`` and editors like ``vi`` or ``nano`` to quickly inspect and edit
+the files from the command line:
 
 .. _Atom: https://atom.io/
 
@@ -231,12 +239,19 @@ model should look like the following:
     name: Ecoli_core_model
     biomass: Biomass_Ecoli_core_w_GAM
     default_flux_limit: 1000.0
+    compartments:
+    - id: c
+      adjacent_to: e
+      name: Cytoplasm
+    - id: e
+      adjacent_to: c
+      name: Extracellular
     compounds:
     - include: compounds.yaml
     reactions:
     - include: reactions.yaml
-    media:
-    - include: medium.yaml
+    exchange:
+    - include: exchange.yaml
     limits:
     - include: limits.yaml
 
@@ -247,7 +262,13 @@ reaction files (``reactions.yaml``), the flux boundaries (``limits.yaml``), and
 the medium conditions (``medium.yaml``). The additional files are defined using
 include functions. This organization allows you to easily change
 aspects of the model like the exchange reactions by simply referencing a
-different media file in the central ``model.yaml`` definition.
+different media file in the central ``model.yaml`` definition. In addition to the
+information on the other components of the model there will also be details on the
+compartment information for the model. This will provide an overview of how compartments
+are related to each other and what their abbreviations and names are. For this small
+model there is only an ``e`` and a ``c`` compartment representing the cytoplasm
+and extracellular space but more complex cells with multiple compartments
+can also be represented.
 
 This format can also be used to include multiple files in the list of
 reactions and compounds. This feature can be useful, for example, if you
@@ -317,20 +338,22 @@ Reactions
 ~~~~~~~~~
 
 The ``reactions.yaml`` file is where the reaction information is stored in the
-model. A sample of this kind of file can be seen below:
+model. A sample from this file can be seen below:
 
 .. code-block:: yaml
 
+    - id: ACALD
+      name: acetaldehyde dehydrogenase (acetylating)
+      genes: b0351 or b1241
+      equation: '|acald_c[c]| + |coa_c[c]| + |nad_c[c]| <=> |accoa_c[c]| + |h_c[c]| +
+        |nadh_c[c]|'
+      subsystem: Pyruvate Metabolism
     - id: ACALDt
       name: acetaldehyde reversible transport
       genes: s0001
       equation: '|acald_e[e]| <=> |acald_c[c]|'
       subsystem: Transport, Extracellular
-    - id: ACKr
-      name: acetate kinase
-      genes: b3115 or b2296 or b1849
-      equation: '|ac_c[c]| + |atp_c[c]| <=> |actp_c[c]| + |adp_c[c]|'
-      subsystem: Pyruvate Metabolism
+
 
 Each reaction entry is designated with the reaction ID first. Then the various
 properties of the reaction can be listed below it. The required properties for
@@ -346,8 +369,8 @@ flexibility during the modeling process. The reactions can be formatted in a
 string format based on the ModelSEED reaction format. In this representation
 individual compounds in the reaction are represented as compound IDs followed by
 the cellular compartment in brackets, bordered on both sides by single pipes.
-For example if a hydrogen compound in the cytosol was going to be in an equation
-it could be represented as follows:
+For example if a hydrogen compound, ``Hydr``, in a ``cytosol`` compartment
+was going to be in an equation it would be represented as follows:
 
 .. code-block:: shell
 
@@ -432,7 +455,7 @@ the genes property can be seen below:
 Compounds
 ~~~~~~~~~
 
-The ``compounds.yaml`` file is organized in the same way as the
+The ``compounds.yaml`` file is organized in a similar way as the
 ``reactions.yaml``. An example can be seen below.
 
 .. code-block:: yaml
@@ -446,6 +469,7 @@ The ``compounds.yaml`` file is organized in the same way as the
     - id: 3pg_c
       name: 3-Phospho-D-glycerate
       formula: C3H4O7P
+
 
 The compound entries begin with a compound ID which is then followed by the
 compound properties. These properties can include a name, chemical formula,
@@ -475,19 +499,18 @@ limits are explicitly stated, so some of the imported models will not contain
 a predefined limits file. In the `E. coli` core model, only one reaction has a
 non-default limit. This reaction is an ATP maintenance reaction and the
 modelers chose to force a certain level of flux through it to simulate the
-general energy cost of cellular maintenance.
+general energy cost of cellular maintenance processes.
 
-Medium
-~~~~~~
+Exchange
+~~~~~~~~
 
 The medium file is where you can designate the boundary conditions for the
-model. The compartment of the medium compounds can be designated using the
+model. The compartment of the exchange compounds can be designated using the
 ``compartment`` tag, and if omitted, the extracellular compartment (`e`) will
-be assumed. An example of the medium file can be seen below.
+be assumed. An example of the exchange file can be seen below.
 
 .. code-block:: yaml
 
-    name: Default medium
     compounds:
     - id: ac_e
       reaction: EX_ac_e
@@ -509,7 +532,9 @@ metabolic models. Additional properties can be designated for the exchange
 reactions including an ID for the reaction, the compartment for the reaction,
 and lower and upper flux bounds for the reaction. In the same way that only
 non-standard limits need to be specified in the limits file, only non-standard
-exchange limits need to be specified in the media file.
+exchange limits need to be specified in the media file. This can be seen with the
+example above where the upper limits are not set since they should just be the
+default limit of 1000.
 
 
 Model Format Customization
@@ -522,16 +547,14 @@ updated to reflect the different file names referred. While all the file names
 can be changed it is recommended that the central ``model.yaml`` file name does
 not change. PSAMM will automatically detect and read the information from the
 file if it is named ``model.yaml``. If you *do* wish to also alter the name of
-this file you can do so but whenever any PSAMM commands are run you will need
-to specify the path of your model file using the ``--model`` option. For
+this file you will need to specify the path of your model file using
+the ``--model`` option whenever any PSAMM commands are run. For
 example, to run FBA with a different central model file named
 ``ecoli_model.yaml``, you could run the command like this:
 
 .. code-block:: shell
 
     (psamm-env) $ psamm-model --model ecoli_model.yaml fba
-
-
 
 
 Version Control with the YAML Format
@@ -559,7 +582,7 @@ Git commands to get a sense of how Git and PSAMM work together. We will also
 highlight how the features of Git help with model curation and
 development when using the YAML format.
 
-To start using Git to track the changes in this model the folder must first
+To start using Git to track the changes in this git model the folder must first
 be initialized as a Git repository. To do this first enter the YAML model
 directory and use the following command:
 
@@ -614,10 +637,8 @@ knowledge that the unchanged model was able to generate biomass flux.
 
 .. code-block:: shell
 
-    ACONTa	4.69666522532	|Citrate[c]| <=> |cis-Aconitate[c]| + |H2O[c]|	b0118 or b1276
-    ACONTb	4.69666522532	|cis-Aconitate[c]| + |H2O[c]| <=> |Isocitrate[c]|	b0118 or b1276
-    AKGDH	3.68511277336	|2-Oxoglutarate[c]| + |Coenzyme-A[c]| + |Nicotinamide-adenine-dinucleotide[c]| => |CO2[c]| + |Nicotinamide-adenine-dinucleotide-reduced[c]| + |Succinyl-CoA[c]|	b0116 and b0726 and b0727
-    ATPM	8.39	|ATP[c]| + |H2O[c]| => |ADP[c]| + |H[c]| + |Phosphate[c]|
+    ACONTa	6.00724957535	|Citrate[c]| <=> |cis-Aconitate[c]| + |H2O[c]|	b0118 or b1276
+    ACONTb	6.00724957535	|cis-Aconitate[c]| + |H2O[c]| <=> |Isocitrate[c]|	b0118 or b1276
     ...
     INFO: Objective flux: 0.873921506968
 
@@ -707,14 +728,14 @@ would provide mannitol.
 Changing the Boundary Definitions Through the Medium File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To add new exchange reactions to the model a modified ``medium.yaml`` file has
+To add new exchange reactions to the model a modified ``exchange.yaml`` file has
 been included in the additional files. This new boundary condition could be
-added by creating a new entry in the existing ``medium.yaml`` file but for this
+added by creating a new entry in the existing ``exchange.yaml`` file but for this
 tutorial the media can be changed by running the following command:
 
 .. code-block:: shell
 
-    (psamm-env) $ cp ../additional_files/medium.yaml .
+    (psamm-env) $ cp ../additional_files/exchange.yaml .
 
 This will simulate adding in the new mannitol compound into the media file as
 well as setting the uptake of glucose to be zero.
@@ -723,7 +744,7 @@ Now you can track changes to the medium file using the Git command:
 
 .. code-block:: shell
 
-    (psamm-env) $ git diff medium.yaml
+    (psamm-env) $ git diff exchange.yaml
 
 From the output, it can be seen that a new entry was added in the medium file
 to add the mannitol exchange reaction and that the lower flux limit for glucose
@@ -963,6 +984,15 @@ can be viewed using the ``git diff`` command along with the commit ID that you
 want to compare the current version to. This will tell you specifically what
 changes occurred between that commit and the current version.
 
+You can also view a log of the commits in the model by using the following command:
+
+.. code-block:: shell
+
+    (psamm-env) $ git log
+
+This can be helpful for getting an overall view of what changes have been made
+to a repository.
+
 The Git version tracking can also be used with GitHub_, BitBucket_, GitLab_ or
 any other Git hosting provider to share repositories with other people. This
 can enable you to collaborate on different aspects of the modeling
@@ -975,7 +1005,7 @@ maintaining a functional model.
 
 
 Using PSAMM to export the model to other Software
-___________________________________________________
+_________________________________________________
 
 If you want to export the model in a format to use with other
 software, that is also possible using PSAMM. The YAML formatted model can be
