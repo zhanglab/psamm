@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from setuptools import setup, find_packages
 
@@ -47,6 +47,7 @@ setup(
     entry_points = {
         'console_scripts': [
             'psamm-model = psamm.command:main',
+            'psamm-sbml-model = psamm.command:main_sbml',
             'psamm-list-lpsolvers = psamm.lpsolver.generic:list_solvers'
         ],
         'psamm.commands': [

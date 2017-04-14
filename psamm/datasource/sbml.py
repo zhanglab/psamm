@@ -33,6 +33,7 @@ from .context import FileMark
 from .entry import (CompoundEntry as BaseCompoundEntry,
                     ReactionEntry as BaseReactionEntry,
                     CompartmentEntry as BaseCompartmentEntry)
+from .native import NativeModel
 from ..reaction import Reaction, Compound, Direction
 from ..metabolicmodel import create_exchange_id
 from ..expression.boolean import Expression, And, Or, Variable
@@ -740,6 +741,75 @@ class SBMLReader(object):
     def name(self):
         """Model name"""
         return self._model.get('name', None)
+
+    def create_model(self):
+        """Create model from reader.
+
+        Returns:
+            :class:`psamm.datasource.native.NativeModel`.
+        """
+        properties = {
+            'name': self.name,
+            'default_flux_limit': 1000
+        }
+
+        # Load objective as biomass reaction
+        objective = self.get_active_objective()
+        if objective is not None:
+            reactions = dict(objective.reactions)
+            if len(reactions) == 1:
+                reaction, value = next(iteritems(reactions))
+                if ((value < 0 and objective.type == 'minimize') or
+                        (value > 0 and objective.type == 'maximize')):
+                    properties['biomass'] = reaction
+
+        model = NativeModel(properties)
+
+        # Load compartments into model
+        for compartment in self.compartments:
+            model.compartments.add_entry(compartment)
+
+        # Load compounds into model
+        for compound in self.species:
+            model.compounds.add_entry(compound)
+
+        # Load reactions into model
+        for reaction in self.reactions:
+            model.reactions.add_entry(reaction)
+
+        # Load model limits
+        limits_lower = {}
+        limits_upper = {}
+        for bounds in self.flux_bounds:
+            reaction = bounds.reaction
+            if bounds.operation == FluxBoundEntry.LESS_EQUAL:
+                if reaction not in limits_upper:
+                    limits_upper[reaction] = bounds.value
+                else:
+                    raise ParseError(
+                        'Conflicting bounds for {}'.format(reaction))
+            elif bounds.operation == FluxBoundEntry.GREATER_EQUAL:
+                if reaction not in limits_lower:
+                    limits_lower[reaction] = bounds.value
+                else:
+                    raise ParseError(
+                        'Conflicting bounds for {}'.format(reaction))
+            elif bounds.operation == FluxBoundEntry.EQUAL:
+                if (reaction not in limits_lower and
+                        reaction not in limits_upper):
+                    limits_lower[reaction] = bounds.value
+                    limits_upper[reaction] = bounds.value
+                else:
+                    raise ParseError(
+                        'Conflicting bounds for {}'.format(reaction))
+
+        for reaction in model.reactions:
+            if reaction.id in limits_lower or reaction.id in limits_upper:
+                lower = limits_lower.get(reaction.id, None)
+                upper = limits_upper.get(reaction.id, None)
+                model.limits[reaction.id] = reaction.id, lower, upper
+
+        return model
 
 
 class SBMLWriter(object):
