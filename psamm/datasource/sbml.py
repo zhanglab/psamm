@@ -460,6 +460,10 @@ class ObjectiveEntry(object):
 class FluxBoundEntry(object):
     """Flux bound defined with FBC"""
 
+    LESS_EQUAL = 'lessEqual'
+    GREATER_EQUAL = 'greaterEqual'
+    EQUAL = 'equal'
+
     def __init__(self, reader, namespace, root):
         self._reader = reader
         self._root = root
@@ -475,7 +479,8 @@ class FluxBoundEntry(object):
         self._operation = self._root.get(_tag('operation', self._namespace))
         if self._operation is None:
             raise ParseError('Flux bound is missing "operation" attribute')
-        elif self._operation not in ('lessEqual', 'greaterEqual', 'equal'):
+        elif self._operation not in {
+                self.LESS_EQUAL, self.GREATER_EQUAL, self.EQUAL}:
             raise ParseError('Invalid flux bound operation: {}'.format(
                 self._operation))
 
@@ -489,22 +494,30 @@ class FluxBoundEntry(object):
 
     @property
     def id(self):
+        """Return ID of flux bound."""
         return self._id
 
     @property
     def name(self):
+        """Return name of flux bound."""
         return self._name
 
     @property
     def reaction(self):
+        """Return reaction ID that the flux bound pertains to."""
         return self._reaction
 
     @property
     def operation(self):
+        """Return the operation of the flux bound.
+
+        Returns one of LESS_EQUAL, GREATER_EQUAL or EQUAL.
+        """
         return self._operation
 
     @property
     def value(self):
+        """Return the flux bound value."""
         return self._value
 
 
