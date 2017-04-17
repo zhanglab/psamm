@@ -459,7 +459,11 @@ class ObjectiveEntry(object):
 
 
 class FluxBoundEntry(object):
-    """Flux bound defined with FBC"""
+    """Flux bound defined with FBC V1.
+
+    Flux bounds defined with FBC V2 are instead encoded as ``upper_flux`` and
+    ``lower_flux`` properties on the ReactionEntry objects.
+    """
 
     LESS_EQUAL = 'lessEqual'
     GREATER_EQUAL = 'greaterEqual'
@@ -605,7 +609,10 @@ class SBMLReader(object):
         self._flux_bounds = []
         self._reaction_flux_bounds = {}
         if self._level == 3:
-            # Only suported in FBC V1
+            # Only represented with this tag in FBC V1. In FBC V2 the flux
+            # bounds are instead represented in the global listOfParameters
+            # and referenced by attributes on the reactions. Only with FBC V1
+            # are FluxBoundEntry objects created.
             flux_bounds = self._model.find(_tag('listOfFluxBounds', FBC_V1))
             if flux_bounds is not None:
                 for flux_bound in flux_bounds.iterfind(
@@ -777,11 +784,23 @@ class SBMLReader(object):
         for reaction in self.reactions:
             model.reactions.add_entry(reaction)
 
-        # Load model limits
+        # Convert reaction limits properties to proper limits
+        for reaction in model.reactions:
+            props = reaction.properties
+            if 'lower_flux' in props or 'upper_flux' in props:
+                lower = props.get('lower_flux')
+                upper = props.get('upper_flux')
+                model.limits[reaction.id] = reaction.id, lower, upper
+
+        # Load model limits from FBC V1 bounds if present, i.e. if FBC V1 is
+        # used instead of V2.
         limits_lower = {}
         limits_upper = {}
         for bounds in self.flux_bounds:
             reaction = bounds.reaction
+            if reaction in model.limits:
+                continue
+
             if bounds.operation == FluxBoundEntry.LESS_EQUAL:
                 if reaction not in limits_upper:
                     limits_upper[reaction] = bounds.value
