@@ -53,11 +53,11 @@ def charge_balance(model):
     """
 
     compound_charge = {}
-    for compound in model.parse_compounds():
-        if hasattr(compound, 'charge') and compound.charge is not None:
+    for compound in model.compounds:
+        if compound.charge is not None:
             compound_charge[compound.id] = compound.charge
 
-    for reaction in model.parse_reactions():
+    for reaction in model.reactions:
         charge = reaction_charge(reaction.equation, compound_charge)
         yield reaction, charge
 
@@ -101,7 +101,7 @@ def formula_balance(model):
 
     # Mapping from compound id to formula
     compound_formula = {}
-    for compound in model.parse_compounds():
+    for compound in model.compounds:
         if compound.formula is not None:
             try:
                 f = Formula.parse(compound.formula).flattened()
@@ -111,5 +111,5 @@ def formula_balance(model):
                     'Error parsing formula for compound {}: {}'.format(
                         compound.id, compound.formula), exc_info=True)
 
-    for reaction in model.parse_reactions():
+    for reaction in model.reactions:
         yield reaction, reaction_formula(reaction.equation, compound_formula)

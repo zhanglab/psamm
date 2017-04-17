@@ -31,7 +31,7 @@ from six import StringIO, BytesIO
 from psamm.command import (main, Command, MetabolicMixin, SolverCommandMixin,
                            CommandError)
 from psamm.lpsolver import generic
-from psamm.datasource.native import NativeModel
+from psamm.datasource import native, sbml
 
 from psamm.commands.chargecheck import ChargeBalanceCommand
 from psamm.commands.duplicatescheck import DuplicatesCheck
@@ -105,9 +105,60 @@ class MockSolverCommand(SolverCommandMixin, Command):
         solver = self._get_solver()
 
 
-class TestCommandMain(unittest.TestCase):
+class BaseCommandTest(object):
+    """Generic methods used for different test cases.
+
+    This does not inherit from TestCase as it should not be run as a test
+    case. Use as a mixin from actual TestCase subclasses. Implement the
+    method get_default_model() to have the run_command() methods use a
+    default model.
+    """
+    def assertTableOutputEqual(self, output, table):
+        self.assertEqual(
+            output, '\n'.join('\t'.join(row) for row in table) + '\n')
+
+    def is_solver_available(self, **kwargs):
+        try:
+            generic.Solver(**kwargs)
+        except generic.RequirementsError:
+            return False
+
+        return True
+
+    def skip_test_if_no_solver(self, **kwargs):
+        if not self.is_solver_available(**kwargs):
+            self.skipTest('No solver available')
+
+    def run_command(self, command_class, args=[], target=None, model=None):
+        parser = argparse.ArgumentParser()
+        command_class.init_parser(parser)
+        parsed_args = parser.parse_args(args)
+
+        if model is None:
+            model = self.get_default_model()
+
+        command = command_class(model, parsed_args)
+
+        with redirected_stdout(target=target) as f:
+            command.run()
+
+        return f
+
+    def run_solver_command(
+            self, command_class, args=[], requirements={}, **kwargs):
+        with redirected_stdout() as f:
+            if self.is_solver_available(**requirements):
+                self.run_command(command_class, args, **kwargs)
+            else:
+                with self.assertRaises(generic.RequirementsError):
+                    self.run_command(command_class, args, **kwargs)
+
+        return f
+
+
+class TestCommandMain(unittest.TestCase, BaseCommandTest):
     def setUp(self):
-        self._model = NativeModel({
+        reader = native.ModelReader({
             'name': 'Test model',
             'biomass': 'rxn_1',
             'compartments': [
@@ -156,7 +207,7 @@ class TestCommandMain(unittest.TestCase):
                     'formula': 'O2'
                 }
             ],
-            'media': [
+            'exchange': [
                 {
                     'compartment': 'e',
                     'compounds': [
@@ -172,8 +223,9 @@ class TestCommandMain(unittest.TestCase):
                 }
             ]
         })
+        self._model = reader.create_model()
 
-        self._infeasible_model = NativeModel({
+        reader = native.ModelReader({
             'biomass': 'rxn_1',
             'reactions': [
                 {
@@ -188,48 +240,10 @@ class TestCommandMain(unittest.TestCase):
                 }
             ]
         })
+        self._infeasible_model = reader.create_model()
 
-    def assertTableOutputEqual(self, output, table):
-        self.assertEqual(
-            output, '\n'.join('\t'.join(row) for row in table) + '\n')
-
-    def is_solver_available(self, **kwargs):
-        try:
-            generic.Solver(**kwargs)
-        except generic.RequirementsError:
-            return False
-
-        return True
-
-    def skip_test_if_no_solver(self, **kwargs):
-        if not self.is_solver_available(**kwargs):
-            self.skipTest('No solver available')
-
-    def run_command(self, command_class, args=[], target=None, model=None):
-        parser = argparse.ArgumentParser()
-        command_class.init_parser(parser)
-        parsed_args = parser.parse_args(args)
-
-        if model is None:
-            model = self._model
-
-        command = command_class(model, parsed_args)
-
-        with redirected_stdout(target=target) as f:
-            command.run()
-
-        return f
-
-    def run_solver_command(
-            self, command_class, args=[], requirements={}, **kwargs):
-        with redirected_stdout() as f:
-            if self.is_solver_available(**requirements):
-                self.run_command(command_class, args, **kwargs)
-            else:
-                with self.assertRaises(generic.RequirementsError):
-                    self.run_command(command_class, args, **kwargs)
-
-        return f
+    def get_default_model(self):
+        return self._model
 
     def test_invoke_version(self):
         with redirected_stdout():
@@ -383,9 +397,9 @@ class TestCommandMain(unittest.TestCase):
         self.run_solver_command(
             GapCheckCommand, ['--method=prodcheck', '--exclude-extracellular'])
 
-    def test_run_gapcheck_prodcheck_with_unrestricted_medium(self):
+    def test_run_gapcheck_prodcheck_with_unrestricted_exchange(self):
         self.run_solver_command(
-            GapCheckCommand, ['--method=prodcheck', '--unrestricted-medium'])
+            GapCheckCommand, ['--method=prodcheck', '--unrestricted-exchange'])
 
     def test_run_gapcheck_sinkcheck(self):
         self.run_solver_command(
@@ -494,11 +508,11 @@ class TestCommandMain(unittest.TestCase):
 
         self.assertTableOutputEqual(f.getvalue(), [
             ['id', 'equation', 'genes', 'name', 'in_model'],
-            ['rxn_1', '|A_\u2206[e]| => |B[c]|', '["gene_1", "gene_2"]',
+            ['rxn_1', 'A_\u2206[e] => B[c]', '["gene_1", "gene_2"]',
                 'Reaction 1', 'true'],
-            ['rxn_2_\u03c0', '|B[c]| <=> |C[e]|',
+            ['rxn_2_\u03c0', 'B[c] <=> C[e]',
                 'gene_3 or (gene_4 and gene_5)', 'Reaction 2', 'true'],
-            ['rxn_3', '|D[c]| => |E[c]|', '', '', 'true'],
+            ['rxn_3', 'D[c] => E[c]', '', '', 'true'],
         ])
 
     def test_run_tableexport_compounds(self):
@@ -511,8 +525,8 @@ class TestCommandMain(unittest.TestCase):
             ['C', '', '-1', 'O2', 'true']
         ])
 
-    def test_run_tableexport_medium(self):
-        f = self.run_command(ExportTableCommand, ['medium'])
+    def test_run_tableexport_exchange(self):
+        f = self.run_command(ExportTableCommand, ['exchange'])
 
         self.assertTableOutputEqual(f.getvalue(), [
             ['Compound ID', 'Reaction ID', 'Lower Limit', 'Upper Limit'],
@@ -561,3 +575,69 @@ class TestCommandMain(unittest.TestCase):
         mock_command = MockCommand(self._model, None)
         with self.assertRaises(CommandError):
             mock_command.argument_error(msg='Argument error')
+
+
+class TestSBMLCommandMain(unittest.TestCase, BaseCommandTest):
+    def setUp(self):
+        doc = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
+<sbml xmlns="http://www.sbml.org/sbml/level3/version1/core"
+      xmlns:fbc="http://www.sbml.org/sbml/level3/version1/fbc/version1"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      level="3" version="1"
+      fbc:required="false">
+ <model id="test_model" name="Test model">
+  <listOfCompartments>
+   <compartment id="C_c" name="cell" constant="true"/>
+   <compartment id="C_b" name="boundary" constant="true"/>
+  </listOfCompartments>
+  <listOfSpecies>
+   <species id="M_Glucose" name="Glucose" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="C6H12O6"/>
+   <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="C6H11O9P"/>
+   <species id="M_H2O" name="H2O" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="H2O"/>
+   <species id="M_Phosphate" name="Phosphate" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="HO4P"/>
+   <species id="M_Biomass" name="Biomass" compartment="C_b" constant="false" boundaryCondition="true" hasOnlySubstanceUnits="false"/>
+  </listOfSpecies>
+  <listOfReactions>
+   <reaction id="R_G6Pase" reversible="true" fast="false">
+    <listOfReactants>
+     <speciesReference species="M_Glucose" stoichiometry="2" constant="true"/>
+     <speciesReference species="M_Phosphate" stoichiometry="2" constant="true"/>
+    </listOfReactants>
+    <listOfProducts>
+     <speciesReference species="M_H2O" stoichiometry="2" constant="true"/>
+     <speciesReference species="M_Glucose_6_P" stoichiometry="2" constant="true"/>
+    </listOfProducts>
+   </reaction>
+   <reaction id="R_Biomass" reversible="false" fast="false">
+    <listOfReactants>
+     <speciesReference species="M_Glucose_6_P" stoichiometry="0.56" constant="true"/>
+    </listOfReactants>
+    <listOfProducts>
+     <speciesReference species="M_Biomass" stoichiometry="1" constant="true"/>
+    </listOfProducts>
+   </reaction>
+  </listOfReactions>
+  <fbc:listOfObjectives fbc:activeObjective="obj1">
+   <fbc:objective fbc:id="obj1" fbc:name="Objective 1" fbc:type="maximize">
+    <fbc:listOfFluxObjectives>
+     <fbc:fluxObjective fbc:reaction="R_Biomass" fbc:coefficient="1"/>
+    </fbc:listOfFluxObjectives>
+   </fbc:objective>
+  </fbc:listOfObjectives>
+  <fbc:listOfFluxBounds>
+   <fbc:fluxBound fbc:reaction="R_G6Pase" fbc:operation="greaterEqual" fbc:value="-10"/>
+   <fbc:fluxBound fbc:reaction="R_G6Pase" fbc:operation="lessEqual" fbc:value="1000"/>
+   <fbc:fluxBound fbc:reaction="R_Biomass" fbc:operation="greaterEqual" fbc:value="0"/>
+   <fbc:fluxBound fbc:reaction="R_Biomass" fbc:operation="lessEqual" fbc:value="1000"/>
+  </fbc:listOfFluxBounds>
+ </model>
+</sbml>''')
+
+        reader = sbml.SBMLReader(doc)
+        self._model = reader.create_model()
+
+    def get_default_model(self):
+        return self._model
+
+    def test_run_fba(self):
+        self.run_solver_command(FluxBalanceCommand)
