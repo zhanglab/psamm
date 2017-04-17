@@ -36,3 +36,11 @@ References
 .. [Vlassis14] Vlassis N, Pacheco MP, Sauter T. Fast Reconstruction of Compact
     Context-Specific Metabolic Network Models. PLoS Comput Biol. 2014;10:
     e1003424. :doi:`10.1371/journal.pcbi.1003424`.
+.. [Orth13] Orth JD, Palsson BØ, Fleming RMT. Reconstruction and Use of Microbial
+    Metabolic Networks: the Core Escherichia coli Metabolic Model as an
+    Educational Guide. EcoSal Plus. asm Pub2Web; 2013;1.
+    :doi:`10.1128/ecosalplus.10.2.1`.
+.. [Orth11] Orth JD, Conrad TM, Na J, Lerman JA, Nam H, Feist AM, et al. A
+    comprehensive genome-scale reconstruction of Escherichia coli
+    metabolism--2011. Mol Syst Biol. EMBO Press; 2011;7: 535.
+    :doi:`10.1038/msb.2011.65`.

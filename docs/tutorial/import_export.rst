@@ -14,7 +14,9 @@ here.
 Import Functions in PSAMM
 _________________________
 
-{{{Reference to the installation tutorial}}}
+For information on how to install `PSAMM` and the associated requirements, as well
+how to download the materials required for this tutorial you can reference the
+Installation and Materials section of the tutorial.
 
 Importing Existing Models (psamm-import)
 ________________________________________
@@ -87,7 +89,7 @@ the ``psamm-tutorial`` folder if you have left it using the following command:
 Importing an SBML Model
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-In this tutorial, we will use the `E. coli` textbook core model [1]_ as an
+In this tutorial, we will use the `E. coli` textbook core model [Orth13]_ as an
 example to demonstrate these functions in PSAMM. First, we will convert the model
 from the SBML model. To import the ``E_coli_core.xml`` model to YAML format run
 the following command:
@@ -170,7 +172,7 @@ following command can be used:
 
 This will show the available models as well as their names. You can then
 import any of these models to YAML format. For example, using the following
-command to import the `E. coli` iJO1366 [2]_ model from the BiGG database:
+command to import the `E. coli` iJO1366 [Orth11]_ model from the BiGG database:
 
 .. code-block:: shell
 
