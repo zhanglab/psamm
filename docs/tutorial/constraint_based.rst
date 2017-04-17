@@ -2,14 +2,34 @@
 Constraint Based Analysis with PSAMM
 ====================================
 
-This tutorial will go over how to utilize the curation functions in PSAMM
-to correct common errors and ensure that metabolic reconstructions are
-accurate representations of the metabolism of an organism.
+This tutorial will go over how to use the constraint based analysis methods
+that are included in PSAMM. These methods can be used to perform various
+simulations of growth with metabolic models. These simulations can be used
+to explore growth phenotypes, nutrient utilization, and gene essentiality.
 
 .. contents::
    :depth: 1
    :local:
 
+
+Tutorial Materials
+__________________
+
+The materials used in the part of the tutorial can be found in the `tutorial-part-3`
+directory in the psamm-tutorial repository. This directory contains a copy of the
+E. coli core metabolic model that has been used in the other tutorials. This model
+can be used to run all of the simulations in this part of the tutorial. In addition
+to the model the virtual environment where PSAMM has been installed will need to be
+activated to run the `psamm-model` commands. For instructions on how to install or
+activate `PSAMM` in a virtual environment reference the Installation and Materials
+section of the tutorial.
+
+To access the materials needed to run the following commands go to the E_coli_yaml folder
+in the tutorial-part-3 folder.
+
+.. code-block:: shell
+
+    (psamm-env) $ cd <PATH>/tutorial-part-3/E_coli_yaml
 
 Constraint-based Flux Analysis with PSAMM
 _________________________________________
@@ -22,6 +42,9 @@ development, curation, and simulation processes.
 There are various options that you can change in these different flux
 analysis commands. Before introducing the specific commands these options
 will be detailed here.
+
+Loop Minimization in PSAMM
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 First, you can choose the options for loop minimization when running
 constraint-based analyses. This can be done by using the ``--loop-removal``
@@ -50,6 +73,10 @@ or without:
 
     (psamm-env) $ psamm-model fba --loop-removal=none
 
+
+Choosing Linear Programming Solvers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 You also have the option to set which solver you want to use for the linear
 programming problems. To view the solvers that are currently installed the
 following command can be used:
@@ -75,6 +102,9 @@ default solver, you will need to set this option for every simulation run.
     The QSopt_ex solver does not support integer linear programming
     problems. This solver can be used with any commands but you will not be
     able to run the simulation with thermodynamic constraints.
+
+Other Global Options
+~~~~~~~~~~~~~~~~~~~~
 
 Another option that can be used with the various flux analysis commands is the
 ``--epsilon`` option. This option can be used to set the minimum value that a
@@ -106,7 +136,7 @@ ____________
 PSAMM allows for the integration of the model development and curation process
 with the simulation process. In this way changes to a metabolic model can be
 immediately tested using the various flux analysis tools that are present in
-PSAMM. In this tutorial, aspects of the `E. coli` core model [1]_ will be
+PSAMM. In this tutorial, aspects of the `E. coli` core model [Orth11]_ will be
 expanded to demonstrate the various functions available in PSAMM and throughout
 these changes the model will be analyzed with PSAMM's simulation functions to
 make sure that these changes are resulting in a functional model.
@@ -259,6 +289,22 @@ carbon source. To run the robustness command use the following command:
 
     (psamm-env) $ psamm-model robustness --steps 1000 EX_o2_e
 
+The output will contain two columns. The first column will be the flux of the
+varied reaction, in this case the EX_o2_e reaction for oxygen exchange. The second
+shows the flux of the biomass reaction for the model. The output will look like this:
+
+.. code-block:: shell
+
+    -63.958958959	0.0238161275506
+    -63.8938938939	0.0253046355225
+    -63.8288288288	0.0267931434944
+    -63.7637637638	0.0282816514663
+    -63.6986986987	0.0297701594383
+    -63.6336336336	0.0312586674102
+    -63.5685685686	0.0327471753821
+    -63.5035035035	0.034235683354
+    -63.4384384384	0.0357241913259
+    ...
 
 If the biomass reaction flux is plotted against the oxygen uptake it can be seen
 that the biomass flux is low at the highest oxygen uptake, reaches
@@ -267,7 +313,34 @@ with low oxygen uptake.
 
 .. image:: Robustness_chart.png
 
+If a more detailed analysis of internal fluxes is desired the `--all-reaction-fluxes`
+tag can be added to the command. This will print out all of the internal reaction fluxes
+for each step in the robustness analysis. The first column printed will be the reaction ID.
+The second column will be the varying reaction's flux and the last column will be the
+flux of the reaction listed in the first column. This can be used to look at the effects of
+a reaction on internal fluxes in the network. The command to run this would be the following:
 
+.. code-block:: shell
+
+    (psamm-env) $ psamm-model robustness --all-reaction-fluxes --steps 1000 EX_o2_e
+
+And the output for this command will look like the following:
+
+.. code-block:: shell
+
+    G6PDH2r	-63.958958959	0.0
+    AKGDH	-63.958958959	0.0
+    GLNS	-63.958958959	0.00608978381469
+    ADK1	-63.958958959	0.0
+    PYRt2r	-63.958958959	0.0
+    EX_co2_e	-63.958958959	58.986492784
+    ATPM	-63.958958959	8.39
+    SUCCt2_2	-63.958958959	0.0
+    PIt2r	-63.958958959	0.0876123884204
+    EX_lac_D_e	-63.958958959	0.0
+
+Deletion Simulations with PSAMM
+-------------------------------
 
 Gene Deletion
 ~~~~~~~~~~~~~
@@ -297,9 +370,18 @@ it much easier to do these kinds of simulations. The gene delete command can be 
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model genedelete --gene b0118
+    (psamm-env) $ psamm-model genedelete --gene b1779
 
-This will delete 
+This will produce a flux balance analysis result with a model that has any reactions for which b0118 is necessary
+limited to zero flux. The output will show a percentage of the biomass flux of the wild type model that can be
+produced by the deletion model.
+
+.. code-block:: shell
+
+    ...
+    INFO: Objective reaction after gene deletion has flux 0.0
+    INFO: Objective reaction has 0.00% flux of wild type flux
+
 
 Random Minimal Network Analysis
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
