@@ -11,8 +11,27 @@ accurate representations of the metabolism of an organism.
    :local:
 
 
-{{{Reference to the installation tutorial}}}
 
+Materials
+---------
+
+For information on how to install `PSAMM` and the associated requirements, as well
+how to download the materials required for this tutorial you can reference the
+Installation and Materials section of the tutorial.
+
+For this part of the tutorial we will be using a modified version of the E. coli
+core metabolic models that has been used in the other sections of the tutorial.
+This model has been modified to add in a new pathways for the utilization of
+mannitol as a carbon source. To access this model and the other files needed you
+will need to go into the tutorial-part-2 folder located in the psamm-tutorial folder.
+
+.. code-block:: shell
+
+    (psamm-env) $ cd <PATH>/tutorial-part-2/
+
+Once in this folder you should see two directories. One is the E_coli_yaml folder which
+contains the version of the model we will use. The other is called additional_files, which
+contains some files we will use during the tutorial.
 
 
 Common Errors in Metabolic Reconstructions
@@ -77,8 +96,8 @@ from the exchange file.
     WARNING: The compound cpd_chitob was in the extracellular compartment but not defined in the medium
     WARNING: The compound cpd_etoh was defined in the medium but is not in the extracellular compartment
 
-Reaction Consitency in PSAMM
-----------------------------
+Reaction Consistency in PSAMM
+-----------------------------
 
 The previous examples of warning messages produced by PSAMM can be helpful as a first step in identifying
 possible errors in a model but there are various other types of errors that may be present in models that
@@ -160,7 +179,9 @@ some mass from it.
 
 Sometimes the residue minimization problem may have multiple solutions. In
 these cases the residue value may be reallocated among a few connected
-reactions. In this example the unbalanced reaction is the MANNIDEH reaction::
+reactions. In this example the unbalanced reaction is the MANNIDEH reaction:
+
+.. code-block:: shell
 
     MANNIDEH    |manni[c]| + |nad_c[c]| => |fru_c[c]| + |nadh_c[c]|
 
@@ -192,7 +213,7 @@ easy problem to correct by simply adding in a hydrogen compound to correct the
 lost atom in the equation.
 
 The stoichiometric consistency checking allows for the easy identification of
-stoichiometrically inconstent compounds while providing a more targeted subset
+stoichiometrically inconsistent compounds while providing a more targeted subset
 of reactions to check to fix the problem. This allows you to quickly identify
 problematic reactions rather than having to manually go through the whole
 reaction database in an attempt to find the problem.
@@ -269,15 +290,6 @@ folder using the following command:
 Once that problem with the new reaction is fixed the model will pass both the
 formula check and mass check.
 
-Now this fix can be added to the Git repository so that the latest version
-of the model will be the fixed version. To do this the following commands
-can be used.
-
-.. code-block:: shell
-
-    (psamm-env) $ git add mannitol_pathway.yaml
-    (psamm-env) $ git commit -m 'Fixed mass and formula inconsistencies in Mannitol pathway'
-
 Charge Consistency Checking
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -335,8 +347,8 @@ as being inconsistent.
 
 In some situations there are pathways that might be
 modeled but not necessarily connected to the other aspects of metabolism.
-A common occurance of this is with vitamin biosynthesis pathways that are
-not incorporated into the biomass in the model. Fluxcheck will identify
+A common occurrence of this is with vitamin biosynthesis pathways that are
+not incorporated into the biomass in the model. ``fluxcheck`` will identify
 these as being flux inconsistent but the modeler will need to identify if this
 is due to incomplete information on the pathways or if it is due to some
 error in the formulation of the reactions.
@@ -346,7 +358,7 @@ as how many internal model reactions cannot carry flux. PSAMM will also
 list the reactions and the equations for the reactions to make curation of
 these reactions easier.
 
-Above the fluxcheck command was used with the --unrestricted option which
+Above the ``fluxcheck`` command was used with the --unrestricted option which
 allowed the exchange reactions to all be active. This command can also be
 used to see what reactions cannot carry flux when specific media are
 supplied. To run this command on the network with the media that is
@@ -420,6 +432,13 @@ model that cannot be produced in this condition:
 
 .. code-block:: shell
 
+    fru_e[e]	D-Fructose
+    fum_e[e]	Fumarate
+    glc_D_e[e]	D-Glucose
+    gln_L_e[e]	L-Glutamine
+    mal_L_e[e]	L-Malate
+    INFO: Blocked compounds: 5
+
 
 This result indicates that the following metabolites currently cannot be produced in the model.
 This only tells part of the story though as this function was run with the defined media that
@@ -455,8 +474,10 @@ a network based optimization to identify metabolites with no production pathways
 
     (psamm-env) $ psamm-model gapcheck --method gapfind --unrestricted-exchange
 
-
-
+These methods included in the ``gapcheck`` function can be used to identify various kinds of
+'gaps' in a metabolic model network. `PSAMM` also includes two functions for filling these gaps
+through the addition of artificial reactions or reactions from an supplied database. The
+functions ``gapfill`` and ``fastgapfill`` can be 
 
 Search Functions in PSAMM
 -------------------------
