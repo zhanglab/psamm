@@ -194,7 +194,7 @@ in which there will be a number of files that stores the information of the
 model and specifies the simulation conditions. The entry point of the YAML
 model is a file named ``model.yaml``, which points to additional files that
 store the information of the model components, including compounds, reactions,
-flux limits, medium conditions, etc. While we recommend that you use the name
+flux limits, exchange conditions, etc. While we recommend that you use the name
 ``model.yaml`` for the central reference file, the file names for the included
 files are flexible and can be customized as you prefer. In this tutorial, we
 simply used the names: ``compounds.yaml``, ``reactions.yaml``, ``limits.yaml``,
@@ -261,10 +261,10 @@ The ``model.yaml`` file defines the basic components of a metabolic model,
 including the model name (`Ecoli_core_model`), the biomass function
 (`Biomass_Ecoli_core_w_GAM`), the compound files (``compounds.yaml``), the
 reaction files (``reactions.yaml``), the flux boundaries (``limits.yaml``), and
-the medium conditions (``medium.yaml``). The additional files are defined using
+the exchange conditions (``exchange.yaml``). The additional files are defined using
 include functions. This organization allows you to easily change
 aspects of the model like the exchange reactions by simply referencing a
-different media file in the central ``model.yaml`` definition. In addition to the
+different exchange file in the central ``model.yaml`` definition. In addition to the
 information on the other components of the model there will also be details on the
 compartment information for the model. This will provide an overview of how compartments
 are related to each other and what their abbreviations and names are. For this small
@@ -285,6 +285,13 @@ in the additional files folder in the file ``complex_model.yaml``.
     name: Ecoli_core_model
     biomass: Biomass_Ecoli_core_w_GAM
     default_flux_limit: 1000.0
+    compartments:
+    - id: c
+      adjacent_to: e
+      name: Cytoplasm
+    - id: e
+      adjacent_to: c
+      name: Extracellular
     model:
     - include: core_model_definition.tsv
     compounds:
@@ -294,8 +301,8 @@ in the additional files folder in the file ``complex_model.yaml``.
     - include: reactions/periplasm.yaml
     - include: reactions/transporters.yaml
     - include: reactions/extracellular.yaml
-    media:
-    - include: medium.yaml
+    exchange:
+    - include: exchange.yaml
     limits:
     - include: limits.yaml
 
@@ -317,14 +324,21 @@ An example of how to include a model definition file can be found below.
     name: Ecoli_core_model
     biomass: Biomass_Ecoli_core_w_GAM
     default_flux_limit: 1000.0
+    compartments:
+    - id: c
+      adjacent_to: e
+      name: Cytoplasm
+    - id: e
+      adjacent_to: c
+      name: Extracellular
     model:
     - include: subset.tsv
     compounds:
     - include: compounds.yaml
     reactions:
     - include: reactions.yaml
-    media:
-    - include: medium.yaml
+    exchange:
+    - include: exchange.yaml
     limits:
     - include: limits.yaml
 
@@ -347,13 +361,13 @@ model. A sample from this file can be seen below:
     - id: ACALD
       name: acetaldehyde dehydrogenase (acetylating)
       genes: b0351 or b1241
-      equation: '|acald_c[c]| + |coa_c[c]| + |nad_c[c]| <=> |accoa_c[c]| + |h_c[c]| +
-        |nadh_c[c]|'
+      equation: '|acald[c]| + |coa[c]| + |nad[c]| <=> |accoa[c]| + |h[c]| +
+        |nadh[c]|'
       subsystem: Pyruvate Metabolism
     - id: ACALDt
       name: acetaldehyde reversible transport
       genes: s0001
-      equation: '|acald_e[e]| <=> |acald_c[c]|'
+      equation: '|acald[e]| <=> |acald[c]|'
       subsystem: Transport, Extracellular
 
 
@@ -395,7 +409,7 @@ formatted reaction could be as follows:
 
 .. code-block:: shell
 
-    '|ac_c[c]| + |atp_c[c]| <=> |actp_c[c]| + |adp_c[c]|'
+    '|ac[c]| + |atp[c]| <=> |actp[c]| + |adp[c]|'
 
 For longer reactions the YAML format
 provides a way to list each reaction component on a single line. For example a
@@ -433,7 +447,7 @@ property to the reaction like follows:
 
     - id: ACALDt
       name: acetaldehyde reversible transport
-      equation: '|acald_e[e]| <=> |acald_c[c]|'
+      equation: '|acald[e]| <=> |acald[c]|'
       subsystem: Transport, Extracellular
       genes: gene_0001
 
@@ -506,7 +520,7 @@ general energy cost of cellular maintenance processes.
 Exchange
 ~~~~~~~~
 
-The medium file is where you can designate the boundary conditions for the
+The exchange file is where you can designate the boundary conditions for the
 model. The compartment of the exchange compounds can be designated using the
 ``compartment`` tag, and if omitted, the extracellular compartment (`e`) will
 be assumed. An example of the exchange file can be seen below.
@@ -534,7 +548,7 @@ metabolic models. Additional properties can be designated for the exchange
 reactions including an ID for the reaction, the compartment for the reaction,
 and lower and upper flux bounds for the reaction. In the same way that only
 non-standard limits need to be specified in the limits file, only non-standard
-exchange limits need to be specified in the media file. This can be seen with the
+exchange limits need to be specified in the exchange file. This can be seen with the
 example above where the upper limits are not set since they should just be the
 default limit of 1000.
 
@@ -719,36 +733,36 @@ would provide mannitol.
 
 .. code-block:: shell
 
-    FRUKIN	0.0	|fru_c[c]| + |ATP[c]| => |D-Fructose-6-phosphate[c]| + |ADP[c]| + |H[c]|
+    FRUKIN	0.0	|fru[c]| + |ATP[c]| => |D-Fructose-6-phosphate[c]| + |ADP[c]| + |H[c]|
     ...
     MANNI1PDEH	0.0	|Nicotinamide-adenine-dinucleotide[c]| + |manni1p[c]| => |D-Fructose-6-phosphate[c]| + |H[c]| + |Nicotinamide-adenine-dinucleotide-reduced[c]|
     MANNI1PPHOS	0.0	|manni1p[c]| + |H2O[c]| => |manni[c]| + |Phosphate[c]|
-    MANNIDEH	0.0	|Nicotinamide-adenine-dinucleotide[c]| + |manni[c]| => |Nicotinamide-adenine-dinucleotide-reduced[c]| + |fru_c[c]|
+    MANNIDEH	0.0	|Nicotinamide-adenine-dinucleotide[c]| + |manni[c]| => |Nicotinamide-adenine-dinucleotide-reduced[c]| + |fru[c]|
     MANNIPTS	0.0	|manni[e]| + |Phosphoenolpyruvate[c]| => |manni1p[c]| + |Pyruvate[c]|
     ...
 
-Changing the Boundary Definitions Through the Medium File
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Changing the Boundary Definitions Through the Exchange File
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To add new exchange reactions to the model a modified ``exchange.yaml`` file has
 been included in the additional files. This new boundary condition could be
 added by creating a new entry in the existing ``exchange.yaml`` file but for this
-tutorial the media can be changed by running the following command:
+tutorial the exchange file can be changed by running the following command:
 
 .. code-block:: shell
 
     (psamm-env) $ cp ../additional_files/exchange.yaml .
 
-This will simulate adding in the new mannitol compound into the media file as
+This will simulate adding in the new mannitol compound into the exchange file as
 well as setting the uptake of glucose to be zero.
 
-Now you can track changes to the medium file using the Git command:
+Now you can track changes to the exchange file using the Git command:
 
 .. code-block:: shell
 
     (psamm-env) $ git diff exchange.yaml
 
-From the output, it can be seen that a new entry was added in the medium file
+From the output, it can be seen that a new entry was added in the exchange file
 to add the mannitol exchange reaction and that the lower flux limit for glucose
 uptake was changed to zero. This will ensure that any future simulations
 done with the model in these conditions will only have mannitol available as a
@@ -762,16 +776,16 @@ carbon source.
     +- id: manni
     +  lower: -10
      - id: ac_e
-       reaction: EX_ac_e
+       reaction: EX_ac
        lower: 0.0
     @@ -25,7 +27,7 @@
        lower: 0.0
      - id: glc_D_e
-       reaction: EX_glc_e
+       reaction: EX_glc
     -  lower: -10.0
     +  lower: 0.0
      - id: gln_L_e
-       reaction: EX_gln_L_e
+       reaction: EX_gln_L
        lower: 0.0
 
 In this case the Git output indicates what lines were added or removed from the
@@ -797,11 +811,11 @@ is not being used.
 
 .. code-block:: shell
 
-    FRUKIN	0.0	|fru_c[c]| + |ATP[c]| => |D-Fructose-6-phosphate[c]| + |ADP[c]| + |H[c]|
+    FRUKIN	0.0	|fru[c]| + |ATP[c]| => |D-Fructose-6-phosphate[c]| + |ADP[c]| + |H[c]|
     ...
     MANNI1PDEH	10.0	|Nicotinamide-adenine-dinucleotide[c]| + |manni1p[c]| => |D-Fructose-6-phosphate[c]| + |H[c]| + |Nicotinamide-adenine-dinucleotide-reduced[c]|
     MANNI1PPHOS	0.0	|manni1p[c]| + |H2O[c]| => |manni[c]| + |Phosphate[c]|
-    MANNIDEH	0.0	|Nicotinamide-adenine-dinucleotide[c]| + |manni[c]| => |Nicotinamide-adenine-dinucleotide-reduced[c]| + |fru_c[c]|
+    MANNIDEH	0.0	|Nicotinamide-adenine-dinucleotide[c]| + |manni[c]| => |Nicotinamide-adenine-dinucleotide-reduced[c]| + |fru[c]|
     MANNIPTS	10.0	|manni[e]| + |Phosphoenolpyruvate[c]| => |manni1p[c]| + |Pyruvate[c]|
 
 You can also choose to maximize other reactions in the network. For
@@ -834,7 +848,7 @@ function was used as the objective function.
     FORt2	0.0	|Formate[e]| + |H[e]| => |Formate[c]| + |H[c]|	b0904 or b2492
     FORti	0.0	|Formate[c]| => |Formate[e]|	b0904 or b2492
     FRD7	0.0	|Fumarate[c]| + |Ubiquinol-8[c]| => |Ubiquinone-8[c]| + |Succinate[c]|	b4151 and b4152 and b4153 and b4154
-    FRUKIN	10.0	|fru_c[c]| + |ATP[c]| => |D-Fructose-6-phosphate[c]| + |ADP[c]| + |H[c]|
+    FRUKIN	10.0	|fru[c]| + |ATP[c]| => |D-Fructose-6-phosphate[c]| + |ADP[c]| + |H[c]|
     ...
 
 
@@ -923,7 +937,7 @@ files that have changed can be viewed by using the following Git command:
     (psamm-env) $ git status
 
 
-The output of this command should show that the medium, compound, and
+The output of this command should show that the exchange, compound, and
 ``model.yaml`` files have changed and that there is a new file that is not
 being tracked named ``mannitol_pathway.yaml``. First the new mannitol pathway
 file can be added to the Git repository so that future changes can be tracked
@@ -950,16 +964,16 @@ The output should look like the following:
        reactions:
        - include: reactions.yaml
     +  - include: mannitol_pathway.yaml
-       media:
-       - include: medium.yaml
+       exchange:
+       - include: exchange.yaml
        limits:
 
 This can be done with any file that had changes to make sure that no
 accidental changes are added in along with whatever the desired changes are.
 In this example there should be one line added in the ``model.yaml`` file,
 three compounds added into the ``compounds.yaml`` file, and one exchange
-reaction added into the ``media.yaml`` file along with one change that removed
-glucose from the list of carbon sources in the medium (by changing the lower
+reaction added into the ``exchange.yaml`` file along with one change that removed
+glucose from the list of carbon sources in the exchange settings (by changing the lower
 bound of its exchange reaction to zero).
 
 Once the changes are confirmed these files can be added with the Git add
@@ -968,7 +982,7 @@ command.
 .. code-block:: shell
 
     (psamm-env) $ git add compounds.yaml
-    (psamm-env) $ git add medium.yaml
+    (psamm-env) $ git add exchange.yaml
     (psamm-env) $ git add model.yaml
 
 These changes can then be committed to the repository using the following

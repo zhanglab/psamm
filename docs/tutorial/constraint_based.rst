@@ -360,7 +360,7 @@ following two reactions:
 
     - id: RXN_2
       genes: g0001 or g0003
-      equation: '|cpd_a[c]| <=> |cpd_c[c]|'
+      equation: '|cpd_a[c]| <=> |cpd[c]|'
 
 Both reactions are associated with the gene 'g0001' but RXN_1 has an 'and' association while RXN_2 has an 'or'
 association. If the gene 'g0001' were to be deleted from the network RXN_1 would no longer have the required genes

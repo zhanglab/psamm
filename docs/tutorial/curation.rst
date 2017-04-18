@@ -183,7 +183,7 @@ reactions. In this example the unbalanced reaction is the MANNIDEH reaction:
 
 .. code-block:: shell
 
-    MANNIDEH    |manni[c]| + |nad_c[c]| => |fru_c[c]| + |nadh_c[c]|
+    MANNIDEH    |manni[c]| + |nad[c]| => |fru[c]| + |nadh[c]|
 
 In this reaction equation the right hand side is missing a proton. However
 minimization problem can result in the residue being placed on either the
@@ -432,11 +432,11 @@ model that cannot be produced in this condition:
 
 .. code-block:: shell
 
-    fru_e[e]	D-Fructose
-    fum_e[e]	Fumarate
-    glc_D_e[e]	D-Glucose
-    gln_L_e[e]	L-Glutamine
-    mal_L_e[e]	L-Malate
+    fru[e]	D-Fructose
+    fum[e]	Fumarate
+    glc_D[e]	D-Glucose
+    gln_L[e]	L-Glutamine
+    mal_L[e]	L-Malate
     INFO: Blocked compounds: 5
 
 
