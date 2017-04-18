@@ -1,4 +1,25 @@
 
+v0.29 (2017-04-18)
+------------------
+
+- [The tutorial](https://psamm.readthedocs.io/en/stable/tutorial.html) in the
+  PSAMM documentation has been updated and expanded to include additional
+  information on using PSAMM for model curation and constraint-based analyses.
+- The experimental command `psamm-sbml-model` was added which makes it possible
+  to run any command from `psamm-model` (e.g. `fba`, `robustness`, etc.)
+  directly on an SBML file. For now this only supports SBML level 3 files with
+  FBC. This provides a quick way of running basic analyses on SBML files. We
+  still recommend importing the SBML file to YAML format with `psamm-import`
+  for anyone wishing to make changes to a model.
+- Fixes access to charge parameter parsed from SBML files. The charge is now
+  correctly imported with `psamm-import`.
+- Fixes import of compartments from SBML files. The empty boundary compartments
+  are now no longer included in the import.
+- Fixes bug in writing the reaction flux limits sheet of the `excelexport`
+  command.
+- The `console` command was changed to only provide the `model` variable since
+  the metabolic model can easily be created.
+
 v0.28 (2017-03-03)
 ------------------
 
