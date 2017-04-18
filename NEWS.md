@@ -2,6 +2,9 @@
 v0.29 (2017-04-18)
 ------------------
 
+- [The tutorial](https://psamm.readthedocs.io/en/stable/tutorial.html) in the
+  PSAMM documentation has been updated and expanded to include additional
+  information on using PSAMM for model curation and constraint-based analyses.
 - The experimental command `psamm-sbml-model` was added which makes it possible
   to run any command from `psamm-model` (e.g. `fba`, `robustness`, etc.)
   directly on an SBML file. For now this only supports SBML level 3 files with
