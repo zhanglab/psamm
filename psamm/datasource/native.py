@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Module for reading and writing native formats.
 
@@ -47,12 +47,10 @@ from .entry import (DictCompoundEntry as CompoundEntry,
                     DictCompartmentEntry as CompartmentEntry)
 from .reaction import ReactionParser
 from . import modelseed
+from .. import util
 
 # Module-level logging
 logger = logging.getLogger(__name__)
-
-# Model files to try to open if a directory was specified
-DEFAULT_MODEL = ('model.yaml', 'model.yml')
 
 _HAS_YAML_LIBRARY = None
 
@@ -73,11 +71,6 @@ def float_constructor(loader, node):
     elif s == '.nan':
         return Decimal('NaN')
     return Decimal(s)
-
-
-def whendefined(func, value):
-    """Apply func to value if value is not None"""
-    return func(value) if value is not None else None
 
 
 def yaml_load(stream):
@@ -101,14 +94,56 @@ def yaml_load(stream):
     return loader.get_data()
 
 
-class NativeModel(object):
-    """Represents a model specified using the native data formats
+class _OrderedEntrySet(object):
+    """Ordered set of entity entries.
 
-    The model is created from a model file or from a directory containing a
-    model file using the default file name (model.yaml or model.yml). This file
-    can specify the model fully or refer to other files within the same
-    directory subtree that specifies part of the model.
+    This deliberately does not implement Mapping because iteration does not
+    provide keys (since the keys are already in the entry values).
     """
+    def __init__(self, mapping={}):
+        self._dict = OrderedDict(mapping)
+
+    def __contains__(self, key):
+        return key in self._dict
+
+    def get(self, key, default=None):
+        try:
+            return self.__getitem__(key)
+        except KeyError:
+            return default
+
+    def __getitem__(self, key):
+        return self._dict[key]
+
+    def __iter__(self):
+        return itervalues(self._dict)
+
+    def __len__(self):
+        return len(self._dict)
+
+    def add_entry(self, entry):
+        self._dict[entry.id] = entry
+
+    def discard(self, key):
+        try:
+            del self._dict[key]
+        except KeyError:
+            pass
+
+
+class ModelReader(object):
+    """Reader of native YAML-based model format.
+
+    The reader can be created from a model YAML file or directly from a
+    dict, string or File-like object. Use :meth:`reader_from_path` to read the
+    model from a YAML file or directory and use the constructor to read from
+    other sources. Any externally referenced file (with ``include``) will be
+    read on demand by the parse methods. To read the model fully into memory,
+    use the :meth:`create_model` to create a :class:`NativeModel`.
+    """
+
+    # Model files to try to open if a directory was specified
+    DEFAULT_MODEL = 'model.yaml', 'model.yml'
 
     def __init__(self, model_from, context=None):
         """Create a model from the specified content.
@@ -128,33 +163,76 @@ class NativeModel(object):
             raise ValueError("Model is of an invalid types")
 
     @classmethod
-    def load_model_from_path(cls, path):
-        """Create a model from specified path."""
+    def reader_from_path(cls, path):
+        """Create a model from specified path.
+
+        Path can be a directory containing a ``model.yaml`` or ``model.yml``
+        file or it can be a path naming the central model file directly.
+        """
         context = FilePathContext(path)
         try:
             with open(context.filepath, 'r') as f:
-                return NativeModel(f, context)
+                return ModelReader(f, context)
         except IOError:
             # Try to open the default file
-            for filename in DEFAULT_MODEL:
+            for filename in cls.DEFAULT_MODEL:
                 try:
                     context = FilePathContext(
                         os.path.join(path, filename))
                     with open(context.filepath, 'r') as f:
-                        return NativeModel(f, context)
+                        return ModelReader(f, context)
                 except:
                     logger.debug('Failed to load model file',
                                  exc_info=True)
 
         # No model could be loaded
         raise ParseError('No model file could be found ({})'.format(
-            ', '.join(DEFAULT_MODEL)))
+            ', '.join(cls.DEFAULT_MODEL)))
+
+    @property
+    def name(self):
+        """Name specified by the model."""
+        return self._model.get('name', None)
+
+    @property
+    def biomass_reaction(self):
+        """Biomass reaction specified by the model."""
+        return self._model.get('biomass', None)
+
+    @property
+    def extracellular_compartment(self):
+        """Extracellular compartment specified by the model.
+
+        Defaults to 'e'.
+        """
+        return self._model.get('extracellular', 'e')
+
+    @property
+    def default_compartment(self):
+        """Default compartment specified by the model.
+
+        The compartment that is implied when not specified. In some contexts
+        (e.g. for exchange compounds) the extracellular compartment may be
+        implied instead. Defaults to 'c'.
+        """
+        return self._model.get('default_compartment', 'c')
+
+    @property
+    def default_flux_limit(self):
+        """Default flux limit specified by the model.
+
+        When flux limits on reactions are not specified, this value will be
+        used. Flux limit of [0;x] will be implied for irreversible reactions
+        and [-x;x] for reversible reactions, where x is this value.
+        Defaults to 1000."""
+        return self._model.get('default_flux_limit', 1000)
 
     def parse_compartments(self):
         """Parse compartment information from model.
 
-        Return tuple of: 1) iterator of :class:`.CompartmentEntry`; 2)
-        Set of pairs defining the compartment boundaries of the model.
+        Return tuple of: 1) iterator of
+        :class:`psamm.datasource.entry.CompartmentEntry`; 2) Set of pairs
+        defining the compartment boundaries of the model.
         """
 
         compartments = OrderedDict()
@@ -194,44 +272,6 @@ class NativeModel(object):
 
         return itervalues(compartments), frozenset(boundaries)
 
-    @property
-    def name(self):
-        """Name specified by the model."""
-        return self._model.get('name', None)
-
-    @property
-    def biomass_reaction(self):
-        """Biomass reaction specified by the model."""
-        return self._model.get('biomass', None)
-
-    @property
-    def extracellular_compartment(self):
-        """Extracellular compartment specified by the model.
-
-        Defaults to 'e'.
-        """
-        return self._model.get('extracellular', 'e')
-
-    @property
-    def default_compartment(self):
-        """Default compartment specified by the model.
-
-        The compartment that is implied when not specified. In some contexts
-        (e.g. medium) the extracellular compartment may be implied instead.
-        Defaults to 'c'.
-        """
-        return self._model.get('default_compartment', 'c')
-
-    @property
-    def default_flux_limit(self):
-        """Default flux limit specified by the model.
-
-        When flux limits on reactions are not specified, this value will be
-        used. Flux limit of [0;x] will be implied for irreversible reactions
-        and [-x;x] for reversible reactions, where x is this value.
-        Defaults to 1000."""
-        return self._model.get('default_flux_limit', 1000)
-
     def parse_reactions(self):
         """Yield tuples of reaction ID and reactions defined in the model"""
 
@@ -265,24 +305,41 @@ class NativeModel(object):
                     self._context, self._model['limits']):
                 yield limit
 
-    def parse_medium(self):
-        """Yield tuples of medium compounds.
+    def parse_exchange(self):
+        """Yield tuples of exchange compounds.
 
-        Each medium compound is a tuple of compound, reaction ID, lower and
+        Each exchange compound is a tuple of compound, reaction ID, lower and
         upper flux limits.
         """
 
-        extracellular = self.extracellular_compartment
         if 'media' in self._model:
-            if not isinstance(self._model['media'], list):
-                raise ParseError('Expected media to be a list')
+            if 'exchange' in self._model:
+                raise ParseError('Both "media" and "exchange" are specified')
+            logger.warning(
+                'The "media" key is deprecated! Please use "exchange" instead:'
+                ' https://psamm.readthedocs.io/en/stable/file_format.html')
+            exchange_list = self._model['media']
+        else:
+            exchange_list = self._model.get('exchange')
 
-            for medium_compound in parse_medium_list(
-                    self._context, self._model['media'], extracellular):
-                compound, reaction_id, lower, upper = medium_compound
+        extracellular = self.extracellular_compartment
+        if exchange_list is not None:
+            if not isinstance(exchange_list, list):
+                raise ParseError('Expected "exchange" to be a list')
+
+            for exchange_compound in parse_exchange_list(
+                    self._context, exchange_list, extracellular):
+                compound, reaction_id, lower, upper = exchange_compound
                 if compound.compartment is None:
                     compound = compound.in_compartment(extracellular)
                 yield compound, reaction_id, lower, upper
+
+    parse_medium = parse_exchange
+    """Yield tuples of exchange compounds.
+
+    .. deprecated:: 0.28
+       Use :meth:`parse_exchange` instead.
+    """
 
     def parse_compounds(self):
         """Yield CompoundEntries for defined compounds"""
@@ -292,25 +349,186 @@ class NativeModel(object):
                     self._context, self._model['compounds']):
                 yield compound
 
+    @property
+    def context(self):
+        return self._context
+
+    def create_model(self):
+        """Return :class:`NativeModel` fully loaded into memory."""
+
+        properties = {
+            'name': self.name,
+            'biomass': self.biomass_reaction,
+            'extracellular': self.extracellular_compartment,
+            'default_compartment': self.default_compartment,
+            'default_flux_limit': self.default_flux_limit
+        }
+
+        if self.context is not None:
+            git_version = util.git_try_describe(self.context.basepath)
+            properties['version_string'] = git_version
+
+        model = NativeModel(properties)
+
+        # Load compartments into model
+        compartment_iter, boundaries = self.parse_compartments()
+        for compartment in compartment_iter:
+            model.compartments.add_entry(compartment)
+        model.compartment_boundaries.update(boundaries)
+
+        # Load compounds into model
+        for compound in self.parse_compounds():
+            if compound.id in model.compounds:
+                existing_entry = model.compounds[compound.id]
+                common_props = set(compound.properties).intersection(
+                    existing_entry.properties).difference({'id'})
+                if len(common_props) > 0:
+                    logger.warning(
+                        'Compound entry {} at {} overrides already defined'
+                        ' properties: {}'.format(
+                            compound.id, compound.filemark, common_props))
+
+                properties = dict(compound.properties)
+                properties.update(existing_entry.properties)
+                compound = CompoundEntry(
+                    properties, filemark=compound.filemark)
+            model.compounds.add_entry(compound)
+
+        # Load reactions into model
+        for reaction in self.parse_reactions():
+            if reaction.id in model.reactions:
+                existing_entry = model.reactions[reaction.id]
+                common_props = set(reaction.properties).intersection(
+                    existing_entry.properties).difference({'id'})
+                if len(common_props) > 0:
+                    logger.warning(
+                        'Reaction entry {} at {} overrides already defined'
+                        ' properties: {}'.format(
+                            reaction.id, reaction.filemark, common_props))
+
+                properties = dict(reaction.properties)
+                properties.update(existing_entry.properties)
+                reaction = ReactionEntry(
+                    properties, filemark=reaction.filemark)
+            model.reactions.add_entry(reaction)
+
+        for exchange_def in self.parse_exchange():
+            model.exchange[exchange_def[0]] = exchange_def
+
+        for limit in self.parse_limits():
+            model.limits[limit[0]] = limit
+
+        if self.has_model_definition():
+            for model_reaction in self.parse_model():
+                model.model[model_reaction] = None
+        else:
+            for reaction in model.reactions:
+                model.model[reaction.id] = None
+
+        return model
+
+
+class NativeModel(object):
+    """Represents model in the native format."""
+
+    def __init__(self, properties={}):
+        self._properties = dict(properties)
+        self._compartments = _OrderedEntrySet()
+        self._compartment_boundaries = set()
+        self._compounds = _OrderedEntrySet()
+        self._reactions = _OrderedEntrySet()
+        self._exchange = OrderedDict()
+        self._limits = OrderedDict()
+        self._model = OrderedDict()
+
+    @property
+    def name(self):
+        """Return model name property."""
+        return self._properties.get('name')
+
+    @property
+    def version_string(self):
+        """Return model version string."""
+        return self._properties.get('version_string')
+
+    @property
+    def biomass_reaction(self):
+        """Return biomass reaction property."""
+        return self._properties.get('biomass')
+
+    @property
+    def extracellular_compartment(self):
+        """Return extracellular compartment property."""
+        return self._properties.get('extracellular')
+
+    @property
+    def default_compartment(self):
+        """Return default compartment property."""
+        return self._properties.get('default_compartment')
+
+    @property
+    def default_flux_limit(self):
+        """Return default flux limit property."""
+        return self._properties.get('default_flux_limit')
+
+    @property
+    def compartments(self):
+        """Return compartments entry set."""
+        return self._compartments
+
+    @property
+    def compartment_boundaries(self):
+        """Return set of compartment boundaries."""
+        return self._compartment_boundaries
+
+    @property
+    def reactions(self):
+        """Return reaction entry set."""
+        return self._reactions
+
+    @property
+    def compounds(self):
+        """Return compound entry set."""
+        return self._compounds
+
+    @property
+    def exchange(self):
+        """Return dict of exchange compounds and properties."""
+        return self._exchange
+
+    @property
+    def limits(self):
+        """Return dict of reaction limits."""
+        return self._limits
+
+    @property
+    def model(self):
+        """Return dict of model reactions."""
+        return self._model
+
     def create_metabolic_model(self):
         """Create a :class:`psamm.metabolicmodel.MetabolicModel`."""
 
+        def _translate_compartments(reaction, compartment):
+            """Translate compound with missing compartments.
+
+            These compounds will have the specified compartment in the output.
+            """
+            left = (((c.in_compartment(compartment), v)
+                     if c.compartment is None else (c, v))
+                    for c, v in reaction.left)
+            right = (((c.in_compartment(compartment), v)
+                      if c.compartment is None else (c, v))
+                     for c, v in reaction.right)
+            return Reaction(reaction.direction, left, right)
+
         # Create metabolic model
         database = DictDatabase()
-        for reaction in self.parse_reactions():
+        for reaction in self.reactions:
             if reaction.equation is not None:
-                database.set_reaction(reaction.id, reaction.equation)
-
-        # Warn about undefined compartments
-        compartments = set()
-        compartments_iter, boundaries = self.parse_compartments()
-        for compartment in compartments_iter:
-            compartments.add(compartment.id)
-
-        # Warn about undefined compounds
-        compounds = set()
-        for compound in self.parse_compounds():
-            compounds.add(compound.id)
+                equation = _translate_compartments(
+                    reaction.equation, self.default_compartment)
+                database.set_reaction(reaction.id, equation)
 
         undefined_compartments = set()
         undefined_compounds = set()
@@ -318,11 +536,11 @@ class NativeModel(object):
         extracellular = self.extracellular_compartment
         for reaction in database.reactions:
             for compound, _ in database.get_reaction_values(reaction):
-                if compound.name not in compounds:
+                if compound.name not in self.compounds:
                     undefined_compounds.add(compound.name)
                 if compound.compartment == extracellular:
                     extracellular_compounds.add(compound.name)
-                if compound.compartment not in compartments:
+                if compound.compartment not in self.compartments:
                     undefined_compartments.add(compound.compartment)
 
         for compartment in sorted(undefined_compartments):
@@ -335,32 +553,27 @@ class NativeModel(object):
                 'The compound {} was not defined in the list'
                 ' of compounds'.format(compound))
 
-        medium_compounds = set()
-        for medium_compound in self.parse_medium():
-            if medium_compound[0].compartment == extracellular:
-                medium_compounds.add(medium_compound[0].name)
+        exchange_compounds = set()
+        for exchange_compound in self.exchange:
+            if exchange_compound.compartment == extracellular:
+                exchange_compounds.add(exchange_compound.name)
 
-        for compound in sorted(extracellular_compounds - medium_compounds):
+        for compound in sorted(extracellular_compounds - exchange_compounds):
             logger.warning(
                 'The compound {} was in the extracellular compartment'
-                ' but not defined in the medium'.format(compound))
-        for compound in sorted(medium_compounds - extracellular_compounds):
+                ' but not defined in the exchange compounds'.format(compound))
+        for compound in sorted(exchange_compounds - extracellular_compounds):
             logger.warning(
-                'The compound {} was defined in the medium but'
+                'The compound {} was defined in the exchange compounds but'
                 ' is not in the extracellular compartment'.format(compound))
 
         model_definition = None
-        if self.has_model_definition():
-            model_definition = self.parse_model()
+        if len(self.model) > 0:
+            model_definition = self.model
 
         return MetabolicModel.load_model(
-            database, model_definition, self.parse_medium(),
-            self.parse_limits(), v_max=self.default_flux_limit)
-
-    @property
-    def context(self):
-        """Model file loading context (or None, if undefined)."""
-        return self._context
+            database, model_definition, itervalues(self.exchange),
+            itervalues(self.limits), v_max=self.default_flux_limit)
 
 
 def _check_id(entity, entity_type):
@@ -672,15 +885,15 @@ def get_limits(compound_def):
     return lower, upper
 
 
-def parse_medium(medium_def, default_compartment):
-    """Parse a structured medium definition as obtained from a YAML file
+def parse_exchange(exchange_def, default_compartment):
+    """Parse a structured exchange definition as obtained from a YAML file.
 
     Returns in iterator of compound, reaction, lower and upper bounds.
     """
 
-    default_compartment = medium_def.get('compartment', default_compartment)
+    default_compartment = exchange_def.get('compartment', default_compartment)
 
-    for compound_def in medium_def.get('compounds', []):
+    for compound_def in exchange_def.get('compounds', []):
         compartment = compound_def.get('compartment', default_compartment)
         compound = Compound(compound_def['id'], compartment=compartment)
         reaction = compound_def.get('reaction')
@@ -688,8 +901,16 @@ def parse_medium(medium_def, default_compartment):
         yield compound, reaction, lower, upper
 
 
-def parse_medium_list(path, medium, default_compartment):
-    """Parse a structured medium list as obtained from a YAML file.
+parse_medium = parse_exchange
+"""Parse a structured exchange definition as obtained from a YAML file.
+
+.. deprecated:: 0.28
+   Use :func:`parse_exchange` instead.
+"""
+
+
+def parse_exchange_list(path, exchange, default_compartment):
+    """Parse a structured exchange list as obtained from a YAML file.
 
     Yields tuples of compound, reaction ID, lower and upper flux bounds. Path
     can be given as a string or a context.
@@ -697,29 +918,45 @@ def parse_medium_list(path, medium, default_compartment):
 
     context = FilePathContext(path)
 
-    for medium_def in medium:
-        if 'include' in medium_def:
-            include_context = context.resolve(medium_def['include'])
-            for medium_compound in parse_medium_file(
+    for exchange_def in exchange:
+        if 'include' in exchange_def:
+            include_context = context.resolve(exchange_def['include'])
+            for exchange_compound in parse_exchange_file(
                     include_context, default_compartment):
-                yield medium_compound
+                yield exchange_compound
         else:
-            for medium_compound in parse_medium(
-                    medium_def, default_compartment):
-                yield medium_compound
+            for exchange_compound in parse_exchange(
+                    exchange_def, default_compartment):
+                yield exchange_compound
 
 
-def parse_medium_yaml_file(path, f, default_compartment):
-    """Parse a file as a YAML-format medium definition
+parse_medium_list = parse_exchange_list
+"""Parse a structured exchange list as obtained from a YAML file.
+
+.. deprecated:: 0.28
+   Use :func:`parse_exchange_list` instead.
+"""
+
+
+def parse_exchange_yaml_file(path, f, default_compartment):
+    """Parse a file as a YAML-format exchange definition.
 
     Path can be given as a string or a context.
     """
 
-    return parse_medium(yaml_load(f), default_compartment)
+    return parse_exchange(yaml_load(f), default_compartment)
 
 
-def parse_medium_table_file(f):
-    """Parse a space-separated file containing medium compound flux limits
+parse_medium_yaml_file = parse_exchange_yaml_file
+"""Parse a file as a YAML-format exchange definition.
+
+.. deprecated:: 0.28
+   Use :func:`parse_exchange_yaml_file` instead.
+"""
+
+
+def parse_exchange_table_file(f):
+    """Parse a space-separated file containing exchange compound flux limits.
 
     The first two columns contain compound IDs and compartment while the
     third column contains the lower flux limits. The fourth column is
@@ -733,7 +970,7 @@ def parse_medium_table_file(f):
             continue
 
         # A line can specify lower limit only (useful for
-        # exchange reactions), or both lower and upper limit.
+        # medium compounds), or both lower and upper limit.
         fields = line.split(None)
         if len(fields) < 2 or len(fields) > 4:
             raise ParseError('Malformed compound limit: {}'.format(fields))
@@ -749,8 +986,16 @@ def parse_medium_table_file(f):
         yield compound, None, lower, upper
 
 
-def parse_medium_file(path, default_compartment):
-    """Parse a file as a list of medium compounds with flux limits
+parse_medium_table_file = parse_exchange_table_file
+"""Parse a space-separated file containing exchange compound flux limits.
+
+.. deprecated:: 0.28
+   Use :func:`parse_exchange_table_file` instead.
+"""
+
+
+def parse_exchange_file(path, default_compartment):
+    """Parse a file as a list of exchange compounds with flux limits.
 
     The file format is detected and the file is parsed accordingly. Path can
     be given as a string or a context.
@@ -760,21 +1005,29 @@ def parse_medium_file(path, default_compartment):
 
     format = resolve_format(None, context.filepath)
     if format == 'tsv':
-        logger.debug('Parsing medium file {} as TSV'.format(
+        logger.debug('Parsing exchange file {} as TSV'.format(
             context.filepath))
         with context.open('r') as f:
-            for entry in parse_medium_table_file(f):
+            for entry in parse_exchange_table_file(f):
                 yield entry
     elif format == 'yaml':
-        logger.debug('Parsing medium file {} as YAML'.format(
+        logger.debug('Parsing exchange file {} as YAML'.format(
             context.filepath))
         with context.open('r') as f:
-            for entry in parse_medium_yaml_file(
+            for entry in parse_exchange_yaml_file(
                     context, f, default_compartment):
                 yield entry
     else:
-        raise ParseError('Unable to detect format of medium file {}'.format(
+        raise ParseError('Unable to detect format of exchange file {}'.format(
             context.filepath))
+
+
+parse_medium_file = parse_exchange_file
+"""Parse a file as a list of exchange compounds with flux limits.
+
+.. deprecated:: 0.28
+   Use :func:`parse_exchange_file` instead.
+"""
 
 
 def parse_limit(limit_def):
@@ -1072,6 +1325,28 @@ class ModelWriter(object):
         finally:
             dumper.dispose()
 
+    def convert_compartment_entry(self, compartment, adjacencies):
+        """Convert compartment entry to YAML dict.
+
+        Args:
+            compartment: :class:`psamm.datasource.entry.CompartmentEntry`.
+            adjacencies: Sequence of IDs or a single ID of adjacent
+                compartments (or None).
+        """
+        d = OrderedDict()
+        d['id'] = compartment.id
+        if adjacencies is not None:
+            d['adjacent_to'] = adjacencies
+
+        order = {key: i for i, key in enumerate(['name'])}
+        prop_keys = set(compartment.properties)
+        for prop in sorted(prop_keys,
+                           key=lambda x: (order.get(x, 1000), x)):
+            if compartment.properties[prop] is not None:
+                d[prop] = compartment.properties[prop]
+
+        return d
+
     def convert_compound_entry(self, compound):
         """Convert compound entry to YAML dict."""
         d = OrderedDict()
@@ -1108,12 +1383,53 @@ class ModelWriter(object):
         prop_keys = (set(reaction.properties) -
                      {'lower_flux', 'upper_flux', 'reversible'})
         for prop in sorted(prop_keys, key=lambda x: (order.get(x, 1000), x)):
-            if reaction.properties[prop] is not None:
-                d[prop] = reaction.properties[prop]
+            if reaction.properties[prop] is None:
+                continue
+            d[prop] = reaction.properties[prop]
             if prop == 'equation' and not is_equation_valid(d[prop]):
                 del d[prop]
 
         return d
+
+    def _write_entries(self, stream, entries, converter, properties=None):
+        """Write iterable of entries as YAML object to stream.
+
+        Args:
+            stream: File-like object.
+            entries: Iterable of entries.
+            converter: Conversion function from entry to YAML object.
+            properties: Set of compartment properties to output (or None to
+                output all).
+        """
+        def iter_entries():
+            for c in entries:
+                entry = converter(c)
+                if entry is None:
+                    continue
+                if properties is not None:
+                    entry = OrderedDict(
+                        (key, value) for key, value in iteritems(entry)
+                        if key == 'id' or key in properties)
+                yield entry
+
+        self._dump(stream, list(iter_entries()))
+
+    def write_compartments(self, stream, compartments, adjacencies,
+                           properties=None):
+        """Write iterable of compartments as YAML object to stream.
+
+        Args:
+            stream: File-like object.
+            compartments: Iterable of compartment entries.
+            adjacencies: Dictionary mapping IDs to adjacent compartment IDs.
+            properties: Set of compartment properties to output (or None to
+                output all).
+        """
+        def convert(entry):
+            return self.convert_compartment_entry(
+                entry, adjacencies.get(entry.id))
+
+        self._write_entries(stream, compartments, convert, properties)
 
     def write_compounds(self, stream, compounds, properties=None):
         """Write iterable of compounds as YAML object to stream.
@@ -1124,18 +1440,8 @@ class ModelWriter(object):
             properties: Set of compound properties to output (or None to output
                 all).
         """
-        def iter_entries():
-            for c in compounds:
-                entry = self.convert_compound_entry(c)
-                if entry is None:
-                    continue
-                if properties is not None:
-                    entry = OrderedDict(
-                        (key, value) for key, value in iteritems(entry)
-                        if key == 'id' or key in properties)
-                yield entry
-
-        self._dump(stream, list(iter_entries()))
+        self._write_entries(
+            stream, compounds, self.convert_compound_entry, properties)
 
     def write_reactions(self, stream, reactions, properties=None):
         """Write iterable of reactions as YAML object to stream.
@@ -1146,15 +1452,5 @@ class ModelWriter(object):
             properties: Set of reaction properties to output (or None to output
                 all).
         """
-        def iter_entries():
-            for r in reactions:
-                entry = self.convert_reaction_entry(r)
-                if entry is None:
-                    continue
-                if properties is not None:
-                    entry = OrderedDict(
-                        (key, value) for key, value in iteritems(entry)
-                        if key == 'id' or key in properties)
-                yield entry
-
-        self._dump(stream, list(iter_entries()))
+        self._write_entries(
+            stream, reactions, self.convert_reaction_entry, properties)

@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 import sys
 import argparse
@@ -23,7 +23,7 @@ from ..command import MetabolicMixin, Command
 
 
 class SBMLExport(MetabolicMixin, Command):
-    """Export model as SBML file."""
+    """Export model as SBML level 3 file."""
 
     @classmethod
     def init_parser(cls, parser):

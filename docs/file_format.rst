@@ -31,8 +31,8 @@ used as a template:
       - include: reactions/reactions.tsv
       - include: reactions/biomass.yaml
 
-    media:
-      - include: medium.yaml
+    exchange:
+      - include: exchange.yaml
     limits:
       - include: limits.yaml
 
@@ -188,13 +188,21 @@ group of genes or when multiple genes can independently enable a reaction:
       equation: '|amp| + |atp| <=> (2) |adp|'
       genes: gene_0001 or (gene_0002 and gene_0003)
 
-Media
------
+Exchange compounds
+------------------
 
-The optional ``media`` key provides a way of defining the medium (boundary
-conditions) for the model. The medium is defined by a set of compounds that are
-able enter or leave the model system. The following fragment is an example of
-the ``medium.yaml`` file:
+The ``exchange`` key provides a way of defining the compounds that can
+enter and exit the model system (the boundary conditions). This includes
+compounds that can enter the system (*the medium*) and compounds that are
+allowed to exit the system, like metabolic byproducts. In most cases, all
+compounds that occur in the extracellular space should also be defined in the
+exchange compounds (with lower limit of zero) so that they are allowed to
+leave the model system, and PSAMM will generate a warning if this is not the
+case for some compounds. Compounds that are allowed to be taken up
+(*the medium*) should in addition be specified with a negative lower limit
+indicating the maximum allowed uptake.
+
+The following fragment is an example of the ``exchange.yaml`` file:
 
 .. code-block:: yaml
 
@@ -205,21 +213,18 @@ the ``medium.yaml`` file:
       - id: o2
       - id: glcD    # D-Glucose with uptake limit of 10
         lower: -10
-      - id: compound_x
-        compartment: c
-        lower: 0    # Provide a sink for compound_x
       # ...
 
-When a medium file is specified, the corresponding exchange reactions are
+When an exchange file is specified, the corresponding exchange reactions are
 automatically added. For example, if the compounds ``o2`` in compartment ``e``
-is in the medium, the exchange reaction ``EX_o2_e`` is added to the model. The
-desired ID for the exchange reaction can be set explicitly using the
+is in the exchange file, the exchange reaction ``EX_o2_e`` is added to the
+model. The desired ID for the exchange reaction can be set explicitly using the
 ``reaction`` attribute.
 
-The medium can also be specified using a TSV-file as the following fragment
-shows. The second column specifies the compartment while third and fourth
-columns specify the lower and upper bounds, respectively. Both can be omitted
-or specified as ``-`` to use the default flux bounds::
+The exchange set can also be specified using a TSV-file as the following
+fragment shows. The second column specifies the compartment while third and
+fourth columns specify the lower and upper bounds, respectively. Both can be
+omitted or specified as ``-`` to use the default flux bounds::
 
     # Acetate exchange with default lower and upper bounds
     ac      e
@@ -228,8 +233,9 @@ or specified as ``-`` to use the default flux bounds::
     # CO2 exchange with production limit of 50 and default uptake limit
     co2     e       -       50
 
-Multiple medium files can be included from the main ``model.yaml`` file, and
-these will be combined to form the final medium used for the simulations.
+Multiple exchange files can be included from the main ``exchange.yaml`` file,
+and these will be combined to form the final set of exchange reactions used for
+the simulations.
 
 Reaction flux limits
 --------------------

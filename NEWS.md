@@ -1,4 +1,47 @@
 
+v0.28 (2017-03-03)
+------------------
+
+- The YAML model format now allows users to specify compartment information and
+  compartment boundaries in the `model.yaml` file. See the file format
+  documentation for more information.
+- The `media` key in the `model.yaml` has changed name to `exchange` to
+  reflect the fact that not only uptake exchange must be defined here. The
+  `media` key is still supported but has been deprecated.
+- The gap-filling command `gapfill` and `fastgapfill` now use the compartment
+  information to determine which artificial transport and exchange reactions
+  to add. This means that a model *must* specify compartments and compartment
+  boundaries when using gap-filling commands.
+- The `gapcheck` command now has two new methods for detecting blocked
+  compounds. The new `prodcheck` is a more robust version of the GapFind check
+  which was previously used. The new `sinkcheck` method will find compounds
+  that cannot be produced in excess. This can find some additional blocked
+  compounds that were not detected by the other methods.
+- The `gapcheck` command now reports blocked compounds in the extracellular
+  space. Previously, these compounds were excluded. An option is available to
+  switch back the old behavior of excluding these from the final output.
+- The `gapcheck` command now has an option to run the check with unrestricted
+  exchange reactions.
+- The `gapfill` command can now be run without implicit sinks. This makes it
+  possible to use this command to solve additional model gaps. It is still
+  recommended to first solve gaps using implicit sinks, then later disable
+  implicit sinks when all other gaps have been closed.
+- The `gapfill` command now has an option to enable the bounds expansion
+  proposals (e.g. making irreversible reactions reversible). By default this
+  option is now off.
+- The `fastgapfill` has improved output that contains less superfluous
+  information. The output format is now identical to the `gapfill` command.
+  The `fastgapfill` also no longer runs an FBA on the induced model since this
+  caused some confusion.
+- Added new command `checkduplicates` which detects whether the model has
+  multiple reactions with the same (or similar) reaction equation.
+- The `sbmlexport` command now allows the user to specify a file path. The
+  command can also optionally output the SBML file in a more readable format
+  with an option.
+- Fixed support for the latest CPLEX release 12.7. A change in their API made
+  PSAMM incompatible with the 12.7 release. This is now fixed.
+- We now officially support Python 3.5 and Python 3.6.
+
 v0.27 (2016-12-23)
 ------------------
 

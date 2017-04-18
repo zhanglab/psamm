@@ -36,7 +36,11 @@ logger = logging.getLogger(__name__)
 
 
 def add_all_database_reactions(model, compartments):
-    """Add all reactions from database that occur in given compartments."""
+    """Add all reactions from database that occur in given compartments.
+
+    Args:
+        model: :class:`psamm.metabolicmodel.MetabolicModel`.
+    """
 
     added = set()
     for rxnid in model.database.reactions:
@@ -51,7 +55,11 @@ def add_all_database_reactions(model, compartments):
 
 
 def add_all_exchange_reactions(model, compartment, allow_duplicates=False):
-    """Add all exchange reactions to database and to model."""
+    """Add all exchange reactions to database and to model.
+
+    Args:
+        model: :class:`psamm.metabolicmodel.MetabolicModel`.
+    """
 
     all_reactions = {}
     if not allow_duplicates:
@@ -94,6 +102,7 @@ def add_all_transport_reactions(model, boundaries, allow_duplicates=False):
     two boundary compartments.
 
     Args:
+        model: :class:`psamm.metabolicmodel.MetabolicModel`.
         boundaries: Set of compartment boundary pairs.
 
     Returns:
@@ -166,9 +175,8 @@ def create_extended_model(model, db_penalty=None, ex_penalty=None,
     # Create metabolic model
     model_extended = model.create_metabolic_model()
     extra_compartment = model.extracellular_compartment
-    compartments, boundaries = model.parse_compartments()
 
-    compartment_ids = set(c.id for c in compartments)
+    compartment_ids = set(c.id for c in model.compartments)
 
     # Add database reactions to extended model
     if len(compartment_ids) > 0:
@@ -191,6 +199,7 @@ def create_extended_model(model, db_penalty=None, ex_penalty=None,
         model_extended, extra_compartment, allow_duplicates=True)
 
     # Add transport reactions to extended model
+    boundaries = model.compartment_boundaries
     if len(boundaries) > 0:
         logger.info(
             'Using artificial transport reactions for the compartment'

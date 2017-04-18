@@ -14,15 +14,15 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from __future__ import unicode_literals
 
 import logging
 
-from six import text_type
+from six import text_type, itervalues
 
 from ..command import Command
-from .. import util
 
 try:
     import xlsxwriter
@@ -33,50 +33,47 @@ logger = logging.getLogger(__name__)
 
 
 class ExcelExportCommand(Command):
-    """Export the metabolic model as an Excel workbook"""
+    """Export the metabolic model as an Excel workbook."""
 
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            'file', type=str, help='File path for writing the Excel workbook')
+            'file', type=text_type,
+            help='File path for writing the Excel workbook')
 
     def run(self):
         model = self._model
         if xlsxwriter is None:
-            self.fail('Excel export requires the XlsxWriter python module')
+            self.fail(
+                'Excel export requires the XlsxWriter python module'
+                ' ("pip install xlsxwriter")')
+
         workbook = xlsxwriter.Workbook(self._args.file)
         reaction_sheet = workbook.add_worksheet(name='Reactions')
 
-        git_version = None
-        if self._model.context is not None:
-            git_version = util.git_try_describe(self._model.context.basepath)
-
         property_set = set()
-        for reaction in model.parse_reactions():
+        for reaction in model.reactions:
             property_set.update(reaction.properties)
         property_list = list(property_set)
         property_list_sorted = sorted(property_list,
                                       key=lambda x: (x != 'id',
                                                      x != 'equation', x))
-        model_reactions = set(model.parse_model())
+        model_reactions = set(model.model)
         for z, i in enumerate(property_list_sorted + ['in_model']):
             reaction_sheet.write_string(0, z, text_type(i))
-        for x, i in enumerate(model.parse_reactions()):
+        for x, i in enumerate(model.reactions):
             for y, j in enumerate(property_list_sorted):
-                reaction_sheet.write_string(
-                    x+1, y, text_type(i.properties.get(j)))
-            if (not model.has_model_definition() or
-                    i.id in model_reactions):
-                reaction_sheet.write_string(
-                    x+1, len(property_list_sorted), 'True')
-            else:
-                reaction_sheet.write_string(
-                    x+1, len(property_list_sorted), 'False')
+                value = i.properties.get(j)
+                if value is not None:
+                    reaction_sheet.write_string(x+1, y, text_type(value))
+            reaction_sheet.write_string(
+                x+1, len(property_list_sorted),
+                text_type(i.id in model_reactions))
 
         compound_sheet = workbook.add_worksheet(name='Compounds')
 
         compound_set = set()
-        for compound in model.parse_compounds():
+        for compound in model.compounds:
             compound_set.update(compound.properties)
 
         compound_list_sorted = sorted(compound_set,
@@ -87,39 +84,36 @@ class ExcelExportCommand(Command):
         model_compounds = set(x.name for x in metabolic_model.compounds)
         for z, i in enumerate(compound_list_sorted + ['in_model']):
             compound_sheet.write_string(0, z, text_type(i))
-        for x, i in enumerate(model.parse_compounds()):
+        for x, i in enumerate(model.compounds):
             for y, j in enumerate(compound_list_sorted):
-                compound_sheet.write_string(
-                    x+1, y, text_type(i.properties.get(j)))
-            if (not self._model.has_model_definition() or
-                    i.id in model_compounds):
-                compound_sheet.write_string(
-                    x+1, len(compound_list_sorted), 'True')
-            else:
-                compound_sheet.write_string(
-                    x+1, len(compound_list_sorted), 'False')
+                value = i.properties.get(j)
+                if value is not None:
+                    compound_sheet.write_string(x+1, y, text_type(value))
+            compound_sheet.write_string(
+                x+1, len(compound_list_sorted),
+                text_type(i.id in model_compounds))
 
-        media_sheet = workbook.add_worksheet(name='Medium')
+        exchange_sheet = workbook.add_worksheet(name='Exchange')
 
-        media_sheet.write_string(0, 0, 'Compound ID')
-        media_sheet.write_string(0, 1, 'Reaction ID')
-        media_sheet.write_string(0, 2, 'Lower Limit')
-        media_sheet.write_string(0, 3, 'Upper Limit')
+        exchange_sheet.write_string(0, 0, 'Compound ID')
+        exchange_sheet.write_string(0, 1, 'Reaction ID')
+        exchange_sheet.write_string(0, 2, 'Lower Limit')
+        exchange_sheet.write_string(0, 3, 'Upper Limit')
 
         default_flux = model.default_flux_limit
 
         for x, (compound, reaction, lower, upper) in enumerate(
-                model.parse_medium()):
+                itervalues(model.exchange)):
             if lower is None:
-                lower = -1 * default_flux
+                lower = -default_flux
 
             if upper is None:
                 upper = default_flux
 
-            media_sheet.write(x+1, 0, text_type(compound))
-            media_sheet.write(x+1, 1, text_type(reaction))
-            media_sheet.write(x+1, 2, text_type(lower))
-            media_sheet.write(x+1, 3, text_type(upper))
+            exchange_sheet.write(x+1, 0, text_type(compound))
+            exchange_sheet.write(x+1, 1, text_type(reaction))
+            exchange_sheet.write(x+1, 2, text_type(lower))
+            exchange_sheet.write(x+1, 3, text_type(upper))
 
         limits_sheet = workbook.add_worksheet(name='Limits')
 
@@ -127,10 +121,17 @@ class ExcelExportCommand(Command):
         limits_sheet.write_string(0, 1, 'Lower Limit')
         limits_sheet.write_string(0, 2, 'Upper Limit')
 
-        for x, i in enumerate(model.parse_limits()):
-            limits_sheet.write(x, 0, (i[0]))
-            limits_sheet.write(x, 1, (i[1]))
-            limits_sheet.write(x, 2, (i[2]))
+        for x, limit in enumerate(itervalues(model.limits)):
+            reaction_id, lower, upper = limit
+            if lower is None:
+                lower = -default_flux
+
+            if upper is None:
+                upper = default_flux
+
+            limits_sheet.write(x+1, 0, reaction_id)
+            limits_sheet.write(x+1, 1, lower)
+            limits_sheet.write(x+1, 2, upper)
 
         model_info = workbook.add_worksheet(name='Model Info')
 
@@ -139,7 +140,8 @@ class ExcelExportCommand(Command):
             1, 0, ('Biomass Reaction: {}'.format(model.biomass_reaction)))
         model_info.write(
             2, 0, ('Default Flux Limits: {}'.format(model.default_flux_limit)))
-        if git_version is not None:
-            model_info.write(3, 0, ('Git version: {}'.format(git_version)))
+        if model.version_string is not None:
+            model_info.write(
+                3, 0, ('Version: {}'.format(model.version_string)))
 
         workbook.close()

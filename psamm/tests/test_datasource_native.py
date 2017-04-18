@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 import os
 import shutil
@@ -57,8 +57,8 @@ class TestYAMLDataSource(unittest.TestCase):
                 }
             ]
         }
-        model = native.NativeModel(model_dict)
-        compartment_iter, boundaries = model.parse_compartments()
+        reader = native.ModelReader(model_dict)
+        compartment_iter, boundaries = reader.parse_compartments()
         compartments = list(compartment_iter)
 
         self.assertEqual(len(compartments), 4)
@@ -127,21 +127,22 @@ class TestYAMLDataSource(unittest.TestCase):
                 }
             ]))
 
-    def test_parse_medium_table(self):
+    def test_parse_exchange_table(self):
         table = '''
 ac      e
 glcD    e       -10
 co2     e       -       50
 '''
 
-        medium = list(native.parse_medium_table_file(StringIO(table.strip())))
-        self.assertEqual(len(medium), 3)
-        self.assertEqual(medium[0], (Compound('ac', 'e'), None, None, None))
-        self.assertEqual(medium[1], (Compound('glcD', 'e'), None, -10, None))
-        self.assertEqual(medium[2], (Compound('co2', 'e'), None, None, 50))
+        exchange = list(
+            native.parse_exchange_table_file(StringIO(table.strip())))
+        self.assertEqual(len(exchange), 3)
+        self.assertEqual(exchange[0], (Compound('ac', 'e'), None, None, None))
+        self.assertEqual(exchange[1], (Compound('glcD', 'e'), None, -10, None))
+        self.assertEqual(exchange[2], (Compound('co2', 'e'), None, None, 50))
 
-    def test_parse_medium(self):
-        medium = list(native.parse_medium({
+    def test_parse_exchange(self):
+        exchange = list(native.parse_exchange({
             'compartment': 'e',
             'compounds': [
                 {'id': 'ac'},
@@ -152,14 +153,14 @@ co2     e       -       50
             ]
         }, 'e'))
 
-        self.assertEqual(len(medium), 5)
-        self.assertEqual(medium[0], (Compound('ac', 'e'), None, None, None))
-        self.assertEqual(medium[1], (Compound('glcD', 'e'), None, -10, None))
-        self.assertEqual(medium[2], (Compound('co2', 'e'), None, None, 50))
+        self.assertEqual(len(exchange), 5)
+        self.assertEqual(exchange[0], (Compound('ac', 'e'), None, None, None))
+        self.assertEqual(exchange[1], (Compound('glcD', 'e'), None, -10, None))
+        self.assertEqual(exchange[2], (Compound('co2', 'e'), None, None, 50))
         self.assertEqual(
-            medium[3], (Compound('compound_x', 'c'), None, None, None))
+            exchange[3], (Compound('compound_x', 'c'), None, None, None))
         self.assertEqual(
-            medium[4], (Compound('compound_y', 'e'), 'EX_cpdy', None, None))
+            exchange[4], (Compound('compound_y', 'e'), 'EX_cpdy', None, None))
 
     def test_parse_normal_float(self):
         v = native.yaml_load('-23.456')
@@ -204,7 +205,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
               - id: A_\u2206
               - id: B
               - id: C
-            media:
+            exchange:
               - compartment: e
                 compounds:
                   - id: A_\u2206
@@ -213,7 +214,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
               - reaction: rxn_2_\u03c0
                 upper: 100
             '''
-        m = native.NativeModel(long_string)
+        m = native.ModelReader(long_string)
         self.assertEqual(m.name, 'Test model')
         self.assertEqual(m.biomass_reaction, 'rxn_1')
         self.assertEqual(m.extracellular_compartment, 'e')
@@ -225,9 +226,9 @@ class TestYAMLFileSystemData(unittest.TestCase):
             name: Test model
             biomass: rxn_1
             reactions:
-              - include: medium.yaml
+              - include: exchange.yaml
             '''
-        m = native.NativeModel(longString)
+        m = native.ModelReader(longString)
         with self.assertRaises(context.ContextError):
             list(m.parse_reactions())
 
@@ -252,7 +253,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
                 {'id': 'B'},
                 {'id': 'C'}
               ],
-            'media': [
+            'exchange': [
                 {'compartment': 'e',
                  'compounds':[
                     {'id': 'A_\u2206'},
@@ -264,7 +265,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
                 }]
             }
 
-        dmodel = native.NativeModel(dict_model)
+        dmodel = native.ModelReader(dict_model)
         self.assertEqual(dmodel.name, 'Test model')
         self.assertEqual(dmodel.biomass_reaction, 'rxn_1')
         self.assertEqual(dmodel.extracellular_compartment, 'e')
@@ -277,7 +278,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
             'default_flux_limit: 500'
         ]))
 
-        model = native.NativeModel.load_model_from_path(path)
+        model = native.ModelReader.reader_from_path(path)
 
         self.assertEqual(model.name, 'Test model')
         self.assertEqual(model.biomass_reaction, 'biomass_reaction_id')
@@ -286,13 +287,30 @@ class TestYAMLFileSystemData(unittest.TestCase):
 
     def test_bad_path(self):
         with self.assertRaises(native.ParseError):
-            native.NativeModel.load_model_from_path('/nope/nreal/path')
+            native.ModelReader.reader_from_path('/nope/nreal/path')
 
     def test_invalid_model_type(self):
         with self.assertRaises(ValueError):
-            native.NativeModel(42.2)
+            native.ModelReader(42.2)
+
+    def test_parse_model_file_with_exchange(self):
+        path = self.write_model_file('model.yaml', '\n'.join([
+            'extracellular: Ex',
+            'exchange:',
+            ' - compounds:',
+            '    - id: A',
+            '    - id: B',
+            '      compartment: c'
+        ]))
+
+        model = native.ModelReader.reader_from_path(path)
+
+        exchange = list(model.parse_exchange())
+        self.assertEqual(exchange[0][0], Compound('A', 'Ex'))
+        self.assertEqual(exchange[1][0], Compound('B', 'c'))
 
     def test_parse_model_file_with_media(self):
+        """Test parsing model with the deprecated media key."""
         path = self.write_model_file('model.yaml', '\n'.join([
             'extracellular: Ex',
             'media:',
@@ -302,11 +320,31 @@ class TestYAMLFileSystemData(unittest.TestCase):
             '      compartment: c'
         ]))
 
-        model = native.NativeModel.load_model_from_path(path)
+        model = native.ModelReader.reader_from_path(path)
 
-        medium = list(model.parse_medium())
-        self.assertEqual(medium[0][0], Compound('A', 'Ex'))
-        self.assertEqual(medium[1][0], Compound('B', 'c'))
+        exchange = list(model.parse_exchange())
+        self.assertEqual(exchange[0][0], Compound('A', 'Ex'))
+        self.assertEqual(exchange[1][0], Compound('B', 'c'))
+
+    def test_parse_model_file_with_media_and_exchange(self):
+        """Test that parsing model with both media and exchange fails."""
+        path = self.write_model_file('model.yaml', '\n'.join([
+            'extracellular: Ex',
+            'media:',
+            ' - compounds:',
+            '    - id: A',
+            '    - id: B',
+            '      compartment: c',
+            'exchange:',
+            ' - compounds:',
+            '    - id: C',
+            '    - id: D'
+        ]))
+
+        model = native.ModelReader.reader_from_path(path)
+
+        with self.assertRaises(native.ParseError):
+            medium = list(model.parse_exchange())
 
     def test_parse_compound_tsv_file(self):
         path = self.write_model_file('compounds.tsv', '\n'.join([
@@ -389,8 +427,8 @@ class TestYAMLFileSystemData(unittest.TestCase):
         self.assertEqual(reactions[0].id, 'rxn_1')
         self.assertEqual(reactions[1].id, 'rxn_2')
 
-    def test_parse_medium_table_file(self):
-        path = self.write_model_file('medium.tsv', '\n'.join([
+    def test_parse_exchange_table_file(self):
+        path = self.write_model_file('exchange.tsv', '\n'.join([
             '',
             '# comment',
             'cpd_A\tc',
@@ -399,8 +437,8 @@ class TestYAMLFileSystemData(unittest.TestCase):
             'cpd_D\te\t-100\t-10'
         ]))
 
-        medium = list(native.parse_medium_file(path, 'e'))
-        self.assertEqual(medium, [
+        exchange = list(native.parse_exchange_file(path, 'e'))
+        self.assertEqual(exchange, [
             (Compound('cpd_A', 'c'), None, None, None),
             (Compound('cpd_B', 'e'), None, -1000, None),
             (Compound('cpd_C', 'e'), None, None, 20),
@@ -415,8 +453,8 @@ class TestYAMLFileSystemData(unittest.TestCase):
         with self.assertRaises(native.ParseError):
             native.get_limits(d)
 
-    def test_parse_medium_yaml_file(self):
-        path = self.write_model_file('medium.yaml', '\n'.join([
+    def test_parse_exchange_yaml_file(self):
+        path = self.write_model_file('exchange.yaml', '\n'.join([
             'compartment: e',
             'compounds:',
             '  - id: cpd_A',
@@ -433,8 +471,8 @@ class TestYAMLFileSystemData(unittest.TestCase):
             '    fixed: 100.0',
         ]))
 
-        medium = list(native.parse_medium_file(path, 'e'))
-        self.assertEqual(medium, [
+        exchange = list(native.parse_exchange_file(path, 'e'))
+        self.assertEqual(exchange, [
             (Compound('cpd_A', 'e'), 'EX_A', -40, None),
             (Compound('cpd_B', 'e'), None, None, 100),
             (Compound('cpd_C', 'e'), None, -100, 500),
@@ -442,8 +480,8 @@ class TestYAMLFileSystemData(unittest.TestCase):
             (Compound('cpd_E', 'e'), None, 100, 100)
         ])
 
-    def test_parse_medium_yaml_list(self):
-        self.write_model_file('medium.yaml', '\n'.join([
+    def test_parse_exchange_yaml_list(self):
+        self.write_model_file('exchange.yaml', '\n'.join([
             'compartment: e',
             'compounds:',
             '  - id: cpd_A',
@@ -451,8 +489,8 @@ class TestYAMLFileSystemData(unittest.TestCase):
         ]))
 
         path = os.path.join(self._model_dir, 'fake.yaml')
-        medium = list(native.parse_medium_list(path, [
-            {'include': 'medium.yaml'},
+        exchange = list(native.parse_exchange_list(path, [
+            {'include': 'exchange.yaml'},
             {
                 'compartment': 'e',
                 'compounds': [
@@ -461,7 +499,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
             }
         ], 'e'))
 
-        self.assertEqual(medium, [
+        self.assertEqual(exchange, [
             (Compound('cpd_A', 'e'), None, -42, None),
             (Compound('cpd_B', 'e'), None, None, 767)
         ])
@@ -564,6 +602,19 @@ class TestNativeModelWriter(unittest.TestCase):
     def setUp(self):
         self.writer = native.ModelWriter()
 
+    def test_convert_compartment_entry(self):
+        compartment = entry.DictCompartmentEntry({
+            'id': 'cytosol',
+            'name': 'Cytosol',
+            'custom': 456
+        })
+        d = self.writer.convert_compartment_entry(compartment, 'periplasm')
+        self.assertIsInstance(d, OrderedDict)
+        self.assertEqual(d['id'], 'cytosol')
+        self.assertEqual(d['name'], 'Cytosol')
+        self.assertEqual(d['custom'], 456)
+        self.assertEqual(d['adjacent_to'], 'periplasm')
+
     def test_convert_compound_entry(self):
         compound = entry.DictCompoundEntry({
             'id': 'c1',
@@ -597,6 +648,41 @@ class TestNativeModelWriter(unittest.TestCase):
         self.assertEqual(d['equation'], equation)
         self.assertEqual(d['custom_property'], -34)
         self.assertNotIn('another_custom_property', d)
+
+    def test_write_compartments(self):
+        stream = StringIO()
+        compartments = [
+            entry.DictCompartmentEntry({
+                'id': 'cytosol',
+                'name': 'Cytosol',
+                'custom': 456
+            }),
+            entry.DictCompartmentEntry({
+                'id': 'periplasm',
+                'name': 'Periplasm',
+                'test': 'abc'
+            })
+        ]
+        adjacencies = {
+            'cytosol': 'periplasm',
+            'periplasm': ['cytosol', 'e']
+        }
+        self.writer.write_compartments(stream, compartments, adjacencies)
+
+        self.assertEqual(yaml.safe_load(stream.getvalue()), [
+            {
+                'id': 'cytosol',
+                'adjacent_to': 'periplasm',
+                'name': 'Cytosol',
+                'custom': 456
+            },
+            {
+                'id': 'periplasm',
+                'adjacent_to': ['cytosol', 'e'],
+                'name': 'Periplasm',
+                'test': 'abc'
+            }
+        ])
 
     def test_write_compounds(self):
         stream = StringIO()
@@ -685,6 +771,6 @@ class TestNativeModelWriter(unittest.TestCase):
             {
                 'id': 'r2',
                 'name': 'Reaction 2',
-                'equation': '|c1[c]| => (2) |c2[c]|'
+                'equation': 'c1[c] => (2) c2[c]'
             }
         ])

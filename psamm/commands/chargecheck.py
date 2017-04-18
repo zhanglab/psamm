@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from __future__ import unicode_literals
 
@@ -49,10 +49,10 @@ class ChargeBalanceCommand(Command):
         """Run charge balance command"""
 
         # Load compound information
-        compound_name = {}
-        for compound in self._model.parse_compounds():
-            compound_name[compound.id] = (
-                compound.name if compound.name is not None else compound.id)
+        def compound_name(id):
+            if id not in self._model.compounds:
+                return id
+            return self._model.compounds[id].properties.get('name', id)
 
         # Create a set of excluded reactions
         exclude = set(self._args.exclude)
@@ -71,8 +71,7 @@ class ChargeBalanceCommand(Command):
                 unchecked += 1
             elif abs(charge) > self._args.epsilon:
                 unbalanced += 1
-                rxt = reaction.equation.translated_compounds(
-                    lambda x: compound_name.get(x, x))
+                rxt = reaction.equation.translated_compounds(compound_name)
                 print('{}\t{}\t{}'.format(reaction.id, charge, rxt))
 
         logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))

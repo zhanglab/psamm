@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
 # Copyright 2016  Chao Liu <lcddzyx@gmail.com>
 
@@ -22,7 +22,7 @@ import unittest
 import tempfile
 import shutil
 
-from psamm.datasource.native import NativeModel
+from psamm.datasource.native import ModelReader
 from psamm.metabolicmodel import MetabolicModel
 from psamm.database import DictDatabase
 from psamm.datasource.reaction import parse_reaction
@@ -54,7 +54,7 @@ class TestGetGeneAssociation(unittest.TestCase):
                 '  - id: B',
                 '  - id: C',
                 '  - id: D',
-                'media:',
+                'exchange:',
                 '  - compartment: e',
                 '    compounds:',
                 '      - id: A',
@@ -66,7 +66,8 @@ class TestGetGeneAssociation(unittest.TestCase):
                 '     - rxn_3',
                 '     - rxn_4',
             ]))
-        self._model = NativeModel.load_model_from_path(self._model_dir)
+        self._model = ModelReader.reader_from_path(
+            self._model_dir).create_model()
 
     def tearDown(self):
         shutil.rmtree(self._model_dir)

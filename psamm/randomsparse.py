@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
 # Copyright 2016  Chao Liu <lcddzyx@gmail.com>
 
@@ -123,7 +123,7 @@ def get_gene_associations(model):
         model: :class:`psamm.datasource.native.NativeModel`.
     """
 
-    for reaction in model.parse_reactions():
+    for reaction in model.reactions:
         assoc = None
         if reaction.genes is None:
             continue
