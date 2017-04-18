@@ -67,8 +67,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'PSAMM'
-copyright = u'2015, Jon Lund Steffensen'
-author = u'Jon Lund Steffensen'
+copyright = u'2015-2017, PSAMM developers'
+author = u'PSAMM developers'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -249,7 +249,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
   (master_doc, 'psamm.tex', u'PSAMM Documentation',
-   u'Jon Lund Steffensen', 'manual'),
+   u'PSAMM developers', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
