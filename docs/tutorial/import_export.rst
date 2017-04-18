@@ -307,7 +307,7 @@ in the additional files folder in the file ``complex_model.yaml``.
     - include: limits.yaml
 
 
-As can be see here the modeler chose to distribute their reaction database
+As can be seen here the modeler chose to distribute their reaction database
 files into different files representing various cellular compartments and roles.
 This organization can be customized to suit your preferred workflow.
 
@@ -1029,7 +1029,7 @@ easily exported as an SBML file using the following command:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model sbmlexport > Modified_core_ecoli.xml
+    (psamm-env) $ psamm-model sbmlexport Modified_core_ecoli.xml
 
 This will export the model in SBML level 3 version 1 format which can then
 be used in other software that support this format.

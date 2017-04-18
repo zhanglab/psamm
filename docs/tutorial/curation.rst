@@ -408,16 +408,16 @@ fill these gaps that are present through the introduction of additional reaction
 Gapcheck in PSAMM
 ~~~~~~~~~~~~~~~~~
 
-The ``gapcheck`` function in psamm can be used to identify dead end metabolites in a metabolic network.
+The ``gapcheck`` function in `PSAMM` can be used to identify dead end metabolites in a metabolic network.
 These dead end metabolites are compounds in the metabolic model that can either be produced but not consumed
 or ones that can be consumed but not produced. Reactions that contain these compounds cannot carry flux within
 a model and are often the result of knowledge gaps in our understanding of metabolic networks.
 
 The ``gapcheck`` function allows the use of three methods for the identification of these dead end metabolites
-within a metabolic network. These are the ``prodcheck``, ``concheck``, and ``gapfind`` methods.
+within a metabolic network. These are the ``prodcheck``, ``sinkcheck``, and ``gapfind`` methods.
 
 The ``prodcheck`` method is the most straightforward of these methods and can be used to identify any
-compounds that cannot be produced in the metabolic network. Will iterate through the reactions in a network
+compounds that cannot be produced in the metabolic network. It will iterate through the reactions in a network
 and maximize each one. If the reaction can carry a flux then the metabolites involved in the reaction
 are not considered to be blocked.
 
@@ -441,18 +441,18 @@ model that cannot be produced in this condition:
 
 
 This result indicates that the following metabolites currently cannot be produced in the model.
-This only tells part of the story though as this function was run with the defined media that
-was set for the model. As a result there are gaps identified like, '', that can be produced in other
-conditions. To do a global check using this function on the model without restrictions on the media
+This only tells part of the story though, as this function was run with the defined media that
+was set for the model. As a result there are gaps identified like, 'D-Glucose', that will not be considered
+gaps in other conditions. To do a global check using this function on the model without restrictions on the media
 the following command can be used:
 
 .. code-block:: shell
 
     (psamm-env) $ psamm-model gapcheck --method prodcheck --unrestricted-exchange
 
-The unrestricted tag in this function will allow temporarily set all of the exchange
+The unrestricted tag in this function will temporarily set all of the exchange
 reaction bounds to be -1000 to 1000 allowing all nutrients to be either taken up or produced.
-gap-checking in this condition will allow for the identification of gaps that are not media dependent
+Gap-checking in this condition will allow for the identification of gaps that are not media dependent
 and may instead be the result of incomplete pathways and knowledge gaps.
 
 
@@ -467,7 +467,7 @@ metabolite.
 
 
 The last method implemented in the ``gapcheck`` function is the ``gapfind`` method. This method is an implementation
-of a previously published method to identify gaps in metabolic networks "Include CITATION HERE". This method will use
+of a previously published method to identify gaps in metabolic networks [Kumar07]_. This method will use
 a network based optimization to identify metabolites with no production pathways present.
 
 .. code-block:: shell
@@ -476,8 +476,9 @@ a network based optimization to identify metabolites with no production pathways
 
 These methods included in the ``gapcheck`` function can be used to identify various kinds of
 'gaps' in a metabolic model network. `PSAMM` also includes two functions for filling these gaps
-through the addition of artificial reactions or reactions from an supplied database. The
-functions ``gapfill`` and ``fastgapfill`` can be 
+through the addition of artificial reactions or reactions from a supplied database. The
+functions ``gapfill`` and ``fastgapfill`` can be used to perform these gapfilling procedures
+during the process of generating and curating a model.
 
 Search Functions in PSAMM
 -------------------------
@@ -519,3 +520,24 @@ command can be used:
 .. code-block:: shell
 
     (psamm-env) $ psamm-model search reaction --compound 'manni[c]'
+
+
+
+Duplicate Reaction Checks
+-------------------------
+
+An additional searching function called ``duplicatescheck`` is also included in `PSAMM`.
+This function will search through a model and compare all of the reactions in the network
+to each other. Any reactions that have all of the same metabolites consumed and produced
+will then be reported. This can be a helpful function to use if there a multiple people
+working on the construction of a model as it allows for an automated checking that
+two individuals did not add the same reaction to the reconstruction. The ``duplicatescheck``
+function can be run through the following command:
+
+.. code-blockk:: shell
+
+    (psamm-env) $ psamm-model duplicatescheck
+
+The additional tags `--compare-direction` and `--compare-stoichiometry` can be added to
+the command to take into account the reaction directionality and metabolite stoichiometry
+when comparing two different reactions.
