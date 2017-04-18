@@ -33,6 +33,7 @@ from .context import FileMark
 from .entry import (CompoundEntry as BaseCompoundEntry,
                     ReactionEntry as BaseReactionEntry,
                     CompartmentEntry as BaseCompartmentEntry)
+from .native import NativeModel
 from ..reaction import Reaction, Compound, Direction
 from ..metabolicmodel import create_exchange_id
 from ..expression.boolean import Expression, And, Or, Variable
@@ -193,15 +194,13 @@ class SpeciesEntry(_SBMLEntry, BaseCompoundEntry):
         if 'compartment' in self._root.attrib:
             properties['compartment'] = self._root.get('compartment')
 
-        charge_tag = _tag('charge', FBC_V2)
-        if (charge_tag in self._root.attrib and
-                self._root.get(charge_tag) != ''):
-            properties['charge'] = int(self._root.get(charge_tag))
+        charge = self.charge
+        if charge is not None:
+            properties['charge'] = charge
 
-        formula_tag = _tag('chemicalFormula', FBC_V2)
-        if (formula_tag in self._root.attrib and
-                self._root.get(formula_tag) != ''):
-            properties['formula'] = self._root.get(formula_tag)
+        formula = self.formula
+        if formula is not None:
+            properties['formula'] = formula
 
         return properties
 
@@ -425,8 +424,8 @@ class ObjectiveEntry(object):
         self._type = self._root.get(_tag('type', self._namespace))
 
         if self._type is None:
-            raise ParseError('Missing "type" attribute on objective: {}'.formt(
-                self.id))
+            raise ParseError(
+                'Missing "type" attribute on objective: {}'.format(self.id))
 
         # Find flux objectives
         self._reactions = {}
@@ -460,7 +459,15 @@ class ObjectiveEntry(object):
 
 
 class FluxBoundEntry(object):
-    """Flux bound defined with FBC"""
+    """Flux bound defined with FBC V1.
+
+    Flux bounds defined with FBC V2 are instead encoded as ``upper_flux`` and
+    ``lower_flux`` properties on the ReactionEntry objects.
+    """
+
+    LESS_EQUAL = 'lessEqual'
+    GREATER_EQUAL = 'greaterEqual'
+    EQUAL = 'equal'
 
     def __init__(self, reader, namespace, root):
         self._reader = reader
@@ -477,7 +484,8 @@ class FluxBoundEntry(object):
         self._operation = self._root.get(_tag('operation', self._namespace))
         if self._operation is None:
             raise ParseError('Flux bound is missing "operation" attribute')
-        elif self._operation not in ('lessEqual', 'greaterEqual', 'equal'):
+        elif self._operation not in {
+                self.LESS_EQUAL, self.GREATER_EQUAL, self.EQUAL}:
             raise ParseError('Invalid flux bound operation: {}'.format(
                 self._operation))
 
@@ -491,22 +499,30 @@ class FluxBoundEntry(object):
 
     @property
     def id(self):
+        """Return ID of flux bound."""
         return self._id
 
     @property
     def name(self):
+        """Return name of flux bound."""
         return self._name
 
     @property
     def reaction(self):
+        """Return reaction ID that the flux bound pertains to."""
         return self._reaction
 
     @property
     def operation(self):
+        """Return the operation of the flux bound.
+
+        Returns one of LESS_EQUAL, GREATER_EQUAL or EQUAL.
+        """
         return self._operation
 
     @property
     def value(self):
+        """Return the flux bound value."""
         return self._value
 
 
@@ -521,7 +537,7 @@ class SBMLReader(object):
 
     If ``ignore_boundary`` is ``True``, the species that are marked as
     boundary conditions will simply be dropped from the species list and from
-    the reaction equations.
+    the reaction equations, and any boundary compartment will be dropped too.
     """
 
     def __init__(self, file, strict=False, ignore_boundary=False,
@@ -593,7 +609,10 @@ class SBMLReader(object):
         self._flux_bounds = []
         self._reaction_flux_bounds = {}
         if self._level == 3:
-            # Only suported in FBC V1
+            # Only represented with this tag in FBC V1. In FBC V2 the flux
+            # bounds are instead represented in the global listOfParameters
+            # and referenced by attributes on the reactions. Only with FBC V1
+            # are FluxBoundEntry objects created.
             flux_bounds = self._model.find(_tag('listOfFluxBounds', FBC_V1))
             if flux_bounds is not None:
                 for flux_bound in flux_bounds.iterfind(
@@ -631,6 +650,23 @@ class SBMLReader(object):
             filemark = FileMark(self._context, None, None)
             entry = ReactionEntry(self, reaction, filemark=filemark)
             self._model_reactions[entry.id] = entry
+
+        if self._ignore_boundary:
+            # Remove compartments that only contain boundary compounds
+            empty_compartments = set(self._model_compartments)
+            valid_compartments = set()
+            for species in itervalues(self._model_species):
+                empty_compartments.discard(species.compartment)
+                if not species.boundary:
+                    valid_compartments.add(species.compartment)
+
+            boundary_compartments = (
+                set(self._model_compartments) - empty_compartments -
+                valid_compartments)
+            for compartment in boundary_compartments:
+                logger.info('Ignoring boundary compartment: {}'.format(
+                    compartment))
+                del self._model_compartments[compartment]
 
         # Objectives
         self._model_objectives = {}
@@ -712,6 +748,87 @@ class SBMLReader(object):
     def name(self):
         """Model name"""
         return self._model.get('name', None)
+
+    def create_model(self):
+        """Create model from reader.
+
+        Returns:
+            :class:`psamm.datasource.native.NativeModel`.
+        """
+        properties = {
+            'name': self.name,
+            'default_flux_limit': 1000
+        }
+
+        # Load objective as biomass reaction
+        objective = self.get_active_objective()
+        if objective is not None:
+            reactions = dict(objective.reactions)
+            if len(reactions) == 1:
+                reaction, value = next(iteritems(reactions))
+                if ((value < 0 and objective.type == 'minimize') or
+                        (value > 0 and objective.type == 'maximize')):
+                    properties['biomass'] = reaction
+
+        model = NativeModel(properties)
+
+        # Load compartments into model
+        for compartment in self.compartments:
+            model.compartments.add_entry(compartment)
+
+        # Load compounds into model
+        for compound in self.species:
+            model.compounds.add_entry(compound)
+
+        # Load reactions into model
+        for reaction in self.reactions:
+            model.reactions.add_entry(reaction)
+
+        # Convert reaction limits properties to proper limits
+        for reaction in model.reactions:
+            props = reaction.properties
+            if 'lower_flux' in props or 'upper_flux' in props:
+                lower = props.get('lower_flux')
+                upper = props.get('upper_flux')
+                model.limits[reaction.id] = reaction.id, lower, upper
+
+        # Load model limits from FBC V1 bounds if present, i.e. if FBC V1 is
+        # used instead of V2.
+        limits_lower = {}
+        limits_upper = {}
+        for bounds in self.flux_bounds:
+            reaction = bounds.reaction
+            if reaction in model.limits:
+                continue
+
+            if bounds.operation == FluxBoundEntry.LESS_EQUAL:
+                if reaction not in limits_upper:
+                    limits_upper[reaction] = bounds.value
+                else:
+                    raise ParseError(
+                        'Conflicting bounds for {}'.format(reaction))
+            elif bounds.operation == FluxBoundEntry.GREATER_EQUAL:
+                if reaction not in limits_lower:
+                    limits_lower[reaction] = bounds.value
+                else:
+                    raise ParseError(
+                        'Conflicting bounds for {}'.format(reaction))
+            elif bounds.operation == FluxBoundEntry.EQUAL:
+                if (reaction not in limits_lower and
+                        reaction not in limits_upper):
+                    limits_lower[reaction] = bounds.value
+                    limits_upper[reaction] = bounds.value
+                else:
+                    raise ParseError(
+                        'Conflicting bounds for {}'.format(reaction))
+
+        for reaction in model.reactions:
+            if reaction.id in limits_lower or reaction.id in limits_upper:
+                lower = limits_lower.get(reaction.id, None)
+                upper = limits_upper.get(reaction.id, None)
+                model.limits[reaction.id] = reaction.id, lower, upper
+
+        return model
 
 
 class SBMLWriter(object):
@@ -859,25 +976,19 @@ class SBMLWriter(object):
         ET.register_namespace('xhtml', XHTML_NS)
         ET.register_namespace('fbc', FBC_V2)
 
-        git_version = None
-        if model.context is not None:
-            git_version = util.git_try_describe(model.context.basepath)
-
         # Load compound information
         compound_name = {}
         compound_properties = {}
-        for compound in model.parse_compounds():
+        for compound in model.compounds:
             compound_name[compound.id] = (
                 compound.name if compound.name is not None else compound.id)
             compound_properties[compound.id] = compound.properties
 
-        model_reactions = None
-        if model.has_model_definition():
-            model_reactions = set(model.parse_model())
+        model_reactions = set(model.model)
 
         reaction_properties = {}
         biomass_id = None
-        for r in model.parse_reactions():
+        for r in model.reactions:
             if (model_reactions is not None and
                     r.id not in model_reactions):
                 continue
@@ -892,7 +1003,7 @@ class SBMLWriter(object):
         # Add exchange reactions to reaction_properties,
         # also add flux limit info to flux_limits
         flux_limits = {}
-        for compound, reaction_id, lower, upper in model.parse_exchange():
+        for compound, reaction_id, lower, upper in itervalues(model.exchange):
             # Create exchange reaction
             if reaction_id is None:
                 reaction_id = create_exchange_id(reaction_properties, compound)
@@ -920,11 +1031,11 @@ class SBMLWriter(object):
         root.set(self._sbml_tag('level'), '3')
         root.set(self._sbml_tag('version'), '1')
         root.set(_tag('required', FBC_V2), 'false')
-        if git_version is not None:
+        if model.version_string is not None:
             notes_tag = ET.SubElement(root, self._sbml_tag('notes'))
             body_tag = ET.SubElement(notes_tag, _tag('body', XHTML_NS))
             self._add_properties_notes(
-                body_tag, {'git version': git_version})
+                body_tag, {'model version': model.version_string})
 
         model_tag = ET.SubElement(root, self._sbml_tag('model'))
         model_tag.set(_tag('strict', FBC_V2), 'true')
@@ -999,7 +1110,7 @@ class SBMLWriter(object):
             model_tag, self._sbml_tag('listOfParameters'))
 
         # Create mapping for reactions containing flux limit definitions
-        for rxn_id, lower_lim, upper_lim in model.parse_limits():
+        for rxn_id, lower_lim, upper_lim in itervalues(model.limits):
             flux_limits[rxn_id] = lower_lim, upper_lim
 
         params = {}

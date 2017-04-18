@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2016  Chao liu <lcddzyx@gmail.com>
 
 import os
@@ -23,7 +23,7 @@ import shutil
 import math
 
 from psamm.formula import Formula
-from psamm.datasource.native import NativeModel
+from psamm.datasource.native import ModelReader
 from psamm import balancecheck
 from psamm.datasource.reaction import parse_reaction
 
@@ -54,7 +54,8 @@ class TestBalanceCheckWithModel(unittest.TestCase):
                 '  - id: D',
                 '    formula: H2O',
             ]))
-        self._model = NativeModel.load_model_from_path(self._model_dir)
+        self._model = ModelReader.reader_from_path(
+            self._model_dir).create_model()
 
     def tearDown(self):
         shutil.rmtree(self._model_dir)

@@ -14,10 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 import unittest
 from decimal import Decimal
+
+from six import text_type
 
 from psamm.reaction import Reaction, Compound, Direction
 from psamm.datasource import reaction
@@ -30,6 +32,15 @@ class TestDefaultReactionParser(unittest.TestCase):
         self.assertEqual(r, Reaction(
             Direction.Forward, [(Compound('H2O'), 1), (Compound('PPi'), 1)],
             [(Compound('Phosphate'), 2), (Compound('H+'), 2)]))
+
+    def test_reaction_parse_space(self):
+        r = reaction.parse_reaction(
+            '(2) |Some compound[c]| <=> '
+            'abc[c] + |Some other compound| + (3) def')
+        self.assertEqual(r, Reaction(
+            Direction.Both, [(Compound('Some compound', 'c'), 2)],
+            [(Compound('abc', 'c'), 1),
+             (Compound('Some other compound'), 1), (Compound('def'), 3)]))
 
     def test_reaction_parse_with_decimal(self):
         r = reaction.parse_reaction('|H2| + (0.5) |O2| => |H2O|')
@@ -80,7 +91,7 @@ class TestDefaultReactionParser(unittest.TestCase):
     def test_reaction_str(self):
         r = Reaction(Direction.Reverse, [(Compound('H2O'), 2)],
                      [(Compound('H2'), 2), (Compound('O2'), 1)])
-        self.assertEqual(str(r), '(2) |H2O| <= (2) |H2| + |O2|')
+        self.assertEqual(text_type(r), '(2) H2O <= (2) H2 + O2')
 
 
 class TestSudenSimple(unittest.TestCase):

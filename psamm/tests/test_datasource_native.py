@@ -57,8 +57,8 @@ class TestYAMLDataSource(unittest.TestCase):
                 }
             ]
         }
-        model = native.NativeModel(model_dict)
-        compartment_iter, boundaries = model.parse_compartments()
+        reader = native.ModelReader(model_dict)
+        compartment_iter, boundaries = reader.parse_compartments()
         compartments = list(compartment_iter)
 
         self.assertEqual(len(compartments), 4)
@@ -214,7 +214,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
               - reaction: rxn_2_\u03c0
                 upper: 100
             '''
-        m = native.NativeModel(long_string)
+        m = native.ModelReader(long_string)
         self.assertEqual(m.name, 'Test model')
         self.assertEqual(m.biomass_reaction, 'rxn_1')
         self.assertEqual(m.extracellular_compartment, 'e')
@@ -228,7 +228,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
             reactions:
               - include: exchange.yaml
             '''
-        m = native.NativeModel(longString)
+        m = native.ModelReader(longString)
         with self.assertRaises(context.ContextError):
             list(m.parse_reactions())
 
@@ -265,7 +265,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
                 }]
             }
 
-        dmodel = native.NativeModel(dict_model)
+        dmodel = native.ModelReader(dict_model)
         self.assertEqual(dmodel.name, 'Test model')
         self.assertEqual(dmodel.biomass_reaction, 'rxn_1')
         self.assertEqual(dmodel.extracellular_compartment, 'e')
@@ -278,7 +278,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
             'default_flux_limit: 500'
         ]))
 
-        model = native.NativeModel.load_model_from_path(path)
+        model = native.ModelReader.reader_from_path(path)
 
         self.assertEqual(model.name, 'Test model')
         self.assertEqual(model.biomass_reaction, 'biomass_reaction_id')
@@ -287,11 +287,11 @@ class TestYAMLFileSystemData(unittest.TestCase):
 
     def test_bad_path(self):
         with self.assertRaises(native.ParseError):
-            native.NativeModel.load_model_from_path('/nope/nreal/path')
+            native.ModelReader.reader_from_path('/nope/nreal/path')
 
     def test_invalid_model_type(self):
         with self.assertRaises(ValueError):
-            native.NativeModel(42.2)
+            native.ModelReader(42.2)
 
     def test_parse_model_file_with_exchange(self):
         path = self.write_model_file('model.yaml', '\n'.join([
@@ -303,7 +303,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
             '      compartment: c'
         ]))
 
-        model = native.NativeModel.load_model_from_path(path)
+        model = native.ModelReader.reader_from_path(path)
 
         exchange = list(model.parse_exchange())
         self.assertEqual(exchange[0][0], Compound('A', 'Ex'))
@@ -320,7 +320,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
             '      compartment: c'
         ]))
 
-        model = native.NativeModel.load_model_from_path(path)
+        model = native.ModelReader.reader_from_path(path)
 
         exchange = list(model.parse_exchange())
         self.assertEqual(exchange[0][0], Compound('A', 'Ex'))
@@ -341,7 +341,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
             '    - id: D'
         ]))
 
-        model = native.NativeModel.load_model_from_path(path)
+        model = native.ModelReader.reader_from_path(path)
 
         with self.assertRaises(native.ParseError):
             medium = list(model.parse_exchange())
@@ -771,6 +771,6 @@ class TestNativeModelWriter(unittest.TestCase):
             {
                 'id': 'r2',
                 'name': 'Reaction 2',
-                'equation': '|c1[c]| => (2) |c2[c]|'
+                'equation': 'c1[c] => (2) c2[c]'
             }
         ])

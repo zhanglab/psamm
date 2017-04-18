@@ -67,12 +67,10 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         """Run GapFill command"""
 
         # Load compound information
-        compound_name = {}
-        for compound in self._model.parse_compounds():
-            if 'name' in compound.properties:
-                compound_name[compound.id] = compound.properties['name']
-            elif compound.id not in compound_name:
-                compound_name[compound.id] = compound.id
+        def compound_name(id):
+            if id not in self._model.compounds:
+                return id
+            return self._model.compounds[id].properties.get('name', id)
 
         # Calculate penalty if penalty file exists
         penalties = {}
@@ -133,21 +131,18 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         for reaction_id in sorted(self._mm.reactions):
             rx = self._mm.get_reaction(reaction_id)
-            rxt = rx.translated_compounds(
-                lambda x: compound_name.get(x, x))
+            rxt = rx.translated_compounds(compound_name)
             print('{}\t{}\t{}\t{}'.format(reaction_id, 'Model', 0, rxt))
 
         for rxnid in sorted(added_reactions):
             rx = model_complete.get_reaction(rxnid)
-            rxt = rx.translated_compounds(
-                lambda x: compound_name.get(x, x))
+            rxt = rx.translated_compounds(compound_name)
             print('{}\t{}\t{}\t{}'.format(
                 rxnid, 'Add', weights.get(rxnid, 1), rxt))
 
         for rxnid in sorted(no_bounds_reactions):
             rx = model_complete.get_reaction(rxnid)
-            rxt = rx.translated_compounds(
-                lambda x: compound_name.get(x, x))
+            rxt = rx.translated_compounds(compound_name)
             print('{}\t{}\t{}\t{}'.format(
                 rxnid, 'Remove bounds', weights.get(rxnid, 1), rxt))
 

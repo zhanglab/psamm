@@ -80,7 +80,7 @@ class DuplicatesCheck(Command):
 
         # Create dictonary of signatures
         database_signatures = {}
-        for entry in self._model.parse_reactions():
+        for entry in self._model.reactions:
             signature = reaction_signature(
                 entry.equation, direction=self._args.compare_direction,
                 stoichiometry=self._args.compare_stoichiometry)

@@ -49,7 +49,7 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
 
         genes = set()
         gene_assoc = {}
-        for reaction in self._model.parse_reactions():
+        for reaction in self._model.reactions:
             assoc = None
             if reaction.genes is None:
                 continue

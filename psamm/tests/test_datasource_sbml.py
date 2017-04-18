@@ -30,20 +30,21 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
     """Test parsing of a simple level 1 version 2 SBML file"""
 
     def setUp(self):
-        s = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
+        self.doc = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
 <sbml xmlns="http://www.sbml.org/sbml/level1"
       xmlns:html="http://www.w3.org/1999/xhtml"
       level="1" version="2">
  <model name="Test model">
   <listOfCompartments>
+   <compartment name="boundary"/>
    <compartment name="cell"/>
   </listOfCompartments>
   <listOfSpecies>
-   <species name="Glucose" compartment="cell" initialAmount="1"/>
-   <species name="Glucose_6_P" compartment="cell" initialAmount="1"/>
-   <species name="H2O" compartment="cell" initialAmount="1"/>
+   <species name="Glucose" compartment="cell" initialAmount="1" charge="0"/>
+   <species name="Glucose_6_P" compartment="cell" initialAmount="1" charge="-2"/>
+   <species name="H2O" compartment="cell" initialAmount="1" charge="0"/>
    <species name="Phosphate" compartment="cell" initialAmount="1" boundaryCondition="false"/>
-   <species name="Biomass" compartment="cell" initialAmount="1" boundaryCondition="true"/>
+   <species name="Biomass" compartment="boundary" initialAmount="1" boundaryCondition="true"/>
   </listOfSpecies>
   <listOfReactions>
    <reaction name="G6Pase" reversible="true">
@@ -70,41 +71,56 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
   </listOfReactions>
  </model>
 </sbml>''')
-        self.reader = sbml.SBMLReader(s)
 
     def test_model_name(self):
-        self.assertEqual(self.reader.name, 'Test model')
+        reader = sbml.SBMLReader(self.doc)
+        self.assertEqual(reader.name, 'Test model')
 
     def test_compartment_exists(self):
-        compartments = {entry.id: entry for entry in self.reader.compartments}
+        reader = sbml.SBMLReader(self.doc)
+        compartments = {entry.id: entry for entry in reader.compartments}
+        self.assertEqual(len(compartments), 2)
+        self.assertEqual(compartments['cell'].id, 'cell')
+        self.assertEqual(compartments['cell'].name, 'cell')
+        self.assertEqual(compartments['boundary'].id, 'boundary')
+        self.assertEqual(compartments['boundary'].name, 'boundary')
+
+    def test_compartment_exists_with_ignore_boundary(self):
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=True)
+        compartments = {entry.id: entry for entry in reader.compartments}
         self.assertEqual(len(compartments), 1)
         self.assertEqual(compartments['cell'].id, 'cell')
         self.assertEqual(compartments['cell'].name, 'cell')
 
     def test_compounds_exist(self):
-        species = {entry.id: entry for entry in self.reader.species}
+        reader = sbml.SBMLReader(self.doc)
+        species = {entry.id: entry for entry in reader.species}
         self.assertEqual(len(species), 5)
 
         self.assertEqual(species['Glucose'].id, 'Glucose')
         self.assertEqual(species['Glucose'].name, 'Glucose')
         self.assertEqual(species['Glucose'].compartment, 'cell')
         self.assertFalse(species['Glucose'].boundary)
+        self.assertEqual(species['Glucose'].charge, 0)
 
         self.assertEqual(species['Glucose_6_P'].id, 'Glucose_6_P')
         self.assertEqual(species['Glucose_6_P'].name, 'Glucose_6_P')
         self.assertEqual(species['Glucose_6_P'].compartment, 'cell')
         self.assertFalse(species['Glucose_6_P'].boundary)
+        self.assertEqual(species['Glucose_6_P'].charge, -2)
 
         self.assertEqual(species['H2O'].id, 'H2O')
         self.assertEqual(species['H2O'].name, 'H2O')
         self.assertEqual(species['H2O'].compartment, 'cell')
         self.assertFalse(species['H2O'].boundary)
+        self.assertEqual(species['H2O'].charge, 0)
 
         self.assertFalse(species['Phosphate'].boundary)
         self.assertTrue(species['Biomass'].boundary)
 
     def test_g6pase_reaction_exists(self):
-        reaction = self.reader.get_reaction('G6Pase')
+        reader = sbml.SBMLReader(self.doc)
+        reaction = reader.get_reaction('G6Pase')
         self.assertTrue(reaction.reversible)
 
         # Compare equation of reaction
@@ -116,18 +132,20 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
         self.assertEqual(reaction.equation, actual_equation)
 
     def test_biomass_reaction_exists(self):
-        reaction = self.reader.get_reaction('Biomass')
+        reader = sbml.SBMLReader(self.doc)
+        reaction = reader.get_reaction('Biomass')
         self.assertFalse(reaction.reversible)
 
         # Compare equation of reaction
         actual_equation = Reaction(Direction.Forward,
                                    [(Compound('Glucose_6_P', 'cell'),
                                      Fraction(56, 100))],
-                                   [(Compound('Biomass', 'cell'), 1)])
+                                   [(Compound('Biomass', 'boundary'), 1)])
         self.assertEqual(reaction.equation, actual_equation)
 
     def test_reaction_xml_notes(self):
-        reaction = self.reader.get_reaction('G6Pase')
+        reader = sbml.SBMLReader(self.doc)
+        reaction = reader.get_reaction('G6Pase')
         notes = reaction.xml_notes
 
         notes_tags = list(notes)
@@ -136,12 +154,14 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
         self.assertEqual(notes_tags[0].text, 'Glucose 6-phosphatase')
 
     def test_objective_not_present(self):
-        objectives = list(self.reader.objectives)
+        reader = sbml.SBMLReader(self.doc)
+        objectives = list(reader.objectives)
         self.assertEqual(len(objectives), 0)
-        self.assertIsNone(self.reader.get_active_objective())
+        self.assertIsNone(reader.get_active_objective())
 
     def test_flux_bounds_not_present(self):
-        flux_bounds = list(self.reader.flux_bounds)
+        reader = sbml.SBMLReader(self.doc)
+        flux_bounds = list(reader.flux_bounds)
         self.assertEqual(len(flux_bounds), 0)
 
 
@@ -149,20 +169,21 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
     """Test parsing of a simple level 2 version 5 SBML file"""
 
     def setUp(self):
-        s = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
+        self.doc = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
 <sbml xmlns="http://www.sbml.org/sbml/level2/version5"
       xmlns:html="http://www.w3.org/1999/xhtml"
       level="2" version="5">
  <model id="test_model" name="Test model">
   <listOfCompartments>
    <compartment id="C_c" name="cell"/>
+   <compartment id="C_b" name="boundary"/>
   </listOfCompartments>
   <listOfSpecies>
-   <species id="M_Glucose" name="Glucose" compartment="C_c"/>
-   <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c"/>
-   <species id="M_H2O" name="H2O" compartment="C_c"/>
+   <species id="M_Glucose" name="Glucose" compartment="C_c" charge="0"/>
+   <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c" charge="-2"/>
+   <species id="M_H2O" name="H2O" compartment="C_c" charge="0"/>
    <species id="M_Phosphate" name="Phosphate" compartment="C_c" boundaryCondition="false"/>
-   <species id="M_Biomass" name="Biomass" compartment="C_c" boundaryCondition="true"/>
+   <species id="M_Biomass" name="Biomass" compartment="C_b" boundaryCondition="true"/>
   </listOfSpecies>
   <listOfReactions>
    <reaction id="R_G6Pase" reversible="true">
@@ -189,42 +210,57 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
   </listOfReactions>
  </model>
 </sbml>''')
-        self.reader = sbml.SBMLReader(s)
 
     def test_model_name(self):
-        self.assertEqual(self.reader.id, 'test_model')
-        self.assertEqual(self.reader.name, 'Test model')
+        reader = sbml.SBMLReader(self.doc)
+        self.assertEqual(reader.id, 'test_model')
+        self.assertEqual(reader.name, 'Test model')
 
     def test_compartment_exists(self):
-        compartments = {entry.id: entry for entry in self.reader.compartments}
+        reader = sbml.SBMLReader(self.doc)
+        compartments = {entry.id: entry for entry in reader.compartments}
+        self.assertEqual(len(compartments), 2)
+        self.assertEqual(compartments['C_c'].id, 'C_c')
+        self.assertEqual(compartments['C_c'].name, 'cell')
+        self.assertEqual(compartments['C_b'].id, 'C_b')
+        self.assertEqual(compartments['C_b'].name, 'boundary')
+
+    def test_compartment_exists_with_ignore_boundary(self):
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=True)
+        compartments = {entry.id: entry for entry in reader.compartments}
         self.assertEqual(len(compartments), 1)
         self.assertEqual(compartments['C_c'].id, 'C_c')
         self.assertEqual(compartments['C_c'].name, 'cell')
 
     def test_compounds_exist(self):
-        species = {entry.id: entry for entry in self.reader.species}
+        reader = sbml.SBMLReader(self.doc)
+        species = {entry.id: entry for entry in reader.species}
         self.assertEqual(len(species), 5)
 
         self.assertEqual(species['M_Glucose'].id, 'M_Glucose')
         self.assertEqual(species['M_Glucose'].name, 'Glucose')
         self.assertEqual(species['M_Glucose'].compartment, 'C_c')
         self.assertFalse(species['M_Glucose'].boundary)
+        self.assertEqual(species['M_Glucose'].charge, 0)
 
         self.assertEqual(species['M_Glucose_6_P'].id, 'M_Glucose_6_P')
         self.assertEqual(species['M_Glucose_6_P'].name, 'Glucose-6-P')
         self.assertEqual(species['M_Glucose_6_P'].compartment, 'C_c')
         self.assertFalse(species['M_Glucose_6_P'].boundary)
+        self.assertEqual(species['M_Glucose_6_P'].charge, -2)
 
         self.assertEqual(species['M_H2O'].id, 'M_H2O')
         self.assertEqual(species['M_H2O'].name, 'H2O')
         self.assertEqual(species['M_H2O'].compartment, 'C_c')
         self.assertFalse(species['M_H2O'].boundary)
+        self.assertEqual(species['M_H2O'].charge, 0)
 
         self.assertFalse(species['M_Phosphate'].boundary)
         self.assertTrue(species['M_Biomass'].boundary)
 
     def test_g6pase_reaction_exists(self):
-        reaction = self.reader.get_reaction('R_G6Pase')
+        reader = sbml.SBMLReader(self.doc)
+        reaction = reader.get_reaction('R_G6Pase')
         self.assertTrue(reaction.reversible)
 
         # Compare equation of reaction
@@ -236,18 +272,20 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         self.assertEqual(reaction.equation, actual_equation)
 
     def test_biomass_reaction_exists(self):
-        reaction = self.reader.get_reaction('R_Biomass')
+        reader = sbml.SBMLReader(self.doc)
+        reaction = reader.get_reaction('R_Biomass')
         self.assertFalse(reaction.reversible)
 
         # Compare equation of reaction
         actual_equation = Reaction(Direction.Forward,
                                    [(Compound('M_Glucose_6_P', 'C_c'),
                                      Decimal('0.56'))],
-                                   [(Compound('M_Biomass', 'C_c'), 1)])
+                                   [(Compound('M_Biomass', 'C_b'), 1)])
         self.assertEqual(reaction.equation, actual_equation)
 
     def test_reaction_xml_notes(self):
-        reaction = self.reader.get_reaction('R_G6Pase')
+        reader = sbml.SBMLReader(self.doc)
+        reaction = reader.get_reaction('R_G6Pase')
         notes = reaction.xml_notes
 
         notes_tags = list(notes)
@@ -256,12 +294,14 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         self.assertEqual(notes_tags[0].text, 'Glucose 6-phosphatase')
 
     def test_objective_not_present(self):
-        objectives = list(self.reader.objectives)
+        reader = sbml.SBMLReader(self.doc)
+        objectives = list(reader.objectives)
         self.assertEqual(len(objectives), 0)
-        self.assertIsNone(self.reader.get_active_objective())
+        self.assertIsNone(reader.get_active_objective())
 
     def test_flux_bounds_not_present(self):
-        flux_bounds = list(self.reader.flux_bounds)
+        reader = sbml.SBMLReader(self.doc)
+        flux_bounds = list(reader.flux_bounds)
         self.assertEqual(len(flux_bounds), 0)
 
 
@@ -269,20 +309,21 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
     """Test parsing of a simple level 3 version 1 SBML file"""
 
     def setUp(self):
-        s = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
+        self.doc = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
 <sbml xmlns="http://www.sbml.org/sbml/level3/version1/core"
       xmlns:html="http://www.w3.org/1999/xhtml"
       level="3" version="1">
  <model id="test_model" name="Test model">
   <listOfCompartments>
    <compartment id="C_c" name="cell" constant="true"/>
+   <compartment id="C_b" name="boundary" constant="true"/>
   </listOfCompartments>
   <listOfSpecies>
    <species id="M_Glucose" name="Glucose" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false"/>
    <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false"/>
    <species id="M_H2O" name="H2O" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false"/>
    <species id="M_Phosphate" name="Phosphate" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false"/>
-   <species id="M_Biomass" name="Biomass" compartment="C_c" constant="false" boundaryCondition="true" hasOnlySubstanceUnits="false"/>
+   <species id="M_Biomass" name="Biomass" compartment="C_b" constant="false" boundaryCondition="true" hasOnlySubstanceUnits="false"/>
   </listOfSpecies>
   <listOfReactions>
    <reaction id="R_G6Pase" reversible="true" fast="false">
@@ -309,20 +350,31 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
   </listOfReactions>
  </model>
 </sbml>''')
-        self.reader = sbml.SBMLReader(s)
 
     def test_model_name(self):
-        self.assertEqual(self.reader.id, 'test_model')
-        self.assertEqual(self.reader.name, 'Test model')
+        reader = sbml.SBMLReader(self.doc)
+        self.assertEqual(reader.id, 'test_model')
+        self.assertEqual(reader.name, 'Test model')
 
     def test_compartment_exists(self):
-        compartments = {entry.id: entry for entry in self.reader.compartments}
+        reader = sbml.SBMLReader(self.doc)
+        compartments = {entry.id: entry for entry in reader.compartments}
+        self.assertEqual(len(compartments), 2)
+        self.assertEqual(compartments['C_c'].id, 'C_c')
+        self.assertEqual(compartments['C_c'].name, 'cell')
+        self.assertEqual(compartments['C_b'].id, 'C_b')
+        self.assertEqual(compartments['C_b'].name, 'boundary')
+
+    def test_compartment_exists_with_ignore_boundary(self):
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=True)
+        compartments = {entry.id: entry for entry in reader.compartments}
         self.assertEqual(len(compartments), 1)
         self.assertEqual(compartments['C_c'].id, 'C_c')
         self.assertEqual(compartments['C_c'].name, 'cell')
 
     def test_compounds_exist(self):
-        species = {entry.id: entry for entry in self.reader.species}
+        reader = sbml.SBMLReader(self.doc)
+        species = {entry.id: entry for entry in reader.species}
         self.assertEqual(len(species), 5)
 
         self.assertEqual(species['M_Glucose'].id, 'M_Glucose')
@@ -344,7 +396,8 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         self.assertTrue(species['M_Biomass'].boundary)
 
     def test_g6pase_reaction_exists(self):
-        reaction = self.reader.get_reaction('R_G6Pase')
+        reader = sbml.SBMLReader(self.doc)
+        reaction = reader.get_reaction('R_G6Pase')
         self.assertTrue(reaction.reversible)
 
         # Compare equation of reaction
@@ -356,18 +409,20 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         self.assertEqual(reaction.equation, actual_equation)
 
     def test_biomass_reaction_exists(self):
-        reaction = self.reader.get_reaction('R_Biomass')
+        reader = sbml.SBMLReader(self.doc)
+        reaction = reader.get_reaction('R_Biomass')
         self.assertFalse(reaction.reversible)
 
         # Compare equation of reaction
         actual_equation = Reaction(Direction.Forward,
                                    [(Compound('M_Glucose_6_P', 'C_c'),
                                      Decimal('0.56'))],
-                                   [(Compound('M_Biomass', 'C_c'), 1)])
+                                   [(Compound('M_Biomass', 'C_b'), 1)])
         self.assertEqual(reaction.equation, actual_equation)
 
     def test_reaction_xml_notes(self):
-        reaction = self.reader.get_reaction('R_G6Pase')
+        reader = sbml.SBMLReader(self.doc)
+        reaction = reader.get_reaction('R_G6Pase')
         notes = reaction.xml_notes
 
         notes_tags = list(notes)
@@ -376,12 +431,14 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         self.assertEqual(notes_tags[0].text, 'Glucose 6-phosphatase')
 
     def test_objective_not_present(self):
-        objectives = list(self.reader.objectives)
+        reader = sbml.SBMLReader(self.doc)
+        objectives = list(reader.objectives)
         self.assertEqual(len(objectives), 0)
-        self.assertIsNone(self.reader.get_active_objective())
+        self.assertIsNone(reader.get_active_objective())
 
     def test_flux_bounds_not_present(self):
-        flux_bounds = list(self.reader.flux_bounds)
+        reader = sbml.SBMLReader(self.doc)
+        flux_bounds = list(reader.flux_bounds)
         self.assertEqual(len(flux_bounds), 0)
 
 
@@ -389,7 +446,7 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
     """Test parsing of a level 3 version 1 SBML file with FBC version 1"""
 
     def setUp(self):
-        s = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
+        self.doc = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
 <sbml xmlns="http://www.sbml.org/sbml/level3/version1/core"
       xmlns:fbc="http://www.sbml.org/sbml/level3/version1/fbc/version1"
       xmlns:html="http://www.w3.org/1999/xhtml"
@@ -398,13 +455,14 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
  <model id="test_model" name="Test model">
   <listOfCompartments>
    <compartment id="C_c" name="cell" constant="true"/>
+   <compartment id="C_b" name="boundary" constant="true"/>
   </listOfCompartments>
   <listOfSpecies>
    <species id="M_Glucose" name="Glucose" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="C6H12O6"/>
    <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="C6H11O9P"/>
    <species id="M_H2O" name="H2O" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="H2O"/>
    <species id="M_Phosphate" name="Phosphate" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="HO4P"/>
-   <species id="M_Biomass" name="Biomass" compartment="C_c" constant="false" boundaryCondition="true" hasOnlySubstanceUnits="false"/>
+   <species id="M_Biomass" name="Biomass" compartment="C_b" constant="false" boundaryCondition="true" hasOnlySubstanceUnits="false"/>
   </listOfSpecies>
   <listOfReactions>
    <reaction id="R_G6Pase" reversible="true" fast="false">
@@ -441,20 +499,24 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
   </fbc:listOfFluxBounds>
  </model>
 </sbml>''')
-        self.reader = sbml.SBMLReader(s)
 
     def test_model_name(self):
-        self.assertEqual(self.reader.id, 'test_model')
-        self.assertEqual(self.reader.name, 'Test model')
+        reader = sbml.SBMLReader(self.doc)
+        self.assertEqual(reader.id, 'test_model')
+        self.assertEqual(reader.name, 'Test model')
 
     def test_compartment_exists(self):
-        compartments = {entry.id: entry for entry in self.reader.compartments}
-        self.assertEqual(len(compartments), 1)
+        reader = sbml.SBMLReader(self.doc)
+        compartments = {entry.id: entry for entry in reader.compartments}
+        self.assertEqual(len(compartments), 2)
         self.assertEqual(compartments['C_c'].id, 'C_c')
         self.assertEqual(compartments['C_c'].name, 'cell')
+        self.assertEqual(compartments['C_b'].id, 'C_b')
+        self.assertEqual(compartments['C_b'].name, 'boundary')
 
     def test_compounds_exist(self):
-        species = {entry.id: entry for entry in self.reader.species}
+        reader = sbml.SBMLReader(self.doc)
+        species = {entry.id: entry for entry in reader.species}
         self.assertEqual(len(species), 5)
 
         self.assertEqual(species['M_Glucose'].id, 'M_Glucose')
@@ -485,7 +547,8 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
         self.assertIsNone(species['M_Biomass'].charge)
 
     def test_g6pase_reaction_exists(self):
-        reaction = self.reader.get_reaction('R_G6Pase')
+        reader = sbml.SBMLReader(self.doc)
+        reaction = reader.get_reaction('R_G6Pase')
         self.assertTrue(reaction.reversible)
 
         # Compare equation of reaction
@@ -500,21 +563,23 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
         self.assertEqual(reaction.properties['upper_flux'], 1000)
 
     def test_biomass_reaction_exists(self):
-        reaction = self.reader.get_reaction('R_Biomass')
+        reader = sbml.SBMLReader(self.doc)
+        reaction = reader.get_reaction('R_Biomass')
         self.assertFalse(reaction.reversible)
 
         # Compare equation of reaction
         actual_equation = Reaction(Direction.Forward,
                                    [(Compound('M_Glucose_6_P', 'C_c'),
                                      Decimal('0.56'))],
-                                   [(Compound('M_Biomass', 'C_c'), 1)])
+                                   [(Compound('M_Biomass', 'C_b'), 1)])
         self.assertEqual(reaction.equation, actual_equation)
 
         self.assertEqual(reaction.properties['lower_flux'], 0)
         self.assertEqual(reaction.properties['upper_flux'], 1000)
 
     def test_objective_exists(self):
-        objectives = {entry.id: entry for entry in self.reader.objectives}
+        reader = sbml.SBMLReader(self.doc)
+        objectives = {entry.id: entry for entry in reader.objectives}
         self.assertEqual(len(objectives), 1)
 
         objective = objectives['obj1']
@@ -523,12 +588,13 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
         self.assertEqual(dict(objective.reactions), {'R_Biomass': 1})
 
     def test_active_objective(self):
-        objectives = {entry.id: entry for entry in self.reader.objectives}
-        self.assertEqual(self.reader.get_active_objective(),
-                         objectives['obj1'])
+        reader = sbml.SBMLReader(self.doc)
+        objectives = {entry.id: entry for entry in reader.objectives}
+        self.assertEqual(reader.get_active_objective(), objectives['obj1'])
 
     def test_flux_bounds_exists(self):
-        flux_bounds = list(self.reader.flux_bounds)
+        reader = sbml.SBMLReader(self.doc)
+        flux_bounds = list(reader.flux_bounds)
         self.assertEqual(len(flux_bounds), 4)
 
         biomass_bounds = set(
@@ -550,7 +616,7 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
     """Test parsing of a level 3 version 1 SBML file with FBC version 2"""
 
     def setUp(self):
-        s = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
+        self.doc = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
 <sbml xmlns="http://www.sbml.org/sbml/level3/version1/core"
       xmlns:fbc="http://www.sbml.org/sbml/level3/version1/fbc/version2"
       xmlns:html="http://www.w3.org/1999/xhtml"
@@ -559,13 +625,14 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
  <model id="test_model" name="Test model">
   <listOfCompartments>
    <compartment id="C_c" name="cell" constant="true"/>
+   <compartment id="C_b" name="boundary" constant="true"/>
   </listOfCompartments>
   <listOfSpecies>
    <species id="M_Glucose" name="Glucose" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="C6H12O6"/>
    <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="C6H11O9P"/>
    <species id="M_H2O" name="H2O" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="H2O"/>
    <species id="M_Phosphate" name="Phosphate" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="HO4P"/>
-   <species id="M_Biomass" name="Biomass" compartment="C_c" constant="false" boundaryCondition="true" hasOnlySubstanceUnits="false"/>
+   <species id="M_Biomass" name="Biomass" compartment="C_b" constant="false" boundaryCondition="true" hasOnlySubstanceUnits="false"/>
   </listOfSpecies>
   <listOfParameters>
    <parameter constant="true" id="P_lower_G6Pase" value="-10"/>
@@ -601,20 +668,24 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
   </fbc:listOfObjectives>
  </model>
 </sbml>''')
-        self.reader = sbml.SBMLReader(s)
 
     def test_model_name(self):
-        self.assertEqual(self.reader.id, 'test_model')
-        self.assertEqual(self.reader.name, 'Test model')
+        reader = sbml.SBMLReader(self.doc)
+        self.assertEqual(reader.id, 'test_model')
+        self.assertEqual(reader.name, 'Test model')
 
     def test_compartment_exists(self):
-        compartments = {entry.id: entry for entry in self.reader.compartments}
-        self.assertEqual(len(compartments), 1)
+        reader = sbml.SBMLReader(self.doc)
+        compartments = {entry.id: entry for entry in reader.compartments}
+        self.assertEqual(len(compartments), 2)
         self.assertEqual(compartments['C_c'].id, 'C_c')
         self.assertEqual(compartments['C_c'].name, 'cell')
+        self.assertEqual(compartments['C_b'].id, 'C_b')
+        self.assertEqual(compartments['C_b'].name, 'boundary')
 
     def test_compounds_exist(self):
-        species = {entry.id: entry for entry in self.reader.species}
+        reader = sbml.SBMLReader(self.doc)
+        species = {entry.id: entry for entry in reader.species}
         self.assertEqual(len(species), 5)
 
         self.assertEqual(species['M_Glucose'].id, 'M_Glucose')
@@ -645,7 +716,8 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         self.assertIsNone(species['M_Biomass'].charge)
 
     def test_g6pase_reaction_exists(self):
-        reaction = self.reader.get_reaction('R_G6Pase')
+        reader = sbml.SBMLReader(self.doc)
+        reaction = reader.get_reaction('R_G6Pase')
         self.assertTrue(reaction.reversible)
 
         # Compare equation of reaction
@@ -660,21 +732,23 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         self.assertEqual(reaction.properties['upper_flux'], 1000)
 
     def test_biomass_reaction_exists(self):
-        reaction = self.reader.get_reaction('R_Biomass')
+        reader = sbml.SBMLReader(self.doc)
+        reaction = reader.get_reaction('R_Biomass')
         self.assertFalse(reaction.reversible)
 
         # Compare equation of reaction
         actual_equation = Reaction(Direction.Forward,
                                    [(Compound('M_Glucose_6_P', 'C_c'),
                                      Decimal('0.56'))],
-                                   [(Compound('M_Biomass', 'C_c'), 1)])
+                                   [(Compound('M_Biomass', 'C_b'), 1)])
         self.assertEqual(reaction.equation, actual_equation)
 
         self.assertEqual(reaction.properties['lower_flux'], 0)
         self.assertEqual(reaction.properties['upper_flux'], 1000)
 
     def test_objective_exists(self):
-        objectives = {entry.id: entry for entry in self.reader.objectives}
+        reader = sbml.SBMLReader(self.doc)
+        objectives = {entry.id: entry for entry in reader.objectives}
         self.assertEqual(len(objectives), 1)
 
         objective = objectives['obj1']
@@ -683,14 +757,12 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         self.assertEqual(dict(objective.reactions), {'R_Biomass': 1})
 
     def test_active_objective(self):
-        objectives = {entry.id: entry for entry in self.reader.objectives}
-        self.assertEqual(self.reader.get_active_objective(),
+        reader = sbml.SBMLReader(self.doc)
+        objectives = {entry.id: entry for entry in reader.objectives}
+        self.assertEqual(reader.get_active_objective(),
                          objectives['obj1'])
 
     def test_flux_bounds_not_present(self):
-        flux_bounds = list(self.reader.flux_bounds)
+        reader = sbml.SBMLReader(self.doc)
+        flux_bounds = list(reader.flux_bounds)
         self.assertEqual(len(flux_bounds), 0)
-
-
-if __name__ == '__main__':
-    unittest.main()

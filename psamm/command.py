@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Command line interface.
 
@@ -40,9 +40,9 @@ import pkg_resources
 from six import add_metaclass, iteritems, itervalues, text_type
 
 from . import __version__ as package_version
-from .datasource.native import NativeModel
+from .datasource import native, sbml
+from .datasource.context import FilePathContext
 from .lpsolver import generic
-from . import util
 
 logger = logging.getLogger(__name__)
 
@@ -76,15 +76,11 @@ class Command(object):
         self._model = model
         self._args = args
 
-        name = self._model.name
-        if name is None:
-            name = text_type(self._model.context)
-        logger.info('Model: {}'.format(name))
+        if self._model.name is not None:
+            logger.info('Model: {}'.format(self._model.name))
 
-        if self._model.context is not None:
-            version = util.git_try_describe(self._model.context.basepath)
-            if version is not None:
-                logger.info('Model Git version: {}'.format(version))
+        if self._model.version_string is not None:
+            logger.info('Model version: {}'.format(self._model.version_string))
 
     @classmethod
     def init_parser(cls, parser):
@@ -552,7 +548,80 @@ def main(command_class=None, args=None):
     parsed_args = parser.parse_args(args)
 
     # Load model definition
-    model = NativeModel.load_model_from_path(parsed_args.model)
+    model = native.ModelReader.reader_from_path(
+        parsed_args.model).create_model()
+
+    # Instantiate command with model and run
+    command = parsed_args.command(model, parsed_args)
+    try:
+        command.run()
+    except CommandError as e:
+        parser.error(text_type(e))
+
+
+def main_sbml(command_class=None, args=None):
+    # Set up logging for the command line interface
+    if 'PSAMM_DEBUG' in os.environ:
+        level = getattr(logging, os.environ['PSAMM_DEBUG'].upper(), None)
+        if level is not None:
+            logging.basicConfig(level=level)
+    else:
+        logging.basicConfig(level=logging.INFO)
+        base_logger = logging.getLogger('psamm')
+        if len(base_logger.handlers) == 0:
+            handler = logging.StreamHandler()
+            handler.setFormatter(
+                logging.Formatter(u'%(levelname)s: %(message)s'))
+            base_logger.addHandler(handler)
+            base_logger.propagate = False
+
+    logger.warning(
+        'This command is experimental. It currently only fully parses level 3'
+        ' SBML files!')
+
+    title = 'Metabolic modeling tools (SBML)'
+    if command_class is not None:
+        title, _, _ = command_class.__doc__.partition('\n\n')
+
+    parser = argparse.ArgumentParser(description=title)
+    parser.add_argument('model', metavar='file', help='SBML file')
+    parser.add_argument(
+        '-V', '--version', action='version',
+        version='%(prog)s ' + package_version)
+
+    if command_class is not None:
+        # Command explicitly given, only allow that command
+        command_class.init_parser(parser)
+        parser.set_defaults(command=command_class)
+    else:
+        # Discover all available commands
+        commands = {}
+        for entry in pkg_resources.iter_entry_points('psamm.commands'):
+            canonical = entry.name.lower()
+            if canonical not in commands:
+                command_class = entry.load()
+                commands[canonical] = command_class
+            else:
+                logger.warning('Command {} was found more than once!'.format(
+                    canonical))
+
+        # Create parsers for subcommands
+        subparsers = parser.add_subparsers(title='Commands', metavar='command')
+        for name, command_class in sorted(iteritems(commands)):
+            title, _, _ = command_class.__doc__.partition('\n\n')
+            subparser = subparsers.add_parser(
+                name, help=title.rstrip('.'),
+                formatter_class=argparse.RawDescriptionHelpFormatter,
+                description=_trim(command_class.__doc__))
+            subparser.set_defaults(command=command_class)
+            command_class.init_parser(subparser)
+
+    parsed_args = parser.parse_args(args)
+
+    # Load model definition
+    context = FilePathContext(parsed_args.model)
+    with context.open('r') as f:
+        model = sbml.SBMLReader(f, context=context).create_model()
 
     # Instantiate command with model and run
     command = parsed_args.command(model, parsed_args)

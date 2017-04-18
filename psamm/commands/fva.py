@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from __future__ import unicode_literals
 
@@ -47,12 +47,10 @@ class FluxVariabilityCommand(MetabolicMixin, SolverCommandMixin,
         """Run flux variability command"""
 
         # Load compound information
-        compound_name = {}
-        for compound in self._model.parse_compounds():
-            if 'name' in compound.properties:
-                compound_name[compound.id] = compound.properties['name']
-            elif compound.id not in compound_name:
-                compound_name[compound.id] = compound.id
+        def compound_name(id):
+            if id not in self._model.compounds:
+                return id
+            return self._model.compounds[id].properties.get('name', id)
 
         reaction = self._get_objective()
         if not self._mm.has_reaction(reaction):
@@ -107,7 +105,7 @@ class FluxVariabilityCommand(MetabolicMixin, SolverCommandMixin,
 
         for reaction_id, (lower, upper) in iter_results():
             rx = self._mm.get_reaction(reaction_id)
-            rxt = rx.translated_compounds(lambda x: compound_name.get(x, x))
+            rxt = rx.translated_compounds(compound_name)
             print('{}\t{}\t{}\t{}'.format(reaction_id, lower, upper, rxt))
 
         logger.info('Solving took {:.2f} seconds'.format(

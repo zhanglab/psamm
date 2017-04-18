@@ -54,12 +54,10 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
 
     def run(self):
         # Load compound information
-        compound_name = {}
-        for compound in self._model.parse_compounds():
-            if 'name' in compound.properties:
-                compound_name[compound.id] = compound.properties['name']
-            elif compound.id not in compound_name:
-                compound_name[compound.id] = compound.id
+        def compound_name(id):
+            if id not in self._model.compounds:
+                return id
+            return self._model.compounds[id].properties.get('name', id)
 
         extracellular_comp = self._model.extracellular_compartment
         epsilon = self._args.epsilon
@@ -107,8 +105,7 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
                 continue
 
             count += 1
-            name = compound_name.get(compound.name, compound.name)
-            print('{}\t{}'.format(compound, name))
+            print('{}\t{}'.format(compound, compound_name(compound.name)))
 
         logger.info('Blocked compounds: {}'.format(count))
 
