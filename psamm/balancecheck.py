@@ -15,6 +15,7 @@
 #
 # Copyright 2016  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2016  Chao Liu <lcddzyx@gmail.com>
+from __future__ import unicode_literals
 
 from __future__ import unicode_literals
 
