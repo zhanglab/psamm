@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 import unittest
 
@@ -77,7 +77,7 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
         self.assertEqual(reader.name, 'Test model')
 
     def test_compartment_exists(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         compartments = {entry.id: entry for entry in reader.compartments}
         self.assertEqual(len(compartments), 2)
         self.assertEqual(compartments['cell'].id, 'cell')
@@ -93,7 +93,7 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
         self.assertEqual(compartments['cell'].name, 'cell')
 
     def test_compounds_exist(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         species = {entry.id: entry for entry in reader.species}
         self.assertEqual(len(species), 5)
 
@@ -132,7 +132,7 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
         self.assertEqual(reaction.equation, actual_equation)
 
     def test_biomass_reaction_exists(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         reaction = reader.get_reaction('Biomass')
         self.assertFalse(reaction.reversible)
 
@@ -144,7 +144,7 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
         self.assertEqual(reaction.equation, actual_equation)
 
     def test_reaction_xml_notes(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         reaction = reader.get_reaction('G6Pase')
         notes = reaction.xml_notes
 
@@ -217,7 +217,7 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         self.assertEqual(reader.name, 'Test model')
 
     def test_compartment_exists(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         compartments = {entry.id: entry for entry in reader.compartments}
         self.assertEqual(len(compartments), 2)
         self.assertEqual(compartments['C_c'].id, 'C_c')
@@ -233,7 +233,7 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         self.assertEqual(compartments['C_c'].name, 'cell')
 
     def test_compounds_exist(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         species = {entry.id: entry for entry in reader.species}
         self.assertEqual(len(species), 5)
 
@@ -272,7 +272,7 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         self.assertEqual(reaction.equation, actual_equation)
 
     def test_biomass_reaction_exists(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         reaction = reader.get_reaction('R_Biomass')
         self.assertFalse(reaction.reversible)
 
@@ -357,7 +357,7 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         self.assertEqual(reader.name, 'Test model')
 
     def test_compartment_exists(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         compartments = {entry.id: entry for entry in reader.compartments}
         self.assertEqual(len(compartments), 2)
         self.assertEqual(compartments['C_c'].id, 'C_c')
@@ -373,7 +373,7 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         self.assertEqual(compartments['C_c'].name, 'cell')
 
     def test_compounds_exist(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         species = {entry.id: entry for entry in reader.species}
         self.assertEqual(len(species), 5)
 
@@ -409,7 +409,7 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         self.assertEqual(reaction.equation, actual_equation)
 
     def test_biomass_reaction_exists(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         reaction = reader.get_reaction('R_Biomass')
         self.assertFalse(reaction.reversible)
 
@@ -506,7 +506,7 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
         self.assertEqual(reader.name, 'Test model')
 
     def test_compartment_exists(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         compartments = {entry.id: entry for entry in reader.compartments}
         self.assertEqual(len(compartments), 2)
         self.assertEqual(compartments['C_c'].id, 'C_c')
@@ -515,7 +515,7 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
         self.assertEqual(compartments['C_b'].name, 'boundary')
 
     def test_compounds_exist(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         species = {entry.id: entry for entry in reader.species}
         self.assertEqual(len(species), 5)
 
@@ -547,7 +547,7 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
         self.assertIsNone(species['M_Biomass'].charge)
 
     def test_g6pase_reaction_exists(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         reaction = reader.get_reaction('R_G6Pase')
         self.assertTrue(reaction.reversible)
 
@@ -563,7 +563,7 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
         self.assertEqual(reaction.properties['upper_flux'], 1000)
 
     def test_biomass_reaction_exists(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         reaction = reader.get_reaction('R_Biomass')
         self.assertFalse(reaction.reversible)
 
@@ -675,7 +675,7 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         self.assertEqual(reader.name, 'Test model')
 
     def test_compartment_exists(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         compartments = {entry.id: entry for entry in reader.compartments}
         self.assertEqual(len(compartments), 2)
         self.assertEqual(compartments['C_c'].id, 'C_c')
@@ -684,7 +684,7 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         self.assertEqual(compartments['C_b'].name, 'boundary')
 
     def test_compounds_exist(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         species = {entry.id: entry for entry in reader.species}
         self.assertEqual(len(species), 5)
 
@@ -732,7 +732,7 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         self.assertEqual(reaction.properties['upper_flux'], 1000)
 
     def test_biomass_reaction_exists(self):
-        reader = sbml.SBMLReader(self.doc)
+        reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         reaction = reader.get_reaction('R_Biomass')
         self.assertFalse(reaction.reversible)
 
