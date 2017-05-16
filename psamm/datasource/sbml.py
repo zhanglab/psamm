@@ -841,7 +841,7 @@ class SBMLReader(object):
 
 
 class SBMLWriter(object):
-    """Writer of SBML files"""
+    """Writer of SBML files."""
 
     def __init__(self, cobra_flux_bounds=False):
         self._namespace = SBML_NS_L3_V1_CORE
@@ -979,8 +979,13 @@ class SBMLWriter(object):
                 elem.tail = i
 
     def write_model(self, file, model, pretty=False):
-        """Write a given model to file"""
+        """Write a given model to file.
 
+        Args:
+            file: File-like object open for writing.
+            model: Instance of :class:`NativeModel` to write.
+            pretty: Whether to format the XML output for readability.
+        """
         ET.register_namespace('mathml', MATHML_NS)
         ET.register_namespace('xhtml', XHTML_NS)
         ET.register_namespace('fbc', FBC_V2)
