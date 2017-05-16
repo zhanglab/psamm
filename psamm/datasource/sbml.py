@@ -538,9 +538,18 @@ class SBMLReader(object):
     If ``ignore_boundary`` is ``True``, the species that are marked as
     boundary conditions will simply be dropped from the species list and from
     the reaction equations, and any boundary compartment will be dropped too.
+    Otherwise the boundary species will be retained. Retaining these is only
+    useful to extract specific information from those species objects.
+
+    Args:
+        file: File-like object to parse XML SBML content from.
+        strict: Indicating whether strict parsing is enabled.
+        ignore_boundary: Indicating whether boundary species are dropped.
+        context: Optional file parsing context from
+            :mod:`psamm.datasource.context`.
     """
 
-    def __init__(self, file, strict=False, ignore_boundary=False,
+    def __init__(self, file, strict=False, ignore_boundary=True,
                  context=None):
         # Parse SBML file
         tree = ET.parse(file)
