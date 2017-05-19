@@ -267,6 +267,9 @@ def fastcc_consistent_subset(model, epsilon, solver):
         model: :class:`MetabolicModel` to solve.
         epsilon: Flux threshold value.
         solver: LP solver instance to use.
+
+    Returns:
+        Set of reaction IDs in the consistent reaction subset.
     """
     reaction_set = set(model.reactions)
     return reaction_set.difference(fastcc(model, epsilon, solver))
@@ -288,6 +291,9 @@ def fastcore(model, core, epsilon, solver, scaling=1e5, weights={}):
         weights: Dictionary with reaction IDs as keys and values as weights.
             Weights specify the cost of adding a reaction to the consistent
             subnetwork. Default value is 1.
+
+    Returns:
+        Set of reaction IDs in the consistent reaction subset.
     """
     consistent_subset = set()
     reaction_set = set(model.reactions)
