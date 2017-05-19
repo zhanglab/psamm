@@ -72,16 +72,18 @@ def add_all_exchange_reactions(model, compartment, allow_duplicates=False):
     added = set()
     added_compounds = set()
     initial_compounds = set(model.compounds)
+    reactions = set(model.database.reactions)
     for model_compound in initial_compounds:
         compound = model_compound.in_compartment(compartment)
         if compound in added_compounds:
             continue
 
-        rxnid_ex = create_exchange_id(model.database.reactions, compound)
+        rxnid_ex = create_exchange_id(reactions, compound)
 
         reaction_ex = Reaction(Direction.Both, {compound: -1})
         if reaction_ex not in all_reactions:
             model.database.set_reaction(rxnid_ex, reaction_ex)
+            reactions.add(rxnid_ex)
         else:
             rxnid_ex = all_reactions[reaction_ex]
 
@@ -125,6 +127,7 @@ def add_all_transport_reactions(model, boundaries, allow_duplicates=False):
     added = set()
     added_pairs = set()
     initial_compounds = set(model.compounds)
+    reactions = set(model.database.reactions)
     for compound in initial_compounds:
         for c1, c2 in boundary_pairs:
             compound1 = compound.in_compartment(c1)
@@ -133,8 +136,7 @@ def add_all_transport_reactions(model, boundaries, allow_duplicates=False):
             if pair in added_pairs:
                 continue
 
-            rxnid_tp = create_transport_id(
-                model.database.reactions, compound1, compound2)
+            rxnid_tp = create_transport_id(reactions, compound1, compound2)
 
             reaction_tp = Reaction(Direction.Both, {
                 compound1: -1,
@@ -142,6 +144,7 @@ def add_all_transport_reactions(model, boundaries, allow_duplicates=False):
             })
             if reaction_tp not in all_reactions:
                 model.database.set_reaction(rxnid_tp, reaction_tp)
+                reactions.add(rxnid_tp)
             else:
                 rxnid_tp = all_reactions[reaction_tp]
 
