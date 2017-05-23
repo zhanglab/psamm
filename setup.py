@@ -54,6 +54,7 @@ setup(
             'chargecheck = psamm.commands.chargecheck:ChargeBalanceCommand',
             'console = psamm.commands.console:ConsoleCommand',
             'duplicatescheck = psamm.commands.duplicatescheck:DuplicatesCheck',
+            'eflux = psamm.commands.eflux:EFluxBalance',
             'excelexport = psamm.commands.excelexport:ExcelExportCommand',
             'fastgapfill = psamm.commands.fastgapfill:FastGapFillCommand',
             'fba = psamm.commands.fba:FluxBalanceCommand',
