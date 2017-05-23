@@ -17,6 +17,8 @@
 
 """Representation of compound/reaction entries in models."""
 
+from __future__ import unicode_literals
+
 import abc
 from collections import Mapping
 
@@ -45,6 +47,9 @@ class ModelEntry(object):
     @abc.abstractproperty
     def filemark(self):
         """Position of entry in the source file (or None)."""
+
+    def __repr__(self):
+        return str('<{} id={!r}>').format(self.__class__.__name__, self.id)
 
 
 class CompoundEntry(ModelEntry):
