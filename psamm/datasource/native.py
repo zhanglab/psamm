@@ -133,6 +133,13 @@ class _OrderedEntrySet(object):
         except KeyError:
             pass
 
+    def clear(self):
+        self._dict.clear()
+
+    def update(self, it):
+        for entry in it:
+            self.add_entry(entry)
+
     def __repr__(self):
         return str('<_OrderedEntrySet {{{}}}>').format(
             ', '.join(repr(x) for x in iter(self)))
