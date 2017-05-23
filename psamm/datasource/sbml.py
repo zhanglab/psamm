@@ -38,7 +38,9 @@ from six import itervalues, iteritems, text_type, PY3
 from .context import FileMark
 from .entry import (CompoundEntry as BaseCompoundEntry,
                     ReactionEntry as BaseReactionEntry,
-                    CompartmentEntry as BaseCompartmentEntry)
+                    CompartmentEntry as BaseCompartmentEntry,
+                    DictReactionEntry, DictCompoundEntry,
+                    DictCompartmentEntry)
 from .native import NativeModel
 from ..reaction import Reaction, Compound, Direction
 from ..metabolicmodel import create_exchange_id
@@ -67,6 +69,21 @@ XHTML_NS = 'http://www.w3.org/1999/xhtml'
 # FBC namespaces
 FBC_V1 = 'http://www.sbml.org/sbml/level3/version1/fbc/version1'
 FBC_V2 = 'http://www.sbml.org/sbml/level3/version1/fbc/version2'
+
+
+# COBRA ID mappings
+_COBRA_DECODE_ESCAPES = {
+    '_DASH_': '-',
+    '_FSLASH_': '/',
+    '_BSLASH_': '\\',
+    '_LPAREN_': '(',
+    '_RPAREN_': ')',
+    '_LSQBKT_': '[',
+    '_RSQBKT_': ']',
+    '_COMMA_': ',',
+    '_PERIOD_': '.',
+    '_APOS_': "'"
+}
 
 
 def _tag(tag, namespace=None):
@@ -1241,3 +1258,390 @@ class SBMLWriter(object):
         if PY3:
             write_options['encoding'] = 'unicode'
         tree.write(file, **write_options)
+
+
+def convert_sbml_model(model):
+    """Convert raw SBML model to extended model.
+
+    Args:
+        model: :class:`NativeModel` obtained from :class:`SBMLReader`.
+    """
+    biomass_reactions = set()
+    for reaction in model.reactions:
+        # Extract limits
+        if reaction.id not in model.limits:
+            lower, upper = parse_flux_bounds(reaction)
+            if lower is not None or upper is not None:
+                model.limits[reaction.id] = reaction.id, lower, upper
+
+        # Detect objective
+        objective = parse_objective_coefficient(reaction)
+        if objective is not None and objective != 0:
+            biomass_reactions.add(reaction.id)
+
+    if len(biomass_reactions) == 1:
+        model.biomass_reaction = next(iter(biomass_reactions))
+
+    # Convert model to mutable entries
+    convert_model_entries(model)
+
+
+def entry_id_from_cobra_encoding(cobra_id):
+    """Convert COBRA-encoded ID string to decoded ID string."""
+    for escape, symbol in iteritems(_COBRA_DECODE_ESCAPES):
+        cobra_id = cobra_id.replace(escape, symbol)
+    return cobra_id
+
+
+def create_convert_sbml_id_function(
+        compartment_prefix='C_', reaction_prefix='R_',
+        compound_prefix='M_', decode_id=entry_id_from_cobra_encoding):
+    """Create function for converting SBML IDs.
+
+    The returned function will strip prefixes, decode the ID using the provided
+    function. These prefixes are common on IDs in SBML models because the IDs
+    live in a global namespace.
+    """
+    def convert_sbml_id(entry):
+        if isinstance(entry, BaseCompartmentEntry):
+            prefix = compartment_prefix
+        elif isinstance(entry, BaseReactionEntry):
+            prefix = reaction_prefix
+        elif isinstance(entry, BaseCompoundEntry):
+            prefix = compound_prefix
+
+        new_id = entry.id
+        if decode_id is not None:
+            new_id = decode_id(new_id)
+        if prefix is not None and new_id.startswith(prefix):
+            new_id = new_id[len(prefix):]
+
+        return new_id
+
+    return convert_sbml_id
+
+
+def translate_sbml_compartment(entry, new_id):
+    """Translate SBML compartment entry."""
+    return DictCompartmentEntry(entry, id=new_id)
+
+
+def translate_sbml_reaction(entry, new_id, compartment_map, compound_map):
+    """Translate SBML reaction entry."""
+    new_entry = DictReactionEntry(entry, id=new_id)
+
+    # Convert compound IDs in reaction equation
+    if new_entry.equation is not None:
+        compounds = []
+        for compound, value in new_entry.equation.compounds:
+            # Translate compartment to new ID, if available.
+            compartment = compartment_map.get(
+                compound.compartment, compound.compartment)
+            new_compound = compound.translate(
+                lambda name: compound_map.get(name, name)).in_compartment(
+                    compartment)
+            compounds.append((new_compound, value))
+
+        new_entry.equation = Reaction(
+            new_entry.equation.direction, compounds)
+
+    # Get XHTML notes properties
+    for key, value in iteritems(parse_xhtml_reaction_notes(entry)):
+        if key not in new_entry.properties:
+            new_entry.properties[key] = value
+
+    return new_entry
+
+
+def translate_sbml_compound(entry, new_id, compartment_map):
+    """Translate SBML compound entry."""
+    new_entry = DictCompoundEntry(entry, id=new_id)
+
+    if 'compartment' in new_entry.properties:
+        old_compartment = new_entry.properties['compartment']
+        new_entry.properties['compartment'] = compartment_map.get(
+            old_compartment, old_compartment)
+
+    # Get XHTML notes properties
+    for key, value in iteritems(parse_xhtml_species_notes(entry)):
+        if key not in new_entry.properties:
+            new_entry.properties[key] = value
+
+    return new_entry
+
+
+def convert_model_entries(
+        model, convert_id=create_convert_sbml_id_function(),
+        create_unique_id=None,
+        translate_compartment=translate_sbml_compartment,
+        translate_reaction=translate_sbml_reaction,
+        translate_compound=translate_sbml_compound):
+    """Convert and decode model entries.
+
+    Model entries are converted to new entries using the translate functions
+    and IDs are converted using the given coversion function. If ID conversion
+    would create a clash of IDs, the ``create_unique_id`` function is called
+    with a container of current IDs and the base ID to generate a unique ID
+    from. The translation functions take an existing entry and the new ID.
+
+    All references within the model are updated to use new IDs: compartment
+    boundaries, limits, exchange, model, biomass reaction, etc.
+
+    Args:
+        model: :class:`NativeModel`.
+    """
+    compartment_map = {}
+    compound_map = {}
+    reaction_map = {}
+
+    def find_new_ids(entries, id_map, type_name):
+        """Create new IDs for entries."""
+        new_ids = set()
+        for entry in entries:
+            new_id = convert_id(entry)
+            if new_id in new_ids:
+                if create_unique_id is not None:
+                    new_id = create_unique_id(new_ids, new_id)
+                else:
+                    raise ValueError(
+                        'Entity ID {!r} is not unique after conversion'.format(
+                            type_name, entry.id))
+
+            id_map[entry.id] = new_id
+            new_ids.add(new_id)
+
+    # Find new IDs for all entries
+    find_new_ids(model.compartments, compartment_map, 'Compartment')
+    find_new_ids(model.compounds, compound_map, 'Compound')
+    find_new_ids(model.reactions, reaction_map, 'Reaction')
+
+    # Create new compartment entries
+    new_compartments = []
+    for compartment in model.compartments:
+        new_id = compartment_map[compartment.id]
+        new_compartments.append(translate_compartment(compartment, new_id))
+
+    # Create new compound entries
+    new_compounds = []
+    for compound in model.compounds:
+        new_id = compound_map[compound.id]
+        new_compounds.append(
+            translate_compound(compound, new_id, compartment_map))
+
+    # Create new reaction entries
+    new_reactions = []
+    for reaction in model.reactions:
+        new_id = reaction_map[reaction.id]
+        new_entry = translate_reaction(
+            reaction, new_id, compartment_map, compound_map)
+        new_reactions.append(new_entry)
+
+    # Update entries
+    model.compartments.clear()
+    model.compartments.update(new_compartments)
+
+    model.compounds.clear()
+    model.compounds.update(new_compounds)
+
+    model.reactions.clear()
+    model.reactions.update(new_reactions)
+
+    # Convert compartment boundaries
+    new_boundaries = []
+    for boundary in model.compartment_boundaries:
+        c1, c2 = (compartment_map.get(c, c) for c in boundary)
+        new_boundaries.append(tuple(sorted(c1, c2)))
+
+    model.compartment_boundaries.clear()
+    model.compartment_boundaries.update(new_boundaries)
+
+    # Convert limits
+    new_limits = []
+    for reaction, lower, upper in itervalues(model.limits):
+        new_reaction_id = reaction_map.get(reaction, reaction)
+        new_limits.append((new_reaction_id, lower, upper))
+
+    model.limits.clear()
+    model.limits.update((limit[0], limit) for limit in new_limits)
+
+    # Convert exchange
+    new_exchanges = []
+    for compound, reaction, lower, upper in itervalues(model.exchange):
+        new_compound_id = compound.translated(
+            lambda name: compound_map.get(name, name))
+        new_reaction_id = reaction_map.get(reaction, reaction)
+        new_exchanges.append((new_compound_id, new_reaction_id, lower, upper))
+
+    model.exchange.clear()
+    model.exchange.update((ex[0], ex) for ex in new_exchanges)
+
+    # Convert model
+    new_model = []
+    for reaction in model.model:
+        new_id = reaction_map.get(reaction, reaction)
+        new_model.append(new_id)
+
+    model.model.clear()
+    model.model.update((new_id, None) for new_id in new_model)
+
+    # Convert other properties
+    if model.biomass_reaction is not None:
+        old_id = model.biomass_reaction
+        model.biomass_reaction = reaction_map.get(old_id, old_id)
+
+    if model.extracellular_compartment is not None:
+        old_id = model.extracellular_compartment
+        model.extracellular_compartment = compartment_map.get(old_id, old_id)
+
+    if model.default_compartment is not None:
+        old_id = model.default_compartment
+        model.default_compartment = compartment_map.get(old_id, old_id)
+
+
+def parse_xhtml_notes(entry):
+    """Yield key, value pairs parsed from the XHTML notes section.
+
+    Each key, value pair must be defined in its own text block, e.g.
+    ``<p>key: value</p><p>key2: value2</p>``. The key and value must be
+    separated by a colon. Whitespace is stripped from both key and value, and
+    quotes are removed from values if present. The key is normalized by
+    conversion to lower case and spaces replaced with underscores.
+
+    Args:
+        entry: :class:`_SBMLEntry`.
+    """
+    for note in entry.xml_notes.itertext():
+        m = re.match(r'^([^:]+):(.+)$', note)
+        if m:
+            key, value = m.groups()
+            key = key.strip().lower().replace(' ', '_')
+            value = value.strip()
+            m = re.match(r'^"(.*)"$', value)
+            if m:
+                value = m.group(1)
+            if value != '':
+                yield key, value
+
+
+def parse_xhtml_species_notes(entry):
+    """Return species properties defined in the XHTML notes.
+
+    Older SBML models often define additional properties in the XHTML notes
+    section because structured methods for defining properties had not been
+    developed. This will try to parse the following properties: ``PUBCHEM ID``,
+    ``CHEBI ID``, ``FORMULA``, ``KEGG ID``, ``CHARGE``.
+
+    Args:
+        entry: :class:`SBMLSpeciesEntry`.
+    """
+    properties = {}
+    if entry.xml_notes is not None:
+        cobra_notes = dict(parse_xhtml_notes(entry))
+
+        for key in ('pubchem_id', 'chebi_id'):
+            if key in cobra_notes:
+                properties[key] = cobra_notes[key]
+
+        if 'formula' in cobra_notes:
+            properties['formula'] = cobra_notes['formula']
+
+        if 'kegg_id' in cobra_notes:
+            properties['kegg'] = cobra_notes['kegg_id']
+
+        if 'charge' in cobra_notes:
+            try:
+                value = int(cobra_notes['charge'])
+            except ValueError:
+                logger.warning(
+                    'Unable to parse charge for {} as an'
+                    ' integer: {}'.format(
+                        entry.id, cobra_notes['charge']))
+                value = cobra_notes['charge']
+            properties['charge'] = value
+
+    return properties
+
+
+def parse_xhtml_reaction_notes(entry):
+    """Return reaction properties defined in the XHTML notes.
+
+    Older SBML models often define additional properties in the XHTML notes
+    section because structured methods for defining properties had not been
+    developed. This will try to parse the following properties: ``SUBSYSTEM``,
+    ``GENE ASSOCIATION``, ``EC NUMBER``, ``AUTHORS``, ``CONFIDENCE``.
+
+    Args:
+        entry: :class:`SBMLReactionEntry`.
+    """
+    properties = {}
+    if entry.xml_notes is not None:
+        cobra_notes = dict(parse_xhtml_notes(entry))
+
+        if 'subsystem' in cobra_notes:
+            properties['subsystem'] = cobra_notes['subsystem']
+
+        if 'gene_association' in cobra_notes:
+            properties['genes'] = cobra_notes['gene_association']
+
+        if 'ec_number' in cobra_notes:
+            properties['ec'] = cobra_notes['ec_number']
+
+        if 'authors' in cobra_notes:
+            properties['authors'] = [
+                a.strip() for a in cobra_notes['authors'].split(';')]
+
+        if 'confidence' in cobra_notes:
+            try:
+                value = int(cobra_notes['confidence'])
+            except ValueError:
+                logger.warning(
+                    'Unable to parse confidence level for {} as an'
+                    ' integer: {}'.format(
+                        entry.id, cobra_notes['confidence']))
+                value = cobra_notes['confidence']
+            properties['confidence'] = value
+
+    return properties
+
+
+def parse_objective_coefficient(entry):
+    """Return objective value for reaction entry.
+
+    Detect objectives that are specified using the non-standardized
+    kinetic law parameters which are used by many pre-FBC SBML models. The
+    objective coefficient is returned for the given reaction, or None if
+    undefined.
+
+    Args:
+        entry: :class:`SBMLReactionEntry`.
+    """
+    for parameter in entry.kinetic_law_reaction_parameters:
+        pid, name, value, units = parameter
+        if (pid == 'OBJECTIVE_COEFFICIENT' or
+                name == 'OBJECTIVE_COEFFICIENT'):
+            return value
+
+    return None
+
+
+def parse_flux_bounds(entry):
+    """Return flux bounds for reaction entry.
+
+    Detect flux bounds that are specified using the non-standardized
+    kinetic law parameters which are used by many pre-FBC SBML models. The
+    flux bounds are returned as a pair of lower, upper bounds. The returned
+    bound is None if undefined.
+
+    Args:
+        entry: :class:`SBMLReactionEntry`.
+    """
+    lower_bound = None
+    upper_bound = None
+    for parameter in entry.kinetic_law_reaction_parameters:
+        pid, name, value, units = parameter
+        if pid == 'UPPER_BOUND' or name == 'UPPER_BOUND':
+            upper_bound = value
+        elif pid == 'LOWER_BOUND' or name == 'LOWER_BOUND':
+            lower_bound = value
+
+    return lower_bound, upper_bound
