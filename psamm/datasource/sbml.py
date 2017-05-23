@@ -111,11 +111,11 @@ class _SBMLEntry(object):
         return self._root.find(self._reader._sbml_tag('notes'))
 
 
-class SpeciesEntry(_SBMLEntry, BaseCompoundEntry):
+class SBMLSpeciesEntry(_SBMLEntry, BaseCompoundEntry):
     """Species entry in the SBML file"""
 
     def __init__(self, reader, root, filemark=None):
-        super(SpeciesEntry, self).__init__(reader, root)
+        super(SBMLSpeciesEntry, self).__init__(reader, root)
 
         self._name = root.get('name')
         self._comp = root.get('compartment')
@@ -215,11 +215,11 @@ class SpeciesEntry(_SBMLEntry, BaseCompoundEntry):
         return self._filemark
 
 
-class ReactionEntry(_SBMLEntry, BaseReactionEntry):
+class SBMLReactionEntry(_SBMLEntry, BaseReactionEntry):
     """Reaction entry in SBML file"""
 
     def __init__(self, reader, root, filemark=None):
-        super(ReactionEntry, self).__init__(reader, root)
+        super(SBMLReactionEntry, self).__init__(reader, root)
 
         self._name = self._root.get('name')
         self._rev = self._root.get('reversible', 'true') == 'true'
@@ -391,11 +391,11 @@ class ReactionEntry(_SBMLEntry, BaseReactionEntry):
         return self._filemark
 
 
-class CompartmentEntry(_SBMLEntry, BaseCompartmentEntry):
+class SBMLCompartmentEntry(_SBMLEntry, BaseCompartmentEntry):
     """Compartment entry in the SBML file"""
 
     def __init__(self, reader, root, filemark=None):
-        super(CompartmentEntry, self).__init__(reader, root)
+        super(SBMLCompartmentEntry, self).__init__(reader, root)
 
         self._name = self._root.get('name')
         self._filemark = filemark
@@ -414,7 +414,7 @@ class CompartmentEntry(_SBMLEntry, BaseCompartmentEntry):
         return self._filemark
 
 
-class ObjectiveEntry(object):
+class SBMLObjectiveEntry(object):
     """Flux objective defined with FBC"""
 
     def __init__(self, reader, namespace, root):
@@ -464,7 +464,7 @@ class ObjectiveEntry(object):
         return iteritems(self._reactions)
 
 
-class FluxBoundEntry(object):
+class SBMLFluxBoundEntry(object):
     """Flux bound defined with FBC V1.
 
     Flux bounds defined with FBC V2 are instead encoded as ``upper_flux`` and
@@ -632,7 +632,7 @@ class SBMLReader(object):
             if flux_bounds is not None:
                 for flux_bound in flux_bounds.iterfind(
                         _tag('fluxBound', FBC_V1)):
-                    entry = FluxBoundEntry(self, FBC_V1, flux_bound)
+                    entry = SBMLFluxBoundEntry(self, FBC_V1, flux_bound)
                     self._flux_bounds.append(entry)
 
                     # Create reference from reaction to flux bound
@@ -648,7 +648,7 @@ class SBMLReader(object):
                 self._sbml_tag('compartment')):
             filemark = FileMark(
                 self._context, self._get_sourceline(compartment), None)
-            entry = CompartmentEntry(self, compartment, filemark=filemark)
+            entry = SBMLCompartmentEntry(self, compartment, filemark=filemark)
             self._model_compartments[entry.id] = entry
 
         # Species
@@ -657,7 +657,7 @@ class SBMLReader(object):
         for species in self._species.iterfind(self._sbml_tag('species')):
             filemark = FileMark(
                 self._context, self._get_sourceline(species), None)
-            entry = SpeciesEntry(self, species, filemark=filemark)
+            entry = SBMLSpeciesEntry(self, species, filemark=filemark)
             self._model_species[entry.id] = entry
 
         # Reactions
@@ -666,7 +666,7 @@ class SBMLReader(object):
         for reaction in self._reactions.iterfind(self._sbml_tag('reaction')):
             filemark = FileMark(
                 self._context, self._get_sourceline(reaction), None)
-            entry = ReactionEntry(self, reaction, filemark=filemark)
+            entry = SBMLReactionEntry(self, reaction, filemark=filemark)
             self._model_reactions[entry.id] = entry
 
         if self._ignore_boundary:
@@ -699,7 +699,7 @@ class SBMLReader(object):
             if objectives is not None:
                 for objective in objectives.iterfind(
                         _tag('objective', fbc_ns)):
-                    entry = ObjectiveEntry(self, fbc_ns, objective)
+                    entry = SBMLObjectiveEntry(self, fbc_ns, objective)
                     self._model_objectives[entry.id] = entry
 
                 active = objectives.get(_tag('activeObjective', fbc_ns))
@@ -823,19 +823,19 @@ class SBMLReader(object):
             if reaction in model.limits:
                 continue
 
-            if bounds.operation == FluxBoundEntry.LESS_EQUAL:
+            if bounds.operation == SBMLFluxBoundEntry.LESS_EQUAL:
                 if reaction not in limits_upper:
                     limits_upper[reaction] = bounds.value
                 else:
                     raise ParseError(
                         'Conflicting bounds for {}'.format(reaction))
-            elif bounds.operation == FluxBoundEntry.GREATER_EQUAL:
+            elif bounds.operation == SBMLFluxBoundEntry.GREATER_EQUAL:
                 if reaction not in limits_lower:
                     limits_lower[reaction] = bounds.value
                 else:
                     raise ParseError(
                         'Conflicting bounds for {}'.format(reaction))
-            elif bounds.operation == FluxBoundEntry.EQUAL:
+            elif bounds.operation == SBMLFluxBoundEntry.EQUAL:
                 if (reaction not in limits_lower and
                         reaction not in limits_upper):
                     limits_lower[reaction] = bounds.value
