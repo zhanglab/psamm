@@ -19,13 +19,19 @@
 
 from __future__ import unicode_literals
 
-import xml.etree.ElementTree as ET
 from decimal import Decimal
 from fractions import Fraction
 from functools import partial
 import logging
 import re
 import json
+
+# Import ElementTree XML parser. The lxml etree implementation may also be
+# used with SBMLReader but has compatiblity issues with SBMLWriter.
+try:
+    import xml.etree.cElementTree as ET
+except ImportError:
+    import xml.etree.ElementTree as ET
 
 from six import itervalues, iteritems, text_type, PY3
 
@@ -640,7 +646,8 @@ class SBMLReader(object):
             self._sbml_tag('listOfCompartments'))
         for compartment in self._compartments.iterfind(
                 self._sbml_tag('compartment')):
-            filemark = FileMark(self._context, None, None)
+            filemark = FileMark(
+                self._context, self._get_sourceline(compartment), None)
             entry = CompartmentEntry(self, compartment, filemark=filemark)
             self._model_compartments[entry.id] = entry
 
@@ -648,7 +655,8 @@ class SBMLReader(object):
         self._model_species = {}
         self._species = self._model.find(self._sbml_tag('listOfSpecies'))
         for species in self._species.iterfind(self._sbml_tag('species')):
-            filemark = FileMark(self._context, None, None)
+            filemark = FileMark(
+                self._context, self._get_sourceline(species), None)
             entry = SpeciesEntry(self, species, filemark=filemark)
             self._model_species[entry.id] = entry
 
@@ -656,7 +664,8 @@ class SBMLReader(object):
         self._model_reactions = {}
         self._reactions = self._model.find(self._sbml_tag('listOfReactions'))
         for reaction in self._reactions.iterfind(self._sbml_tag('reaction')):
-            filemark = FileMark(self._context, None, None)
+            filemark = FileMark(
+                self._context, self._get_sourceline(reaction), None)
             entry = ReactionEntry(self, reaction, filemark=filemark)
             self._model_reactions[entry.id] = entry
 
@@ -699,6 +708,10 @@ class SBMLReader(object):
                         active))
 
                 self._active_objective = self._model_objectives[active]
+
+    def _get_sourceline(self, element):
+        """Get source line of element (only supported by lxml)."""
+        return getattr(element, 'sourceline', None)
 
     def get_compartment(self, compartment_id):
         """Return :class:`.CompartmentEntry` corresponding to id."""
