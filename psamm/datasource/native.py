@@ -97,8 +97,11 @@ def yaml_load(stream):
 class _OrderedEntrySet(object):
     """Ordered set of entity entries.
 
-    This deliberately does not implement Mapping because iteration does not
-    provide keys (since the keys are already in the entry values).
+    This is somewhere between a Set and a Mapping but deliberately does not
+    implement any of those interfaces. Iteration does not provide
+    (key, value)-items (since the keys are already in the entry values)
+    but instead provides just values. The usual set operations such as union
+    and intersection are not provided.
     """
     def __init__(self, mapping={}):
         self._dict = OrderedDict(mapping)
@@ -129,6 +132,10 @@ class _OrderedEntrySet(object):
             del self._dict[key]
         except KeyError:
             pass
+
+    def __repr__(self):
+        return str('<_OrderedEntrySet {{{}}}>').format(
+            ', '.join(repr(x) for x in iter(self)))
 
 
 class ModelReader(object):
@@ -574,6 +581,9 @@ class NativeModel(object):
         return MetabolicModel.load_model(
             database, model_definition, itervalues(self.exchange),
             itervalues(self.limits), v_max=self.default_flux_limit)
+
+    def __repr__(self):
+        return str('<{} name={!r}>'.format(self.__class__.__name__, self.name))
 
 
 def _check_id(entity, entity_type):
