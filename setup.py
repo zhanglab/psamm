@@ -33,7 +33,7 @@ setup(
 
     long_description=long_description,
 
-    classifiers = [
+    classifiers=[
         'Development Status :: 4 - Beta',
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
         'Programming Language :: Python :: 2.7',
@@ -44,34 +44,34 @@ setup(
     ],
 
     packages=find_packages(),
-    entry_points = {
-        'console_scripts': [
-            'psamm-model = psamm.command:main',
-            'psamm-sbml-model = psamm.command:main_sbml',
-            'psamm-list-lpsolvers = psamm.lpsolver.generic:list_solvers'
-        ],
-        'psamm.commands': [
-            'chargecheck = psamm.commands.chargecheck:ChargeBalanceCommand',
-            'console = psamm.commands.console:ConsoleCommand',
-            'duplicatescheck = psamm.commands.duplicatescheck:DuplicatesCheck',
-            'excelexport = psamm.commands.excelexport:ExcelExportCommand',
-            'fastgapfill = psamm.commands.fastgapfill:FastGapFillCommand',
-            'fba = psamm.commands.fba:FluxBalanceCommand',
-            'fluxcheck = psamm.commands.fluxcheck:FluxConsistencyCommand',
-            'fluxcoupling = psamm.commands.fluxcoupling:FluxCouplingCommand',
-            'formulacheck = psamm.commands.formulacheck:FormulaBalanceCommand',
-            'fva = psamm.commands.fva:FluxVariabilityCommand',
-            'gapcheck = psamm.commands.gapcheck:GapCheckCommand',
-            'gapfill = psamm.commands.gapfill:GapFillCommand',
-            'genedelete = psamm.commands.genedelete:GeneDeletionCommand',
-            'masscheck = psamm.commands.masscheck:MassConsistencyCommand',
-            'randomsparse = psamm.commands.randomsparse:RandomSparseNetworkCommand',
-            'robustness = psamm.commands.robustness:RobustnessCommand',
-            'sbmlexport = psamm.commands.sbmlexport:SBMLExport',
-            'search = psamm.commands.search:SearchCommand',
-            'tableexport = psamm.commands.tableexport:ExportTableCommand',
-        ]
-    },
+
+    entry_points='''
+        [console_scripts]
+        psamm-model = psamm.command:main
+        psamm-sbml-model = psamm.command:main_sbml
+        psamm-list-lpsolvers = psamm.lpsolver.generic:list_solvers
+
+        [psamm.commands]
+        chargecheck = psamm.commands.chargecheck:ChargeBalanceCommand
+        console = psamm.commands.console:ConsoleCommand
+        duplicatescheck = psamm.commands.duplicatescheck:DuplicatesCheck
+        excelexport = psamm.commands.excelexport:ExcelExportCommand [excel]
+        fastgapfill = psamm.commands.fastgapfill:FastGapFillCommand
+        fba = psamm.commands.fba:FluxBalanceCommand
+        fluxcheck = psamm.commands.fluxcheck:FluxConsistencyCommand
+        fluxcoupling = psamm.commands.fluxcoupling:FluxCouplingCommand
+        formulacheck = psamm.commands.formulacheck:FormulaBalanceCommand
+        fva = psamm.commands.fva:FluxVariabilityCommand
+        gapcheck = psamm.commands.gapcheck:GapCheckCommand
+        gapfill = psamm.commands.gapfill:GapFillCommand
+        genedelete = psamm.commands.genedelete:GeneDeletionCommand
+        masscheck = psamm.commands.masscheck:MassConsistencyCommand
+        randomsparse = psamm.commands.randomsparse:RandomSparseNetworkCommand
+        robustness = psamm.commands.robustness:RobustnessCommand
+        sbmlexport = psamm.commands.sbmlexport:SBMLExport
+        search = psamm.commands.search:SearchCommand
+        tableexport = psamm.commands.tableexport:ExportTableCommand
+    ''',
 
     test_suite='psamm.tests',
 
@@ -81,6 +81,7 @@ setup(
     ],
     extras_require={
         'docs': ['sphinx', 'sphinx_rtd_theme', 'mock'],
+        'excel': ['xlsxwriter'],
         ':python_version=="2.7"': ['enum34'],
         ':python_version=="3.3"': ['enum34']
     })
