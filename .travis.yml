@@ -1,3 +1,4 @@
+dist: trusty
 sudo: false
 language: python
 cache:
@@ -9,7 +10,9 @@ addons:
         packages:
             - libgmp-dev
             - libgmp10
-            - glpk
+            - libglpk36
+            - libglpk-dev
+            - glpk-utils
             - swig
 
 install:
