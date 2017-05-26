@@ -20,7 +20,6 @@ from __future__ import unicode_literals
 import sys
 import os
 import argparse
-import codecs
 import shutil
 import tempfile
 from contextlib import contextmanager
@@ -103,6 +102,7 @@ class MockSolverCommand(SolverCommandMixin, Command):
     """
     def run(self):
         solver = self._get_solver()
+        print(solver)
 
 
 class BaseCommandTest(object):
@@ -579,7 +579,7 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
 
 class TestSBMLCommandMain(unittest.TestCase, BaseCommandTest):
     def setUp(self):
-        doc = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
+        doc = BytesIO('''<?xml version="1.0" encoding="UTF-8"?>
 <sbml xmlns="http://www.sbml.org/sbml/level3/version1/core"
       xmlns:fbc="http://www.sbml.org/sbml/level3/version1/fbc/version1"
       xmlns:html="http://www.w3.org/1999/xhtml"
@@ -631,7 +631,7 @@ class TestSBMLCommandMain(unittest.TestCase, BaseCommandTest):
    <fbc:fluxBound fbc:reaction="R_Biomass" fbc:operation="lessEqual" fbc:value="1000"/>
   </fbc:listOfFluxBounds>
  </model>
-</sbml>''')
+</sbml>'''.encode('utf-8'))
 
         reader = sbml.SBMLReader(doc)
         self._model = reader.create_model()

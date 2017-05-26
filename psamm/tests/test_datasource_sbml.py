@@ -16,6 +16,8 @@
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
+from __future__ import unicode_literals
+
 import unittest
 
 from psamm.datasource import sbml
@@ -23,14 +25,14 @@ from psamm.reaction import Reaction, Compound, Direction
 
 from decimal import Decimal
 from fractions import Fraction
-from six import StringIO
+from six import BytesIO
 
 
 class TestSBMLDatabaseL1V2(unittest.TestCase):
     """Test parsing of a simple level 1 version 2 SBML file"""
 
     def setUp(self):
-        self.doc = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
+        self.doc = BytesIO('''<?xml version="1.0" encoding="UTF-8"?>
 <sbml xmlns="http://www.sbml.org/sbml/level1"
       xmlns:html="http://www.w3.org/1999/xhtml"
       level="1" version="2">
@@ -70,7 +72,7 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
    </reaction>
   </listOfReactions>
  </model>
-</sbml>''')
+</sbml>'''.encode('utf-8'))
 
     def test_model_name(self):
         reader = sbml.SBMLReader(self.doc)
@@ -169,7 +171,7 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
     """Test parsing of a simple level 2 version 5 SBML file"""
 
     def setUp(self):
-        self.doc = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
+        self.doc = BytesIO('''<?xml version="1.0" encoding="UTF-8"?>
 <sbml xmlns="http://www.sbml.org/sbml/level2/version5"
       xmlns:html="http://www.w3.org/1999/xhtml"
       level="2" version="5">
@@ -209,7 +211,7 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
    </reaction>
   </listOfReactions>
  </model>
-</sbml>''')
+</sbml>'''.encode('utf-8'))
 
     def test_model_name(self):
         reader = sbml.SBMLReader(self.doc)
@@ -309,7 +311,7 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
     """Test parsing of a simple level 3 version 1 SBML file"""
 
     def setUp(self):
-        self.doc = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
+        self.doc = BytesIO('''<?xml version="1.0" encoding="UTF-8"?>
 <sbml xmlns="http://www.sbml.org/sbml/level3/version1/core"
       xmlns:html="http://www.w3.org/1999/xhtml"
       level="3" version="1">
@@ -349,7 +351,7 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
    </reaction>
   </listOfReactions>
  </model>
-</sbml>''')
+</sbml>'''.encode('utf-8'))
 
     def test_model_name(self):
         reader = sbml.SBMLReader(self.doc)
@@ -446,7 +448,7 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
     """Test parsing of a level 3 version 1 SBML file with FBC version 1"""
 
     def setUp(self):
-        self.doc = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
+        self.doc = BytesIO('''<?xml version="1.0" encoding="UTF-8"?>
 <sbml xmlns="http://www.sbml.org/sbml/level3/version1/core"
       xmlns:fbc="http://www.sbml.org/sbml/level3/version1/fbc/version1"
       xmlns:html="http://www.w3.org/1999/xhtml"
@@ -498,7 +500,7 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
    <fbc:fluxBound fbc:reaction="R_Biomass" fbc:operation="lessEqual" fbc:value="1000"/>
   </fbc:listOfFluxBounds>
  </model>
-</sbml>''')
+</sbml>'''.encode('utf-8'))
 
     def test_model_name(self):
         reader = sbml.SBMLReader(self.doc)
@@ -616,7 +618,7 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
     """Test parsing of a level 3 version 1 SBML file with FBC version 2"""
 
     def setUp(self):
-        self.doc = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
+        self.doc = BytesIO('''<?xml version="1.0" encoding="UTF-8"?>
 <sbml xmlns="http://www.sbml.org/sbml/level3/version1/core"
       xmlns:fbc="http://www.sbml.org/sbml/level3/version1/fbc/version2"
       xmlns:html="http://www.w3.org/1999/xhtml"
@@ -667,7 +669,7 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
    </fbc:objective>
   </fbc:listOfObjectives>
  </model>
-</sbml>''')
+</sbml>'''.encode('utf-8'))
 
     def test_model_name(self):
         reader = sbml.SBMLReader(self.doc)
