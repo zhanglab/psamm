@@ -625,12 +625,23 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
       level="3" version="1"
       fbc:required="false">
  <model id="test_model" name="Test model">
+  <notes>
+   <body xmlns="http://www.w3.org/1999/xhtml">
+    <p>This is model information intended to be seen by humans.</p>
+   </body>
+  </notes>
   <listOfCompartments>
    <compartment id="C_c" name="cell" constant="true"/>
    <compartment id="C_b" name="boundary" constant="true"/>
   </listOfCompartments>
   <listOfSpecies>
-   <species id="M_Glucose" name="Glucose" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="C6H12O6"/>
+   <species id="M_Glucose" metaid="meta_M_Glucose" name="Glucose" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="C6H12O6">
+    <notes>
+     <body xmlns="http://www.w3.org/1999/xhtml">
+      <p>This is compound information intended to be seen by humans.</p>
+     </body>
+    </notes>
+   </species>
    <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="C6H11O9P"/>
    <species id="M_H2O" name="H2O" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="H2O"/>
    <species id="M_Phosphate" name="Phosphate" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="HO4P"/>
@@ -642,7 +653,7 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
    <parameter constant="true" id="P_upper_default" value="1000"/>
   </listOfParameters>
   <listOfReactions>
-   <reaction id="R_G6Pase" reversible="true" fast="false" fbc:lowerFluxBound="P_lower_G6Pase" fbc:upperFluxBound="P_upper_default">
+   <reaction id="R_G6Pase" metaid="meta_R_G6Pase" reversible="true" fast="false" fbc:lowerFluxBound="P_lower_G6Pase" fbc:upperFluxBound="P_upper_default">
     <listOfReactants>
      <speciesReference species="M_Glucose" stoichiometry="2" constant="true"/>
      <speciesReference species="M_Phosphate" stoichiometry="2" constant="true"/>
@@ -651,6 +662,23 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
      <speciesReference species="M_H2O" stoichiometry="2" constant="true"/>
      <speciesReference species="M_Glucose_6_P" stoichiometry="2" constant="true"/>
     </listOfProducts>
+    <notes>
+     <body xmlns="http://www.w3.org/1999/xhtml">
+      <p>This is reaction information intended to be seen by humans.</p>
+     </body>
+    </notes>
+    <annotation>
+     <RDF xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+          xmlns:bqbiol="http://biomodels.net/biology-qualifiers/">
+      <Description about="#meta_R_G6Pase">
+       <bqbiol:isVersionOf>
+        <Bag>
+         <li resource="http://identifiers.org/ec-code/3.1.3.9"/>
+        </Bag>
+       </bqbiol:isVersionOf>
+      </Description>
+     </RDF>
+    </annotation>
    </reaction>
    <reaction id="R_Biomass" reversible="false" fast="false" fbc:lowerFluxBound="P_lower_zero" fbc:upperFluxBound="P_upper_default">
     <listOfReactants>
@@ -696,6 +724,7 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         self.assertFalse(species['M_Glucose'].boundary)
         self.assertEqual(species['M_Glucose'].formula, 'C6H12O6')
         self.assertEqual(species['M_Glucose'].charge, 0)
+        self.assertIsNotNone(species['M_Glucose'].xml_notes)
 
         self.assertEqual(species['M_Glucose_6_P'].id, 'M_Glucose_6_P')
         self.assertEqual(species['M_Glucose_6_P'].name, 'Glucose-6-P')
@@ -703,6 +732,7 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         self.assertFalse(species['M_Glucose_6_P'].boundary)
         self.assertEqual(species['M_Glucose_6_P'].formula, 'C6H11O9P')
         self.assertEqual(species['M_Glucose_6_P'].charge, -2)
+        self.assertIsNone(species['M_Glucose_6_P'].xml_notes)
 
         self.assertEqual(species['M_H2O'].id, 'M_H2O')
         self.assertEqual(species['M_H2O'].name, 'H2O')
@@ -733,6 +763,9 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         self.assertEqual(reaction.properties['lower_flux'], -10)
         self.assertEqual(reaction.properties['upper_flux'], 1000)
 
+        self.assertIsNotNone(reaction.xml_notes)
+        self.assertIsNotNone(reaction.xml_annotation)
+
     def test_biomass_reaction_exists(self):
         reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         reaction = reader.get_reaction('R_Biomass')
@@ -747,6 +780,9 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
 
         self.assertEqual(reaction.properties['lower_flux'], 0)
         self.assertEqual(reaction.properties['upper_flux'], 1000)
+
+        self.assertIsNone(reaction.xml_notes)
+        self.assertIsNone(reaction.xml_annotation)
 
     def test_objective_exists(self):
         reader = sbml.SBMLReader(self.doc)
