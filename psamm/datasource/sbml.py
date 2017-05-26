@@ -81,7 +81,7 @@ class ParseError(Exception):
 
 
 class _SBMLEntry(object):
-    """Base class for compound and reaction entries"""
+    """Base class for compound and reaction entries."""
 
     def __init__(self, reader, root):
         self._reader = reader
@@ -107,8 +107,13 @@ class _SBMLEntry(object):
 
     @property
     def xml_notes(self):
-        """Access the entity notes as an XML document fragment"""
+        """Access the entity notes as an XML document fragment."""
         return self._root.find(self._reader._sbml_tag('notes'))
+
+    @property
+    def xml_annotation(self):
+        """Access the entity annotation as an XML document fragment."""
+        return self._root.find(self._reader._sbml_tag('annotation'))
 
 
 class SBMLSpeciesEntry(_SBMLEntry, BaseCompoundEntry):
