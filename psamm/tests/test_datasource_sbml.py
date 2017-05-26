@@ -173,7 +173,6 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
     def setUp(self):
         self.doc = BytesIO('''<?xml version="1.0" encoding="UTF-8"?>
 <sbml xmlns="http://www.sbml.org/sbml/level2/version5"
-      xmlns:html="http://www.w3.org/1999/xhtml"
       level="2" version="5">
  <model id="test_model" name="Test model">
   <listOfCompartments>
@@ -181,7 +180,17 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
    <compartment id="C_b" name="boundary"/>
   </listOfCompartments>
   <listOfSpecies>
-   <species id="M_Glucose" name="Glucose" compartment="C_c" charge="0"/>
+   <species id="M_Glucose" name="Glucose" compartment="C_c" charge="0">
+    <notes>
+     <body xmlns="http://www.w3.org/1999/xhtml">
+      <p>FORMULA: C6H12O6</p>
+      <p>Charge: "0"</p>
+      <p>Additional notes..</p>
+      <p>KEGG ID: C00031</p>
+      <p>Custom: 123</p>
+     </body>
+    </notes>
+   </species>
    <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c" charge="-2"/>
    <species id="M_H2O" name="H2O" compartment="C_c" charge="0"/>
    <species id="M_Phosphate" name="Phosphate" compartment="C_c" boundaryCondition="false"/>
@@ -198,7 +207,14 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
      <speciesReference species="M_Glucose_6_P" stoichiometry="2"/>
     </listOfProducts>
     <notes>
-     <html:p>Glucose 6-phosphatase</html:p>
+     <body xmlns="http://www.w3.org/1999/xhtml">
+      <p> Authors: Jane Doe ; John Doe </p>
+      <p>CONFIDENCE: 3</p>
+      <p>EC NUMBER: 3.1.3.9</p>
+      <p>gene association :   b0822 </p>
+      <p>SUBSYSTEM: "Glycolysis / Gluconeogenesis"</p>
+      <p>Additional notes...</p>
+     </body>
     </notes>
    </reaction>
    <reaction id="R_Biomass" reversible="false">
@@ -260,6 +276,16 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         self.assertFalse(species['M_Phosphate'].boundary)
         self.assertTrue(species['M_Biomass'].boundary)
 
+    def test_glucose_parse_notes(self):
+        reader = sbml.SBMLReader(self.doc)
+        species = reader.get_species('M_Glucose')
+        notes_dict = sbml.parse_xhtml_species_notes(species)
+        self.assertEqual(notes_dict, {
+            'formula': 'C6H12O6',
+            'kegg': 'C00031',
+            'charge': 0
+        })
+
     def test_g6pase_reaction_exists(self):
         reader = sbml.SBMLReader(self.doc)
         reaction = reader.get_reaction('R_G6Pase')
@@ -273,6 +299,18 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
                                     (Compound('M_Glucose_6_P', 'C_c'), 2)])
         self.assertEqual(reaction.equation, actual_equation)
 
+    def test_g6pase_parse_notes(self):
+        reader = sbml.SBMLReader(self.doc)
+        reaction = reader.get_reaction('R_G6Pase')
+        notes = sbml.parse_xhtml_reaction_notes(reaction)
+        self.assertEqual(notes, {
+            'subsystem': 'Glycolysis / Gluconeogenesis',
+            'genes': 'b0822',
+            'ec': '3.1.3.9',
+            'confidence': 3,
+            'authors': ['Jane Doe', 'John Doe']
+        })
+
     def test_biomass_reaction_exists(self):
         reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
         reaction = reader.get_reaction('R_Biomass')
@@ -284,16 +322,6 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
                                      Decimal('0.56'))],
                                    [(Compound('M_Biomass', 'C_b'), 1)])
         self.assertEqual(reaction.equation, actual_equation)
-
-    def test_reaction_xml_notes(self):
-        reader = sbml.SBMLReader(self.doc)
-        reaction = reader.get_reaction('R_G6Pase')
-        notes = reaction.xml_notes
-
-        notes_tags = list(notes)
-        self.assertEqual(len(notes_tags), 1)
-        self.assertEqual(notes_tags[0].tag, '{http://www.w3.org/1999/xhtml}p')
-        self.assertEqual(notes_tags[0].text, 'Glucose 6-phosphatase')
 
     def test_objective_not_present(self):
         reader = sbml.SBMLReader(self.doc)
