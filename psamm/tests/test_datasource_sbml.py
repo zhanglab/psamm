@@ -21,12 +21,12 @@ from __future__ import unicode_literals
 import unittest
 
 from psamm.datasource import sbml, native, entry
-from psamm.datasource.reaction import parse_reaction, parse_compound
+from psamm.datasource.reaction import parse_reaction
 from psamm.reaction import Reaction, Compound, Direction
 
 from decimal import Decimal
 from fractions import Fraction
-from six import BytesIO
+from six import BytesIO, itervalues
 
 
 class TestSBMLDatabaseL1V2(unittest.TestCase):
@@ -70,6 +70,8 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
    <reaction name="Biomass" reversible="false">
     <listOfReactants>
      <speciesReference species="Glucose_6_P" stoichiometry="56"
+                       denominator="100"/>
+     <speciesReference species="Glucose" stoichiometry="88"
                        denominator="100"/>
     </listOfReactants>
     <listOfProducts>
@@ -145,10 +147,12 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
         self.assertFalse(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Direction.Forward,
-                                   [(Compound('Glucose_6_P', 'cell'),
-                                     Fraction(56, 100))],
-                                   [(Compound('Biomass', 'boundary'), 1)])
+        actual_equation = Reaction(Direction.Forward, [
+            (Compound('Glucose_6_P', 'cell'), Fraction(56, 100)),
+            (Compound('Glucose', 'cell'), Fraction(88, 100))
+        ], [
+            (Compound('Biomass', 'boundary'), 1)
+        ])
         self.assertEqual(reaction.equation, actual_equation)
 
     def test_reaction_xml_notes(self):
@@ -251,6 +255,8 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
     <listOfReactants>
      <speciesReference species="M_Glucose_6_DASH_P_LPAREN_c_RPAREN_"
                        stoichiometry="0.56"/>
+     <speciesReference species="M_Glucose_LPAREN_c_RPAREN_"
+                       stoichiometry="0.88"/>
     </listOfReactants>
     <listOfProducts>
      <speciesReference species="M_Biomass"/>
@@ -385,7 +391,8 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         # Compare equation of reaction
         actual_equation = Reaction(Direction.Forward, [
             (Compound('M_Glucose_6_DASH_P_LPAREN_c_RPAREN_', 'C_c'),
-             Decimal('0.56'))
+             Decimal('0.56')),
+            (Compound('M_Glucose_LPAREN_c_RPAREN_', 'C_c'), Decimal('0.88'))
         ], [
             (Compound('M_Biomass', 'C_b'), 1)
         ])
@@ -473,6 +480,8 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
     <listOfReactants>
      <speciesReference species="M_Glucose_6_DASH_P_LPAREN_c_RPAREN_"
                        stoichiometry="0.56" constant="true"/>
+     <speciesReference species="M_Glucose_LPAREN_c_RPAREN_"
+                       stoichiometry="0.88" constant="true"/>
     </listOfReactants>
     <listOfProducts>
      <speciesReference species="M_Biomass" stoichiometry="1" constant="true"/>
@@ -552,7 +561,8 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         # Compare equation of reaction
         actual_equation = Reaction(Direction.Forward, [
             (Compound('M_Glucose_6_DASH_P_LPAREN_c_RPAREN_', 'C_c'),
-             Decimal('0.56'))
+             Decimal('0.56')),
+            (Compound('M_Glucose_LPAREN_c_RPAREN_', 'C_c'), Decimal('0.88'))
         ], [
             (Compound('M_Biomass', 'C_b'), 1)
         ])
@@ -651,6 +661,8 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
     <listOfReactants>
      <speciesReference species="M_Glucose_6_DASH_P_LPAREN_c_RPAREN_"
                        stoichiometry="0.56" constant="true"/>
+     <speciesReference species="M_Glucose_LPAREN_c_RPAREN_"
+                       stoichiometry="0.88" constant="true"/>
     </listOfReactants>
     <listOfProducts>
      <speciesReference species="M_Biomass" stoichiometry="1" constant="true"/>
@@ -752,7 +764,8 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
         # Compare equation of reaction
         actual_equation = Reaction(Direction.Forward, [
             (Compound('M_Glucose_6_DASH_P_LPAREN_c_RPAREN_', 'C_c'),
-             Decimal('0.56'))
+             Decimal('0.56')),
+            (Compound('M_Glucose_LPAREN_c_RPAREN_', 'C_c'), Decimal('0.88'))
         ], [
             (Compound('M_Biomass', 'C_b'), 1)
         ])
@@ -908,6 +921,8 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
     <listOfReactants>
      <speciesReference species="M_Glucose_6_DASH_P_LPAREN_c_RPAREN_"
                        stoichiometry="0.56" constant="true"/>
+     <speciesReference species="M_Glucose_LPAREN_c_RPAREN_"
+                       stoichiometry="0.88" constant="true"/>
     </listOfReactants>
     <listOfProducts>
      <speciesReference species="M_Biomass" stoichiometry="1" constant="true"/>
@@ -1004,7 +1019,8 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         # Compare equation of reaction
         actual_equation = Reaction(Direction.Forward, [
             (Compound('M_Glucose_6_DASH_P_LPAREN_c_RPAREN_', 'C_c'),
-             Decimal('0.56'))
+             Decimal('0.56')),
+            (Compound('M_Glucose_LPAREN_c_RPAREN_', 'C_c'), Decimal('0.88'))
         ], [
             (Compound('M_Biomass', 'C_b'), 1)
         ])
@@ -1056,6 +1072,56 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         self.assertEqual(model.limits['G6Pase'], ('G6Pase', -10, 1000))
         self.assertEqual(set(model.model), {'Biomass', 'G6Pase'})
         self.assertEqual(model.biomass_reaction, 'Biomass')
+
+
+class TestModelExtracellularCompartment(unittest.TestCase):
+    def setUp(self):
+        self.model = native.NativeModel()
+        self.model.reactions.update([
+            entry.DictReactionEntry({
+                'id': 'EX_g6p',
+                'equation': parse_reaction('g6p[e] <=>')
+            }),
+            entry.DictReactionEntry({
+                'id': 'EX_glc-D',
+                'equation': parse_reaction('glc-D[e] <=>')
+            }),
+            entry.DictReactionEntry({
+                'id': 'SINK_glc-D',
+                'equation': parse_reaction('glc-D[c] <=>')
+            }),
+            entry.DictReactionEntry({
+                'id': 'rxn_1',
+                'equation': parse_reaction('g6p[c] <=> glc-D[c]')
+            }),
+            entry.DictReactionEntry({
+                'id': 'TP_glc-D',
+                'equation': parse_reaction('glc-D[c] <=> glc-D[e]')
+            })
+        ])
+
+    def test_detect_model(self):
+        """Test that the extracellular compartment is detected.
+
+        Since the 'e' compartment occurs more often in exchange reactions,
+        this compartment should be detected.
+        """
+        extracellular = sbml.detect_extracellular_compartment(self.model)
+        self.assertEqual(extracellular, 'e')
+
+    def test_convert_model(self):
+        self.model.extracellular_compartment = 'e'
+        sbml.convert_exchange_to_compounds(self.model)
+
+        self.assertEqual(
+            {entry.id for entry in self.model.reactions},
+            {'rxn_1', 'TP_glc-D', 'SINK_glc-D'})
+        self.assertEqual(
+            set(itervalues(self.model.exchange)),
+            {
+                (Compound('g6p', 'e'), 'EX_g6p', None, None),
+                (Compound('glc-D', 'e'), 'EX_glc-D', None, None)
+            })
 
 
 class TestMergeEquivalentCompounds(unittest.TestCase):

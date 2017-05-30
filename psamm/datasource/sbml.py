@@ -25,7 +25,7 @@ from functools import partial
 import logging
 import re
 import json
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 
 # Import ElementTree XML parser. The lxml etree implementation may also be
 # used with SBMLReader but has compatiblity issues with SBMLWriter.
@@ -389,7 +389,7 @@ class SBMLReactionEntry(_SBMLEntry, BaseReactionEntry):
                                     self._reader._sbml_tag('parameter'))):
             param_id = parameter.get('id')
             param_name = parameter.get('name')
-            param_value = float(parameter.get('value'))
+            param_value = Decimal(parameter.get('value'))
             param_units = parameter.get('units')
 
             yield param_id, param_name, param_value, param_units
@@ -462,7 +462,7 @@ class SBMLObjectiveEntry(object):
                 _tag('listOfFluxObjectives', self._namespace),
                 _tag('fluxObjective', self._namespace))):
             reaction = fo.get(_tag('reaction', self._namespace))
-            coefficient = float(fo.get(_tag('coefficient', self._namespace)))
+            coefficient = Decimal(fo.get(_tag('coefficient', self._namespace)))
             if reaction is None or coefficient is None:
                 raise ParseError(
                     'Missing attributes on flux objective: {}'.format(self.id))
@@ -522,7 +522,7 @@ class SBMLFluxBoundEntry(object):
         if value is None:
             raise ParseError('Flux bound is missing "value" attribute')
         try:
-            self._value = float(value)
+            self._value = Decimal(value)
         except ValueError:
             raise ParseError('Unable to parse flux bound value')
 
@@ -640,7 +640,7 @@ class SBMLReader(object):
             for param in params.iterfind(self._sbml_tag('parameter')):
                 if param.get('constant') == 'true':
                     param_id = param.get('id')
-                    value = float(param.get('value'))
+                    value = Decimal(param.get('value'))
                     self._model_constants[param_id] = value
 
         # Flux bounds
@@ -1290,6 +1290,14 @@ def convert_sbml_model(model):
     # Convert model to mutable entries
     convert_model_entries(model)
 
+    # Detect extracelluar compartment
+    if model.extracellular_compartment is None:
+        extracellular = detect_extracellular_compartment(model)
+        model.extracellular_compartment = extracellular
+
+    # Convert exchange reactions to exchange compounds
+    convert_exchange_to_compounds(model)
+
 
 def entry_id_from_cobra_encoding(cobra_id):
     """Convert COBRA-encoded ID string to decoded ID string."""
@@ -1650,6 +1658,104 @@ def parse_flux_bounds(entry):
             lower_bound = value
 
     return lower_bound, upper_bound
+
+
+def detect_extracellular_compartment(model):
+    """Detect the identifier for equations with extracellular compartments.
+
+    Args:
+        model: :class:`NativeModel`.
+    """
+    extracellular_key = Counter()
+
+    for reaction in model.reactions:
+        equation = reaction.equation
+        if equation is None:
+            continue
+
+        if len(equation.compounds) == 1:
+            compound, _ = equation.compounds[0]
+            compartment = compound.compartment
+            extracellular_key[compartment] += 1
+    if len(extracellular_key) == 0:
+        return None
+    else:
+        best_key, _ = extracellular_key.most_common(1)[0]
+
+    logger.info('{} is extracellular compartment'.format(best_key))
+
+    return best_key
+
+
+def convert_exchange_to_compounds(model):
+    """Convert exchange reactions in model to exchange compounds.
+
+    Only exchange reactions in the extracellular compartment are converted.
+    The extracelluar compartment must be defined for the model.
+
+    Args:
+        model: :class:`NativeModel`.
+    """
+    # Build set of exchange reactions
+    exchanges = set()
+    for reaction in model.reactions:
+        equation = reaction.properties.get('equation')
+        if equation is None:
+            continue
+
+        if len(equation.compounds) != 1:
+            # Provide warning for exchange reactions with more than
+            # one compound, they won't be put into the exchange definition
+            if (len(equation.left) == 0) != (len(equation.right) == 0):
+                logger.warning('Exchange reaction {} has more than one'
+                               ' compound, it was not converted to'
+                               ' exchange compound'.format(reaction.id))
+            continue
+
+        exchanges.add(reaction.id)
+
+    # Convert exchange reactions into exchange compounds
+    for reaction_id in exchanges:
+        equation = model.reactions[reaction_id].equation
+        compound, value = equation.compounds[0]
+        if compound.compartment != model.extracellular_compartment:
+            continue
+
+        if compound in model.exchange:
+            logger.warning(
+                'Compound {} is already defined in the exchange'
+                ' definition'.format(compound))
+            continue
+
+        # We multiply the flux bounds by value in order to create equivalent
+        # exchange reactions with stoichiometric value of one. If the flux
+        # bounds are not set but the reaction is unidirectional, the implicit
+        # flux bounds must be used.
+        lower_flux, upper_flux = None, None
+        if reaction_id in model.limits:
+            _, lower, upper = model.limits[reaction_id]
+            if lower is not None:
+                lower_flux = lower * abs(value)
+            if upper is not None:
+                upper_flux = upper * abs(value)
+
+        if lower_flux is None and equation.direction == Direction.Forward:
+            lower_flux = 0.0
+        if upper_flux is None and equation.direction == Direction.Reverse:
+            upper_flux = 0.0
+
+        # If the stoichiometric value of the reaction is reversed, the flux
+        # limits must be flipped.
+        if value > 0:
+            lower_flux, upper_flux = (
+                -upper_flux if upper_flux is not None else None,
+                -lower_flux if lower_flux is not None else None)
+
+        model.exchange[compound] = (
+            compound, reaction_id, lower_flux, upper_flux)
+
+        model.reactions.discard(reaction_id)
+        model.limits.pop(reaction_id, None)
 
 
 def merge_equivalent_compounds(model):
