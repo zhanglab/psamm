@@ -42,11 +42,15 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
    <compartment name="cell"/>
   </listOfCompartments>
   <listOfSpecies>
-   <species name="Glucose" compartment="cell" initialAmount="1" charge="0"/>
-   <species name="Glucose_6_P" compartment="cell" initialAmount="1" charge="-2"/>
+   <species name="Glucose" compartment="cell" initialAmount="1"
+            charge="0"/>
+   <species name="Glucose_6_P" compartment="cell" initialAmount="1"
+            charge="-2"/>
    <species name="H2O" compartment="cell" initialAmount="1" charge="0"/>
-   <species name="Phosphate" compartment="cell" initialAmount="1" boundaryCondition="false"/>
-   <species name="Biomass" compartment="boundary" initialAmount="1" boundaryCondition="true"/>
+   <species name="Phosphate" compartment="cell" initialAmount="1"
+            boundaryCondition="false"/>
+   <species name="Biomass" compartment="boundary" initialAmount="1"
+            boundaryCondition="true"/>
   </listOfSpecies>
   <listOfReactions>
    <reaction name="G6Pase" reversible="true">
@@ -64,7 +68,8 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
    </reaction>
    <reaction name="Biomass" reversible="false">
     <listOfReactants>
-     <speciesReference species="Glucose_6_P" stoichiometry="56" denominator="100"/>
+     <speciesReference species="Glucose_6_P" stoichiometry="56"
+                       denominator="100"/>
     </listOfReactants>
     <listOfProducts>
      <speciesReference species="Biomass"/>
@@ -166,6 +171,21 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
         flux_bounds = list(reader.flux_bounds)
         self.assertEqual(len(flux_bounds), 0)
 
+    def test_create_and_convert_model(self):
+        reader = sbml.SBMLReader(self.doc)
+        model = reader.create_model()
+        sbml.convert_sbml_model(model)
+
+        self.assertEqual(
+            {entry.id for entry in model.compounds},
+            {'Glucose', 'Glucose_6_P', 'H2O', 'Phosphate'})
+        self.assertEqual(
+            {entry.id for entry in model.reactions},
+            {'G6Pase', 'Biomass'})
+        self.assertEqual(
+            {entry.id for entry in model.compartments},
+            {'cell'})
+
 
 class TestSBMLDatabaseL2V5(unittest.TestCase):
     """Test parsing of a simple level 2 version 5 SBML file"""
@@ -180,7 +200,8 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
    <compartment id="C_b" name="boundary"/>
   </listOfCompartments>
   <listOfSpecies>
-   <species id="M_Glucose" name="Glucose" compartment="C_c" charge="0">
+   <species id="M_Glucose_LPAREN_c_RPAREN_" name="Glucose" compartment="C_c"
+            charge="0">
     <notes>
      <body xmlns="http://www.w3.org/1999/xhtml">
       <p>FORMULA: C6H12O6</p>
@@ -191,20 +212,26 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
      </body>
     </notes>
    </species>
-   <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c" charge="-2"/>
-   <species id="M_H2O" name="H2O" compartment="C_c" charge="0"/>
-   <species id="M_Phosphate" name="Phosphate" compartment="C_c" boundaryCondition="false"/>
-   <species id="M_Biomass" name="Biomass" compartment="C_b" boundaryCondition="true"/>
+   <species id="M_Glucose_6_DASH_P_LPAREN_c_RPAREN_" name="Glucose-6-P"
+            compartment="C_c" charge="-2"/>
+   <species id="M_H2O_LPAREN_c_RPAREN_" name="H2O" compartment="C_c"
+            charge="0"/>
+   <species id="M_Phosphate_LPAREN_c_RPAREN_" name="Phosphate"
+            compartment="C_c" boundaryCondition="false"/>
+   <species id="M_Biomass" name="Biomass" compartment="C_b"
+            boundaryCondition="true"/>
   </listOfSpecies>
   <listOfReactions>
    <reaction id="R_G6Pase" reversible="true">
     <listOfReactants>
-     <speciesReference species="M_Glucose" stoichiometry="2"/>
-     <speciesReference species="M_Phosphate" stoichiometry="2"/>
+     <speciesReference species="M_Glucose_LPAREN_c_RPAREN_" stoichiometry="2"/>
+     <speciesReference species="M_Phosphate_LPAREN_c_RPAREN_"
+                       stoichiometry="2"/>
     </listOfReactants>
     <listOfProducts>
-     <speciesReference species="M_H2O" stoichiometry="2"/>
-     <speciesReference species="M_Glucose_6_P" stoichiometry="2"/>
+     <speciesReference species="M_H2O_LPAREN_c_RPAREN_" stoichiometry="2"/>
+     <speciesReference species="M_Glucose_6_DASH_P_LPAREN_c_RPAREN_"
+                       stoichiometry="2"/>
     </listOfProducts>
     <notes>
      <body xmlns="http://www.w3.org/1999/xhtml">
@@ -219,7 +246,8 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
    </reaction>
    <reaction id="R_Biomass" reversible="false">
     <listOfReactants>
-     <speciesReference species="M_Glucose_6_P" stoichiometry="0.56"/>
+     <speciesReference species="M_Glucose_6_DASH_P_LPAREN_c_RPAREN_"
+                       stoichiometry="0.56"/>
     </listOfReactants>
     <listOfProducts>
      <speciesReference species="M_Biomass"/>
@@ -263,30 +291,33 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         species = {entry.id: entry for entry in reader.species}
         self.assertEqual(len(species), 5)
 
-        self.assertEqual(species['M_Glucose'].id, 'M_Glucose')
-        self.assertEqual(species['M_Glucose'].name, 'Glucose')
-        self.assertEqual(species['M_Glucose'].compartment, 'C_c')
-        self.assertFalse(species['M_Glucose'].boundary)
-        self.assertEqual(species['M_Glucose'].charge, 0)
+        gluc_species = species['M_Glucose_LPAREN_c_RPAREN_']
+        self.assertEqual(gluc_species.id, 'M_Glucose_LPAREN_c_RPAREN_')
+        self.assertEqual(gluc_species.name, 'Glucose')
+        self.assertEqual(gluc_species.compartment, 'C_c')
+        self.assertFalse(gluc_species.boundary)
+        self.assertEqual(gluc_species.charge, 0)
 
-        self.assertEqual(species['M_Glucose_6_P'].id, 'M_Glucose_6_P')
-        self.assertEqual(species['M_Glucose_6_P'].name, 'Glucose-6-P')
-        self.assertEqual(species['M_Glucose_6_P'].compartment, 'C_c')
-        self.assertFalse(species['M_Glucose_6_P'].boundary)
-        self.assertEqual(species['M_Glucose_6_P'].charge, -2)
+        g6p_species = species['M_Glucose_6_DASH_P_LPAREN_c_RPAREN_']
+        self.assertEqual(g6p_species.id, 'M_Glucose_6_DASH_P_LPAREN_c_RPAREN_')
+        self.assertEqual(g6p_species.name, 'Glucose-6-P')
+        self.assertEqual(g6p_species.compartment, 'C_c')
+        self.assertFalse(g6p_species.boundary)
+        self.assertEqual(g6p_species.charge, -2)
 
-        self.assertEqual(species['M_H2O'].id, 'M_H2O')
-        self.assertEqual(species['M_H2O'].name, 'H2O')
-        self.assertEqual(species['M_H2O'].compartment, 'C_c')
-        self.assertFalse(species['M_H2O'].boundary)
-        self.assertEqual(species['M_H2O'].charge, 0)
+        h2o_species = species['M_H2O_LPAREN_c_RPAREN_']
+        self.assertEqual(h2o_species.id, 'M_H2O_LPAREN_c_RPAREN_')
+        self.assertEqual(h2o_species.name, 'H2O')
+        self.assertEqual(h2o_species.compartment, 'C_c')
+        self.assertFalse(h2o_species.boundary)
+        self.assertEqual(h2o_species.charge, 0)
 
-        self.assertFalse(species['M_Phosphate'].boundary)
+        self.assertFalse(species['M_Phosphate_LPAREN_c_RPAREN_'].boundary)
         self.assertTrue(species['M_Biomass'].boundary)
 
     def test_glucose_parse_notes(self):
         reader = sbml.SBMLReader(self.doc)
-        species = reader.get_species('M_Glucose')
+        species = reader.get_species('M_Glucose_LPAREN_c_RPAREN_')
         notes_dict = sbml.parse_xhtml_species_notes(species)
         self.assertEqual(notes_dict, {
             'formula': 'C6H12O6',
@@ -300,11 +331,13 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         self.assertTrue(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Direction.Both,
-                                   [(Compound('M_Glucose', 'C_c'), 2),
-                                    (Compound('M_Phosphate', 'C_c'), 2)],
-                                   [(Compound('M_H2O', 'C_c'), 2),
-                                    (Compound('M_Glucose_6_P', 'C_c'), 2)])
+        actual_equation = Reaction(Direction.Both, [
+            (Compound('M_Glucose_LPAREN_c_RPAREN_', 'C_c'), 2),
+            (Compound('M_Phosphate_LPAREN_c_RPAREN_', 'C_c'), 2)
+        ], [
+            (Compound('M_H2O_LPAREN_c_RPAREN_', 'C_c'), 2),
+            (Compound('M_Glucose_6_DASH_P_LPAREN_c_RPAREN_', 'C_c'), 2)
+        ])
         self.assertEqual(reaction.equation, actual_equation)
 
     def test_g6pase_parse_notes(self):
@@ -347,10 +380,12 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         self.assertFalse(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Direction.Forward,
-                                   [(Compound('M_Glucose_6_P', 'C_c'),
-                                     Decimal('0.56'))],
-                                   [(Compound('M_Biomass', 'C_b'), 1)])
+        actual_equation = Reaction(Direction.Forward, [
+            (Compound('M_Glucose_6_DASH_P_LPAREN_c_RPAREN_', 'C_c'),
+             Decimal('0.56'))
+        ], [
+            (Compound('M_Biomass', 'C_b'), 1)
+        ])
         self.assertEqual(reaction.equation, actual_equation)
 
     def test_objective_not_present(self):
@@ -363,6 +398,24 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
         reader = sbml.SBMLReader(self.doc)
         flux_bounds = list(reader.flux_bounds)
         self.assertEqual(len(flux_bounds), 0)
+
+    def test_create_and_convert_model(self):
+        reader = sbml.SBMLReader(self.doc)
+        model = reader.create_model()
+        sbml.convert_sbml_model(model)
+
+        self.assertEqual(
+            {entry.id for entry in model.compounds},
+            {'Glucose(c)', 'Glucose_6-P(c)', 'H2O(c)', 'Phosphate(c)'})
+        self.assertEqual(
+            {entry.id for entry in model.reactions},
+            {'G6Pase', 'Biomass'})
+        self.assertEqual(
+            {entry.id for entry in model.compartments},
+            {'c'})
+
+        self.assertEqual(model.limits['Biomass'], ('Biomass', 0, 1000))
+        self.assertEqual(model.biomass_reaction, 'Biomass')
 
 
 class TestSBMLDatabaseL3V1(unittest.TestCase):
@@ -379,21 +432,34 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
    <compartment id="C_b" name="boundary" constant="true"/>
   </listOfCompartments>
   <listOfSpecies>
-   <species id="M_Glucose" name="Glucose" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false"/>
-   <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false"/>
-   <species id="M_H2O" name="H2O" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false"/>
-   <species id="M_Phosphate" name="Phosphate" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false"/>
-   <species id="M_Biomass" name="Biomass" compartment="C_b" constant="false" boundaryCondition="true" hasOnlySubstanceUnits="false"/>
+   <species id="M_Glucose_LPAREN_c_RPAREN_" name="Glucose" compartment="C_c"
+            constant="false" boundaryCondition="false"
+            hasOnlySubstanceUnits="false"/>
+   <species id="M_Glucose_6_DASH_P_LPAREN_c_RPAREN_" name="Glucose-6-P"
+            compartment="C_c" constant="false" boundaryCondition="false"
+            hasOnlySubstanceUnits="false"/>
+   <species id="M_H2O_LPAREN_c_RPAREN_" name="H2O" compartment="C_c"
+            constant="false" boundaryCondition="false"
+            hasOnlySubstanceUnits="false"/>
+   <species id="M_Phosphate_LPAREN_c_RPAREN_" name="Phosphate"
+            compartment="C_c" constant="false" boundaryCondition="false"
+            hasOnlySubstanceUnits="false"/>
+   <species id="M_Biomass" name="Biomass" compartment="C_b" constant="false"
+            boundaryCondition="true" hasOnlySubstanceUnits="false"/>
   </listOfSpecies>
   <listOfReactions>
    <reaction id="R_G6Pase" reversible="true" fast="false">
     <listOfReactants>
-     <speciesReference species="M_Glucose" stoichiometry="2" constant="true"/>
-     <speciesReference species="M_Phosphate" stoichiometry="2" constant="true"/>
+     <speciesReference species="M_Glucose_LPAREN_c_RPAREN_" stoichiometry="2"
+                       constant="true"/>
+     <speciesReference species="M_Phosphate_LPAREN_c_RPAREN_" stoichiometry="2"
+                       constant="true"/>
     </listOfReactants>
     <listOfProducts>
-     <speciesReference species="M_H2O" stoichiometry="2" constant="true"/>
-     <speciesReference species="M_Glucose_6_P" stoichiometry="2" constant="true"/>
+     <speciesReference species="M_H2O_LPAREN_c_RPAREN_" stoichiometry="2"
+                       constant="true"/>
+     <speciesReference species="M_Glucose_6_DASH_P_LPAREN_c_RPAREN_"
+                       stoichiometry="2" constant="true"/>
     </listOfProducts>
     <notes>
      <html:p>Glucose 6-phosphatase</html:p>
@@ -401,7 +467,8 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
    </reaction>
    <reaction id="R_Biomass" reversible="false" fast="false">
     <listOfReactants>
-     <speciesReference species="M_Glucose_6_P" stoichiometry="0.56" constant="true"/>
+     <speciesReference species="M_Glucose_6_DASH_P_LPAREN_c_RPAREN_"
+                       stoichiometry="0.56" constant="true"/>
     </listOfReactants>
     <listOfProducts>
      <speciesReference species="M_Biomass" stoichiometry="1" constant="true"/>
@@ -437,22 +504,25 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         species = {entry.id: entry for entry in reader.species}
         self.assertEqual(len(species), 5)
 
-        self.assertEqual(species['M_Glucose'].id, 'M_Glucose')
-        self.assertEqual(species['M_Glucose'].name, 'Glucose')
-        self.assertEqual(species['M_Glucose'].compartment, 'C_c')
-        self.assertFalse(species['M_Glucose'].boundary)
+        gluc_species = species['M_Glucose_LPAREN_c_RPAREN_']
+        self.assertEqual(gluc_species.id, 'M_Glucose_LPAREN_c_RPAREN_')
+        self.assertEqual(gluc_species.name, 'Glucose')
+        self.assertEqual(gluc_species.compartment, 'C_c')
+        self.assertFalse(gluc_species.boundary)
 
-        self.assertEqual(species['M_Glucose_6_P'].id, 'M_Glucose_6_P')
-        self.assertEqual(species['M_Glucose_6_P'].name, 'Glucose-6-P')
-        self.assertEqual(species['M_Glucose_6_P'].compartment, 'C_c')
-        self.assertFalse(species['M_Glucose_6_P'].boundary)
+        g6p_species = species['M_Glucose_6_DASH_P_LPAREN_c_RPAREN_']
+        self.assertEqual(g6p_species.id, 'M_Glucose_6_DASH_P_LPAREN_c_RPAREN_')
+        self.assertEqual(g6p_species.name, 'Glucose-6-P')
+        self.assertEqual(g6p_species.compartment, 'C_c')
+        self.assertFalse(g6p_species.boundary)
 
-        self.assertEqual(species['M_H2O'].id, 'M_H2O')
-        self.assertEqual(species['M_H2O'].name, 'H2O')
-        self.assertEqual(species['M_H2O'].compartment, 'C_c')
-        self.assertFalse(species['M_H2O'].boundary)
+        h2o_species = species['M_H2O_LPAREN_c_RPAREN_']
+        self.assertEqual(h2o_species.id, 'M_H2O_LPAREN_c_RPAREN_')
+        self.assertEqual(h2o_species.name, 'H2O')
+        self.assertEqual(h2o_species.compartment, 'C_c')
+        self.assertFalse(h2o_species.boundary)
 
-        self.assertFalse(species['M_Phosphate'].boundary)
+        self.assertFalse(species['M_Phosphate_LPAREN_c_RPAREN_'].boundary)
         self.assertTrue(species['M_Biomass'].boundary)
 
     def test_g6pase_reaction_exists(self):
@@ -461,11 +531,13 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         self.assertTrue(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Direction.Both,
-                                   [(Compound('M_Glucose', 'C_c'), 2),
-                                    (Compound('M_Phosphate', 'C_c'), 2)],
-                                   [(Compound('M_H2O', 'C_c'), 2),
-                                    (Compound('M_Glucose_6_P', 'C_c'), 2)])
+        actual_equation = Reaction(Direction.Both, [
+            (Compound('M_Glucose_LPAREN_c_RPAREN_', 'C_c'), 2),
+            (Compound('M_Phosphate_LPAREN_c_RPAREN_', 'C_c'), 2)
+        ], [
+            (Compound('M_H2O_LPAREN_c_RPAREN_', 'C_c'), 2),
+            (Compound('M_Glucose_6_DASH_P_LPAREN_c_RPAREN_', 'C_c'), 2)
+        ])
         self.assertEqual(reaction.equation, actual_equation)
 
     def test_biomass_reaction_exists(self):
@@ -474,10 +546,12 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         self.assertFalse(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Direction.Forward,
-                                   [(Compound('M_Glucose_6_P', 'C_c'),
-                                     Decimal('0.56'))],
-                                   [(Compound('M_Biomass', 'C_b'), 1)])
+        actual_equation = Reaction(Direction.Forward, [
+            (Compound('M_Glucose_6_DASH_P_LPAREN_c_RPAREN_', 'C_c'),
+             Decimal('0.56'))
+        ], [
+            (Compound('M_Biomass', 'C_b'), 1)
+        ])
         self.assertEqual(reaction.equation, actual_equation)
 
     def test_reaction_xml_notes(self):
@@ -501,6 +575,21 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         flux_bounds = list(reader.flux_bounds)
         self.assertEqual(len(flux_bounds), 0)
 
+    def test_create_and_convert_model(self):
+        reader = sbml.SBMLReader(self.doc)
+        model = reader.create_model()
+        sbml.convert_sbml_model(model)
+
+        self.assertEqual(
+            {entry.id for entry in model.compounds},
+            {'Glucose(c)', 'Glucose_6-P(c)', 'H2O(c)', 'Phosphate(c)'})
+        self.assertEqual(
+            {entry.id for entry in model.reactions},
+            {'G6Pase', 'Biomass'})
+        self.assertEqual(
+            {entry.id for entry in model.compartments},
+            {'c'})
+
 
 class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
     """Test parsing of a level 3 version 1 SBML file with FBC version 1"""
@@ -518,26 +607,44 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
    <compartment id="C_b" name="boundary" constant="true"/>
   </listOfCompartments>
   <listOfSpecies>
-   <species id="M_Glucose" name="Glucose" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="C6H12O6"/>
-   <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="C6H11O9P"/>
-   <species id="M_H2O" name="H2O" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="H2O"/>
-   <species id="M_Phosphate" name="Phosphate" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="HO4P"/>
-   <species id="M_Biomass" name="Biomass" compartment="C_b" constant="false" boundaryCondition="true" hasOnlySubstanceUnits="false"/>
+   <species id="M_Glucose_LPAREN_c_RPAREN_" name="Glucose" compartment="C_c"
+            constant="false" boundaryCondition="false"
+            hasOnlySubstanceUnits="false" fbc:charge="0"
+            fbc:chemicalFormula="C6H12O6"/>
+   <species id="M_Glucose_6_DASH_P_LPAREN_c_RPAREN_" name="Glucose-6-P"
+            compartment="C_c" constant="false" boundaryCondition="false"
+            hasOnlySubstanceUnits="false" fbc:charge="-2"
+            fbc:chemicalFormula="C6H11O9P"/>
+   <species id="M_H2O_LPAREN_c_RPAREN_" name="H2O" compartment="C_c"
+            constant="false" boundaryCondition="false"
+            hasOnlySubstanceUnits="false" fbc:charge="0"
+            fbc:chemicalFormula="H2O"/>
+   <species id="M_Phosphate_LPAREN_c_RPAREN_" name="Phosphate"
+            compartment="C_c" constant="false" boundaryCondition="false"
+            hasOnlySubstanceUnits="false" fbc:charge="-2"
+            fbc:chemicalFormula="HO4P"/>
+   <species id="M_Biomass" name="Biomass" compartment="C_b" constant="false"
+            boundaryCondition="true" hasOnlySubstanceUnits="false"/>
   </listOfSpecies>
   <listOfReactions>
    <reaction id="R_G6Pase" reversible="true" fast="false">
     <listOfReactants>
-     <speciesReference species="M_Glucose" stoichiometry="2" constant="true"/>
-     <speciesReference species="M_Phosphate" stoichiometry="2" constant="true"/>
+     <speciesReference species="M_Glucose_LPAREN_c_RPAREN_" stoichiometry="2"
+                       constant="true"/>
+     <speciesReference species="M_Phosphate_LPAREN_c_RPAREN_" stoichiometry="2"
+                       constant="true"/>
     </listOfReactants>
     <listOfProducts>
-     <speciesReference species="M_H2O" stoichiometry="2" constant="true"/>
-     <speciesReference species="M_Glucose_6_P" stoichiometry="2" constant="true"/>
+     <speciesReference species="M_H2O_LPAREN_c_RPAREN_" stoichiometry="2"
+                       constant="true"/>
+     <speciesReference species="M_Glucose_6_DASH_P_LPAREN_c_RPAREN_"
+                       stoichiometry="2" constant="true"/>
     </listOfProducts>
    </reaction>
    <reaction id="R_Biomass" reversible="false" fast="false">
     <listOfReactants>
-     <speciesReference species="M_Glucose_6_P" stoichiometry="0.56" constant="true"/>
+     <speciesReference species="M_Glucose_6_DASH_P_LPAREN_c_RPAREN_"
+                       stoichiometry="0.56" constant="true"/>
     </listOfReactants>
     <listOfProducts>
      <speciesReference species="M_Biomass" stoichiometry="1" constant="true"/>
@@ -552,10 +659,14 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
    </fbc:objective>
   </fbc:listOfObjectives>
   <fbc:listOfFluxBounds>
-   <fbc:fluxBound fbc:reaction="R_G6Pase" fbc:operation="greaterEqual" fbc:value="-10"/>
-   <fbc:fluxBound fbc:reaction="R_G6Pase" fbc:operation="lessEqual" fbc:value="1000"/>
-   <fbc:fluxBound fbc:reaction="R_Biomass" fbc:operation="greaterEqual" fbc:value="0"/>
-   <fbc:fluxBound fbc:reaction="R_Biomass" fbc:operation="lessEqual" fbc:value="1000"/>
+   <fbc:fluxBound fbc:reaction="R_G6Pase" fbc:operation="greaterEqual"
+                  fbc:value="-10"/>
+   <fbc:fluxBound fbc:reaction="R_G6Pase" fbc:operation="lessEqual"
+                  fbc:value="1000"/>
+   <fbc:fluxBound fbc:reaction="R_Biomass" fbc:operation="greaterEqual"
+                  fbc:value="0"/>
+   <fbc:fluxBound fbc:reaction="R_Biomass" fbc:operation="lessEqual"
+                  fbc:value="1000"/>
   </fbc:listOfFluxBounds>
  </model>
 </sbml>'''.encode('utf-8'))
@@ -579,28 +690,31 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
         species = {entry.id: entry for entry in reader.species}
         self.assertEqual(len(species), 5)
 
-        self.assertEqual(species['M_Glucose'].id, 'M_Glucose')
-        self.assertEqual(species['M_Glucose'].name, 'Glucose')
-        self.assertEqual(species['M_Glucose'].compartment, 'C_c')
-        self.assertFalse(species['M_Glucose'].boundary)
-        self.assertEqual(species['M_Glucose'].formula, 'C6H12O6')
-        self.assertEqual(species['M_Glucose'].charge, 0)
+        gluc_species = species['M_Glucose_LPAREN_c_RPAREN_']
+        self.assertEqual(gluc_species.id, 'M_Glucose_LPAREN_c_RPAREN_')
+        self.assertEqual(gluc_species.name, 'Glucose')
+        self.assertEqual(gluc_species.compartment, 'C_c')
+        self.assertFalse(gluc_species.boundary)
+        self.assertEqual(gluc_species.formula, 'C6H12O6')
+        self.assertEqual(gluc_species.charge, 0)
 
-        self.assertEqual(species['M_Glucose_6_P'].id, 'M_Glucose_6_P')
-        self.assertEqual(species['M_Glucose_6_P'].name, 'Glucose-6-P')
-        self.assertEqual(species['M_Glucose_6_P'].compartment, 'C_c')
-        self.assertFalse(species['M_Glucose_6_P'].boundary)
-        self.assertEqual(species['M_Glucose_6_P'].formula, 'C6H11O9P')
-        self.assertEqual(species['M_Glucose_6_P'].charge, -2)
+        g6p_species = species['M_Glucose_6_DASH_P_LPAREN_c_RPAREN_']
+        self.assertEqual(g6p_species.id, 'M_Glucose_6_DASH_P_LPAREN_c_RPAREN_')
+        self.assertEqual(g6p_species.name, 'Glucose-6-P')
+        self.assertEqual(g6p_species.compartment, 'C_c')
+        self.assertFalse(g6p_species.boundary)
+        self.assertEqual(g6p_species.formula, 'C6H11O9P')
+        self.assertEqual(g6p_species.charge, -2)
 
-        self.assertEqual(species['M_H2O'].id, 'M_H2O')
-        self.assertEqual(species['M_H2O'].name, 'H2O')
-        self.assertEqual(species['M_H2O'].compartment, 'C_c')
-        self.assertFalse(species['M_H2O'].boundary)
-        self.assertEqual(species['M_H2O'].formula, 'H2O')
-        self.assertEqual(species['M_H2O'].charge, 0)
+        h2o_species = species['M_H2O_LPAREN_c_RPAREN_']
+        self.assertEqual(h2o_species.id, 'M_H2O_LPAREN_c_RPAREN_')
+        self.assertEqual(h2o_species.name, 'H2O')
+        self.assertEqual(h2o_species.compartment, 'C_c')
+        self.assertFalse(h2o_species.boundary)
+        self.assertEqual(h2o_species.formula, 'H2O')
+        self.assertEqual(h2o_species.charge, 0)
 
-        self.assertFalse(species['M_Phosphate'].boundary)
+        self.assertFalse(species['M_Phosphate_LPAREN_c_RPAREN_'].boundary)
         self.assertTrue(species['M_Biomass'].boundary)
 
         self.assertIsNone(species['M_Biomass'].formula)
@@ -612,11 +726,13 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
         self.assertTrue(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Direction.Both,
-                                   [(Compound('M_Glucose', 'C_c'), 2),
-                                    (Compound('M_Phosphate', 'C_c'), 2)],
-                                   [(Compound('M_H2O', 'C_c'), 2),
-                                    (Compound('M_Glucose_6_P', 'C_c'), 2)])
+        actual_equation = Reaction(Direction.Both, [
+            (Compound('M_Glucose_LPAREN_c_RPAREN_', 'C_c'), 2),
+            (Compound('M_Phosphate_LPAREN_c_RPAREN_', 'C_c'), 2)
+        ], [
+            (Compound('M_H2O_LPAREN_c_RPAREN_', 'C_c'), 2),
+            (Compound('M_Glucose_6_DASH_P_LPAREN_c_RPAREN_', 'C_c'), 2)
+        ])
         self.assertEqual(reaction.equation, actual_equation)
 
         self.assertEqual(reaction.properties['lower_flux'], -10)
@@ -628,10 +744,12 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
         self.assertFalse(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Direction.Forward,
-                                   [(Compound('M_Glucose_6_P', 'C_c'),
-                                     Decimal('0.56'))],
-                                   [(Compound('M_Biomass', 'C_b'), 1)])
+        actual_equation = Reaction(Direction.Forward, [
+            (Compound('M_Glucose_6_DASH_P_LPAREN_c_RPAREN_', 'C_c'),
+             Decimal('0.56'))
+        ], [
+            (Compound('M_Biomass', 'C_b'), 1)
+        ])
         self.assertEqual(reaction.equation, actual_equation)
 
         self.assertEqual(reaction.properties['lower_flux'], 0)
@@ -671,6 +789,25 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
             ('greaterEqual', -10),
             ('lessEqual', 1000)})
 
+    def test_create_and_convert_model(self):
+        reader = sbml.SBMLReader(self.doc)
+        model = reader.create_model()
+        sbml.convert_sbml_model(model)
+
+        self.assertEqual(
+            {entry.id for entry in model.compounds},
+            {'Glucose(c)', 'Glucose_6-P(c)', 'H2O(c)', 'Phosphate(c)'})
+        self.assertEqual(
+            {entry.id for entry in model.reactions},
+            {'G6Pase', 'Biomass'})
+        self.assertEqual(
+            {entry.id for entry in model.compartments},
+            {'c'})
+
+        self.assertEqual(model.limits['Biomass'], ('Biomass', 0, 1000))
+        self.assertEqual(model.limits['G6Pase'], ('G6Pase', -10, 1000))
+        self.assertEqual(model.biomass_reaction, 'Biomass')
+
 
 class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
     """Test parsing of a level 3 version 1 SBML file with FBC version 2"""
@@ -693,17 +830,31 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
    <compartment id="C_b" name="boundary" constant="true"/>
   </listOfCompartments>
   <listOfSpecies>
-   <species id="M_Glucose" metaid="meta_M_Glucose" name="Glucose" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="C6H12O6">
+   <species id="M_Glucose_LPAREN_c_RPAREN_"
+            metaid="meta_M_Glucose_LPAREN_c_RPAREN_" name="Glucose"
+            compartment="C_c" constant="false" boundaryCondition="false"
+            hasOnlySubstanceUnits="false" fbc:charge="0"
+            fbc:chemicalFormula="C6H12O6">
     <notes>
      <body xmlns="http://www.w3.org/1999/xhtml">
       <p>This is compound information intended to be seen by humans.</p>
      </body>
     </notes>
    </species>
-   <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="C6H11O9P"/>
-   <species id="M_H2O" name="H2O" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="H2O"/>
-   <species id="M_Phosphate" name="Phosphate" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="HO4P"/>
-   <species id="M_Biomass" name="Biomass" compartment="C_b" constant="false" boundaryCondition="true" hasOnlySubstanceUnits="false"/>
+   <species id="M_Glucose_6_DASH_P_LPAREN_c_RPAREN_" name="Glucose-6-P"
+            compartment="C_c" constant="false" boundaryCondition="false"
+            hasOnlySubstanceUnits="false" fbc:charge="-2"
+            fbc:chemicalFormula="C6H11O9P"/>
+   <species id="M_H2O_LPAREN_c_RPAREN_" name="H2O" compartment="C_c"
+            constant="false" boundaryCondition="false"
+            hasOnlySubstanceUnits="false" fbc:charge="0"
+            fbc:chemicalFormula="H2O"/>
+   <species id="M_Phosphate_LPAREN_c_RPAREN_" name="Phosphate"
+            compartment="C_c" constant="false" boundaryCondition="false"
+            hasOnlySubstanceUnits="false" fbc:charge="-2"
+            fbc:chemicalFormula="HO4P"/>
+   <species id="M_Biomass" name="Biomass" compartment="C_b" constant="false"
+            boundaryCondition="true" hasOnlySubstanceUnits="false"/>
   </listOfSpecies>
   <listOfParameters>
    <parameter constant="true" id="P_lower_G6Pase" value="-10"/>
@@ -711,14 +862,20 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
    <parameter constant="true" id="P_upper_default" value="1000"/>
   </listOfParameters>
   <listOfReactions>
-   <reaction id="R_G6Pase" metaid="meta_R_G6Pase" reversible="true" fast="false" fbc:lowerFluxBound="P_lower_G6Pase" fbc:upperFluxBound="P_upper_default">
+   <reaction id="R_G6Pase" metaid="meta_R_G6Pase" reversible="true"
+             fast="false" fbc:lowerFluxBound="P_lower_G6Pase"
+             fbc:upperFluxBound="P_upper_default">
     <listOfReactants>
-     <speciesReference species="M_Glucose" stoichiometry="2" constant="true"/>
-     <speciesReference species="M_Phosphate" stoichiometry="2" constant="true"/>
+     <speciesReference species="M_Glucose_LPAREN_c_RPAREN_" stoichiometry="2"
+                       constant="true"/>
+     <speciesReference species="M_Phosphate_LPAREN_c_RPAREN_" stoichiometry="2"
+                       constant="true"/>
     </listOfReactants>
     <listOfProducts>
-     <speciesReference species="M_H2O" stoichiometry="2" constant="true"/>
-     <speciesReference species="M_Glucose_6_P" stoichiometry="2" constant="true"/>
+     <speciesReference species="M_H2O_LPAREN_c_RPAREN_" stoichiometry="2"
+                       constant="true"/>
+     <speciesReference species="M_Glucose_6_DASH_P_LPAREN_c_RPAREN_"
+                       stoichiometry="2" constant="true"/>
     </listOfProducts>
     <notes>
      <body xmlns="http://www.w3.org/1999/xhtml">
@@ -738,9 +895,12 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
      </RDF>
     </annotation>
    </reaction>
-   <reaction id="R_Biomass" reversible="false" fast="false" fbc:lowerFluxBound="P_lower_zero" fbc:upperFluxBound="P_upper_default">
+   <reaction id="R_Biomass" reversible="false" fast="false"
+             fbc:lowerFluxBound="P_lower_zero"
+             fbc:upperFluxBound="P_upper_default">
     <listOfReactants>
-     <speciesReference species="M_Glucose_6_P" stoichiometry="0.56" constant="true"/>
+     <speciesReference species="M_Glucose_6_DASH_P_LPAREN_c_RPAREN_"
+                       stoichiometry="0.56" constant="true"/>
     </listOfReactants>
     <listOfProducts>
      <speciesReference species="M_Biomass" stoichiometry="1" constant="true"/>
@@ -776,30 +936,33 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         species = {entry.id: entry for entry in reader.species}
         self.assertEqual(len(species), 5)
 
-        self.assertEqual(species['M_Glucose'].id, 'M_Glucose')
-        self.assertEqual(species['M_Glucose'].name, 'Glucose')
-        self.assertEqual(species['M_Glucose'].compartment, 'C_c')
-        self.assertFalse(species['M_Glucose'].boundary)
-        self.assertEqual(species['M_Glucose'].formula, 'C6H12O6')
-        self.assertEqual(species['M_Glucose'].charge, 0)
-        self.assertIsNotNone(species['M_Glucose'].xml_notes)
+        gluc_species = species['M_Glucose_LPAREN_c_RPAREN_']
+        self.assertEqual(gluc_species.id, 'M_Glucose_LPAREN_c_RPAREN_')
+        self.assertEqual(gluc_species.name, 'Glucose')
+        self.assertEqual(gluc_species.compartment, 'C_c')
+        self.assertFalse(gluc_species.boundary)
+        self.assertEqual(gluc_species.formula, 'C6H12O6')
+        self.assertEqual(gluc_species.charge, 0)
+        self.assertIsNotNone(gluc_species.xml_notes)
 
-        self.assertEqual(species['M_Glucose_6_P'].id, 'M_Glucose_6_P')
-        self.assertEqual(species['M_Glucose_6_P'].name, 'Glucose-6-P')
-        self.assertEqual(species['M_Glucose_6_P'].compartment, 'C_c')
-        self.assertFalse(species['M_Glucose_6_P'].boundary)
-        self.assertEqual(species['M_Glucose_6_P'].formula, 'C6H11O9P')
-        self.assertEqual(species['M_Glucose_6_P'].charge, -2)
-        self.assertIsNone(species['M_Glucose_6_P'].xml_notes)
+        g6p_species = species['M_Glucose_6_DASH_P_LPAREN_c_RPAREN_']
+        self.assertEqual(g6p_species.id, 'M_Glucose_6_DASH_P_LPAREN_c_RPAREN_')
+        self.assertEqual(g6p_species.name, 'Glucose-6-P')
+        self.assertEqual(g6p_species.compartment, 'C_c')
+        self.assertFalse(g6p_species.boundary)
+        self.assertEqual(g6p_species.formula, 'C6H11O9P')
+        self.assertEqual(g6p_species.charge, -2)
+        self.assertIsNone(g6p_species.xml_notes)
 
-        self.assertEqual(species['M_H2O'].id, 'M_H2O')
-        self.assertEqual(species['M_H2O'].name, 'H2O')
-        self.assertEqual(species['M_H2O'].compartment, 'C_c')
-        self.assertFalse(species['M_H2O'].boundary)
-        self.assertEqual(species['M_H2O'].formula, 'H2O')
-        self.assertEqual(species['M_H2O'].charge, 0)
+        h2o_species = species['M_H2O_LPAREN_c_RPAREN_']
+        self.assertEqual(h2o_species.id, 'M_H2O_LPAREN_c_RPAREN_')
+        self.assertEqual(h2o_species.name, 'H2O')
+        self.assertEqual(h2o_species.compartment, 'C_c')
+        self.assertFalse(h2o_species.boundary)
+        self.assertEqual(h2o_species.formula, 'H2O')
+        self.assertEqual(h2o_species.charge, 0)
 
-        self.assertFalse(species['M_Phosphate'].boundary)
+        self.assertFalse(species['M_Phosphate_LPAREN_c_RPAREN_'].boundary)
         self.assertTrue(species['M_Biomass'].boundary)
 
         self.assertIsNone(species['M_Biomass'].formula)
@@ -811,11 +974,13 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         self.assertTrue(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Direction.Both,
-                                   [(Compound('M_Glucose', 'C_c'), 2),
-                                    (Compound('M_Phosphate', 'C_c'), 2)],
-                                   [(Compound('M_H2O', 'C_c'), 2),
-                                    (Compound('M_Glucose_6_P', 'C_c'), 2)])
+        actual_equation = Reaction(Direction.Both, [
+            (Compound('M_Glucose_LPAREN_c_RPAREN_', 'C_c'), 2),
+            (Compound('M_Phosphate_LPAREN_c_RPAREN_', 'C_c'), 2)
+        ], [
+            (Compound('M_H2O_LPAREN_c_RPAREN_', 'C_c'), 2),
+            (Compound('M_Glucose_6_DASH_P_LPAREN_c_RPAREN_', 'C_c'), 2)
+        ])
         self.assertEqual(reaction.equation, actual_equation)
 
         self.assertEqual(reaction.properties['lower_flux'], -10)
@@ -830,10 +995,12 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         self.assertFalse(reaction.reversible)
 
         # Compare equation of reaction
-        actual_equation = Reaction(Direction.Forward,
-                                   [(Compound('M_Glucose_6_P', 'C_c'),
-                                     Decimal('0.56'))],
-                                   [(Compound('M_Biomass', 'C_b'), 1)])
+        actual_equation = Reaction(Direction.Forward, [
+            (Compound('M_Glucose_6_DASH_P_LPAREN_c_RPAREN_', 'C_c'),
+             Decimal('0.56'))
+        ], [
+            (Compound('M_Biomass', 'C_b'), 1)
+        ])
         self.assertEqual(reaction.equation, actual_equation)
 
         self.assertEqual(reaction.properties['lower_flux'], 0)
@@ -862,3 +1029,22 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         reader = sbml.SBMLReader(self.doc)
         flux_bounds = list(reader.flux_bounds)
         self.assertEqual(len(flux_bounds), 0)
+
+    def test_create_and_convert_model(self):
+        reader = sbml.SBMLReader(self.doc)
+        model = reader.create_model()
+        sbml.convert_sbml_model(model)
+
+        self.assertEqual(
+            {entry.id for entry in model.compounds},
+            {'Glucose(c)', 'Glucose_6-P(c)', 'H2O(c)', 'Phosphate(c)'})
+        self.assertEqual(
+            {entry.id for entry in model.reactions},
+            {'G6Pase', 'Biomass'})
+        self.assertEqual(
+            {entry.id for entry in model.compartments},
+            {'c'})
+
+        self.assertEqual(model.limits['Biomass'], ('Biomass', 0, 1000))
+        self.assertEqual(model.limits['G6Pase'], ('G6Pase', -10, 1000))
+        self.assertEqual(model.biomass_reaction, 'Biomass')
