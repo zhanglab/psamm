@@ -32,6 +32,88 @@ from six import StringIO
 import yaml
 
 
+class MockEntry(object):
+    """Entry object for testing OrderedEntrySet."""
+    def __init__(self, id):
+        self._id = id
+
+    @property
+    def id(self):
+        return self._id
+
+
+class TestOrderedEntrySet(unittest.TestCase):
+    def test_init_from_dict(self):
+        entries = {
+            'test_1': MockEntry('test_1'),
+            'test_2': MockEntry('test_2')
+        }
+        entry_set = native._OrderedEntrySet(entries)
+        self.assertEqual(entry_set['test_1'], entries['test_1'])
+        self.assertEqual(entry_set['test_2'], entries['test_2'])
+        self.assertEqual(len(entry_set), len(entries))
+
+    def test_add_and_contains(self):
+        entry_set = native._OrderedEntrySet()
+        entry_set.add_entry(MockEntry('def'))
+        entry_set.add_entry(MockEntry('abc'))
+        entry_set.add_entry(MockEntry('ghi'))
+
+        self.assertIn('def', entry_set)
+        self.assertIn('ghi', entry_set)
+        self.assertNotIn('klm', entry_set)
+        self.assertEqual(len(entry_set), 3)
+
+        # Check that it is ordered
+        self.assertEqual(
+            [entry.id for entry in entry_set], ['def', 'abc', 'ghi'])
+
+    def test_get(self):
+        entries = {
+            'test_1': MockEntry('test_1'),
+            'test_2': MockEntry('test_2')
+        }
+        entry_set = native._OrderedEntrySet(entries)
+        self.assertEqual(entry_set.get('test_1'), entries['test_1'])
+        self.assertIsNone(entry_set.get('test_3'))
+        self.assertEqual(entry_set.get('test_3', 5), 5)
+
+    def test_discard(self):
+        entries = {
+            'test_1': MockEntry('test_1'),
+            'test_2': MockEntry('test_2')
+        }
+        entry_set = native._OrderedEntrySet(entries)
+        entry_set.discard('test_1')
+        self.assertNotIn('test_1', entry_set)
+
+    def test_update(self):
+        entries = {
+            'test_1': MockEntry('test_1'),
+            'test_2': MockEntry('test_2')
+        }
+        entry_set = native._OrderedEntrySet(entries)
+        entry_set.update([
+            MockEntry('test_2'),
+            MockEntry('test_3')
+        ])
+
+        self.assertEqual(len(entry_set), 3)
+        self.assertEqual(entry_set['test_1'], entries['test_1'])
+        self.assertNotEqual(entry_set['test_2'], entries['test_2'])
+
+    def test_clear(self):
+        entries = {
+            'test_1': MockEntry('test_1'),
+            'test_2': MockEntry('test_2')
+        }
+        entry_set = native._OrderedEntrySet(entries)
+        entry_set.clear()
+
+        self.assertEqual(len(entry_set), 0)
+        self.assertNotIn('test_1', entry_set)
+
+
 class TestYAMLDataSource(unittest.TestCase):
     def test_parse_compartments(self):
         model_dict = {
