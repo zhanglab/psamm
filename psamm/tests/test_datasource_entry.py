@@ -58,10 +58,13 @@ class TestDictEntries(unittest.TestCase):
 
     def test_create_compound_dict_entry_with_id_override(self):
         props = {
+            'id': 'old_id',
             'name': 'Compound 1',
             'formula': 'CO2'
         }
         e = entry.DictCompoundEntry(props, id='new_id')
+        self.assertEqual(e.id, 'new_id')
+        self.assertEqual(e.properties['id'], 'new_id')
 
     def test_use_compound_dict_entry_setters(self):
         e = entry.DictCompoundEntry({}, id='new_id')
