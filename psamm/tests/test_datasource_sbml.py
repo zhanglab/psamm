@@ -224,6 +224,14 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
     <listOfProducts>
      <speciesReference species="M_Biomass"/>
     </listOfProducts>
+    <kineticLaw>
+     <listOfParameters>
+      <parameter id="LOWER_BOUND" value="0"/>
+      <parameter id="UPPER_BOUND" value="1000"/>
+      <parameter id="SOME_CUSTOM_PARAMETER" value="123.4"/>
+      <parameter id="OBJECTIVE_COEFFICIENT" value="1"/>
+     </listOfParameters>
+    </kineticLaw>
    </reaction>
   </listOfReactions>
  </model>
@@ -310,6 +318,28 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
             'confidence': 3,
             'authors': ['Jane Doe', 'John Doe']
         })
+
+    def test_parse_reaction_cobra_flux_bounds(self):
+        reader = sbml.SBMLReader(self.doc)
+        reaction = reader.get_reaction('R_G6Pase')
+        lower, upper = sbml.parse_flux_bounds(reaction)
+        self.assertIsNone(lower)
+        self.assertIsNone(upper)
+
+        reaction = reader.get_reaction('R_Biomass')
+        lower, upper = sbml.parse_flux_bounds(reaction)
+        self.assertEqual(lower, 0)
+        self.assertEqual(upper, 1000)
+
+    def test_parse_reaction_cobra_objective(self):
+        reader = sbml.SBMLReader(self.doc)
+        reaction = reader.get_reaction('R_G6Pase')
+        coeff = sbml.parse_objective_coefficient(reaction)
+        self.assertIsNone(coeff)
+
+        reaction = reader.get_reaction('R_Biomass')
+        coeff = sbml.parse_objective_coefficient(reaction)
+        self.assertEqual(coeff, 1)
 
     def test_biomass_reaction_exists(self):
         reader = sbml.SBMLReader(self.doc, ignore_boundary=False)
