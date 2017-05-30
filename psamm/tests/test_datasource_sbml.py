@@ -20,7 +20,8 @@ from __future__ import unicode_literals
 
 import unittest
 
-from psamm.datasource import sbml
+from psamm.datasource import sbml, native, entry
+from psamm.datasource.reaction import parse_reaction, parse_compound
 from psamm.reaction import Reaction, Compound, Direction
 
 from decimal import Decimal
@@ -1055,3 +1056,39 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
         self.assertEqual(model.limits['G6Pase'], ('G6Pase', -10, 1000))
         self.assertEqual(set(model.model), {'Biomass', 'G6Pase'})
         self.assertEqual(model.biomass_reaction, 'Biomass')
+
+
+class TestMergeEquivalentCompounds(unittest.TestCase):
+    def test_merge(self):
+        model = native.NativeModel()
+        model.compounds.update([
+            entry.DictCompoundEntry({
+                'id': 'g6p_c',
+                'name': 'G6P'
+            }),
+            entry.DictCompoundEntry({
+                'id': 'g6p_e',
+                'name': 'G6P'
+            })
+        ])
+        model.reactions.update([
+            entry.DictReactionEntry({
+                'id': 'TP_g6p',
+                'equation': parse_reaction('g6p_c[c] <=> g6p_e[e]')
+            })
+        ])
+        exchange_compound = Compound('g6p_e', 'e')
+        model.exchange[exchange_compound] = (
+            exchange_compound, 'EX_g6p_e', -10, 0)
+
+        sbml.merge_equivalent_compounds(model)
+
+        self.assertEqual({entry.id for entry in model.compounds}, {'g6p'})
+        self.assertEqual(
+            model.reactions['TP_g6p'].equation,
+            parse_reaction('g6p[c] <=> g6p[e]'))
+
+        new_exchange_compound = Compound('g6p', 'e')
+        self.assertEqual(
+            model.exchange[new_exchange_compound],
+            (new_exchange_compound, 'EX_g6p_e', -10, 0))
