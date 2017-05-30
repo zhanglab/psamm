@@ -582,6 +582,9 @@ def main_sbml(command_class=None, args=None):
 
     parser = argparse.ArgumentParser(description=title)
     parser.add_argument('model', metavar='file', help='SBML file')
+    parser.add_argument('--merge-compounds', action='store_true',
+                        help=('Merge identical compounds occuring in various'
+                              ' compartments.'))
     parser.add_argument(
         '-V', '--version', action='version',
         version='%(prog)s ' + package_version)
@@ -620,6 +623,8 @@ def main_sbml(command_class=None, args=None):
     with context.open('r') as f:
         model = sbml.SBMLReader(f, context=context).create_model()
         sbml.convert_sbml_model(model)
+        if parsed_args.merge_compounds:
+            sbml.merge_equivalent_compounds(model)
 
     # Instantiate command with model and run
     command = parsed_args.command(model, parsed_args)
