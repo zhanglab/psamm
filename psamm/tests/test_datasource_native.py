@@ -680,6 +680,23 @@ class TestCheckId(unittest.TestCase):
         native._check_id(u'\u222b', 'Compound')
 
 
+class TestNativeModel(unittest.TestCase):
+    def test_properties(self):
+        model = native.NativeModel()
+        model.name = 'Test model'
+        model.version_string = '1.0'
+        model.biomass_reaction = 'rxn_1'
+        model.extracellular_compartment = 'e'
+        model.default_compartment = 'c'
+        model.default_flux_limit = 1000
+        self.assertEqual(model.name, 'Test model')
+        self.assertEqual(model.version_string, '1.0')
+        self.assertEqual(model.biomass_reaction, 'rxn_1')
+        self.assertEqual(model.extracellular_compartment, 'e')
+        self.assertEqual(model.default_compartment, 'c')
+        self.assertEqual(model.default_flux_limit, 1000)
+
+
 class TestNativeModelWriter(unittest.TestCase):
     def setUp(self):
         self.writer = native.ModelWriter()

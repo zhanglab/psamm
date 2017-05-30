@@ -460,30 +460,54 @@ class NativeModel(object):
         """Return model name property."""
         return self._properties.get('name')
 
+    @name.setter
+    def name(self, value):
+        self._properties['name'] = value
+
     @property
     def version_string(self):
         """Return model version string."""
         return self._properties.get('version_string')
+
+    @version_string.setter
+    def version_string(self, value):
+        self._properties['version_string'] = value
 
     @property
     def biomass_reaction(self):
         """Return biomass reaction property."""
         return self._properties.get('biomass')
 
+    @biomass_reaction.setter
+    def biomass_reaction(self, value):
+        self._properties['biomass'] = value
+
     @property
     def extracellular_compartment(self):
         """Return extracellular compartment property."""
         return self._properties.get('extracellular')
+
+    @extracellular_compartment.setter
+    def extracellular_compartment(self, value):
+        self._properties['extracellular'] = value
 
     @property
     def default_compartment(self):
         """Return default compartment property."""
         return self._properties.get('default_compartment')
 
+    @default_compartment.setter
+    def default_compartment(self, value):
+        self._properties['default_compartment'] = value
+
     @property
     def default_flux_limit(self):
         """Return default flux limit property."""
         return self._properties.get('default_flux_limit')
+
+    @default_flux_limit.setter
+    def default_flux_limit(self, value):
+        self._properties['default_flux_limit'] = value
 
     @property
     def compartments(self):

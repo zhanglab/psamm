@@ -134,6 +134,7 @@ class _BaseDictEntry(ModelEntry):
         else:
             raise ValueError('Invalid type of properties object')
 
+        self._properties['id'] = self._id
         self._filemark = filemark
 
     @property
