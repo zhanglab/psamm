@@ -186,6 +186,8 @@ class TestSBMLDatabaseL1V2(unittest.TestCase):
             {entry.id for entry in model.compartments},
             {'cell'})
 
+        self.assertEqual(set(model.model), {'Biomass', 'G6Pase'})
+
 
 class TestSBMLDatabaseL2V5(unittest.TestCase):
     """Test parsing of a simple level 2 version 5 SBML file"""
@@ -416,6 +418,7 @@ class TestSBMLDatabaseL2V5(unittest.TestCase):
 
         self.assertEqual(model.limits['Biomass'], ('Biomass', 0, 1000))
         self.assertEqual(model.biomass_reaction, 'Biomass')
+        self.assertEqual(set(model.model), {'Biomass', 'G6Pase'})
 
 
 class TestSBMLDatabaseL3V1(unittest.TestCase):
@@ -589,6 +592,8 @@ class TestSBMLDatabaseL3V1(unittest.TestCase):
         self.assertEqual(
             {entry.id for entry in model.compartments},
             {'c'})
+
+        self.assertEqual(set(model.model), {'Biomass', 'G6Pase'})
 
 
 class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
@@ -806,6 +811,7 @@ class TestSBMLDatabaseL3V1WithFBCV1(unittest.TestCase):
 
         self.assertEqual(model.limits['Biomass'], ('Biomass', 0, 1000))
         self.assertEqual(model.limits['G6Pase'], ('G6Pase', -10, 1000))
+        self.assertEqual(set(model.model), {'Biomass', 'G6Pase'})
         self.assertEqual(model.biomass_reaction, 'Biomass')
 
 
@@ -1047,4 +1053,5 @@ class TestSBMLDatabaseL3V1WithFBCV2(unittest.TestCase):
 
         self.assertEqual(model.limits['Biomass'], ('Biomass', 0, 1000))
         self.assertEqual(model.limits['G6Pase'], ('G6Pase', -10, 1000))
+        self.assertEqual(set(model.model), {'Biomass', 'G6Pase'})
         self.assertEqual(model.biomass_reaction, 'Biomass')

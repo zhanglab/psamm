@@ -828,6 +828,10 @@ class SBMLReader(object):
         for reaction in self.reactions:
             model.reactions.add_entry(reaction)
 
+        # Create model reaction set
+        for reaction in model.reactions:
+            model.model[reaction.id] = None
+
         # Convert reaction limits properties to proper limits
         for reaction in model.reactions:
             props = reaction.properties
