@@ -1403,12 +1403,9 @@ def convert_model_entries(
     Args:
         model: :class:`NativeModel`.
     """
-    compartment_map = {}
-    compound_map = {}
-    reaction_map = {}
-
-    def find_new_ids(entries, id_map, type_name):
+    def find_new_ids(entries):
         """Create new IDs for entries."""
+        id_map = {}
         new_ids = set()
         for entry in entries:
             new_id = convert_id(entry)
@@ -1418,15 +1415,17 @@ def convert_model_entries(
                 else:
                     raise ValueError(
                         'Entity ID {!r} is not unique after conversion'.format(
-                            type_name, entry.id))
+                            entry.id))
 
             id_map[entry.id] = new_id
             new_ids.add(new_id)
 
+        return id_map
+
     # Find new IDs for all entries
-    find_new_ids(model.compartments, compartment_map, 'Compartment')
-    find_new_ids(model.compounds, compound_map, 'Compound')
-    find_new_ids(model.reactions, reaction_map, 'Reaction')
+    compartment_map = find_new_ids(model.compartments)
+    compound_map = find_new_ids(model.compounds)
+    reaction_map = find_new_ids(model.reactions)
 
     # Create new compartment entries
     new_compartments = []

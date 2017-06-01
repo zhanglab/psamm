@@ -50,6 +50,8 @@ setup(
         psamm-model = psamm.command:main
         psamm-sbml-model = psamm.command:main_sbml
         psamm-list-lpsolvers = psamm.lpsolver.generic:list_solvers
+        psamm-import = psamm.importer:main
+        psamm-import-bigg = psamm.importer:main_bigg
 
         [psamm.commands]
         chargecheck = psamm.commands.chargecheck:ChargeBalanceCommand
@@ -72,6 +74,11 @@ setup(
         sbmlexport = psamm.commands.sbmlexport:SBMLExport
         search = psamm.commands.search:SearchCommand
         tableexport = psamm.commands.tableexport:ExportTableCommand
+
+        [psamm.importer]
+        JSON = psamm.importers.cobrajson:Importer
+        SBML = psamm.importers.sbml:NonstrictImporter
+        SBML-strict = psamm.importers.sbml:StrictImporter
     ''',
 
     test_suite='psamm.tests',
