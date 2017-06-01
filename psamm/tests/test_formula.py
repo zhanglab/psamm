@@ -142,6 +142,25 @@ class TestFormula(unittest.TestCase):
         self.assertIn(Atom.C, f)
         self.assertNotIn(Atom.Ag, f)
 
+    def test_formula_get(self):
+        f = Formula({Atom.H: 12, Atom.C: 6, Atom.O: 6})
+        self.assertEqual(f.get(Atom.H), 12)
+        self.assertEqual(f.get(Atom.Au), None)
+        self.assertEqual(f.get(Atom.Hg, 4), 4)
+
+    def test_formula_getitem(self):
+        f = Formula({Atom.H: 12, Atom.C: 6, Atom.O: 6})
+        self.assertEqual(f[Atom.H], 12)
+
+    def test_formula_getitem_not_found(self):
+        f = Formula({Atom.H: 12, Atom.C: 6, Atom.O: 6})
+        with self.assertRaises(KeyError):
+            f[Atom.Au]
+
+    def test_formula_length(self):
+        f = Formula({Atom.H: 12, Atom.C: 6, Atom.O: 6})
+        self.assertEqual(len(f), 3)
+
     def test_formula_to_string(self):
         f = Formula({Atom.H: 12, Atom.C: 6, Atom.O: 6})
         self.assertEqual(str(f), 'C6H12O6')
