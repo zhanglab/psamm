@@ -741,15 +741,15 @@ class SBMLReader(object):
         return self._model_compartments[compartment_id]
 
     def get_reaction(self, reaction_id):
-        """Return :class:`.ReactionEntry` corresponding to reaction_id"""
+        """Return :class:`.SBMLReactionEntry` corresponding to reaction_id"""
         return self._model_reactions[reaction_id]
 
     def get_species(self, species_id):
-        """Return :class:`.SpeciesEntry` corresponding to species_id"""
+        """Return :class:`.SBMLSpeciesEntry` corresponding to species_id"""
         return self._model_species[species_id]
 
     def get_objective(self, objective_id):
-        """Return :class:`.ObjectiveEntry` corresponding to objective_id"""
+        """Return :class:`.SBMLObjectiveEntry` corresponding to objective_id"""
         return self._model_objectives[objective_id]
 
     def get_active_objective(self):
@@ -757,12 +757,12 @@ class SBMLReader(object):
 
     @property
     def compartments(self):
-        """Iterator over :class:`.CompartmentEntry` entries."""
+        """Iterator over :class:`.SBMLCompartmentEntry` entries."""
         return itervalues(self._model_compartments)
 
     @property
     def reactions(self):
-        """Iterator over :class:`ReactionEntries <.ReactionEntry>`"""
+        """Iterator over :class:`ReactionEntries <.SBMLReactionEntry>`"""
         return itervalues(self._model_reactions)
 
     @property
@@ -776,12 +776,12 @@ class SBMLReader(object):
 
     @property
     def objectives(self):
-        """Iterator over :class:`.ObjectiveEntry`"""
+        """Iterator over :class:`.SBMLObjectiveEntry`"""
         return itervalues(self._model_objectives)
 
     @property
     def flux_bounds(self):
-        """Iterator over :class:`.FluxBoundEntry`"""
+        """Iterator over :class:`.SBMLFluxBoundEntry`"""
         return iter(self._flux_bounds)
 
     @property
