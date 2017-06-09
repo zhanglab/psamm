@@ -207,14 +207,15 @@ class Formula(FormulaElement):
     """
 
     def __init__(self, values={}):
-        self._values = {}
+        self._values = Counter()
         self._variables = set()
 
         for element, value in iteritems(values):
             if not isinstance(element, FormulaElement):
                 raise ValueError('Not a formula element: {}'.format(
                     repr(element)))
-            if element != Formula() and value != 0:
+            if (value != 0 and
+                    (not isinstance(element, Formula) or len(element) > 0)):
                 self._values[element] = value
 
             if callable(getattr(value, 'variables', None)):
@@ -243,21 +244,21 @@ class Formula(FormulaElement):
         """
 
         stack = [(self, 1)]
-        result = {}
+        result = Counter()
         while len(stack) > 0:
             var, value = stack.pop()
             if isinstance(var, Formula):
                 for sub_var, sub_value in iteritems(var._values):
                     stack.append((sub_var, value*sub_value))
             else:
-                if var in result:
-                    result[var] += value
-                else:
-                    result[var] = value
+                result[var] += value
         return Formula(result)
 
     def variables(self):
         return iter(self._variables)
+
+    def __iter__(self):
+        return iter(self._values)
 
     def items(self):
         """Iterate over (:class:`.FormulaElement`, value)-pairs"""
@@ -274,6 +275,8 @@ class Formula(FormulaElement):
         return self._values.get(element, default)
 
     def __getitem__(self, element):
+        if element not in self._values:
+            raise KeyError(repr(element))
         return self._values[element]
 
     def __len__(self):
@@ -329,20 +332,37 @@ class Formula(FormulaElement):
         return s
 
     def __repr__(self):
-        return str('Formula({})').format(repr(self._values))
+        return str('Formula({})').format(repr(dict(self._values)))
+
+    def __and__(self, other):
+        """Intersection of formula elements."""
+        if isinstance(other, Formula):
+            return Formula(self._values & other._values)
+        elif isinstance(other, FormulaElement):
+            return Formula(self._values & Counter([other]))
+        return NotImplemented
 
     def __or__(self, other):
-        """Merge formulas into one formula"""
+        """Merge formulas into one formula."""
+        # Note: This operator corresponds to the add-operator on Counter not
+        # the or-operator! The add-operator is used here (on the superclass)
+        # to compose formula elements into subformulas.
         if isinstance(other, Formula):
-            values = Counter(self._values)
-            values.update(other._values)
-            return Formula(values)
+            return Formula(self._values + other._values)
         elif isinstance(other, FormulaElement):
-            return self | Formula({other: 1})
+            return Formula(self._values + Counter([other]))
+        return NotImplemented
+
+    def __sub__(self, other):
+        """Substract other formula from this formula."""
+        if isinstance(other, Formula):
+            return Formula(self._values - other._values)
+        elif isinstance(other, FormulaElement):
+            return Formula(self._values - Counter([other]))
         return NotImplemented
 
     def __mul__(self, other):
-        """Multiply formula element by other"""
+        """Multiply formula element by other."""
         values = {key: value*other for key, value in iteritems(self._values)}
         return Formula(values)
 

@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 import unittest
 
@@ -117,6 +117,26 @@ class TestFormula(unittest.TestCase):
         f = Formula({Atom.H: 2, Atom.O: 1}).repeat(4)
         self.assertEqual(f, Formula({Formula({Atom.H: 2, Atom.O: 1}): 4}))
 
+    def test_formula_intersection(self):
+        f1 = Formula({Atom.H: 4, Atom.N: 1})
+        f2 = Formula({Atom.H: 2, Atom.O: 1})
+        f = f1 & f2
+        self.assertEqual(f, Formula({Atom.H: 2}))
+
+    def test_formula_intersection_with_atom(self):
+        f = Formula({Atom.H: 4, Atom.N: 1}) & Atom.H
+        self.assertEqual(f, Formula({Atom.H: 1}))
+
+    def test_formula_subtraction(self):
+        f1 = Formula({Atom.H: 4, Atom.N: 1})
+        f2 = Formula({Atom.H: 2, Atom.O: 1})
+        f = f1 - f2
+        self.assertEqual(f, Formula({Atom.H: 2, Atom.N: 1}))
+
+    def test_formula_subtraction_with_atom(self):
+        f = Formula({Atom.H: 4, Atom.N: 1}) - Atom.H
+        self.assertEqual(f, Formula({Atom.H: 3, Atom.N: 1}))
+
     def test_formula_equals_other_formula(self):
         f = Formula({Atom.H: 2, Atom.O: 1})
         self.assertEqual(f, Formula({Atom.O: 1, Atom.H: 2}))
@@ -128,6 +148,10 @@ class TestFormula(unittest.TestCase):
     def test_formula_not_equals_other_with_different_number(self):
         f = Formula({Atom.Au: 1})
         self.assertNotEqual(f, Formula({Atom.Au: 2}))
+
+    def test_formula_iter(self):
+        f = Formula({Atom.H: 12, Atom.C: 6, Atom.O: 6})
+        self.assertEqual(set(iter(f)), {Atom.H, Atom.C, Atom.O})
 
     def test_formula_items(self):
         f = Formula({Atom.H: 12, Atom.C: 6, Atom.O: 6})
