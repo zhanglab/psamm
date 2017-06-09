@@ -18,7 +18,7 @@
 
 import unittest
 
-from psamm.formula import Formula, FormulaElement, Atom, Radical
+from psamm.formula import Formula, FormulaElement, Atom, Radical, ParseError
 
 
 class TestFormulaElement(unittest.TestCase):
@@ -316,6 +316,20 @@ class TestFormulaParser(unittest.TestCase):
         f = Formula.parse('C2H4NO2(R1)')
         self.assertEqual(f, Formula({
             Atom.C: 2, Atom.H: 4, Atom.N: 1, Atom.O: 2, Radical('R1'): 1}))
+
+    def test_formula_parse_error(self):
+        with self.assertRaises(ParseError):
+            Formula.parse('H2O. ABC')
+
+
+class TestFormulaParseError(unittest.TestCase):
+    def test_create_with_span(self):
+        e = ParseError('This is an error', span=(4, 7))
+        self.assertEqual(e.indicator, '    ^^^')
+
+    def test_create_without_span(self):
+        e = ParseError('This is an error')
+        self.assertIsNone(e.indicator)
 
 
 if __name__ == '__main__':
