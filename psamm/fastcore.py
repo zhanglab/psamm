@@ -22,6 +22,8 @@ Use the functions :func:`fastcore` and :func:`fastcc` to easily apply
 these algorithms to a :class:`MetabolicModel`.
 """
 
+from __future__ import unicode_literals
+
 import logging
 
 from .fluxanalysis import FluxBalanceProblem

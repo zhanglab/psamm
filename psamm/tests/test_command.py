@@ -182,7 +182,7 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
                 }, {
                     'id': 'rxn_2_\u03c0',
                     'name': 'Reaction 2',
-                    'equation': '|B[c]| <=> |C[e]|',
+                    'equation': 'atp[c] + (2) |B[c]| <=> adp[c] + |C[e]|',
                     'genes': 'gene_3 or (gene_4 and gene_5)'
                 }, {
                     'id': 'rxn_3',
@@ -205,6 +205,18 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
                     'id': 'C',
                     'charge': -1,
                     'formula': 'O2'
+                },
+                {
+                    'id': 'atp',
+                    'name': '\u2192 ATP ',
+                    'charge': -4,
+                    'formula': 'C10H12N5O13P3'
+                },
+                {
+                    'id': 'adp',
+                    'name': ' ADP',
+                    'charge': -3,
+                    'formula': 'C10H12N5O10P2'
                 }
             ],
             'exchange': [
@@ -510,7 +522,7 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
             ['id', 'equation', 'genes', 'name', 'in_model'],
             ['rxn_1', 'A_\u2206[e] => B[c]', '["gene_1", "gene_2"]',
                 'Reaction 1', 'true'],
-            ['rxn_2_\u03c0', 'B[c] <=> C[e]',
+            ['rxn_2_\u03c0', 'atp[c] + (2) B[c] <=> adp[c] + C[e]',
                 'gene_3 or (gene_4 and gene_5)', 'Reaction 2', 'true'],
             ['rxn_3', 'D[c] => E[c]', '', '', 'true'],
         ])
@@ -522,7 +534,9 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
             ['id', 'name', 'charge', 'formula', 'in_model'],
             ['A_\u2206', 'Compound A', '0', '', 'true'],
             ['B', 'Compound B', '-1', 'H2O', 'true'],
-            ['C', '', '-1', 'O2', 'true']
+            ['C', '', '-1', 'O2', 'true'],
+            ['atp', '\u2192 ATP ', '-4', 'C10H12N5O13P3', 'true'],
+            ['adp', ' ADP', '-3', 'C10H12N5O10P2', 'true']
         ])
 
     def test_run_tableexport_exchange(self):
