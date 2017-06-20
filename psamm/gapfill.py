@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Identify blocked metabolites and possible reconstructions.
 
@@ -22,7 +22,7 @@ This implements a variant of the algorithms described in [Kumar07]_.
 
 import logging
 
-from six import iteritems
+from six import iteritems, raise_from
 
 from .lpsolver import lp
 
@@ -130,9 +130,10 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000, implicit_sinks=True):
             prob.add_linear_constraints(lhs == 0)
 
     # Solve
-    result = prob.solve(lp.ObjectiveSense.Maximize)
-    if not result:
-        raise GapFillError('Non-optimal solution: {}'.format(result.status))
+    try:
+        result = prob.solve(lp.ObjectiveSense.Maximize)
+    except lp.SolverError as e:
+        raise_from(GapFillError('Failed to solve gapfill: {}'.format(e), e))
 
     for compound in model.compounds:
         if result.get_value(xp(compound)) < 0.5:
@@ -254,9 +255,10 @@ def gapfill(
             prob.add_linear_constraints(lhs == 0)
 
     # Solve
-    result = prob.solve(lp.ObjectiveSense.Minimize)
-    if not result:
-        raise GapFillError('Non-optimal solution: {}'.format(result.status))
+    try:
+        prob.solve(lp.ObjectiveSense.Minimize)
+    except lp.SolverError as e:
+        raise_from(GapFillError('Failed to solve gapfill: {}'.format(e)), e)
 
     def added_iter():
         for reaction_id in database_reactions:

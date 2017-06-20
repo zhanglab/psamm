@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Implementation of Flux Balance Analysis."""
 
@@ -24,7 +24,7 @@ import random
 
 from .lpsolver import lp
 
-from six import iteritems
+from six import iteritems, raise_from
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -266,10 +266,10 @@ class FluxBalanceProblem(object):
             self._remove_constr.pop().delete()
 
         try:
-            result = self._prob.solve(lp.ObjectiveSense.Maximize)
-            if not result:
-                raise FluxBalanceError('Non-optimal solution: {}'.format(
-                    result.status), result=result)
+            self._prob.solve(lp.ObjectiveSense.Maximize)
+        except lp.SolverError as e:
+            raise_from(FluxBalanceError('Failed to solve: {}'.format(
+                e), result=self._prob.result), e)
         finally:
             # Set temporary constraints to be removed on next solve call
             self._remove_constr = self._temp_constr

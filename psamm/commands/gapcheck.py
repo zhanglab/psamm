@@ -142,10 +142,11 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
                 mass_balance_constrs[compound].delete()
 
             prob.set_objective(lhs)
-            result = prob.solve(lp.ObjectiveSense.Maximize)
-            if not result:
-                logger.warning('Failed to solve for compound: {}'.format(
-                    compound))
+            try:
+                result = prob.solve(lp.ObjectiveSense.Maximize)
+            except lp.SolverError as e:
+                logger.warning('Failed to solve for compound: {} ({})'.format(
+                    compound, e))
 
             if result.get_value(lhs) < threshold:
                 yield compound
@@ -190,11 +191,12 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
             prob.set_objective(v(reaction))
             for sense in (lp.ObjectiveSense.Maximize,
                           lp.ObjectiveSense.Minimize):
-                result = prob.solve(sense)
-                if not result:
+                try:
+                    result = prob.solve(sense)
+                except lp.SolverError as e:
                     self.fail(
                         'Failed to solve for compound, reaction: {}, {}:'
-                        ' {}'.format(compound, reaction, result.status))
+                        ' {}'.format(compound, reaction, e))
 
                 flux = result.get_value(v(reaction))
                 for compound, value in model.get_reaction_values(reaction):
