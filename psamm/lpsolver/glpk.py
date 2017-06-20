@@ -32,7 +32,7 @@ from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
 from .lp import (Expression, RelationSense, ObjectiveSense, VariableType,
-                 InvalidResultError, ranged_property)
+                 InvalidResultError, ranged_property, SolverError)
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ swiglpk.glp_term_hook(_term_hook)
 _INF = float('inf')
 
 
-class GLPKError(Exception):
+class GLPKError(SolverError):
     """Error from calling GLPK library."""
 
 

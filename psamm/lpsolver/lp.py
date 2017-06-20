@@ -47,6 +47,10 @@ from six.moves import range, reduce
 _INF = float('inf')
 
 
+class SolverError(Exception):
+    """Error wrapping solver specific errors."""
+
+
 class VariableSet(tuple):
     """A tuple used to represent sets of variables."""
 
