@@ -272,8 +272,13 @@ class Problem(BaseProblem):
 
         swiglpk.glp_set_obj_dir(self._p, self.OBJ_SENSE_MAP[sense])
 
-    def solve(self, sense=None):
-        """Solve problem."""
+    def solve_unchecked(self, sense=None):
+        """Solve problem and return result.
+
+        The user must manually check the status of the result to determine
+        whether an optimal solution was found. A :class:`SolverError` may still
+        be raised if the underlying solver raises an exception.
+        """
         if sense is not None:
             self.set_objective_sense(sense)
 

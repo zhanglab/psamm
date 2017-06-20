@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 import unittest
 
@@ -98,8 +98,12 @@ class TestCplexProblem(unittest.TestCase):
                                     prob.var('z') <= 3)
         prob.set_objective_sense(lp.ObjectiveSense.Maximize)
         prob.set_linear_objective(2*prob.var('x'))
-        result = prob.solve()
+        result = prob.solve_unchecked()
         self.assertFalse(result)
+
+        # Check that the normal solve raises SolverError when non-optimal.
+        with self.assertRaises(lp.SolverError):
+            prob.solve()
 
     def test_constraint_delete(self):
         prob = self.solver.create_problem()

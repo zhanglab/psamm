@@ -771,9 +771,25 @@ class Problem(object):
     def set_objective_sense(self, sense):
         """Set type of problem (minimize or maximize)"""
 
-    @abc.abstractmethod
     def solve(self, sense=None):
-        """Solve problem and return result"""
+        """Solve problem and return result.
+
+        Raises :class:`SolverError` if the solution is not optimal.
+        """
+        result = self.solve_unchecked(sense)
+        if not result:
+            raise SolverError('Solution not optimal: {}'.format(result.status))
+
+        return result
+
+    @abc.abstractmethod
+    def solve_unchecked(self, sense=None):
+        """Solve problem and return result.
+
+        The user must manually check the status of the result to determine
+        whether an optimal solution was found. A :class:`SolverError` may still
+        be raised if the underlying solver raises an exception.
+        """
 
     @abc.abstractproperty
     def result(self):

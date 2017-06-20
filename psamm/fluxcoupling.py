@@ -111,8 +111,9 @@ class FluxCouplingProblem(object):
 
         results = []
         for sense in (lp.ObjectiveSense.Minimize, lp.ObjectiveSense.Maximize):
-            result = self._prob.solve(sense)
-            if not result:
+            try:
+                result = self._prob.solve(sense)
+            except lp.SolverError:
                 results.append(None)
             else:
                 results.append(result.get_value(self._vbow(reaction_1)))
