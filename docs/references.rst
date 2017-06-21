@@ -36,7 +36,7 @@ References
 .. [Segre02] Segrè D, Vitkup D, Church GM. Analysis of optimality in natural
     and perturbed metabolic networks. Proceedings of the National Academy of
     Sciences of the United States of America. 2002;99(23):15112-15117.
-      :doi:`10.1073/pnas.232349399`.
+    :doi:`10.1073/pnas.232349399`.
 .. [Thiele14] Thiele I, Vlassis N, Fleming RMT. fastGapFill: efficient gap
     filling in metabolic networks. Bioinformatics. 2014;30: 2529–31.
     :doi:`10.1093/bioinformatics/btu321`.
