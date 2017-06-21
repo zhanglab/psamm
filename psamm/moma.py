@@ -52,7 +52,7 @@ class ConstraintGroup(object):
         self.delete()
 
     def add(self, *args):
-        """Add a constraints to the model."""
+        """Add constraints to the model."""
         self._constrs.extend(self._moma._prob.add_linear_constraints(*args))
 
     def delete(self):
@@ -220,74 +220,140 @@ class MOMAProblem(object):
             fba_fluxes[key] = result.get_value(self._v_wt[key])
         return fba_fluxes
 
-    def minimize_qlp2(self, objective, wt_fluxes):
-        """Implemetnation of the MOMA algorithm.
+    def get_fba_obj_flux(self, objective):
+        """Return the maximum objective flux solved by FBA."""
+        flux_result = self.solve_fba(objective)
+        return flux_result.get_value(self._v_wt[objective])
 
-        We try to maximize biomass, by keeping the fluxes relitively the same
-        as the wildtype. This helps avoid the assumption that an organism will
-        perform optimally directly after removing a gene.
+    def lin_moma(self, wt_fluxes):
+        """Minimize the redistribution of fluxes using a linear objective.
 
-        Minimizes sum of (wild type - knockout)^2
+        The change in flux distribution is mimimized by minimizing the sum
+        of the absolute values of the differences of wild type FBA solution
+        and the knockout strain flux solution.
+
+        This formulation bases the solution on the wild type fluxes that
+        are specified by the user. If these wild type fluxes were calculated
+        using FBA, then an arbitrary flux vector that optimizes the objective
+        function is used. See [Segre`_02] for more information.
 
         Args:
-            objective: Biomass reaction for the model.
-            wt_fluxes: All the wt_fluxes found by FBA in the form of a
-                dictionary. Use :meth: _get_fba_flux(objective) to return
-                a dictionary.
+            wt_fluxes: Dictionary of all the wild type fluxes. Use
+                :meth:`.get_fba_flux(objective)` to return a dictionary of
+                fluxes found by FBA.
         """
-        # These are all of our non eachange reactions
         reactions = set(self._adjustment_reactions())
 
-        # Get the v model and all the reactions 'variables' associated with it
+        z_diff = self._z_diff
         v = self._v
 
-        # Create a constraints object for this model
-        constr = self.constraints()
+        with self.constraints() as constr:
+            for f_reaction, f_value in iteritems(wt_fluxes):
+                if f_reaction in reactions:
+                    # Add the constraint that finds the optimal solution, such
+                    # that the difference between the wildtype flux is similar
+                    # to the knockout flux.
+                    constr.add(
+                        z_diff[f_reaction] >= f_value - v[f_reaction],
+                        f_value - v[f_reaction] >= -z_diff[f_reaction])
+
+            # If we minimize the sum of the z vector then we will minimize
+            # the |vs_wt - vs| from above
+            self._prob.set_objective(z_diff.sum(reactions))
+
+            self._solve(lp.ObjectiveSense.Minimize)
+
+    def lin_moma2(self, objective, wt_obj):
+        """Find the smallest redistribution vector using a linear objective.
+
+        The change in flux distribution is mimimized by minimizing the sum
+        of the absolute values of the differences of wild type FBA solution
+        and the knockout strain flux solution.
+
+        Creates the constraint that the we select the optimal flux vector that
+        is closest to the wildtype. This might still return an arbitrary flux
+        vector the maximizes the objective function.
+
+        Args:
+            objective: Objective reaction for the model.
+            wt_obj: The flux value for your wild type objective reactions.
+                Can either use an expiremental value or on determined by FBA
+                by using :meth:`.get_fba_obj_flux(objective)`.
+        """
+        reactions = set(self._adjustment_reactions())
+
+        z_diff = self._z_diff
+        v = self._v
+        v_wt = self._v_wt
+
+        with self.constraints() as constr:
+            for f_reaction in reactions:
+                # Add the constraint that finds the optimal solution, such
+                # that the difference between the wildtype flux
+                # is similar to the knockout flux.
+                constr.add(
+                    z_diff[f_reaction] >= v_wt[f_reaction] - v[f_reaction],
+                    v_wt[f_reaction] - v[f_reaction] >= -z_diff[f_reaction])
+
+            # If we minimize the sum of the z vector then we will minimize
+            # the |v_wt - v| from above
+            self._prob.set_objective(z_diff.sum(reactions))
+
+            constr.add(self._v_wt[objective] >= wt_obj)
+
+            self._solve(lp.ObjectiveSense.Minimize)
+
+    def moma(self, wt_fluxes):
+        """Minimize the redistribution of fluxes using Euclidean distance.
+
+        Minimizing the redistribution of fluxes using a quadratic objective
+        function. The distance is minimized by minimizing the sum of
+        (wild type - knockout)^2.
+
+        Args:
+            wt_fluxes: Dictionary of all the wild type fluxes that will be
+                used to find a close MOMA solution. Fluxes can be expiremental
+                or calculated using :meth: get_fba_flux(objective).
+        """
+        reactions = set(self._adjustment_reactions())
+        v = self._v
 
         obj_expr = 0
-        # Loop through all the flux reactions
         for f_reaction, f_value in iteritems(wt_fluxes):
-            # Makes sure the reaction we are trying to put a constraint on is
-            # a non exchange reaction
             if f_reaction in reactions:
-                # Add the constraint that finds the optimal solution, such
-                # that the differenct between the wildtype flux
-                # is similar to the knockout flux.
-                obj_expr += (f_value - v(f_reaction))**2
+                # Minimize the Euclidean distance between the two vectors
+                obj_expr += (f_value - v[f_reaction])**2
 
-        # Set the objective
         self._prob.set_objective(obj_expr)
+        self._solve(lp.ObjectiveSense.Minimize)
 
-        # Minimize the squared distance between the wild type flux values and
-        # the knockout values
-        result = self._solve(lp.ObjectiveSense.Minimize)
+    def moma2(self, objective, wt_obj):
+        """Find the smallest redistribution vector using Euclidean distance.
 
-        # We need to go back and manually delete all the constaints
-        constr.delete()
+        Minimizing the redistribution of fluxes using a quadratic objective
+        function. The distance is minimized by minimizing the sum of
+        (wild type - knockout)^2.
 
-        # Need to make sure we catch any problems that occur in the solver
-        if not result:
-            raise MOMAError('Unable to solve QLP2 MOMA: {}'.format(
-                result.status))
+        Creates the constraint that the we select the optimal flux vector that
+        is closest to the wildtype. This might still return an arbitrary flux
+        vector the maximizes the objective function.
 
-    def minimize_l2(self, objective):
-        wt_obj = self._solve_fba(objective)
-
+        Args:
+            objective: Objective reaction for the model.
+            wt_obj: The flux value for your wild type objective reactions.
+                Can either use an expiremental value or on determined by FBA
+                by using :meth:`.get_fba_obj_flux(objective)`.
+        """
         obj_expr = 0
         for reaction in self._adjustment_reactions():
-            v_wt = self._v_wt(reaction)
-            v = self._v(reaction)
+            v_wt = self._v_wt[reaction]
+            v = self._v[reaction]
             obj_expr += (v_wt - v)**2
 
         self._prob.set_objective(obj_expr)
 
-        v_wt_obj = self._v_wt(objective)
-        with self.constraints(v_wt_obj == wt_obj):
-            result = self._solve(lp.ObjectiveSense.Minimize)
-
-        if not result:
-            raise MOMAError('Unable to solve L2 MOMA: {}'.format(
-                result.status))
+        with self.constraints(self._v_wt[objective] >= wt_obj):
+            self._solve(lp.ObjectiveSense.Minimize)
 
     def get_flux(self, reaction):
         """Return the knockout flux for a specific reaction."""
