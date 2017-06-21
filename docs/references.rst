@@ -26,14 +26,14 @@ References
 .. [Muller13] Müller AC, Bockmayr A. Fast thermodynamically constrained flux
     variability analysis. Bioinformatics. 2013;29: 903–909.
     :doi:`10.1093/bioinformatics/btt059`.
-.. [Orth10] Orth JD, Thiele I, Palsson BØ. What is flux balance analysis? Nat
+.. [Orth10] Orth JD, Thiele I, Palsson Bo. What is flux balance analysis? Nat
     Biotechnol. Nature Publishing Group; 2010;28: 245–8.
     :doi:`10.1038/nbt.1614`.
 .. [Schilling00] Schilling CH, Letscher D, Palsson BO. Theory for the systemic
     definition of metabolic pathways and their use in interpreting metabolic
     function from a pathway-oriented perspective. J Theor Biol. 2000;203:
     229–48. :doi:`10.1006/jtbi.2000.1073`.
-.. [Segre02] Segrè D, Vitkup D, Church GM. Analysis of optimality in natural
+.. [Segre02] Segre D, Vitkup D, Church GM. Analysis of optimality in natural
     and perturbed metabolic networks. Proceedings of the National Academy of
     Sciences of the United States of America. 2002;99(23):15112-15117.
       :doi:`10.1073/pnas.232349399`.

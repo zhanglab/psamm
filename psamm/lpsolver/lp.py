@@ -278,7 +278,7 @@ class Expression(object):
                 for v2, value2 in iteritems(other._variables):
                     p1 = v1 if isinstance(v1, Product) else Product((v1,))
                     p2 = v2 if isinstance(v2, Product) else Product((v2,))
-                    product = Product(sorted(p1 + p2, key=text_type))
+                    product = Product(sorted(p1 + p2, key=lambda p: id(p)))
                     variables[product] += value1 * value2
 
                 if other._offset != 0:
@@ -310,7 +310,7 @@ class Expression(object):
                 for v2, value2 in iteritems(other._variables):
                     p1 = v1 if isinstance(v1, Product) else Product((v1,))
                     p2 = v2 if isinstance(v2, Product) else Product((v2,))
-                    product = Product(sorted(p1 + p2, key=text_type))
+                    product = Product(sorted(p1 + p2, key=lambda p: id(p)))
                     variables[product] += value1 * value2
 
                 if other._offset != 0:
@@ -414,15 +414,11 @@ class Expression(object):
     def __str__(self):
         """Return string representation of expression"""
 
-        def sort_key_variable(item):
-            key, _ = item
-            is_product = isinstance(key, Product)
-            return is_product, text_type(key)
-
         def all_terms():
             count_vars = 0
             for name, value in sorted(
-                    iteritems(self._variables), key=sort_key_variable):
+                    iteritems(self._variables),
+                    key=lambda p: (isinstance(p[0], Product), p[0])):
                 if value != 0:
                     count_vars += 1
                     if isinstance(name, VariableSet):

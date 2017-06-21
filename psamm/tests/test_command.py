@@ -441,6 +441,26 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
     def test_run_genedelete(self):
         self.run_solver_command(GeneDeletionCommand, ['--gene', 'gene_1'])
 
+    def test_run_genedelete_with_fba(self):
+        self.run_solver_command(
+            GeneDeletionCommand, ['--gene=gene_1', '--method=fba'])
+
+    def test_run_genedelete_with_lin_moma(self):
+        self.run_solver_command(
+            GeneDeletionCommand, ['--gene=gene_1', '--method=lin_moma'])
+
+    def test_run_genedelete_with_lin_moma2(self):
+        self.run_solver_command(
+            GeneDeletionCommand, ['--gene=gene_1', '--method=lin_moma2'])
+
+    def test_run_genedelete_with_moma(self):
+        self.run_solver_command(
+            GeneDeletionCommand, ['--gene=gene_1', '--method=moma'], {'quadratic': True})
+
+    def test_run_genedelete_with_moma2(self):
+        self.run_solver_command(
+            GeneDeletionCommand, ['--gene=gene_1', '--method=moma2'], {'quadratic': True})
+
     def test_run_genedelete_with_infeasible(self):
         self.skip_test_if_no_solver()
         with self.assertRaises(SystemExit):

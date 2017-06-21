@@ -24,6 +24,7 @@ import logging
 from ..command import (Command, MetabolicMixin, ObjectiveMixin,
                        SolverCommandMixin, FilePrefixAppendAction)
 from .. import fluxanalysis
+from .. import moma
 from ..expression import boolean
 
 from six import string_types
@@ -42,9 +43,16 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         parser.add_argument(
             '--gene', metavar='genes', action=FilePrefixAppendAction,
             type=str, default=[], help='Delete multiple genes from model')
+        parser.add_argument(
+            '--method', metavar='method',
+            choices=['fba', 'lin_moma', 'lin_moma2', 'moma', 'moma2'],
+            type=str, default='fba',
+            help='Select which method to use. (fba, lin_moma, lin_moma2, '
+                 'moma, moma2)')
         super(GeneDeletionCommand, cls).init_parser(parser)
 
     def run(self):
+        """Delete the specified gene and solve using the desired method."""
         obj_reaction = self._get_objective()
 
         genes = set()
@@ -81,28 +89,80 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                     logger.info('Deleting reaction {}...'.format(reaction))
                     deleted_reactions.add(reaction)
 
-        solver = self._get_solver()
-        prob = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+        if self._args.method in ['moma', 'moma2']:
+            solver = self._get_solver(quadratic=True)
+        else:
+            solver = self._get_solver()
 
-        try:
+        if self._args.method == 'fba':
+            logger.info('Solving using FBA...')
+            prob = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+
+            try:
+                prob.maximize(obj_reaction)
+            except fluxanalysis.FluxBalanceError as e:
+                self.report_flux_balance_error(e)
+
+            wild = prob.get_flux(obj_reaction)
+
+            for reaction in deleted_reactions:
+                flux_var = prob.get_flux_var(reaction)
+                prob.prob.add_linear_constraints(flux_var == 0)
+
             prob.maximize(obj_reaction)
-        except fluxanalysis.FluxBalanceError as e:
-            self.report_flux_balance_error(e)
-        wild = prob.get_flux(obj_reaction)
+            deleteflux = prob.get_flux(obj_reaction)
 
-        for reaction in deleted_reactions:
-            flux_var = prob.get_flux_var(reaction)
-            prob.prob.add_linear_constraints(flux_var == 0)
+            if wild != 0:
+                logger.info(
+                    'Objective reaction has {:.2%} '
+                    'flux of wild type flux'.format(abs(deleteflux / wild)))
+                logger.info(
+                    'Solving took {:.2f} seconds'.format(
+                        time.time() - start_time))
+                logger.info(
+                    'Objective reaction after gene deletion '
+                    'has flux {}'.format(
+                        abs(deleteflux) if deleteflux == 0 else deleteflux))
 
-        prob.maximize(obj_reaction)
-        deleteflux = prob.get_flux(obj_reaction)
+        elif self._args.method in ['lin_moma', 'lin_moma2', 'moma', 'moma2']:
+            p = moma.MOMAProblem(self._mm, solver)
+            wild = p.get_fba_obj_flux(obj_reaction)
+            wt_fluxes = p.get_minimal_fba_flux(obj_reaction)
 
-        logger.info(
-            'Solving took {:.2f} seconds'.format(time.time() - start_time))
-        logger.info(
-            'Objective reaction after gene deletion has flux {}'.format(
-                abs(deleteflux) if deleteflux == 0 else deleteflux))
-        if wild != 0:
-            logger.info(
-                'Objective reaction has {:.2%} flux of wild type flux'.format(
-                    abs(deleteflux / wild)))
+            constr = []
+            try:
+                for reaction in deleted_reactions:
+                    constr.extend(p.prob.add_linear_constraints(
+                        p.get_flux_var(reaction) == 0))
+
+                if self._args.method == 'lin_moma2':
+                    logger.info('Solving using linear moma2...')
+                    p.lin_moma2(obj_reaction, wild)
+                elif self._args.method == 'lin_moma':
+                    logger.info('Solving using linear moma...')
+                    p.lin_moma(wt_fluxes)
+                elif self._args.method == 'moma':
+                    logger.info('Solving using moma...')
+                    p.moma(wt_fluxes)
+                elif self._args.method == 'moma2':
+                    logger.info('Solving using moma2...')
+                    p.moma2(obj_reaction, wild)
+
+                deleteflux = p.get_flux(obj_reaction)
+                logger.info(
+                    '''Objective reaction has {:.2%} flux of wild
+                    type flux'''.format(abs(deleteflux / wild)))
+                logger.info(
+                    'Solving took {:.2f} seconds'.format(
+                        time.time() - start_time))
+                logger.info(
+                    'Objective reaction after gene deletion '
+                    'has flux {}'.format(
+                        abs(deleteflux) if deleteflux == 0 else deleteflux))
+
+            except moma.MOMAError:
+                logger.info('Error computing the flux')
+            # Reset the model for the next gene
+            finally:
+                for c in constr:
+                    c.delete()
