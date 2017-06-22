@@ -199,9 +199,6 @@ class MOMAProblem(object):
         Returns:
             A dictionary of all the reactions and their minimized fluxes.
         """
-        if self._z is None:
-            self._define_z_vars()
-
         # Define constraints
         vs_wt = self._v_wt.set(self._model.reactions)
         zs = self._z.set(self._model.reactions)
