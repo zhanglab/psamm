@@ -13,12 +13,16 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Fastcore module implementing the fastcore algorithm
 
 This is an implementation of the algorithms described in [Vlassis14]_.
+Use the functions :func:`fastcore` and :func:`fastcc` to easily apply
+these algorithms to a :class:`MetabolicModel`.
 """
+
+from __future__ import unicode_literals
 
 import logging
 
@@ -33,6 +37,16 @@ class FastcoreError(Exception):
 
 
 class FastcoreProblem(FluxBalanceProblem):
+    """Represents a FastCore extension of a flux balance problem.
+
+    Accepts the same arguments as :class:`FluxBalanceProblem`, and an
+    additional ``epsilon`` keyword argument.
+
+    Args:
+        model: :class:`MetabolicModel` to solve.
+        solver: LP solver instance to use.
+        epsilon: Flux threshold value.
+    """
     def __init__(self, *args, **kwargs):
         self._epsilon = kwargs.pop('epsilon', 1e-5)
         super(FastcoreProblem, self).__init__(*args, **kwargs)
@@ -131,6 +145,7 @@ class FastcoreProblem(FluxBalanceProblem):
                 yield reaction_id
 
     def flip(self, reactions):
+        """Flip the specified reactions."""
         for reaction in reactions:
             if reaction in self._flipped:
                 self._flipped.remove(reaction)
@@ -138,16 +153,21 @@ class FastcoreProblem(FluxBalanceProblem):
                 self._flipped.add(reaction)
 
     def is_flipped(self, reaction):
+        """Return true if reaction is flipped."""
         return reaction in self._flipped
 
 
 def fastcc(model, epsilon, solver):
-    """Check consistency of model reactions
+    """Check consistency of model reactions.
 
-    Yields all reactions in the model that are not part
-    of the consistent subset.
+    Yield all reactions in the model that are not part of the consistent
+    subset.
+
+    Args:
+        model: :class:`MetabolicModel` to solve.
+        epsilon: Flux threshold value.
+        solver: LP solver instance to use.
     """
-
     reaction_set = set(model.reactions)
     subset = set(reaction_id for reaction_id in reaction_set
                  if model.limits[reaction_id].lower >= 0)
@@ -225,34 +245,58 @@ def fastcc(model, epsilon, solver):
 def fastcc_is_consistent(model, epsilon, solver):
     """Quickly check whether model is consistent
 
-    Returns true if the model is consistent. If it is only necessary to know
-    whether a model is consistent, this function is faster as it will return
+    Return true if the model is consistent. If it is only necessary to know
+    whether a model is consistent, this function is fast as it will return
     the result as soon as it finds a single inconsistent reaction.
-    """
 
+    Args:
+        model: :class:`MetabolicModel` to solve.
+        epsilon: Flux threshold value.
+        solver: LP solver instance to use.
+    """
     for reaction in fastcc(model, epsilon, solver):
         return False
     return True
 
 
 def fastcc_consistent_subset(model, epsilon, solver):
-    """Return consistent subset of model
+    """Return consistent subset of model.
 
     The largest consistent subset is returned as
     a set of reaction names.
-    """
 
+    Args:
+        model: :class:`MetabolicModel` to solve.
+        epsilon: Flux threshold value.
+        solver: LP solver instance to use.
+
+    Returns:
+        Set of reaction IDs in the consistent reaction subset.
+    """
     reaction_set = set(model.reactions)
     return reaction_set.difference(fastcc(model, epsilon, solver))
 
 
 def fastcore(model, core, epsilon, solver, scaling=1e5, weights={}):
-    """Find a flux consistent subnetwork containing the core subset
+    """Find a flux consistent subnetwork containing the core subset.
 
     The result will contain the core subset and as few of the additional
     reactions as possible.
-    """
 
+    Args:
+        model: :class:`MetabolicModel` to solve.
+        core: Set of core reaction IDs.
+        epsilon: Flux threshold value.
+        solver: LP solver instance to use.
+        scaling: Scaling value to apply (see [Vlassis14]_ for more
+            information on this parameter).
+        weights: Dictionary with reaction IDs as keys and values as weights.
+            Weights specify the cost of adding a reaction to the consistent
+            subnetwork. Default value is 1.
+
+    Returns:
+        Set of reaction IDs in the consistent reaction subset.
+    """
     consistent_subset = set()
     reaction_set = set(model.reactions)
 

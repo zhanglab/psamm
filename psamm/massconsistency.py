@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Mass consistency analysis of metabolic databases
 
@@ -29,7 +29,7 @@ pseudo-compounds (e.g. "photon") that also has to be excluded.
 
 from .lpsolver import lp
 
-from six import iteritems
+from six import iteritems, raise_from
 
 
 class MassConsistencyError(Exception):
@@ -67,7 +67,7 @@ def is_consistent(database, solver, exchange=set(), zeromass=set()):
         if reaction not in exchange:
             prob.add_linear_constraints(lhs == 0)
 
-    result = prob.solve(lp.ObjectiveSense.Minimize)
+    result = prob.solve_unchecked(lp.ObjectiveSense.Minimize)
     return result.success
 
 
@@ -119,10 +119,12 @@ def check_reaction_consistency(database, solver, exchange=set(),
                 prob.add_linear_constraints(lhs == 0)
 
     # Solve
-    result = prob.solve(lp.ObjectiveSense.Minimize)
-    if not result:
-        raise MassConsistencyError('Non-optimal solution: {}'.format(
-            result.status))
+    try:
+        prob.solve(lp.ObjectiveSense.Minimize)
+    except lp.SolverError as e:
+        raise_from(
+            MassConsistencyError('Failed to solve mass consistency: {}'.format(
+                e)), e)
 
     def iterate_reactions():
         for reaction_id in database.reactions:
@@ -173,10 +175,12 @@ def check_compound_consistency(database, solver, exchange=set(),
             prob.add_linear_constraints(lhs == 0)
 
     # Solve
-    result = prob.solve(lp.ObjectiveSense.Maximize)
-    if not result:
-        raise MassConsistencyError('Non-optimal solution: {}'.format(
-            result.status))
+    try:
+        prob.solve(lp.ObjectiveSense.Maximize)
+    except lp.SolverError as e:
+        raise_from(
+            MassConsistencyError('Failed to solve mass consistency: {}'.format(
+                e)), e)
 
     for compound in mass_compounds:
         yield compound, m.value(compound)

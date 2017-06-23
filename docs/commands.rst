@@ -209,6 +209,48 @@ The file gene_file.txt would contain the following lines::
     ExGene1
     ExGene2
 
+To delete genes using different algorithms use ``--method`` to specify
+which algorithm for the solver to use. The default method for the command is
+FBA. To delete genes using the Minimization of Metabolic Adjustment (MOMA)
+algorithm use the command line argument ``--method moma``. MOMA is based on
+the assumption that the knockout organism has not had time to adjust its gene
+regulation to maximize biomass production so fluxes will be close to wildtype
+fluxes.
+
+.. code-block:: shell
+
+    $ psamm-model genedelete --gene ExGene1 --method moma
+
+There are four variations of MOMA available in PSAMM, defined in the following
+way (where :math:`\bar{v}` is the wild type fluxes and :math:`\bar{u}` is the
+knockout fluxes):
+
+MOMA (``--method moma``)
+    Finds the reaction fluxes in the knockout, such that the difference in flux
+    from the wildtype is minimized. Minimization is performed with the
+    Euclidean distance: :math:`\sum_j (v_j - u_j)^2`. The wildtype fluxes are
+    obtained from the wildtype model (i.e. before genes are deleted) by FBA
+    with L1 minimization. L1 minimization is performed on the FBA result to
+    remove loops and make the result disregard internal loop fluxes. [Segre02]_
+
+Linear MOMA (``--method lin_moma``)
+    Finds the reaction fluxes in the knockout, such that the difference in flux
+    from the wildtype is minimized. Minimization is performed with the
+    Manhattan distance: :math:`\sum_j \|v_j - u_j\|`. The wildtype fluxes are
+    obtained from the wildtype model (i.e. before genes are deleted) by FBA
+    with L1 minimization. L1 minimization is performed on the FBA result to
+    remove loops and make the result disregard internal loop fluxes. [Mo09]_
+
+Combined-model MOMA (``--method moma2``) (Experimental)
+    Similar to ``moma``, but this implementation solves for the wild type
+    fluxes at the same time as the knockout fluxes to ensure not to rely on the
+    arbitrary flux vector found with FBA.
+
+Combined-model linear MOMA (``--method lin_moma2``) (Experimental)
+    Similar to ``lin_moma``, but this implementation solves for the wild type
+    fluxes at the same time as the knockout fluxes to ensure not to rely on the
+    arbitrary flux vector found with FBA.
+
 Flux coupling analysis (``fluxcoupling``)
 -----------------------------------------
 
@@ -456,6 +498,25 @@ minimal solution.
 .. code-block:: shell
 
     $ psamm-model fastgapfill --penalty penalty.tsv
+
+Predict primary pairs (``primarypairs``)
+----------------------------------------------------------------------
+
+This command is used to predict element-transferring reactant/product pairs
+in the reactions of the model. This can be used to determine the flow of
+elements through reactions. Two methods for predicting the pairs are available:
+FindPrimaryPairs (``fpp``) [Steffensen17]_ and
+MapMaker (``mapmaker``) [Tervo16]_. The ``--method`` option can used to select
+which prediction method to use:
+
+.. code-block:: shell
+
+    $ psamm-model primarypairs --method=fpp
+
+The result is reported as a table of four columns. The first column is the
+reactions ID, the second and third columns contain the compound ID of the
+reactant and product. The fourth column contains the predicted transfer of
+elements.
 
 SBML Export (``sbmlexport``)
 ----------------------------

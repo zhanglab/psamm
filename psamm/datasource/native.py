@@ -97,8 +97,11 @@ def yaml_load(stream):
 class _OrderedEntrySet(object):
     """Ordered set of entity entries.
 
-    This deliberately does not implement Mapping because iteration does not
-    provide keys (since the keys are already in the entry values).
+    This is somewhere between a Set and a Mapping but deliberately does not
+    implement any of those interfaces. Iteration does not provide
+    (key, value)-items (since the keys are already in the entry values)
+    but instead provides just values. The usual set operations such as union
+    and intersection are not provided.
     """
     def __init__(self, mapping={}):
         self._dict = OrderedDict(mapping)
@@ -129,6 +132,17 @@ class _OrderedEntrySet(object):
             del self._dict[key]
         except KeyError:
             pass
+
+    def clear(self):
+        self._dict.clear()
+
+    def update(self, it):
+        for entry in it:
+            self.add_entry(entry)
+
+    def __repr__(self):
+        return str('<_OrderedEntrySet {{{}}}>').format(
+            ', '.join(repr(x) for x in iter(self)))
 
 
 class ModelReader(object):
@@ -446,30 +460,54 @@ class NativeModel(object):
         """Return model name property."""
         return self._properties.get('name')
 
+    @name.setter
+    def name(self, value):
+        self._properties['name'] = value
+
     @property
     def version_string(self):
         """Return model version string."""
         return self._properties.get('version_string')
+
+    @version_string.setter
+    def version_string(self, value):
+        self._properties['version_string'] = value
 
     @property
     def biomass_reaction(self):
         """Return biomass reaction property."""
         return self._properties.get('biomass')
 
+    @biomass_reaction.setter
+    def biomass_reaction(self, value):
+        self._properties['biomass'] = value
+
     @property
     def extracellular_compartment(self):
         """Return extracellular compartment property."""
         return self._properties.get('extracellular')
+
+    @extracellular_compartment.setter
+    def extracellular_compartment(self, value):
+        self._properties['extracellular'] = value
 
     @property
     def default_compartment(self):
         """Return default compartment property."""
         return self._properties.get('default_compartment')
 
+    @default_compartment.setter
+    def default_compartment(self, value):
+        self._properties['default_compartment'] = value
+
     @property
     def default_flux_limit(self):
         """Return default flux limit property."""
         return self._properties.get('default_flux_limit')
+
+    @default_flux_limit.setter
+    def default_flux_limit(self, value):
+        self._properties['default_flux_limit'] = value
 
     @property
     def compartments(self):
@@ -574,6 +612,9 @@ class NativeModel(object):
         return MetabolicModel.load_model(
             database, model_definition, itervalues(self.exchange),
             itervalues(self.limits), v_max=self.default_flux_limit)
+
+    def __repr__(self):
+        return str('<{} name={!r}>'.format(self.__class__.__name__, self.name))
 
 
 def _check_id(entity, entity_type):

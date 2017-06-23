@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 """Parser and representation of chemical formulas.
 
@@ -207,14 +207,15 @@ class Formula(FormulaElement):
     """
 
     def __init__(self, values={}):
-        self._values = {}
+        self._values = Counter()
         self._variables = set()
 
         for element, value in iteritems(values):
             if not isinstance(element, FormulaElement):
                 raise ValueError('Not a formula element: {}'.format(
                     repr(element)))
-            if element != Formula() and value != 0:
+            if (value != 0 and
+                    (not isinstance(element, Formula) or len(element) > 0)):
                 self._values[element] = value
 
             if callable(getattr(value, 'variables', None)):
@@ -243,21 +244,21 @@ class Formula(FormulaElement):
         """
 
         stack = [(self, 1)]
-        result = {}
+        result = Counter()
         while len(stack) > 0:
             var, value = stack.pop()
             if isinstance(var, Formula):
                 for sub_var, sub_value in iteritems(var._values):
                     stack.append((sub_var, value*sub_value))
             else:
-                if var in result:
-                    result[var] += value
-                else:
-                    result[var] = value
+                result[var] += value
         return Formula(result)
 
     def variables(self):
         return iter(self._variables)
+
+    def __iter__(self):
+        return iter(self._values)
 
     def items(self):
         """Iterate over (:class:`.FormulaElement`, value)-pairs"""
@@ -268,6 +269,18 @@ class Formula(FormulaElement):
 
     def __contains__(self, element):
         return element in self._values
+
+    def get(self, element, default=None):
+        """Return value for element or default if not in the formula."""
+        return self._values.get(element, default)
+
+    def __getitem__(self, element):
+        if element not in self._values:
+            raise KeyError(repr(element))
+        return self._values[element]
+
+    def __len__(self):
+        return len(self._values)
 
     def __str__(self):
         """Return formula represented using Hill notation system
@@ -319,20 +332,37 @@ class Formula(FormulaElement):
         return s
 
     def __repr__(self):
-        return str('Formula({})').format(repr(self._values))
+        return str('Formula({})').format(repr(dict(self._values)))
+
+    def __and__(self, other):
+        """Intersection of formula elements."""
+        if isinstance(other, Formula):
+            return Formula(self._values & other._values)
+        elif isinstance(other, FormulaElement):
+            return Formula(self._values & Counter([other]))
+        return NotImplemented
 
     def __or__(self, other):
-        """Merge formulas into one formula"""
+        """Merge formulas into one formula."""
+        # Note: This operator corresponds to the add-operator on Counter not
+        # the or-operator! The add-operator is used here (on the superclass)
+        # to compose formula elements into subformulas.
         if isinstance(other, Formula):
-            values = Counter(self._values)
-            values.update(other._values)
-            return Formula(values)
+            return Formula(self._values + other._values)
         elif isinstance(other, FormulaElement):
-            return self | Formula({other: 1})
+            return Formula(self._values + Counter([other]))
+        return NotImplemented
+
+    def __sub__(self, other):
+        """Substract other formula from this formula."""
+        if isinstance(other, Formula):
+            return Formula(self._values - other._values)
+        elif isinstance(other, FormulaElement):
+            return Formula(self._values - Counter([other]))
         return NotImplemented
 
     def __mul__(self, other):
-        """Multiply formula element by other"""
+        """Multiply formula element by other."""
         values = {key: value*other for key, value in iteritems(self._values)}
         return Formula(values)
 
@@ -350,90 +380,8 @@ class Formula(FormulaElement):
 
     @classmethod
     def parse(cls, s):
-        """Parse a formula string (e.g. C6H10O2)"""
-
-        scanner = re.compile(r'''
-            (\s+) |         # whitespace
-            (\(|\)) |       # group
-            ([A-Z][a-z]*) | # element
-            (\d+) |         # number
-            ([a-z]) |       # variable
-            (\Z) |          # end
-            (.)             # error
-        ''', re.DOTALL | re.VERBOSE)
-
-        def transform_subformula(form):
-            '''Extract radical if subformula is a singleton with a radical'''
-            if isinstance(form, dict) and len(form) == 1:
-                # A radical in a singleton subformula is interpreted as a
-                # numbered radical.
-                element, value = next(iteritems(form))
-                if isinstance(element, Radical):
-                    return Radical('{}{}'.format(element.symbol, value))
-            return form
-
-        stack = []
-        formula = {}
-        expect_count = False
-
-        def close(formula, count=1):
-            if len(stack) == 0:
-                raise ValueError('Unbalanced parenthesis group in formula')
-            subformula = transform_subformula(formula)
-            if isinstance(subformula, dict):
-                subformula = Formula(subformula)
-
-            formula = stack.pop()
-            if subformula not in formula:
-                formula[subformula] = 0
-            formula[subformula] += count
-            return formula
-
-        for match in re.finditer(scanner, s):
-            (whitespace, group, element, number, variable, end,
-                error) = match.groups()
-
-            if error is not None:
-                raise ValueError('Invalid token in formula string: {}'.format(
-                    match.group(0)))
-            elif whitespace is not None:
-                continue
-            elif group is not None and group == '(':
-                if expect_count:
-                    formula = close(formula)
-                stack.append(formula)
-                formula = {}
-                expect_count = False
-            elif group is not None and group == ')':
-                if expect_count:
-                    formula = close(formula)
-                expect_count = True
-            elif element is not None:
-                if expect_count:
-                    formula = close(formula)
-                stack.append(formula)
-                if element in 'RX':
-                    formula = Radical(element)
-                else:
-                    formula = Atom(element)
-                expect_count = True
-            elif number is not None and expect_count:
-                formula = close(formula, int(number))
-                expect_count = False
-            elif variable is not None and expect_count:
-                formula = close(formula, Expression(variable))
-                expect_count = False
-            elif end is not None:
-                if expect_count:
-                    formula = close(formula)
-            else:
-                raise ValueError('Invalid token in formula string:'
-                                 ' {}'.format(match.group(0)))
-
-        if len(stack) > 0:
-            raise ValueError('Unbalanced parenthesis group in formula')
-
-        return Formula(formula)
+        """Parse a formula string (e.g. C6H10O2)."""
+        return _parse_formula(s)
 
     @classmethod
     def balance(cls, lhs, rhs):
@@ -458,6 +406,105 @@ class Formula(FormulaElement):
                 reduce(operator.or_, missing(lhs, rhs), Formula()))
 
 
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
+class ParseError(Exception):
+    """Signals error parsing formula."""
+
+    def __init__(self, *args, **kwargs):
+        self._span = kwargs.pop('span', None)
+        super(ParseError, self).__init__(*args, **kwargs)
+
+    @property
+    def indicator(self):
+        if self._span is None:
+            return None
+        pre = ' ' * self._span[0]
+        ind = '^' * max(1, self._span[1] - self._span[0])
+        return pre + ind
+
+
+def _parse_formula(s):
+    """Parse formula string."""
+    scanner = re.compile(r'''
+        (\s+) |         # whitespace
+        (\(|\)) |       # group
+        ([A-Z][a-z]*) | # element
+        (\d+) |         # number
+        ([a-z]) |       # variable
+        (\Z) |          # end
+        (.)             # error
+    ''', re.DOTALL | re.VERBOSE)
+
+    def transform_subformula(form):
+        """Extract radical if subformula is a singleton with a radical."""
+        if isinstance(form, dict) and len(form) == 1:
+            # A radical in a singleton subformula is interpreted as a
+            # numbered radical.
+            element, value = next(iteritems(form))
+            if isinstance(element, Radical):
+                return Radical('{}{}'.format(element.symbol, value))
+        return form
+
+    stack = []
+    formula = {}
+    expect_count = False
+
+    def close(formula, count=1):
+        if len(stack) == 0:
+            raise ParseError('Unbalanced parenthesis group in formula')
+        subformula = transform_subformula(formula)
+        if isinstance(subformula, dict):
+            subformula = Formula(subformula)
+
+        formula = stack.pop()
+        if subformula not in formula:
+            formula[subformula] = 0
+        formula[subformula] += count
+        return formula
+
+    for match in re.finditer(scanner, s):
+        (whitespace, group, element, number, variable, end,
+            error) = match.groups()
+
+        if error is not None:
+            raise ParseError(
+                'Invalid token in formula string: {!r}'.format(match.group(0)),
+                span=(match.start(), match.end()))
+        elif whitespace is not None:
+            continue
+        elif group is not None and group == '(':
+            if expect_count:
+                formula = close(formula)
+            stack.append(formula)
+            formula = {}
+            expect_count = False
+        elif group is not None and group == ')':
+            if expect_count:
+                formula = close(formula)
+            expect_count = True
+        elif element is not None:
+            if expect_count:
+                formula = close(formula)
+            stack.append(formula)
+            if element in 'RX':
+                formula = Radical(element)
+            else:
+                formula = Atom(element)
+            expect_count = True
+        elif number is not None and expect_count:
+            formula = close(formula, int(number))
+            expect_count = False
+        elif variable is not None and expect_count:
+            formula = close(formula, Expression(variable))
+            expect_count = False
+        elif end is not None:
+            if expect_count:
+                formula = close(formula)
+        else:
+            raise ParseError(
+                'Invalid token in formula string: {!r}'.format(match.group(0)),
+                span=(match.start(), match.end()))
+
+    if len(stack) > 0:
+        raise ParseError('Unbalanced parenthesis group in formula')
+
+    return Formula(formula)

@@ -560,6 +560,7 @@ def main(command_class=None, args=None):
 
 
 def main_sbml(command_class=None, args=None):
+    """Run the SBML command line interface."""
     # Set up logging for the command line interface
     if 'PSAMM_DEBUG' in os.environ:
         level = getattr(logging, os.environ['PSAMM_DEBUG'].upper(), None)
@@ -575,16 +576,15 @@ def main_sbml(command_class=None, args=None):
             base_logger.addHandler(handler)
             base_logger.propagate = False
 
-    logger.warning(
-        'This command is experimental. It currently only fully parses level 3'
-        ' SBML files!')
-
     title = 'Metabolic modeling tools (SBML)'
     if command_class is not None:
         title, _, _ = command_class.__doc__.partition('\n\n')
 
     parser = argparse.ArgumentParser(description=title)
     parser.add_argument('model', metavar='file', help='SBML file')
+    parser.add_argument('--merge-compounds', action='store_true',
+                        help=('Merge identical compounds occuring in various'
+                              ' compartments.'))
     parser.add_argument(
         '-V', '--version', action='version',
         version='%(prog)s ' + package_version)
@@ -622,6 +622,9 @@ def main_sbml(command_class=None, args=None):
     context = FilePathContext(parsed_args.model)
     with context.open('r') as f:
         model = sbml.SBMLReader(f, context=context).create_model()
+        sbml.convert_sbml_model(model)
+        if parsed_args.merge_compounds:
+            sbml.merge_equivalent_compounds(model)
 
     # Instantiate command with model and run
     command = parsed_args.command(model, parsed_args)

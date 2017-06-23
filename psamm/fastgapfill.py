@@ -51,7 +51,7 @@ def fastgapfill(model_extended, core, solver, weights={}, epsilon=1e-5):
     # Run Fastcore and print the induced reaction set
     logger.info('Calculating Fastcore induced set on model')
     induced = fastcore(
-        model_extended, core, epsilon=1e-5, weights=weights, solver=solver)
+        model_extended, core, epsilon=epsilon, weights=weights, solver=solver)
     logger.debug('Result: |A| = {}, A = {}'.format(len(induced), induced))
     added_reactions = induced - core
     logger.debug('Extended: |E| = {}, E = {}'.format(

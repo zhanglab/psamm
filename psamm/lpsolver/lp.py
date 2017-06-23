@@ -47,6 +47,10 @@ from six.moves import range, reduce
 _INF = float('inf')
 
 
+class SolverError(Exception):
+    """Error wrapping solver specific errors."""
+
+
 class VariableSet(tuple):
     """A tuple used to represent sets of variables."""
 
@@ -274,7 +278,7 @@ class Expression(object):
                 for v2, value2 in iteritems(other._variables):
                     p1 = v1 if isinstance(v1, Product) else Product((v1,))
                     p2 = v2 if isinstance(v2, Product) else Product((v2,))
-                    product = Product(sorted(p1 + p2))
+                    product = Product(sorted(p1 + p2, key=text_type))
                     variables[product] += value1 * value2
 
                 if other._offset != 0:
@@ -306,7 +310,7 @@ class Expression(object):
                 for v2, value2 in iteritems(other._variables):
                     p1 = v1 if isinstance(v1, Product) else Product((v1,))
                     p2 = v2 if isinstance(v2, Product) else Product((v2,))
-                    product = Product(sorted(p1 + p2))
+                    product = Product(sorted(p1 + p2, key=text_type))
                     variables[product] += value1 * value2
 
                 if other._offset != 0:
@@ -410,11 +414,15 @@ class Expression(object):
     def __str__(self):
         """Return string representation of expression"""
 
+        def sort_key_variable(item):
+            key, _ = item
+            is_product = isinstance(key, Product)
+            return is_product, text_type(key)
+
         def all_terms():
             count_vars = 0
             for name, value in sorted(
-                    iteritems(self._variables),
-                    key=lambda p: (isinstance(p[0], Product), p[0])):
+                    iteritems(self._variables), key=sort_key_variable):
                 if value != 0:
                     count_vars += 1
                     if isinstance(name, VariableSet):
@@ -767,9 +775,25 @@ class Problem(object):
     def set_objective_sense(self, sense):
         """Set type of problem (minimize or maximize)"""
 
-    @abc.abstractmethod
     def solve(self, sense=None):
-        """Solve problem and return result"""
+        """Solve problem and return result.
+
+        Raises :class:`SolverError` if the solution is not optimal.
+        """
+        result = self.solve_unchecked(sense)
+        if not result:
+            raise SolverError('Solution not optimal: {}'.format(result.status))
+
+        return result
+
+    @abc.abstractmethod
+    def solve_unchecked(self, sense=None):
+        """Solve problem and return result.
+
+        The user must manually check the status of the result to determine
+        whether an optimal solution was found. A :class:`SolverError` may still
+        be raised if the underlying solver raises an exception.
+        """
 
     @abc.abstractproperty
     def result(self):

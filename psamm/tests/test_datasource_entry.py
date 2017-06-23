@@ -56,6 +56,26 @@ class TestDictEntries(unittest.TestCase):
         with self.assertRaises(ValueError):
             e = entry.DictCompoundEntry(props)
 
+    def test_create_compound_dict_entry_with_id_override(self):
+        props = {
+            'id': 'old_id',
+            'name': 'Compound 1',
+            'formula': 'CO2'
+        }
+        e = entry.DictCompoundEntry(props, id='new_id')
+        self.assertEqual(e.id, 'new_id')
+        self.assertEqual(e.properties['id'], 'new_id')
+
+    def test_use_compound_dict_entry_setters(self):
+        e = entry.DictCompoundEntry({}, id='new_id')
+        e.formula = 'CO2'
+        e.name = 'Compound 1'
+        e.charge = 5
+        self.assertEqual(e.formula, 'CO2')
+        self.assertEqual(e.properties['formula'], 'CO2')
+        self.assertEqual(e.name, 'Compound 1')
+        self.assertEqual(e.charge, 5)
+
     def test_create_reaction_entry(self):
         props = {
             'id': 'reaction_1',
@@ -73,6 +93,16 @@ class TestDictEntries(unittest.TestCase):
         })
         with self.assertRaises(ValueError):
             e2 = entry.DictReactionEntry(e)
+
+    def test_use_reaction_dict_entry_setters(self):
+        e = entry.DictReactionEntry({}, id='reaction_1')
+        e.name = 'Reaction 1'
+        e.equation = 'A => B'
+        e.genes = 'gene_1 and gene_2'
+        self.assertEqual(e.name, 'Reaction 1')
+        self.assertEqual(e.equation, 'A => B')
+        self.assertEqual(e.genes, 'gene_1 and gene_2')
+        self.assertEqual(e.properties['genes'], 'gene_1 and gene_2')
 
     def test_create_compartment_entry(self):
         props = {

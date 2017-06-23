@@ -20,6 +20,9 @@ References
 .. [Mahadevan03] Mahadevan R, Schilling CH. The effects of alternate optimal
     solutions in constraint-based genome-scale metabolic models. Metab Eng.
     2003;5: 264–276. :doi:`10.1016/j.ymben.2003.09.002`.
+.. [Mo09] Mo ML, Palsson BØ, Herrgård MJ. Connecting extracellular metabolomic
+    measurements to intracellular flux states in yeast. BMC Systems Biology.
+    2009;3(1):3-37. :doi:`10.1186/1752-0509-3-37`.
 .. [Muller13] Müller AC, Bockmayr A. Fast thermodynamically constrained flux
     variability analysis. Bioinformatics. 2013;29: 903–909.
     :doi:`10.1093/bioinformatics/btt059`.
@@ -30,6 +33,16 @@ References
     definition of metabolic pathways and their use in interpreting metabolic
     function from a pathway-oriented perspective. J Theor Biol. 2000;203:
     229–48. :doi:`10.1006/jtbi.2000.1073`.
+.. [Segre02] Segrè D, Vitkup D, Church GM. Analysis of optimality in natural
+    and perturbed metabolic networks. Proceedings of the National Academy of
+    Sciences of the United States of America. 2002;99(23):15112-15117.
+    :doi:`10.1073/pnas.232349399`.
+.. [Steffensen17] Steffensen JL, Zhang Y. FindPrimaryPairs: An efficient
+    algorithm for predicting element-transferring reactant/product pairs in
+    metabolic networks. *Submitted*
+.. [Tervo16] Tervo CJ, Reed JL. MapMaker and PathTracer for tracking carbon in
+    genome-scale metabolic models. Biotechnol J. 2016; 1–23.
+    :doi:`10.1002/biot.201400305`.
 .. [Thiele14] Thiele I, Vlassis N, Fleming RMT. fastGapFill: efficient gap
     filling in metabolic networks. Bioinformatics. 2014;30: 2529–31.
     :doi:`10.1093/bioinformatics/btu321`.

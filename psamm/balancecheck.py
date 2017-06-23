@@ -23,7 +23,7 @@ import logging
 
 from six.moves import reduce
 
-from .formula import Formula
+from .formula import Formula, ParseError
 
 logger = logging.getLogger(__name__)
 
@@ -106,10 +106,12 @@ def formula_balance(model):
             try:
                 f = Formula.parse(compound.formula).flattened()
                 compound_formula[compound.id] = f
-            except ValueError:
-                logger.warning(
-                    'Error parsing formula for compound {}: {}'.format(
-                        compound.id, compound.formula), exc_info=True)
+            except ParseError as e:
+                msg = 'Error parsing formula for compound {}:\n{}\n{}'.format(
+                    compound.id, e, compound.formula)
+                if e.indicator is not None:
+                    msg += '\n{}'.format(e.indicator)
+                logger.warning(msg)
 
     for reaction in model.reactions:
         yield reaction, reaction_formula(reaction.equation, compound_formula)

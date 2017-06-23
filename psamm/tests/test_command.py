@@ -20,7 +20,6 @@ from __future__ import unicode_literals
 import sys
 import os
 import argparse
-import codecs
 import shutil
 import tempfile
 from contextlib import contextmanager
@@ -46,6 +45,7 @@ from psamm.commands.gapcheck import GapCheckCommand
 from psamm.commands.gapfill import GapFillCommand
 from psamm.commands.genedelete import GeneDeletionCommand
 from psamm.commands.masscheck import MassConsistencyCommand
+from psamm.commands.primarypairs import PrimaryPairsCommand
 from psamm.commands.randomsparse import RandomSparseNetworkCommand
 from psamm.commands.robustness import RobustnessCommand
 from psamm.commands.sbmlexport import SBMLExport
@@ -103,6 +103,7 @@ class MockSolverCommand(SolverCommandMixin, Command):
     """
     def run(self):
         solver = self._get_solver()
+        print(solver)
 
 
 class BaseCommandTest(object):
@@ -182,7 +183,7 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
                 }, {
                     'id': 'rxn_2_\u03c0',
                     'name': 'Reaction 2',
-                    'equation': '|B[c]| <=> |C[e]|',
+                    'equation': 'atp[c] + (2) |B[c]| <=> adp[c] + |C[e]|',
                     'genes': 'gene_3 or (gene_4 and gene_5)'
                 }, {
                     'id': 'rxn_3',
@@ -205,6 +206,18 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
                     'id': 'C',
                     'charge': -1,
                     'formula': 'O2'
+                },
+                {
+                    'id': 'atp',
+                    'name': '\u2192 ATP ',
+                    'charge': -4,
+                    'formula': 'C10H12N5O13P3'
+                },
+                {
+                    'id': 'adp',
+                    'name': ' ADP',
+                    'charge': -3,
+                    'formula': 'C10H12N5O10P2'
                 }
             ],
             'exchange': [
@@ -429,6 +442,26 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
     def test_run_genedelete(self):
         self.run_solver_command(GeneDeletionCommand, ['--gene', 'gene_1'])
 
+    def test_run_genedelete_with_fba(self):
+        self.run_solver_command(
+            GeneDeletionCommand, ['--gene=gene_1', '--method=fba'])
+
+    def test_run_genedelete_with_lin_moma(self):
+        self.run_solver_command(
+            GeneDeletionCommand, ['--gene=gene_1', '--method=lin_moma'])
+
+    def test_run_genedelete_with_lin_moma2(self):
+        self.run_solver_command(
+            GeneDeletionCommand, ['--gene=gene_1', '--method=lin_moma2'])
+
+    def test_run_genedelete_with_moma(self):
+        self.run_solver_command(
+            GeneDeletionCommand, ['--gene=gene_1', '--method=moma'], {'quadratic': True})
+
+    def test_run_genedelete_with_moma2(self):
+        self.run_solver_command(
+            GeneDeletionCommand, ['--gene=gene_1', '--method=moma2'], {'quadratic': True})
+
     def test_run_genedelete_with_infeasible(self):
         self.skip_test_if_no_solver()
         with self.assertRaises(SystemExit):
@@ -445,6 +478,26 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
     def test_run_masscheck_reaction_with_checked(self):
         self.run_solver_command(
             MassConsistencyCommand, ['--type=reaction', '--checked=rxn_3'])
+
+    def test_run_primarypairs_with_fpp(self):
+        self.run_command(PrimaryPairsCommand, ['--method', 'fpp'])
+
+    def test_run_primarypairs_with_fpp_and_report_element(self):
+        self.run_command(
+            PrimaryPairsCommand, ['--method', 'fpp', '--report-element', 'C'])
+
+    def test_run_primarypairs_with_fpp_and_report_all_transfers(self):
+        self.run_command(
+            PrimaryPairsCommand, ['--method', 'fpp', '--report-all-transfers'])
+
+    def test_run_primarypairs_with_fpp_and_weight(self):
+        self.run_command(
+            PrimaryPairsCommand, [
+                '--method', 'fpp', '--weights', 'C=1,H=0,R=0.5,*=0.4'])
+
+    def test_run_primarypairs_with_mapmaker(self):
+        self.run_solver_command(
+            PrimaryPairsCommand, ['--method', 'mapmaker'], {'integer': True})
 
     def test_run_randomsparse_reactions(self):
         self.run_solver_command(
@@ -510,7 +563,7 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
             ['id', 'equation', 'genes', 'name', 'in_model'],
             ['rxn_1', 'A_\u2206[e] => B[c]', '["gene_1", "gene_2"]',
                 'Reaction 1', 'true'],
-            ['rxn_2_\u03c0', 'B[c] <=> C[e]',
+            ['rxn_2_\u03c0', 'atp[c] + (2) B[c] <=> adp[c] + C[e]',
                 'gene_3 or (gene_4 and gene_5)', 'Reaction 2', 'true'],
             ['rxn_3', 'D[c] => E[c]', '', '', 'true'],
         ])
@@ -522,7 +575,9 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
             ['id', 'name', 'charge', 'formula', 'in_model'],
             ['A_\u2206', 'Compound A', '0', '', 'true'],
             ['B', 'Compound B', '-1', 'H2O', 'true'],
-            ['C', '', '-1', 'O2', 'true']
+            ['C', '', '-1', 'O2', 'true'],
+            ['atp', '\u2192 ATP ', '-4', 'C10H12N5O13P3', 'true'],
+            ['adp', ' ADP', '-3', 'C10H12N5O10P2', 'true']
         ])
 
     def test_run_tableexport_exchange(self):
@@ -579,7 +634,7 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
 
 class TestSBMLCommandMain(unittest.TestCase, BaseCommandTest):
     def setUp(self):
-        doc = StringIO('''<?xml version="1.0" encoding="UTF-8"?>
+        doc = BytesIO('''<?xml version="1.0" encoding="UTF-8"?>
 <sbml xmlns="http://www.sbml.org/sbml/level3/version1/core"
       xmlns:fbc="http://www.sbml.org/sbml/level3/version1/fbc/version1"
       xmlns:html="http://www.w3.org/1999/xhtml"
@@ -631,7 +686,7 @@ class TestSBMLCommandMain(unittest.TestCase, BaseCommandTest):
    <fbc:fluxBound fbc:reaction="R_Biomass" fbc:operation="lessEqual" fbc:value="1000"/>
   </fbc:listOfFluxBounds>
  </model>
-</sbml>''')
+</sbml>'''.encode('utf-8'))
 
         reader = sbml.SBMLReader(doc)
         self._model = reader.create_model()

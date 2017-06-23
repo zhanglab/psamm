@@ -23,7 +23,7 @@ import logging
 from itertools import repeat, count
 import numbers
 
-from six import text_type
+from six import text_type, raise_from
 from six.moves import zip
 import cplex as cp
 
@@ -31,8 +31,9 @@ from .lp import Solver as BaseSolver
 from .lp import Constraint as BaseConstraint
 from .lp import Problem as BaseProblem
 from .lp import Result as BaseResult
-from .lp import (Expression, Product, RelationSense, ObjectiveSense,
-                 VariableType, InvalidResultError, RangedProperty)
+from .lp import (SolverError, Expression, Product, RelationSense,
+                 ObjectiveSense, VariableType, InvalidResultError,
+                 RangedProperty)
 from ..util import LoggerFile
 
 # Module-level logging
@@ -341,14 +342,23 @@ class Problem(BaseProblem):
 
     def _solve(self):
         self._reset_problem_type()
-        self._cp.solve()
+        try:
+            self._cp.solve()
+        except cp.exceptions.CplexSolverError as e:
+            raise_from(SolverError('Unable to solve: {}'.format(e)), e)
+
         self._solve_count += 1
         if (self._cp.solution.get_status() ==
                 self._cp.solution.status.abort_user):
             raise KeyboardInterrupt()
 
-    def solve(self, sense=None):
-        """Solve problem"""
+    def solve_unchecked(self, sense=None):
+        """Solve problem and return result.
+
+        The user must manually check the status of the result to determine
+        whether an optimal solution was found. A :class:`SolverError` may still
+        be raised if the underlying solver raises an exception.
+        """
         if sense is not None:
             self.set_objective_sense(sense)
 
