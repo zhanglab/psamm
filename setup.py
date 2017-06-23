@@ -66,6 +66,7 @@ setup(
         gapfill = psamm.commands.gapfill:GapFillCommand
         genedelete = psamm.commands.genedelete:GeneDeletionCommand
         masscheck = psamm.commands.masscheck:MassConsistencyCommand
+        primarypairs = psamm.commands.primarypairs:PrimaryPairsCommand
         randomsparse = psamm.commands.randomsparse:RandomSparseNetworkCommand
         robustness = psamm.commands.robustness:RobustnessCommand
         sbmlexport = psamm.commands.sbmlexport:SBMLExport

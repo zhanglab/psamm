@@ -37,6 +37,12 @@ References
     and perturbed metabolic networks. Proceedings of the National Academy of
     Sciences of the United States of America. 2002;99(23):15112-15117.
     :doi:`10.1073/pnas.232349399`.
+.. [Steffensen17] Steffensen JL, Zhang Y. FindPrimaryPairs: An efficient
+    algorithm for predicting element-transferring reactant/product pairs in
+    metabolic networks. *Submitted*
+.. [Tervo16] Tervo CJ, Reed JL. MapMaker and PathTracer for tracking carbon in
+    genome-scale metabolic models. Biotechnol J. 2016; 1–23.
+    :doi:`10.1002/biot.201400305`.
 .. [Thiele14] Thiele I, Vlassis N, Fleming RMT. fastGapFill: efficient gap
     filling in metabolic networks. Bioinformatics. 2014;30: 2529–31.
     :doi:`10.1093/bioinformatics/btu321`.
