@@ -55,7 +55,7 @@ setup(
         chargecheck = psamm.commands.chargecheck:ChargeBalanceCommand
         console = psamm.commands.console:ConsoleCommand
         duplicatescheck = psamm.commands.duplicatescheck:DuplicatesCheck
-        excelexport = psamm.commands.excelexport:ExcelExportCommand [excel]
+        excelexport = psamm.commands.excelexport:ExcelExportCommand
         fastgapfill = psamm.commands.fastgapfill:FastGapFillCommand
         fba = psamm.commands.fba:FluxBalanceCommand
         fluxcheck = psamm.commands.fluxcheck:FluxConsistencyCommand
@@ -77,11 +77,11 @@ setup(
 
     install_requires=[
         'PyYAML~=3.11',
-        'six'
+        'six',
+        'xlsxwriter'
     ],
     extras_require={
         'docs': ['sphinx', 'sphinx_rtd_theme', 'mock'],
-        'excel': ['xlsxwriter'],
         ':python_version=="2.7"': ['enum34'],
         ':python_version=="3.3"': ['enum34']
     })
