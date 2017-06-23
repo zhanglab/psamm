@@ -1,4 +1,22 @@
 
+v0.30 (2017-06-23)
+------------------
+
+- Adds the new command `primarypairs` for predicting reactant/product element
+  transfers using the new FindPrimaryPairs method as well as the MapMaker
+  method.
+- A new option has been added to the `genedelete` command which allows use of
+  _minimization of metabolic adjustments_ to simulate biomass production for
+  gene knockouts.
+- Fixes a bug where the epsilon parameter was accidentally ignored by
+  `fastgapfill`.
+- Fixes a bug where the `psamm-sbml-model` command did not ignore boundary
+  species. With this change, the boundary species are also ignored by default
+  when using the API to read SBML models.
+- Fixes a performance issues with gap-filling that made the `gapfill` and
+  `fastgapfill` commands take much longer time to run on large models than
+  necessary.
+
 v0.29 (2017-04-18)
 ------------------
 
