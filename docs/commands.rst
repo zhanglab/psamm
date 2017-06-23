@@ -499,6 +499,25 @@ minimal solution.
 
     $ psamm-model fastgapfill --penalty penalty.tsv
 
+Predict primary pairs (``primarypairs``)
+----------------------------------------------------------------------
+
+This command is used to predict element-transferring reactant/product pairs
+in the reactions of the model. This can be used to determine the flow of
+elements through reactions. Two methods for predicting the pairs are available:
+FindPrimaryPairs (``fpp``) [Steffensen17]_ and
+MapMaker (``mapmaker``) [Tervo16]_. The ``--method`` option can used to select
+which prediction method to use:
+
+.. code-block:: shell
+
+    $ psamm-model primarypairs --method=fpp
+
+The result is reported as a table of four columns. The first column is the
+reactions ID, the second and third columns contain the compound ID of the
+reactant and product. The fourth column contains the predicted transfer of
+elements.
+
 SBML Export (``sbmlexport``)
 ----------------------------
 
