@@ -263,11 +263,3 @@ def pathway_extraction(metabolic_model, model_rxns, model_cpd_list, compound, so
         for reaction_id in model.reactions:
             rxn = model.get_reaction(reaction_id)
             yield reaction_id, prob.result.get_value(v(reaction_id)), rxn
-
-        '''for reaction_id in model.reactions:
-            flux = prob.result.get_value(v(reaction_id))
-            rx = model.get_reaction(reaction_id)
-            rx_trans = rx.translated_compounds
-            if flux >= epsilon or flux <= -epsilon:
-                print('{}\t{}'.format(reaction_id, flux, ))
-                        '''
