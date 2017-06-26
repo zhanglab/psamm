@@ -170,7 +170,7 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
                 model_rxn_list.append(j)
 
             pathway_extraction(model_complete, model_rxn_list, model_cpd_list,
-                               self._args.compound, solver=solver)
+                               self._args.compound, solver=solver, epsilon=self._args.epsilon)
 
     def _log_epsilon_and_fail(self, epsilon, exc):
         msg = ('Finding blocked compounds failed with epsilon set to {}. Try'
@@ -179,7 +179,7 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
         self.fail(msg, exc)
 
 
-def pathway_extraction(metabolic_model, model_rxns, model_cpd_list, compound, solver):
+def pathway_extraction(metabolic_model, model_rxns, model_cpd_list, compound, solver, epsilon):
     '''Extract the pathway of reactions needed for the production of the compound after gapfilling.'''
 
     for compound_id in compound:
@@ -242,5 +242,5 @@ def pathway_extraction(metabolic_model, model_rxns, model_cpd_list, compound, so
 
         for reaction_id in model.reactions:
             flux = prob.result.get_value(v(reaction_id))
-            if flux >= 0.000000001 or flux <= -0.000000001:
+            if flux >= epsilon or flux <= -epsilon:
                 print('{}\t{}'.format(reaction_id, flux))
