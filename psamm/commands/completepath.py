@@ -80,6 +80,12 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
                 return id
             return self._model.compounds[id].properties.get('name', id)
 
+        # Reaction gene information
+        def reaction_genes_string(id):
+            if id not in self._model.reactions:
+                return 'No Gene'
+            return self._model.reactions[id].properties.get('genes', '')
+
         # Calculate penalty if penalty file exists
         penalties = {}
         if self._args.penalty is not None:
@@ -169,8 +175,22 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
                             model_cpd_list.append(l[0])
                 model_rxn_list.append(j)
 
-            pathway_extraction(model_complete, model_rxn_list, model_cpd_list,
-                               self._args.compound, solver=solver, epsilon=self._args.epsilon)
+            result = pathway_extraction(model_complete, model_rxn_list, model_cpd_list,
+                               self._args.compound, solver=solver)
+
+            for rxnid, flux, rx in sorted(result):
+                if abs(flux) > self._args.epsilon:
+                    rx_trans = rx.translated_compounds(compound_name)
+                    if rxnid == 'Compound_Production':
+                        obj = (rxnid, flux, rx_trans, 'Compound Production Sink')
+                        continue
+                    if rxnid in mm.reactions:
+                        genes = reaction_genes_string(rxnid)
+                    else:
+                        genes = 'Gapfilling Reaction'
+                    print('{}\t{}\t{}\t{}'.format(
+                        rxnid, flux, rx_trans, genes))
+            print('Compound Production Flux: {}'.format(obj[1]))
 
     def _log_epsilon_and_fail(self, epsilon, exc):
         msg = ('Finding blocked compounds failed with epsilon set to {}. Try'
@@ -179,7 +199,7 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
         self.fail(msg, exc)
 
 
-def pathway_extraction(metabolic_model, model_rxns, model_cpd_list, compound, solver, epsilon):
+def pathway_extraction(metabolic_model, model_rxns, model_cpd_list, compound, solver):
     '''Extract the pathway of reactions needed for the production of the compound after gapfilling.'''
 
     for compound_id in compound:
@@ -188,7 +208,7 @@ def pathway_extraction(metabolic_model, model_rxns, model_cpd_list, compound, so
         for rxn in metabolic_model.reactions:
             if rxn not in model_rxns:
                 model.remove_reaction(rxn)
-        reaction_id = 'tmp_objective'
+        reaction_id = 'Compound_Production'
         reaction_ex = Reaction(Direction.Forward, {compound_id: -1})
         model.database.set_reaction(reaction_id, reaction_ex)
         model.add_reaction(reaction_id)
@@ -219,7 +239,7 @@ def pathway_extraction(metabolic_model, model_rxns, model_cpd_list, compound, so
             else:
                 prob.add_linear_constraints(lhs == 0)
 
-        obj_var = v(name='tmp_objective')
+        obj_var = v(name='Compound_Production')
         prob.set_objective(obj_var)
         prob.solve(lp.ObjectiveSense.Maximize)
         obj_flux = prob.result.get_value(obj_var)
@@ -241,6 +261,13 @@ def pathway_extraction(metabolic_model, model_rxns, model_cpd_list, compound, so
         prob.solve(lp.ObjectiveSense.Maximize)
 
         for reaction_id in model.reactions:
+            rxn = model.get_reaction(reaction_id)
+            yield reaction_id, prob.result.get_value(v(reaction_id)), rxn
+
+        '''for reaction_id in model.reactions:
             flux = prob.result.get_value(v(reaction_id))
+            rx = model.get_reaction(reaction_id)
+            rx_trans = rx.translated_compounds
             if flux >= epsilon or flux <= -epsilon:
-                print('{}\t{}'.format(reaction_id, flux))
+                print('{}\t{}'.format(reaction_id, flux, ))
+                        '''
