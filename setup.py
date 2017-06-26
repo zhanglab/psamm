@@ -53,6 +53,7 @@ setup(
 
         [psamm.commands]
         chargecheck = psamm.commands.chargecheck:ChargeBalanceCommand
+        completepath = psamm.commands.completepath:CompletePathCommand
         console = psamm.commands.console:ConsoleCommand
         duplicatescheck = psamm.commands.duplicatescheck:DuplicatesCheck
         excelexport = psamm.commands.excelexport:ExcelExportCommand
