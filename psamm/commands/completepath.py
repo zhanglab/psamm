@@ -178,69 +178,69 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
                ' the model.'.format(epsilon))
         self.fail(msg, exc)
 
-    def pathway_extraction(metabolic_model, model_rxns, model_cpd_list, compound, solver):
-        '''Extract the pathway of reactions needed for the production of the compound after gapfilling.'''
 
-        for compound_id in compound:
-            model = metabolic_model.copy()
+def pathway_extraction(metabolic_model, model_rxns, model_cpd_list, compound, solver):
+    '''Extract the pathway of reactions needed for the production of the compound after gapfilling.'''
 
-            for rxn in metabolic_model.reactions:
-                if rxn not in model_rxns:
-                    model.remove_reaction(rxn)
-            reaction_id = 'tmp_objective'
-            reaction_ex = Reaction(Direction.Forward, {compound_id: -1})
-            model.database.set_reaction(reaction_id, reaction_ex)
-            model.add_reaction(reaction_id)
+    for compound_id in compound:
+        model = metabolic_model.copy()
 
-            prob = solver.create_problem()
+        for rxn in metabolic_model.reactions:
+            if rxn not in model_rxns:
+                model.remove_reaction(rxn)
+        reaction_id = 'tmp_objective'
+        reaction_ex = Reaction(Direction.Forward, {compound_id: -1})
+        model.database.set_reaction(reaction_id, reaction_ex)
+        model.add_reaction(reaction_id)
 
-            v = prob.namespace()
+        prob = solver.create_problem()
+
+        v = prob.namespace()
 
 
-            # We keep track of temporary constraints from the last optimization so
-            # that we can remove them during the next call to solve(). This is
-            # necessary because removing the constraint immediately after solving
-            # a model can invalidate the solution in some solvers.
-            temp_constr = []
-            remove_constr = []
-            # Define flux variables
-            for reaction_id in model.reactions:
-                lower, upper = model.limits[reaction_id]
-                v.define([reaction_id], lower=lower, upper=upper)
-            print(model_cpd_list)
-            # Define constraints
-            massbalance_lhs = {compound: 0 for compound in model.compounds}
-            for spec, value in iteritems(model.matrix):
-                    compound, reaction_id = spec
-                    massbalance_lhs[compound] += v(reaction_id) * value
-            for compound, lhs in iteritems(massbalance_lhs):
-                if compound not in model_cpd_list:
-                    prob.add_linear_constraints(lhs >= 0)
-                else:
-                    prob.add_linear_constraints(lhs == 0)
+        # We keep track of temporary constraints from the last optimization so
+        # that we can remove them during the next call to solve(). This is
+        # necessary because removing the constraint immediately after solving
+        # a model can invalidate the solution in some solvers.
+        temp_constr = []
+        remove_constr = []
+        # Define flux variables
+        for reaction_id in model.reactions:
+            lower, upper = model.limits[reaction_id]
+            v.define([reaction_id], lower=lower, upper=upper)
+        # Define constraints
+        massbalance_lhs = {compound: 0 for compound in model.compounds}
+        for spec, value in iteritems(model.matrix):
+                compound, reaction_id = spec
+                massbalance_lhs[compound] += v(reaction_id) * value
+        for compound, lhs in iteritems(massbalance_lhs):
+            if compound not in model_cpd_list:
+                prob.add_linear_constraints(lhs >= 0)
+            else:
+                prob.add_linear_constraints(lhs == 0)
 
-            obj_var = v(name='tmp_objective')
-            prob.set_objective(obj_var)
-            prob.solve(lp.ObjectiveSense.Maximize)
-            obj_flux = prob.result.get_value(obj_var)
-            prob.add_linear_constraints(obj_var >= obj_flux)
+        obj_var = v(name='tmp_objective')
+        prob.set_objective(obj_var)
+        prob.solve(lp.ObjectiveSense.Maximize)
+        obj_flux = prob.result.get_value(obj_var)
+        prob.add_linear_constraints(obj_var >= obj_flux)
 
-            z = prob.namespace()
-            for reaction_id in model.reactions:
-                z.define([reaction_id], lower=0)
+        z = prob.namespace()
+        for reaction_id in model.reactions:
+            z.define([reaction_id], lower=0)
 
-            _z = z.set(model.reactions)
-            _v = v.set(model.reactions)
+        _z = z.set(model.reactions)
+        _v = v.set(model.reactions)
 
-            prob.add_linear_constraints(_z >= _v, _v >= -_z)
+        prob.add_linear_constraints(_z >= _v, _v >= -_z)
 
-            objective = z.expr(
-                (reaction_id, -1)
-                for reaction_id in model.reactions)
-            prob.set_objective(objective)
-            prob.solve(lp.ObjectiveSense.Maximize)
+        objective = z.expr(
+            (reaction_id, -1)
+            for reaction_id in model.reactions)
+        prob.set_objective(objective)
+        prob.solve(lp.ObjectiveSense.Maximize)
 
-            for reaction_id in model.reactions:
-                flux = prob.result.get_value(v(reaction_id))
-                if flux >= 0.000000001 or flux <= -0.000000001:
-                    print('{}\t{}'.format(reaction_id, flux))
+        for reaction_id in model.reactions:
+            flux = prob.result.get_value(v(reaction_id))
+            if flux >= 0.000000001 or flux <= -0.000000001:
+                print('{}\t{}'.format(reaction_id, flux))
