@@ -60,7 +60,7 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
             help='Threshold for reaction flux')
         parser.add_argument(
             '--implicit-sinks', action='store_true',
-            help='Do not include implicit sinks when gap-filling')
+            help='Include implicit sinks when gap-filling')
         parser.add_argument(
             '--allow-bounds-expansion', action='store_true',
             help=('Allow GapFill to propose expansion of flux bounds. This'
@@ -132,7 +132,7 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
             tp_penalty=self._args.tp_penalty,
             penalties=penalties)
 
-        implicit_sinks = not self._args.implicit_sinks
+        implicit_sinks = self._args.implicit_sinks
 
         logger.info('Searching for reactions to fill gaps')
         try:
@@ -144,7 +144,7 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
         except GapFillError as e:
             self._log_epsilon_and_fail(epsilon, e)
 
-        if self._args.gapfill is True:
+        if self._args.gapfill:
             for reaction_id in sorted(model_complete.reactions):
                 rx = model_complete.get_reaction(reaction_id)
                 rxt = rx.translated_compounds(compound_name)
@@ -211,7 +211,7 @@ def pathway_extraction(metabolic_model, model_rxns, model_cpd_list, compound, so
     model.
 
     Args:
-        model: :class:`psamm.datasource.native.NativeModel`.
+        model: :class:`psamm.metabolicmodel.MetabolicModel`.
         model_rxns: A list of reaction IDs of all gap-filling and original model reactions.
         model_cpds: A list of Compound Entries for each compound involved in any gap-filling reactions.
         compound: A compound Id of a compound being unblocked by the gap-filling.
@@ -232,13 +232,6 @@ def pathway_extraction(metabolic_model, model_rxns, model_cpd_list, compound, so
 
         v = prob.namespace()
 
-
-        # We keep track of temporary constraints from the last optimization so
-        # that we can remove them during the next call to solve(). This is
-        # necessary because removing the constraint immediately after solving
-        # a model can invalidate the solution in some solvers.
-        temp_constr = []
-        remove_constr = []
         # Define flux variables
         for reaction_id in model.reactions:
             lower, upper = model.limits[reaction_id]
@@ -270,10 +263,10 @@ def pathway_extraction(metabolic_model, model_rxns, model_cpd_list, compound, so
         prob.add_linear_constraints(_z >= _v, _v >= -_z)
 
         objective = z.expr(
-            (reaction_id, -1)
+            (reaction_id, 1)
             for reaction_id in model.reactions)
         prob.set_objective(objective)
-        prob.solve(lp.ObjectiveSense.Maximize)
+        prob.solve(lp.ObjectiveSense.Minimize)
 
         for reaction_id in model.reactions:
             rxn = model.get_reaction(reaction_id)
