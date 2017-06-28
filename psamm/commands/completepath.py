@@ -174,23 +174,24 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
                         for l in model_complete.get_reaction(k).compounds:
                             model_cpd_list.append(l[0])
                 model_rxn_list.append(j)
+            for compound_id in self._args.compound:
+                print('#Results for Compound {}'.format(compound_id))
+                result = pathway_extraction(model_complete, model_rxn_list, model_cpd_list,
+                                   compound_id, solver=solver)
 
-            result = pathway_extraction(model_complete, model_rxn_list, model_cpd_list,
-                               self._args.compound, solver=solver)
-
-            for rxnid, flux, rx in sorted(result):
-                if abs(flux) > self._args.epsilon:
-                    rx_trans = rx.translated_compounds(compound_name)
-                    if rxnid == 'Compound_Production':
-                        obj = (rxnid, flux, rx_trans, 'Compound Production Sink')
-                        continue
-                    if rxnid in mm.reactions:
-                        genes = reaction_genes_string(rxnid)
-                    else:
-                        genes = 'Gapfilling Reaction'
-                    print('{}\t{}\t{}\t{}'.format(
-                        rxnid, flux, rx_trans, genes))
-            print('Compound Production Flux: {}'.format(obj[1]))
+                for rxnid, flux, rx in sorted(result):
+                    if abs(flux) > self._args.epsilon:
+                        rx_trans = rx.translated_compounds(compound_name)
+                        if rxnid == 'Compound_Production':
+                            obj = (rxnid, flux, rx_trans, 'Compound Production Sink')
+                            continue
+                        if rxnid in mm.reactions:
+                            genes = reaction_genes_string(rxnid)
+                        else:
+                            genes = 'Gapfilling Reaction'
+                        print('{}\t{}\t{}\t{}'.format(
+                            rxnid, flux, rx_trans, genes))
+                print('Compound Production Flux: {}'.format(obj[1]))
 
     def _log_epsilon_and_fail(self, epsilon, exc):
         msg = ('Finding blocked compounds failed with epsilon set to {}. Try'
@@ -217,57 +218,56 @@ def pathway_extraction(metabolic_model, model_rxns, model_cpd_list, compound, so
         compound: A compound Id of a compound being unblocked by the gap-filling.
     """
 
-    for compound_id in compound:
-        model = metabolic_model.copy()
+    model = metabolic_model.copy()
 
-        for rxn in metabolic_model.reactions:
-            if rxn not in model_rxns:
-                model.remove_reaction(rxn)
-        reaction_id = 'Compound_Production'
-        reaction_ex = Reaction(Direction.Forward, {compound_id: -1})
-        model.database.set_reaction(reaction_id, reaction_ex)
-        model.add_reaction(reaction_id)
+    for rxn in metabolic_model.reactions:
+        if rxn not in model_rxns:
+            model.remove_reaction(rxn)
+    reaction_id = 'Compound_Production'
+    reaction_ex = Reaction(Direction.Forward, {compound: -1})
+    model.database.set_reaction(reaction_id, reaction_ex)
+    model.add_reaction(reaction_id)
 
-        prob = solver.create_problem()
+    prob = solver.create_problem()
 
-        v = prob.namespace()
+    v = prob.namespace()
 
-        # Define flux variables
-        for reaction_id in model.reactions:
-            lower, upper = model.limits[reaction_id]
-            v.define([reaction_id], lower=lower, upper=upper)
-        # Define constraints
-        massbalance_lhs = {compound: 0 for compound in model.compounds}
-        for spec, value in iteritems(model.matrix):
-                compound, reaction_id = spec
-                massbalance_lhs[compound] += v(reaction_id) * value
-        for compound, lhs in iteritems(massbalance_lhs):
-            if compound not in model_cpd_list:
-                prob.add_linear_constraints(lhs >= 0)
-            else:
-                prob.add_linear_constraints(lhs == 0)
+    # Define flux variables
+    for reaction_id in model.reactions:
+        lower, upper = model.limits[reaction_id]
+        v.define([reaction_id], lower=lower, upper=upper)
+    # Define constraints
+    massbalance_lhs = {compound: 0 for compound in model.compounds}
+    for spec, value in iteritems(model.matrix):
+            compound, reaction_id = spec
+            massbalance_lhs[compound] += v(reaction_id) * value
+    for compound, lhs in iteritems(massbalance_lhs):
+        if compound not in model_cpd_list:
+            prob.add_linear_constraints(lhs >= 0)
+        else:
+            prob.add_linear_constraints(lhs == 0)
 
-        obj_var = v(name='Compound_Production')
-        prob.set_objective(obj_var)
-        prob.solve(lp.ObjectiveSense.Maximize)
-        obj_flux = prob.result.get_value(obj_var)
-        prob.add_linear_constraints(obj_var >= obj_flux)
+    obj_var = v(name='Compound_Production')
+    prob.set_objective(obj_var)
+    prob.solve(lp.ObjectiveSense.Maximize)
+    obj_flux = prob.result.get_value(obj_var)
+    prob.add_linear_constraints(obj_var >= obj_flux)
 
-        z = prob.namespace()
-        for reaction_id in model.reactions:
-            z.define([reaction_id], lower=0)
+    z = prob.namespace()
+    for reaction_id in model.reactions:
+        z.define([reaction_id], lower=0)
 
-        _z = z.set(model.reactions)
-        _v = v.set(model.reactions)
+    _z = z.set(model.reactions)
+    _v = v.set(model.reactions)
 
-        prob.add_linear_constraints(_z >= _v, _v >= -_z)
+    prob.add_linear_constraints(_z >= _v, _v >= -_z)
 
-        objective = z.expr(
-            (reaction_id, 1)
-            for reaction_id in model.reactions)
-        prob.set_objective(objective)
-        prob.solve(lp.ObjectiveSense.Minimize)
+    objective = z.expr(
+        (reaction_id, 1)
+        for reaction_id in model.reactions)
+    prob.set_objective(objective)
+    prob.solve(lp.ObjectiveSense.Minimize)
 
-        for reaction_id in model.reactions:
-            rxn = model.get_reaction(reaction_id)
-            yield reaction_id, prob.result.get_value(v(reaction_id)), rxn
+    for reaction_id in model.reactions:
+        rxn = model.get_reaction(reaction_id)
+        yield reaction_id, prob.result.get_value(v(reaction_id)), rxn
