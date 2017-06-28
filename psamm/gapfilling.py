@@ -54,13 +54,16 @@ def add_all_database_reactions(model, compartments):
     return added
 
 
-def add_all_exchange_reactions(model, compartment, direction, allow_duplicates=False):
+def add_all_exchange_reactions(model, compartment, direction,
+                               allow_duplicates=False):
     """Add all exchange reactions to database and to model.
 
     Args:
         model: :class:`psamm.metabolicmodel.MetabolicModel`.
-        compartment: The compartment in the model in which the reactions will be added.
-        direction: Determines if the reactions added will be sinks (-1), sources (1), or reversible (0).
+        compartment: The compartment in the model in which
+            the reactions will be added.
+        direction: Determines if the reactions added will be
+            sinks (-1), sources (1), or reversible (0).
     """
 
     all_reactions = {}
@@ -238,23 +241,26 @@ def create_extended_model(model, db_penalty=None, ex_penalty=None,
     return model_extended, weights
 
 
-def create_extended_sink_source_model(model, db_penalty=None, source_penalty=None,
-                          sink_penalty=None, tp_penalty=None, penalties=None):
+def create_extended_sink_source_model(model, db_penalty=None,
+                                    source_penalty=None, sink_penalty=None,
+                                    tp_penalty=None, penalties=None):
     """Create a modified extended model for gap-filling.
 
     Create a :class:`psamm.metabolicmodel.MetabolicModel` with
     all reactions added (the reaction database in the model is taken
     to be the universal database), with artificial transport reactions
-    added, and with artificial sink and source reactions added for each compound
-    in each compartment in the model. Returns the extended
+    added, and with artificial sink and source reactions added for each
+    compound in each compartment in the model. Returns the extended
     :class:`psamm.metabolicmodel.MetabolicModel`
     and a weight dictionary for added reactions in that model.
 
     Args:
         model: :class:`psamm.datasource.native.NativeModel`.
         db_penalty: penalty score for database reactions, default is `None`.
-        source_penalty: penalty score for source exchange reactions, default is `None`.
-        sink_penalty: penalty score for sink exchange reactions, default is `None`.
+        source_penalty: penalty score for source exchange reactions,
+            default is `None`.
+        sink_penalty: penalty score for sink exchange reactions,
+            default is `None`.
         tb_penalty: penalty score for transport reactions, default is `None`.
         penalties: a dictionary of penalty scores for database reactions.
     """

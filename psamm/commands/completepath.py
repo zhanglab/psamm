@@ -200,22 +200,27 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
         self.fail(msg, exc)
 
 
-def pathway_extraction(metabolic_model, model_rxns, model_cpd_list, compound, solver):
-    """Extract the pathway of reactions needed for the production of the compound after gapfilling.
+def pathway_extraction(metabolic_model, model_rxns,
+                       model_cpd_list, compound, solver):
+    """Extract the production pathway for a compound after gap-filling.
 
-    Uses an extended model and reactions identified through the gapfilling procedure
-    to create a new LP problem and maximize the production of a target compound. This
-    function will generate an LP problem with implicit sinks for all compounds
-    except for ones involved in the gap-filling reactions. An L1 minimized FBA problem
-    is then solved and the result is a flux based synthesis pathway for a specific compound.
-    This returns a reaction ID, flux value, and reaction entry for each reaction in the metabolic
-    model.
+    Uses an extended model and reactions identified through the
+    gapfilling procedure to create a new LP problem and maximize
+    the production of a target compound. This function will generate
+    an LP problem with implicit sinks for all compounds except for
+    ones involved in the gap-filling reactions. An L1 minimized FBA problem
+    is then solved and the result is a flux based synthesis pathway for a
+    specific compound. This returns a reaction ID, flux value, and reaction
+    entry for each reaction in the metabolic model.
 
     Args:
         model: :class:`psamm.metabolicmodel.MetabolicModel`.
-        model_rxns: A list of reaction IDs of all gap-filling and original model reactions.
-        model_cpds: A list of Compound Entries for each compound involved in any gap-filling reactions.
-        compound: A compound Id of a compound being unblocked by the gap-filling.
+        model_rxns: A list of reaction IDs of all gap-filling and original
+            model reactions.
+        model_cpds: A list of Compound Entries for each compound involved
+            in any gap-filling reactions.
+        compound: A compound Id of a compound being unblocked by the
+            gap-filling.
     """
 
     model = metabolic_model.copy()
