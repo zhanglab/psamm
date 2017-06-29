@@ -59,16 +59,15 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
             '--epsilon', type=float, default=1e-5,
             help='Threshold for reaction flux')
         parser.add_argument(
-            '--implicit-sinks', action='store_true',
-            help='Include implicit sinks when gap-filling')
+            '--no-fba-sinks', action='store_true',
+            help='removed implicit sinks from the final CompletePath FBA')
         parser.add_argument(
             '--allow-bounds-expansion', action='store_true',
             help=('Allow GapFill to propose expansion of flux bounds. This'
                   ' includes turning irreversible reactions reversible.'))
         parser.add_argument(
-            '--gapfill', action='store_true',
-            help='Run the gapfill algorithm on the model with separated '
-                 'sink and source reactions in each compatment.')
+            '--print-gaps', action='store_true',
+            help='Print out gap-filling output')
         super(CompletePathCommand, cls).init_parser(parser)
 
     def run(self):
@@ -132,14 +131,13 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
             tp_penalty=self._args.tp_penalty,
             penalties=penalties)
 
-        implicit_sinks = self._args.implicit_sinks
 
         logger.info('Searching for reactions to fill gaps')
         try:
             added_reactions, no_bounds_reactions = gapfill(
                 model_complete, core, blocked, exclude, solver=solver,
                 epsilon=epsilon, v_max=v_max, weights=weights,
-                implicit_sinks=implicit_sinks,
+                implicit_sinks=False,
                 allow_bounds_expansion=self._args.allow_bounds_expansion)
         except GapFillError as e:
             self._log_epsilon_and_fail(epsilon, e)
@@ -163,6 +161,7 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
                     rxnid, 'Remove bounds', weights.get(rxnid, 1), rxt))
 
         else:
+            sinks = self._args.no_fba_sinks
             model_rxn_list = []
             model_cpd_list = []
             mm = self._model.create_metabolic_model()
@@ -176,14 +175,19 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
                 model_rxn_list.append(j)
             for compound_id in self._args.compound:
                 print('#Results for Compound {}'.format(compound_id))
-                result = pathway_extraction(model_complete, model_rxn_list, model_cpd_list,
-                                   compound_id, solver=solver)
+                result = pathway_extraction(model_complete,
+                                            model_rxn_list, model_cpd_list,
+                                            compound_id, sinks,
+                                            solver=solver)
 
                 for rxnid, flux, rx in sorted(result):
                     if abs(flux) > self._args.epsilon:
                         rx_trans = rx.translated_compounds(compound_name)
                         if rxnid == 'Compound_Production':
-                            obj = (rxnid, flux, rx_trans, 'Compound Production Sink')
+                            obj = (rxnid, flux, rx_trans,
+                                   'Compound Production Sink')
+                            print('{}\t{}\t{}\t{}'.rxnid, flux, rx_trans,
+                                  'Compound Production Sink')
                             continue
                         if rxnid in mm.reactions:
                             genes = reaction_genes_string(rxnid)
@@ -191,7 +195,7 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
                             genes = 'Gapfilling Reaction'
                         print('{}\t{}\t{}\t{}'.format(
                             rxnid, flux, rx_trans, genes))
-                print('Compound Production Flux: {}'.format(obj[1]))
+                logger.info('Compound Production Flux: {}'.format(obj[1]))
 
     def _log_epsilon_and_fail(self, epsilon, exc):
         msg = ('Finding blocked compounds failed with epsilon set to {}. Try'
@@ -201,7 +205,7 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
 
 
 def pathway_extraction(metabolic_model, model_rxns,
-                       model_cpd_list, compound, solver):
+                       model_cpd_list, compound, sinks, solver):
     """Extract the production pathway for a compound after gap-filling.
 
     Uses an extended model and reactions identified through the
@@ -247,10 +251,13 @@ def pathway_extraction(metabolic_model, model_rxns,
             compound, reaction_id = spec
             massbalance_lhs[compound] += v(reaction_id) * value
     for compound, lhs in iteritems(massbalance_lhs):
-        if compound not in model_cpd_list:
-            prob.add_linear_constraints(lhs >= 0)
-        else:
+        if sinks is True:
             prob.add_linear_constraints(lhs == 0)
+        else:
+            if compound not in model_cpd_list:
+                prob.add_linear_constraints(lhs >= 0)
+            else:
+                prob.add_linear_constraints(lhs == 0)
 
     obj_var = v(name='Compound_Production')
     prob.set_objective(obj_var)
