@@ -480,7 +480,7 @@ during the process of generating and curating a model.
 
 GapFill
 ~~~~~~~
-The ``gapfill`` function in PSAMM can be used to apply the GapFill algorithm [Kumar07]_ to a metabolic model
+The ``gapfill`` function in PSAMM can be used to apply a GapFill algorithm based on [Kumar07]_ to a metabolic model
 to search for and identify reactions that can be added into a model to unblock the production of a specific
 compound or set of compounds. To provide an example of how to utilize this ``gapfill`` function a version of
 the E. coli core model has been provided in the `tutorial-part-2/Gapfilling_Model/` directory. In this directory
@@ -494,7 +494,7 @@ is the E. coli core model with a small additional, incomplete pathway, added tha
       equation: b[c] => c[c] + d[c]
 
 
-This small additional pathway converts succinate to an artificial compound 'a'. The other reaction can covert compound
+This small additional pathway converts succinate to an artificial compound 'a'. The other reaction can convert compound
 'b' to 'c' and 'd'. There is no reaction to convert 'a' to 'b' though, and this can be considered a metabolic gap.
 In an additional reaction database, but not included in the model itself, is an additional reaction:
 
@@ -512,9 +512,7 @@ could be used. For this test case the production of compound 'd[c]' could be unb
 
 This would produce an output that first lists all of the reactions from the original metabolic model. Then lists the
 included gap-filling reactions with their associated penalty values. And lastly will list any reactions where the
-gap-filling result suggests that the flux bounds of the reaction be changed. A sample of the reaction is shown below:
-
-.. code-block:: shell
+gap-filling result suggests that the flux bounds of the reaction be changed. A sample of the reaction is shown below::
 
     ....
     TPI	Model	0	Dihydroxyacetone-phosphate[c] <=> Glyceraldehyde-3-phosphate[c]
@@ -529,7 +527,7 @@ metabolic model. By default, if this option is not used with the command, then i
 compounds in the model meaning that any compound that is produced in excess can be removed through the added sinks.
 
 The other way to refine the gap-filling procedure is through defining specific penalty values for the addition of
-reactions from different sources. reactions can be set for specific reactions in a gap-filling database
+reactions from different sources. Penalties can be set for specific reactions in a gap-filling database
 through a tab separated file provided in the command using the ``--penalty`` option. Additionally penalty values
 for all database reactions can be set using the ``--db-penalty`` option followed by a penalty value. Similarly
 penalty values can be assigned to added transport reactions using the ``--tp-penalty`` option and to added
@@ -569,9 +567,7 @@ model:
 
     (psamm-env) $ psamm-model fastgapfill --subset subset.tsv
 
-In this case the output from this command will show the following:
-
-.. code-block:: shell
+In this case the output from this command will show the following::
 
     ....
     TPI	Model	0	Dihydroxyacetone-phosphate[c] <=> Glyceraldehyde-3-phosphate[c]
@@ -586,10 +582,10 @@ In this case the output from this command will show the following:
     rxn2	Add	1	a[c] => b[c]
 
 The output will first list the model reactions which are labeled with the 'Model' tag in the second column
-of the output. The `PSAMM` will list out any artificial exchange and transporters, as well as any gap reactions
+of the output. `PSAMM` will list out any artificial exchange and transporters, as well as any gap reactions
 included from the larger database. These will be labeled with the `Add` tag in the second column. When compared
 to the ``gapfill`` results from the previous section it can be seen that the ``fastgapfill`` result suggests
-some artificial transporters and exchange reactions for certain compounds. this is due to this method
+some artificial transporters and exchange reactions for certain compounds. This is due to this method
 trying to find a flux consistent gap-filling solution.
 
 Penalty values can be assigned for different types of reactions in the same way that they are in the ``gapfill``
