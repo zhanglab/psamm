@@ -1,3 +1,13 @@
+v0.31 (2017-06-30)
+------------------
+
+- The `psamm-import` tool has been moved from the `psamm-import` package to
+  the main PSAMM package. This means that to import SBML files the
+  `psamm-import` package is no longer needed. To use the model-specific Excel
+  importers, the `psamm-import` package is still needed. With this release
+  of PSAMM, the `psamm-import` package should be updated to at least 0.16.
+- The tutorial was updated with additional sections on using gap-filling
+  procedures on models.
 
 v0.30 (2017-06-23)
 ------------------

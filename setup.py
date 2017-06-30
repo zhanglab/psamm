@@ -50,7 +50,7 @@ else:
 
 setup(
     name='psamm',
-    version='0.30',
+    version='0.31',
     description='PSAMM metabolic modeling tools',
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
