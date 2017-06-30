@@ -41,16 +41,17 @@ for the JSON format, it supports the import of JSON files directly from the
 The support for importing from Excel file is model specific and are available
 for 17 published models. This import requires the installation of the separate
 psamm-import repository. There is also a generic Excel import for models
-produced by the ModelSEED pipeline.
+produced that were produced by older versions of ModelSEED. Models from the
+current ModelSEED can be imported in the SBML format.
 
-To install the ``psamm-import`` package for excel format models use the following
+To install the ``psamm-import`` package for Excel format models use the following
 command:
 
 .. code-block:: shell
 
     (psamm-env) $ pip install git+https://github.com/zhanglab/psamm-import.git
 
-This install will make the excel importers available from the command line when the
+This install will make the Ezxcel importers available from the command line when the
 ``psamm-import`` program is called.
 
 To see a list of the models or model formats that are supported for import, use the command:
