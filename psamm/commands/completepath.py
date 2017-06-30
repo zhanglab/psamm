@@ -142,7 +142,8 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
         except GapFillError as e:
             self._log_epsilon_and_fail(epsilon, e)
 
-        if self._args.gapfill:
+        if self._args.print_gaps:
+            #This should not be model_complete: this should be self._model
             for reaction_id in sorted(model_complete.reactions):
                 rx = model_complete.get_reaction(reaction_id)
                 rxt = rx.translated_compounds(compound_name)
@@ -186,8 +187,8 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
                         if rxnid == 'Compound_Production':
                             obj = (rxnid, flux, rx_trans,
                                    'Compound Production Sink')
-                            print('{}\t{}\t{}\t{}'.rxnid, flux, rx_trans,
-                                  'Compound Production Sink')
+                            print('{}\t{}\t{}\t{}'.format(rxnid, flux, rx_trans,
+                                  'Compound Production Sink'))
                             continue
                         if rxnid in mm.reactions:
                             genes = reaction_genes_string(rxnid)
@@ -195,7 +196,7 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
                             genes = 'Gapfilling Reaction'
                         print('{}\t{}\t{}\t{}'.format(
                             rxnid, flux, rx_trans, genes))
-                logger.info('Compound Production Flux: {}'.format(obj[1]))
+                #logger.info('Compound Production Flux: {}'.format(obj[1]))
 
     def _log_epsilon_and_fail(self, epsilon, exc):
         msg = ('Finding blocked compounds failed with epsilon set to {}. Try'
@@ -257,7 +258,7 @@ def pathway_extraction(metabolic_model, model_rxns,
             if compound not in model_cpd_list:
                 prob.add_linear_constraints(lhs >= 0)
             else:
-                prob.add_linear_constraints(lhs == 0)
+                prob.add_linear_constraints(lhs >= 0)
 
     obj_var = v(name='Compound_Production')
     prob.set_objective(obj_var)
