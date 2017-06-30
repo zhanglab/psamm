@@ -51,7 +51,7 @@ command:
 
     (psamm-env) $ pip install git+https://github.com/zhanglab/psamm-import.git
 
-This install will make the Ezxcel importers available from the command line when the
+This install will make the Excel importers available from the command line when the
 ``psamm-import`` program is called.
 
 To see a list of the models or model formats that are supported for import, use the command:
