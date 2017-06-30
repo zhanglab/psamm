@@ -473,10 +473,125 @@ a network based optimization to identify metabolites with no production pathways
     (psamm-env) $ psamm-model gapcheck --method gapfind --unrestricted-exchange
 
 These methods included in the ``gapcheck`` function can be used to identify various kinds of
-'gaps' in a metabolic model network. `PSAMM` also includes two functions for filling these gaps
+'gaps' in a metabolic model network. `PSAMM` also includes three functions for filling these gaps
 through the addition of artificial reactions or reactions from a supplied database. The
-functions ``gapfill`` and ``fastgapfill`` can be used to perform these gapfilling procedures
+functions ``gapfill``, ``fastgapfill``, and ``completepath`` can be used to perform these gapfilling procedures
 during the process of generating and curating a model.
+
+GapFill
+~~~~~~~
+The ``gapfill`` function in PSAMM can be used to apply a GapFill algorithm based on [Kumar07]_ to a metabolic model
+to search for and identify reactions that can be added into a model to unblock the production of a specific
+compound or set of compounds. To provide an example of how to utilize this ``gapfill`` function a version of
+the E. coli core model has been provided in the `tutorial-part-2/Gapfilling_Model/` directory. In this directory
+is the E. coli core model with a small additional, incomplete pathway, added that contains the following reactions:
+
+.. code-block:: yaml
+
+    - id: rxn1
+      equation: succ_c[c] => a[c]
+    - id: rxn3
+      equation: b[c] => c[c] + d[c]
+
+
+This small additional pathway converts succinate to an artificial compound 'a'. The other reaction can convert compound
+'b' to 'c' and 'd'. There is no reaction to convert 'a' to 'b' though, and this can be considered a metabolic gap.
+In an additional reaction database, but not included in the model itself, is an additional reaction:
+
+    - id: rxn2
+      equation: a[c] => b[c]
+
+
+This reaction, if added would be capable of unblocking the production of 'c' or 'd', by allowing for the conversion
+of compound 'a' to 'b'. In most cases when performing gap-filling on a model a larger database of non-model reactions
+could be used. For this test case the production of compound 'd[c]' could be unblocked by running the following command:
+
+.. code-block:: shell
+
+    (psamm-env) psamm-model gapfill --compound d[c]
+
+This would produce an output that first lists all of the reactions from the original metabolic model. Then lists the
+included gap-filling reactions with their associated penalty values. And lastly will list any reactions where the
+gap-filling result suggests that the flux bounds of the reaction be changed. A sample of the reaction is shown below::
+
+    ....
+    TPI	Model	0	Dihydroxyacetone-phosphate[c] <=> Glyceraldehyde-3-phosphate[c]
+    rxn1	Model	0	Succinate[c] => a[c]
+    rxn3	Model	0	b[c] => c[c] + d[c]
+    rxn2	Add	1	a[c] => b[c]
+
+Some additional options can be used to refine the gap-filling. The first of these options is ``--no-implicit-sinks``
+option that can be added to the command. If this option is used then the gap-filling will be performed with no
+implicit sinks for compounds, meaning that all compounds produced need to be consumed by other reactions in the
+metabolic model. By default, if this option is not used with the command, then implicit sinks are added for all
+compounds in the model meaning that any compound that is produced in excess can be removed through the added sinks.
+
+The other way to refine the gap-filling procedure is through defining specific penalty values for the addition of
+reactions from different sources. Penalties can be set for specific reactions in a gap-filling database
+through a tab separated file provided in the command using the ``--penalty`` option. Additionally penalty values
+for all database reactions can be set using the ``--db-penalty`` option followed by a penalty value. Similarly
+penalty values can be assigned to added transport reactions using the ``--tp-penalty`` option and to added
+exchange reactions using the ``--ex-penalty`` option. An example of a command that applies these penalties
+to a gap-filling simulation would be like follows:
+
+.. code-block:: shell
+
+    (psamm-env) $ psamm-model gapfill --compound d[c] --ex-penalty 100 --tp-penalty 10 --db-penalty 1
+
+The ``gapfill`` function in PSAMM can be used through the model construction process to help identify potential
+new reactions to add to a model and to explore how metabolic gaps effect the capabilities of a metabolic
+network.
+
+FastGapFill
+~~~~~~~~~~~
+
+The ``fastgapfill`` function in `PSAMM` is different gap-filling method that uses the FastGapFill algorithm
+to attempt to generate a gap-filled model that is entirely flux consistent [Thiele14]_. The implementation
+of this algorithm in `PSAMM` can be utilized for unblocking an entire metabolic model or for unblocking
+specific reactions in a network. Often times unblocking all of the reactions in a model at the same time
+will not produce the most meaningful and easy to understand results so only performing this function on a
+subset of reactions is preferable. To do this the ``--subset`` option can be used to provide a file that
+contains a list of reactions to unblock. In this example that list would look like this:
+
+.. code-block:: shell
+
+    rxn1
+    rxn3
+
+
+This file can be provided to the command to unblock the small artificial pathway that was added to the E. coli core
+model:
+
+
+.. code-block:: shell
+
+    (psamm-env) $ psamm-model fastgapfill --subset subset.tsv
+
+In this case the output from this command will show the following::
+
+    ....
+    TPI	Model	0	Dihydroxyacetone-phosphate[c] <=> Glyceraldehyde-3-phosphate[c]
+    rxn1	Model	0	Succinate[c] => a[c]
+    rxn3	Model	0	b[c] => c[c] + d[c]
+    EX_c[e]	Add	1	c[e] <=>
+    EX_d[e]	Add	1	d[e] <=>
+    EX_succ_c[e]	Add	1	Succinate[e] <=>
+    TP_c[c]_c[e]	Add	1	c[c] <=> c[e]
+    TP_d[c]_d[e]	Add	1	d[c] <=> d[e]
+    TP_succ_c[c]_succ_c[e]	Add	1	Succinate[c] <=> Succinate[e]
+    rxn2	Add	1	a[c] => b[c]
+
+The output will first list the model reactions which are labeled with the 'Model' tag in the second column
+of the output. `PSAMM` will list out any artificial exchange and transporters, as well as any gap reactions
+included from the larger database. These will be labeled with the `Add` tag in the second column. When compared
+to the ``gapfill`` results from the previous section it can be seen that the ``fastgapfill`` result suggests
+some artificial transporters and exchange reactions for certain compounds. This is due to this method
+trying to find a flux consistent gap-filling solution.
+
+Penalty values can be assigned for different types of reactions in the same way that they are in the ``gapfill``
+command. With ``--ex-penalty`` for artificial exchange reactions, ``--tp-penalty`` for artificial transporters,
+``--db-penalty`` for new database reactions, and penalties on specific reactions through a penalty file provided
+with the ``--penalty`` option.
 
 Search Functions in PSAMM
 -------------------------

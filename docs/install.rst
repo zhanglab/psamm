@@ -25,8 +25,11 @@ the environment by running
 
     $ source env/bin/activate
 
-The *psamm-import* tool is developed in a separate Git repository. After
-installing PSAMM, the *psamm-import* tool can be installed using:
+The *psamm-import* tool is included in the main PSAMM repository. Some
+additional model specific importers for Excel format models associated
+with publications are maintained in a separate repository. After
+installing PSAMM, support for these import functions can be added through
+installing this additional program:
 
 .. code-block:: shell
 

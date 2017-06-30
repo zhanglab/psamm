@@ -489,7 +489,7 @@ def main(command_class=None, args=None):
     If no command class is specified the user will be able to select a specific
     command through the first command line argument. If the ``args`` are
     provided, these should be a list of strings that will be used instead of
-    ``sys.argv[1]``. This is mostly useful for testing.
+    ``sys.argv[1:]``. This is mostly useful for testing.
     """
 
     # Set up logging for the command line interface

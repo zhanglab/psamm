@@ -38,15 +38,7 @@ Use ``pip`` to install (it is recommended to use a Virtualenv_):
 
     $ pip install psamm
 
-The ``psamm-import`` tool is developed in `a separate repository`_. After
-installing PSAMM the ``psamm-import`` tool can be installed using:
-
-.. code:: shell
-
-    $ pip install git+https://github.com/zhanglab/psamm-import.git
-
 .. _Virtualenv: https://virtualenv.pypa.io/
-.. _a separate repository: https://github.com/zhanglab/psamm-import
 
 Documentation
 -------------

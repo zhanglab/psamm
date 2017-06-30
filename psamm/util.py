@@ -19,6 +19,8 @@
 
 from __future__ import unicode_literals
 
+import os
+import errno
 import re
 import math
 import subprocess
@@ -26,6 +28,15 @@ import collections
 
 import six
 from six import iteritems, text_type
+
+
+def mkdir_p(path):
+    """Make directory path if it does not already exist."""
+    try:
+        os.makedirs(path)
+    except OSError as e:
+        if e.errno != errno.EEXIST or not os.path.isdir(path):
+            raise
 
 
 class LoggerFile(object):

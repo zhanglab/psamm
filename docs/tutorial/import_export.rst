@@ -36,11 +36,25 @@ The ``psamm-import`` program supports the import of models in various formats.
 For the SBML format, it supports the COBRA-compliant SBML specifications, the FBC
 specifications, and the basic SBML specifications in levels 1, 2, and 3;
 for the JSON format, it supports the import of JSON files directly from the
-`BiGG`_ database or from locally downloaded versions;
-the support for importing from Excel file is model specific and are available
-for 17 published models. There is also a generic Excel import for models
-produced by the ModelSEED pipeline. To see a list of these models or model
-formats that are supported, use the command:
+`BiGG`_ database or from locally downloaded versions.
+
+The support for importing from Excel file is model specific and are available
+for 17 published models. This import requires the installation of the separate
+psamm-import repository. There is also a generic Excel import for models
+produced that were produced by older versions of ModelSEED. Models from the
+current ModelSEED can be imported in the SBML format.
+
+To install the ``psamm-import`` package for Excel format models use the following
+command:
+
+.. code-block:: shell
+
+    (psamm-env) $ pip install git+https://github.com/zhanglab/psamm-import.git
+
+This install will make the Excel importers available from the command line when the
+``psamm-import`` program is called.
+
+To see a list of the models or model formats that are supported for import, use the command:
 
 .. _BiGG: http://bigg.ucsd.edu
 
