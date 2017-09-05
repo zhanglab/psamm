@@ -54,11 +54,16 @@ def add_all_database_reactions(model, compartments):
     return added
 
 
-def add_all_exchange_reactions(model, compartment, allow_duplicates=False):
+def add_all_exchange_reactions(model, compartment, direction,
+                               allow_duplicates=False):
     """Add all exchange reactions to database and to model.
 
     Args:
         model: :class:`psamm.metabolicmodel.MetabolicModel`.
+        compartment: The compartment in the model in which
+            the reactions will be added.
+        direction: Determines if the reactions added will be
+            sinks (-1), sources (1), or reversible (0).
     """
 
     all_reactions = {}
@@ -80,7 +85,12 @@ def add_all_exchange_reactions(model, compartment, allow_duplicates=False):
 
         rxnid_ex = create_exchange_id(reactions, compound)
 
-        reaction_ex = Reaction(Direction.Both, {compound: -1})
+        if direction == 0:
+            reaction_ex = Reaction(Direction.Both, {compound: -1})
+        elif direction == -1:
+            reaction_ex = Reaction(Direction.Forward, {compound: -1})
+        elif direction == 1:
+            reaction_ex = Reaction(Direction.Forward, {compound: 1})
         if reaction_ex not in all_reactions:
             model.database.set_reaction(rxnid_ex, reaction_ex)
             reactions.add(rxnid_ex)
@@ -199,7 +209,7 @@ def create_extended_model(model, db_penalty=None, ex_penalty=None,
         'Using artificial exchange reactions for compartment: {}...'.format(
             extra_compartment))
     ex_added = add_all_exchange_reactions(
-        model_extended, extra_compartment, allow_duplicates=True)
+        model_extended, extra_compartment, 0, allow_duplicates=True)
 
     # Add transport reactions to extended model
     boundaries = model.compartment_boundaries
@@ -229,3 +239,95 @@ def create_extended_model(model, db_penalty=None, ex_penalty=None,
         for rxnid, penalty in iteritems(penalties):
             weights[rxnid] = penalty
     return model_extended, weights
+
+
+def create_extended_sink_source_model(model, db_penalty=None,
+                                    source_penalty=None, sink_penalty=None,
+                                    tp_penalty=None, penalties=None):
+    """Create a modified extended model for gap-filling.
+
+    Create a :class:`psamm.metabolicmodel.MetabolicModel` with
+    all reactions added (the reaction database in the model is taken
+    to be the universal database), with artificial transport reactions
+    added, and with artificial sink and source reactions added for each
+    compound in each compartment in the model. Returns the extended
+    :class:`psamm.metabolicmodel.MetabolicModel`
+    and a weight dictionary for added reactions in that model.
+
+    Args:
+        model: :class:`psamm.datasource.native.NativeModel`.
+        db_penalty: penalty score for database reactions, default is `None`.
+        source_penalty: penalty score for source exchange reactions,
+            default is `None`.
+        sink_penalty: penalty score for sink exchange reactions,
+            default is `None`.
+        tb_penalty: penalty score for transport reactions, default is `None`.
+        penalties: a dictionary of penalty scores for database reactions.
+    """
+
+    # Create metabolic model
+    model_extended = model.create_metabolic_model()
+    extra_compartment = model.extracellular_compartment
+
+    compartment_ids = set(c.id for c in model.compartments)
+
+    # Add database reactions to extended model
+    if len(compartment_ids) > 0:
+        logger.info(
+            'Using all database reactions in compartments: {}...'.format(
+                ', '.join('{}'.format(c) for c in compartment_ids)))
+        db_added = add_all_database_reactions(model_extended, compartment_ids)
+    else:
+        logger.warning(
+            'No compartments specified in the model; database reactions will'
+            ' not be used! Add compartment specification to model to include'
+            ' database reactions for those compartments.')
+        db_added = set()
+
+    # Add exchange reactions to extended model
+    logger.info(
+        'Using artificial exchange reactions for compartment: {}...'.format(
+            extra_compartment))
+    sources_added = set()
+    sinks_added = set()
+    for compartment_id in compartment_ids:
+        sources_add = add_all_exchange_reactions(
+            model_extended, compartment_id, 1, allow_duplicates=False)
+        sources_added = sources_add.union(sources_added)
+
+        sinks_add = add_all_exchange_reactions(
+            model_extended, compartment_id, -1, allow_duplicates=False)
+        sinks_added = sinks_add.union(sinks_added)
+
+
+    # Add transport reactions to extended model
+    boundaries = model.compartment_boundaries
+    if len(boundaries) > 0:
+        logger.info(
+            'Using artificial transport reactions for the compartment'
+            ' boundaries: {}...'.format(
+                '; '.join('{}<->{}'.format(c1, c2) for c1, c2 in boundaries)))
+        tp_added = add_all_transport_reactions(
+            model_extended, boundaries, allow_duplicates=True)
+    else:
+        logger.warning(
+            'No compartment boundaries specified in the model;'
+            ' artificial transport reactions will not be used!')
+        tp_added = set()
+
+    # Add penalty weights on reactions
+    weights = {}
+    if db_penalty is not None:
+        weights.update((rxnid, db_penalty) for rxnid in db_added)
+    if tp_penalty is not None:
+        weights.update((rxnid, tp_penalty) for rxnid in tp_added)
+    if source_penalty is not None:
+        weights.update((rxnid, source_penalty) for rxnid in sources_added)
+    if sink_penalty is not None:
+        weights.update((rxnid, sink_penalty) for rxnid in sinks_added)
+
+    if penalties is not None:
+        for rxnid, penalty in iteritems(penalties):
+            weights[rxnid] = penalty
+    return model_extended, weights
+

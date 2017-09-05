@@ -482,6 +482,38 @@ that even with the reactions proposed by GapFill the model may need to produce
 compounds that cannot be used anywhere. The implicit sinks can be disabled
 with the ``--no-implicit-sinks`` option.
 
+CompletePath (``completepath``)
+-------------------------------
+
+The CompletePath function is an extension of the gap-filling procedure described
+in [Kumar07]_ and used in the `gapfill` command. This application of gap-filling
+is meant to provide additional biological context to gap-filling reactions
+by providing a Flux based metabolic context for their addition to a model. This
+command will produce an FBA-like result that shows the flux based synthesis pathway
+for a compound after it is unblocked in the gap-filling. Similarly to the `gapfill`
+command, specific compounds can be unblocked using
+the ``--compound`` option on the command line:
+
+.. code-block:: shell
+
+    $ psamm-model completepath --compound leu-L[c]
+
+The CompletePath functions also allows for the introduction of separate sinks and
+sources for compounds in the model. This differs from the `gapfill` implementation
+which will consider sinks and sources as part of a larger group of Exchange Reactions.
+Separate penalty weights for the addition of these sinks and sources can be defined
+using the ``--sinks`` and ``--sources`` options:
+
+.. code-block:: shell
+
+    $ psamm-model completepath --compound leu-L[c] --sinks 10 --sources 100
+
+Unlike the ``gapfill`` implementation CompletePaths will not add implicit sinks
+for all compounds into the model. This is done to provide a more meaningful context
+to the gap-filling solution that is produced. If a solution with implicit sinks for
+all compounds is desired, they can be added through the command line option
+``--implicit-sinks``.
+
 FastGapFill (``fastgapfill``)
 -----------------------------
 
