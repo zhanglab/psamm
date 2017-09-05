@@ -294,9 +294,12 @@ def create_extended_sink_source_model(model, db_penalty=None,
         sources_add = add_all_exchange_reactions(
             model_extended, compartment_id, 1, allow_duplicates=False)
         sources_added = sources_add.union(sources_added)
+
         sinks_add = add_all_exchange_reactions(
             model_extended, compartment_id, -1, allow_duplicates=False)
         sinks_added = sinks_add.union(sinks_added)
+
+
     # Add transport reactions to extended model
     boundaries = model.compartment_boundaries
     if len(boundaries) > 0:

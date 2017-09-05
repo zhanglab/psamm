@@ -28,6 +28,7 @@ from ..gapfill import gapfill, GapFillError
 from ..datasource.reaction import parse_compound
 from ..gapfilling import create_extended_sink_source_model
 from ..lpsolver import lp
+from ..fastgapfill import fastcore
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,9 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
                   ' includes turning irreversible reactions reversible.'))
         parser.add_argument(
             '--print-gaps', action='store_true',
+            help='Print out gap-filling output')
+        parser.add_argument(
+            '--fastgapfill', action='store_true',
             help='Print out gap-filling output')
         super(CompletePathCommand, cls).init_parser(parser)
 
@@ -130,17 +134,25 @@ class CompletePathCommand(MetabolicMixin, SolverCommandMixin, Command):
             sink_penalty=self._args.sink_penalty,
             tp_penalty=self._args.tp_penalty,
             penalties=penalties)
+        for i in self._args.compound:
+            reaction_id = 'Compound_Production'
+            reaction_ex = Reaction(Direction.Forward, {i: -1})
+            model_complete.database.set_reaction(reaction_id, reaction_ex)
+            model_complete.add_reaction(reaction_id)
 
-
-        logger.info('Searching for reactions to fill gaps')
-        try:
-            added_reactions, no_bounds_reactions = gapfill(
-                model_complete, core, blocked, exclude, solver=solver,
-                epsilon=epsilon, v_max=v_max, weights=weights,
-                implicit_sinks=False,
-                allow_bounds_expansion=self._args.allow_bounds_expansion)
-        except GapFillError as e:
-            self._log_epsilon_and_fail(epsilon, e)
+        if self._args.fastgapfill:
+            core1 = set(['Compound_Production'])
+            added_reactions = fastcore(model_complete, core1, epsilon, solver, scaling=1e5, weights=weights)
+        else:
+            logger.info('Searching for reactions to fill gaps')
+            try:
+                added_reactions, no_bounds_reactions = gapfill(
+                    model_complete, core, blocked, exclude, solver=solver,
+                    epsilon=epsilon, v_max=v_max, weights=weights,
+                    implicit_sinks=False,
+                    allow_bounds_expansion=self._args.allow_bounds_expansion)
+            except GapFillError as e:
+                self._log_epsilon_and_fail(epsilon, e)
 
         if self._args.print_gaps:
             #This should not be model_complete: this should be self._model
@@ -233,10 +245,6 @@ def pathway_extraction(metabolic_model, model_rxns,
     for rxn in metabolic_model.reactions:
         if rxn not in model_rxns:
             model.remove_reaction(rxn)
-    reaction_id = 'Compound_Production'
-    reaction_ex = Reaction(Direction.Forward, {compound: -1})
-    model.database.set_reaction(reaction_id, reaction_ex)
-    model.add_reaction(reaction_id)
 
     prob = solver.create_problem()
 
