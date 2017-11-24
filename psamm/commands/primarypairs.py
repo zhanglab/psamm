@@ -18,6 +18,7 @@
 from __future__ import unicode_literals
 
 import logging
+import random
 
 from ..command import Command, SolverCommandMixin, FilePrefixAppendAction
 from ..formula import Formula, Atom, Radical, ParseError
@@ -56,6 +57,10 @@ class PrimaryPairsCommand(SolverCommandMixin, Command):
             '--report-all-transfers', action='store_true',
             help=('Report all transfers instead of combining elements for'
                   ' each pair (only available for fpp).'))
+        parser.add_argument(
+            '--ambiguous', action='store_true',
+            help=('Report additional information about cases where'
+                  'primary pair identification was ambiguous in a reaction'))
         parser.add_argument(
             '--weights', action='append', default=[], type=text_type,
             help=('Set weights for elements for inferring compound'
@@ -193,23 +198,33 @@ class PrimaryPairsCommand(SolverCommandMixin, Command):
 
     def _run_mapmaker(self, compound_formula, reactions, element_weight):
         solver = self._get_solver(integer=True)
+        ambiguous = set()
         for reaction in reactions:
             logger.info('Predicting reaction {}...'.format(reaction.id))
             try:
-                transfer = next(mapmaker.predict_compound_pairs(
+                transfer = list(mapmaker.predict_compound_pairs(
                                 reaction.equation, compound_formula, solver,
                                 weight_func=element_weight))
+                if self._args.ambiguous:
+                    print('TRANSFER-LIST', reaction.id, transfer)
+                    if len(transfer) > 1:
+                        ambiguous.add(reaction.id)
             except mapmaker.UnbalancedReactionError:
                 logger.info('Reaction {} is not balanced! Skipping...'.format(
                     reaction.id))
                 continue
-            except StopIteration:
+            if len(transfer) == 0:
                 logger.warning('Reaction {} has no predicted transfer!'.format(
                     reaction.id))
                 continue
 
-            for (c1, c2), form in sorted(iteritems(transfer)):
+            for (c1, c2), form in sorted(iteritems(random.sample(transfer, 1)[0])):
                 yield reaction.id, c1, c2, form
+        if self._args.ambiguous:
+            for rxn_ambig in ambiguous:
+                logger.info('Ambiguous Transfers in Reaction: {}'.format(rxn_ambig))
+
+
 
 
 def _parse_weights(weight_args, default_weight=0.6):
