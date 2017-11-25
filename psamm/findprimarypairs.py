@@ -252,9 +252,9 @@ def predict_compound_pairs_iterated(
                 rpairs.setdefault((c1, c2), []).append(form)
 
             prediction[reaction_id] = rpairs, balance
-
-        logger.info('Ambiguous Reactions:')
-        print_ambiguous_summary()
+        if ambiguous is True:
+            logger.info('Ambiguous Reactions:')
+            print_ambiguous_summary()
 
         pairs_predicted = Counter()
         for reaction_id, (rpairs, _) in iteritems(prediction):
