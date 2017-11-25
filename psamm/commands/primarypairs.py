@@ -178,8 +178,9 @@ class PrimaryPairsCommand(SolverCommandMixin, Command):
     def _run_find_primary_pairs(
             self, compound_formula, reactions, element_weight):
         reaction_pairs = [(r.id, r.equation) for r in reactions]
+        ambig = self._args.ambiguous
         prediction, _ = findprimarypairs.predict_compound_pairs_iterated(
-            reaction_pairs, compound_formula, element_weight=element_weight)
+            reaction_pairs, compound_formula, ambig, element_weight=element_weight)
 
         for reaction_id, _ in reaction_pairs:
             if reaction_id not in prediction:
