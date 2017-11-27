@@ -4,6 +4,8 @@ cache:
     directories:
         - $HOME/.cache/pip
         - $HOME/qsopt_ex-2.5.10.3
+before_install:
+  - sudo apt-get update
 addons:
     apt:
         packages:
