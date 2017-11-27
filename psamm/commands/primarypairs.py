@@ -207,7 +207,6 @@ class PrimaryPairsCommand(SolverCommandMixin, Command):
                                 reaction.equation, compound_formula, solver,
                                 weight_func=element_weight))
                 if self._args.ambiguous:
-                    print('TRANSFER-LIST', reaction.id, transfer)
                     if len(transfer) > 1:
                         ambiguous.add(reaction.id)
             except mapmaker.UnbalancedReactionError:
