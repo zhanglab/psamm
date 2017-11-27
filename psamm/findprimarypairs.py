@@ -202,6 +202,9 @@ def predict_compound_pairs_iterated(
     final_ambiguous_reactions = {}
 
     def print_ambiguous_summary():
+        '''Function for summarizing and printing ambiguous compound pairs
+
+        '''
         final_ambiguous_count = 0
         final_ambiguous_hydrogen = 0
         for reaction, pairs in sorted(iteritems(final_ambiguous_reactions)):
