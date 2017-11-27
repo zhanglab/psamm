@@ -59,8 +59,8 @@ class PrimaryPairsCommand(SolverCommandMixin, Command):
                   ' each pair (only available for fpp).'))
         parser.add_argument(
             '--ambiguous', action='store_true',
-            help=('Report additional information about cases where'
-                  'primary pair identification was ambiguous in a reaction'))
+            help=('Report additional information about reactions where'
+                  'primary pair identification was ambiguous'))
         parser.add_argument(
             '--weights', action='append', default=[], type=text_type,
             help=('Set weights for elements for inferring compound'
