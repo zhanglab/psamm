@@ -57,3 +57,25 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             help='primary element flow')
         super(VisualizationCommand, cls).init_parser(parser)
 
+    def run(self):
+        """Run visualization command."""
+
+        compound_formula = {}
+        for compound in self._model.compounds:
+            if compound.formula is not None:
+                try:
+                    f = Formula.parse(compound.formula).flattened()
+                    if not f.is_variable():
+                        compound_formula[compound.id] = f
+                    else:
+                        logger.warning(
+                            'Skipping variable formula {}: {}'.format(
+                                compound.id, compound.formula))    #skip generic compounds
+                except ParseError as e:
+                    msg = (
+                        'Error parsing formula'
+                        ' for compound {}:\n{}\n{}'.format(
+                            compound.id, e, compound.formula))
+                    if e.indicator is not None:
+                        msg += '\n{}'.format(e.indicator)
+                    logger.warning(msg)
