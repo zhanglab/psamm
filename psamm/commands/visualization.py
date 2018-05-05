@@ -60,6 +60,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
     def run(self):
         """Run visualization command."""
 
+        # parse compound id and formula
         compound_formula = {}
         for compound in self._model.compounds:
             if compound.formula is not None:
@@ -79,3 +80,35 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     if e.indicator is not None:
                         msg += '\n{}'.format(e.indicator)
                     logger.warning(msg)
+
+
+        #set edge_values
+        edge_values = None
+        if self._args.edge_values is not None:
+            raw_values = {}
+            with open(self._args.edge_values, 'r') as f:
+                for row in csv.reader(f, delimiter=str(u'\t')):
+                    raw_values[row[0]] = float(row[1])
+
+            edge_values = {}
+            for reaction in self._mm.reactions:
+                rx = self._mm.get_reaction(reaction)
+                if reaction in raw_values:
+                    flux = raw_values[reaction]
+                    if abs(flux) < 1e-9:
+                        continue
+
+                    if flux > 0:
+                        for compound, value in rx.right:  #value = stoichiometry
+                            edge_values[reaction, compound] = (
+                                    flux * float(value))
+                        for compound, value in rx.left:
+                            edge_values[compound, reaction] = (
+                                    flux * float(value))
+                    else:
+                        for compound, value in rx.left:
+                            edge_values[reaction, compound] = (
+                                    -flux * float(value))
+                        for compound, value in rx.right:
+                            edge_values[compound, reaction] = (
+                                    -flux * float(value))
