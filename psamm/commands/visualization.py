@@ -20,25 +20,22 @@ from __future__ import unicode_literals
 
 import time
 import logging
-
 from ..command import (LoopRemovalMixin, ObjectiveMixin, SolverCommandMixin,
                        MetabolicMixin, Command)
-from .. import fluxanalysis
+import csv
+from ..reaction import Direction
+form six import text_type, iteritems
+from .. import findprimatypairs
+from ..formula import Formula, Atom, ParseError
+from .. import graph
+from collections import Counter
+
 
 logger = logging.getLogger(__name__)
 
+REACTION_COLOR = '#ccebc5'
+COMPOUND_COLOR = '#b3cde3'
+ACTIVE_COLOR = '#fbb4ae'
+ALT_COLOR = '#ccb460'
 
-class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
-                         SolverCommandMixin, Command):
-    """Run visualization command on the model."""
 
-
-    @classmethod
-    def init_parser(cls, parser):
-        parser.add_argument(
-            '--all-reactions', help='Show all reaction fluxes',
-            action='store_true')
-        super(VisualizationCommand, cls).init_parser(parser)
-
-    def run(self):
-        """Run visualization command."""
