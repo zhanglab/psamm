@@ -38,4 +38,22 @@ COMPOUND_COLOR = '#b3cde3'
 ACTIVE_COLOR = '#fbb4ae'
 ALT_COLOR = '#ccb460'
 
+class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
+                         SolverCommandMixin, Command):
+    """Run visualization command on the model."""
+
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            '--exclude', metavar='reaction', type=text_type, default=[],
+            action=FilePrefixAppendAction,
+            help=('Reaction to exclude (e.g. biomass reactions or'
+                  ' macromolecule synthesis)'))
+        parser.add_argument(
+            '--edge-values', type=text_type, default=None,
+            help='Values for edges')
+        parser.add_argument(
+            '--element', type=text_type, default=None,
+            help='primary element flow')
+        super(VisualizationCommand, cls).init_parser(parser)
 
