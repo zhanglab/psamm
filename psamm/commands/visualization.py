@@ -209,3 +209,15 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         return p
                     else:
                         return dict(edge_props)
+
+                edge1 = c1, rxn_id
+                edge2 = rxn_id, c1
+                g.add_edge(graph.Edge(
+                    compound_nodes[c1], node, final_props(rx, edge1, edge2)))
+
+                edge1 = rxn_id, c2
+                edge2 = c2, rxn_id
+                g.add_edge(graph.Edge(
+                    node, compound_nodes[c2], final_props(rx, edge1, edge2)))
+
+        return g
