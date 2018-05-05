@@ -165,3 +165,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     compound_nodes[c2] = node
                 fpp_cpds.append(c1)
                 fpp_cpds.append(c2)
+
+                fpp_rxns[rxn_id] += 1
+                node = graph.Node({
+                    'id': '{}_{}'.format(rxn_id, fpp_rxns[rxn_id]),
+                    'label': rxn_id,
+                    'shape': 'box',
+                    'style': 'filled',
+                    'fillcolor': REACTION_COLOR})
+                g.add_node(node)
