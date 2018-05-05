@@ -174,3 +174,38 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     'style': 'filled',
                     'fillcolor': REACTION_COLOR})
                 g.add_node(node)
+
+                edge_values = []
+                edge_value_span = 0
+
+                def pen_width(value):
+                    if edge_value_span == 0:
+                        return 1
+
+                def dir_value(direction):
+                    for reaction in model.reactions:
+                        rx = model.get_reaction(reaction)
+                    if rx.direction == Direction.Forward:
+                        return 'forward'
+                    elif rx.direction == Direction.Reverse:
+                        return 'back'
+                    return 'both'
+
+                rx = model.get_reaction(rxn_id)
+                edge_props = {'dir': dir_value(rx.direction)}
+
+                def final_props(reaction, edge1, edge2):
+                    if edge_values is not None:
+                        p = {}
+                        if edge1 in edge_values:
+                            p['dir'] = 'forward'
+                            p['penwidth'] = pen_width(edge_values[edge1])
+                        elif edge2 in edge_values:
+                            p['dir'] = 'back'
+                            p['penwidth'] = pen_width(edge_values[edge2])
+                        else:
+                            p['style'] = 'dotted'
+                            p['dir'] = dir_value(reaction.direction)
+                        return p
+                    else:
+                        return dict(edge_props)
