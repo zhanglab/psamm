@@ -135,3 +135,33 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             g.write_cytoscape_nodes(f)
         with open('reactions.edges.tsv', 'w') as f:
             g.write_cytoscape_edges(f)
+
+    def create_split_bipartite_graph(self, model, fpp_results, element):
+        print(element)
+        g = graph.Graph()
+
+        fpp_cpds = []     #cpds in fpp_results
+        fpp_rxns = Counter()
+        compound_nodes  = {}
+        for rxn_id, fpp_pairs in sorted(fpp_results.iteritems()):
+            for (c1, c2), transfer in fpp_pairs[0].iteritems():  #transfer = transferred_elements
+                if c1 not in fpp_cpds:
+                    node = graph.Node({
+                        'id': text_type(c1),
+                        'label': text_type(c1),
+                        'shape': 'ellipse',
+                        'style': 'filled',
+                        'fillcolor': COMPOUND_COLOR})
+                    g.add_node(node)
+                    compound_nodes[c1] = node
+                if c2 not in fpp_cpds:
+                    node = graph.Node({
+                        'id': text_type(c2),
+                        'label': text_type(c2),
+                        'shape': 'ellipse',
+                        'style': 'filled',
+                        'fillcolor': COMPOUND_COLOR})
+                    g.add_node(node)
+                    compound_nodes[c2] = node
+                fpp_cpds.append(c1)
+                fpp_cpds.append(c2)
