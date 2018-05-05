@@ -25,7 +25,7 @@ from ..command import (LoopRemovalMixin, ObjectiveMixin, SolverCommandMixin,
 import csv
 from ..reaction import Direction
 form six import text_type, iteritems
-from .. import findprimatypairs
+from .. import findprimarypairs
 from ..formula import Formula, Atom, ParseError
 from .. import graph
 from collections import Counter
@@ -39,7 +39,7 @@ ACTIVE_COLOR = '#fbb4ae'
 ALT_COLOR = '#ccb460'
 
 class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
-                         SolverCommandMixin, Command):
+                         SolverCommandMixin, Command, LoopRemovalMixin, FilePrefixAppendAction):
     """Run visualization command on the model."""
 
     @classmethod
@@ -112,3 +112,18 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         for compound, value in rx.right:
                             edge_values[compound, reaction] = (
                                     -flux * float(value))
+
+        reactions = self._model.reactions
+        reaction_pairs = [(r.id, r.equation) for r in reactions if r.id not in self._args.exclude]
+        element_weight = findprimarypairs.element_weight
+        fpp_dict, _ = findprimarypairs.predict_compound_pairs_iterated(reaction_pairs, compound_formula,
+                                                                       element_weight=element_weight)
+        element = self._args.element
+        filter_fpp = {}
+        for rxn_id, fpp_pairs in fpp_dict.iteritems():
+            pairs_tmp = {}
+            for cpair, transfer in fpp_pairs[0].iteritems():
+                if any(Atom(element) in k for k in transfer):
+                    pairs_tmp[cpair] = transfer
+            pairs_tmp_2 = (pairs_tmp, {})
+            filter_fpp[rxn_id] = pairs_tmp_2
