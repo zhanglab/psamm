@@ -127,3 +127,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     pairs_tmp[cpair] = transfer
             pairs_tmp_2 = (pairs_tmp, {})
             filter_fpp[rxn_id] = pairs_tmp_2
+
+        g = self.create_split_bipartite_graph(self._mm, filter_fpp, self._args.element)
+        with open('reactions.dot', 'w') as f:
+            g.write_graphviz(f)
+        with open('reactions.nodes.tsv', 'w') as f:
+            g.write_cytoscape_nodes(f)
+        with open('reactions.edges.tsv', 'w') as f:
+            g.write_cytoscape_edges(f)
