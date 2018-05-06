@@ -21,10 +21,10 @@ from __future__ import unicode_literals
 import time
 import logging
 from ..command import (LoopRemovalMixin, ObjectiveMixin, SolverCommandMixin,
-                       MetabolicMixin, Command)
+                       MetabolicMixin, Command, FilePrefixAppendAction)
 import csv
 from ..reaction import Direction
-form six import text_type, iteritems
+from six import text_type, iteritems, itervalues
 from .. import findprimarypairs
 from ..formula import Formula, Atom, ParseError
 from .. import graph
@@ -128,7 +128,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             pairs_tmp_2 = (pairs_tmp, {})
             filter_fpp[rxn_id] = pairs_tmp_2
 
-        g = self.create_split_bipartite_graph(self._mm, filter_fpp, self._args.element)
+        g = self.create_split_bipartite_graph(self._mm, filter_fpp, self._args.element, edge_values)
         with open('reactions.dot', 'w') as f:
             g.write_graphviz(f)
         with open('reactions.nodes.tsv', 'w') as f:
@@ -136,9 +136,18 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         with open('reactions.edges.tsv', 'w') as f:
             g.write_cytoscape_edges(f)
 
-    def create_split_bipartite_graph(self, model, fpp_results, element):
-        print(element)
+    def create_split_bipartite_graph(self, model, fpp_results, element, edge_values):
+
         g = graph.Graph()
+
+        if edge_values is not None and len(edge_values) > 0:
+            min_edge_value = min(itervalues(edge_values))
+            max_edge_value = max(itervalues(edge_values))
+        else:
+            min_edge_value = 1
+            max_edge_value = 1
+
+        edge_value_span = max_edge_value - min_edge_value
 
         fpp_cpds = []     #cpds in fpp_results
         fpp_rxns = Counter()
@@ -175,12 +184,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     'fillcolor': REACTION_COLOR})
                 g.add_node(node)
 
-                edge_values = []
-                edge_value_span = 0
-
                 def pen_width(value):
                     if edge_value_span == 0:
                         return 1
+                    alpha = value / (max_edge_value - min_edge_value)
+                    return 29 * alpha + 1
 
                 def dir_value(direction):
                     for reaction in model.reactions:
