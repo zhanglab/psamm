@@ -128,7 +128,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             pairs_tmp_2 = (pairs_tmp, {})
             filter_fpp[rxn_id] = pairs_tmp_2
 
-        g = self.create_split_bipartite_graph(self._mm, filter_fpp, self._args.element, edge_values)
+        g = self.create_split_bipartite_graph(self._mm, self._model, filter_fpp, self._args.element, edge_values)
         with open('reactions.dot', 'w') as f:
             g.write_graphviz(f)
         with open('reactions.nodes.tsv', 'w') as f:
@@ -136,9 +136,16 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         with open('reactions.edges.tsv', 'w') as f:
             g.write_cytoscape_edges(f)
 
-    def create_split_bipartite_graph(self, model, fpp_results, element, edge_values):
+    def create_split_bipartite_graph(self, model, nativemodel, fpp_results, element, edge_values):
 
         g = graph.Graph()
+
+        cpd_formula = {}
+        for compound in nativemodel.compounds:
+            if compound.formula is not None:
+                f = Formula.parse(compound.formula).flattened()
+                cpd_formula[compound.id] = f
+
 
         if edge_values is not None and len(edge_values) > 0:
             min_edge_value = min(itervalues(edge_values))
@@ -157,7 +164,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 if c1 not in fpp_cpds:
                     node = graph.Node({
                         'id': text_type(c1),
-                        'label': text_type(c1),
+                        'label': text_type(c1), #'{}\n{}\nTEXTTEST'.format(c1, c1.name),#,
                         'shape': 'ellipse',
                         'style': 'filled',
                         'fillcolor': COMPOUND_COLOR})
@@ -228,4 +235,24 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 g.add_edge(graph.Edge(
                     node, compound_nodes[c2], final_props(rx, edge1, edge2)))
 
+        for reaction in model.reactions:
+            if model.is_exchange(reaction):
+                exchange_rxn = model.get_reaction(reaction)
+                if any(Atom(element) in cpd_formula[str(c[0].name)] for c in exchange_rxn.compounds):
+                    node_ex = graph.Node({
+                        'id': reaction,
+                        'label': reaction,
+                        'shape': 'box',
+                        'style': 'filled',
+                        'fillcolor': ACTIVE_COLOR})
+                    g.add_node(node_ex)
+
+                    for c, _ in exchange_rxn.left:
+                        edge1 = reaction, c
+                        edge2 = c, reaction
+                        g.add_edge(graph.Edge(
+                        node_ex, compound_nodes[c], final_props(exchange_rxn, edge1, edge2)))
+
         return g
+
+
