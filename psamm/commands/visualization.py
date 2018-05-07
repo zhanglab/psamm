@@ -55,6 +55,10 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         parser.add_argument(
             '--element', type=text_type, default=None,
             help='primary element flow')
+        parser.add_argument(
+            '--detail',
+            choices=['basic', 'medium', 'all'],
+            default='basic', help='infomation showed in final graph')
         super(VisualizationCommand, cls).init_parser(parser)
 
     def run(self):
@@ -146,6 +150,17 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 f = Formula.parse(compound.formula).flattened()
                 cpd_formula[compound.id] = f
 
+        # parse reaction_name
+        def reaction_name(id):
+            if id not in nativemodel.reactions:
+                return id
+            return nativemodel.reactions[id].properties.get('name', id)
+
+        # parse reaction EC_number information
+        def reaction_genes(id):
+            if id not in nativemodel.reactions:
+                return ''
+            return nativemodel.reactions[id].properties.get('genes', '')
 
         if edge_values is not None and len(edge_values) > 0:
             min_edge_value = min(itervalues(edge_values))
@@ -159,6 +174,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         fpp_cpds = []     #cpds in fpp_results
         fpp_rxns = Counter()
         compound_nodes  = {}
+
         for rxn_id, fpp_pairs in sorted(fpp_results.iteritems()):
             for (c1, c2), transfer in fpp_pairs[0].iteritems():  #transfer = transferred_elements
                 if c1 not in fpp_cpds:
@@ -182,10 +198,18 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 fpp_cpds.append(c1)
                 fpp_cpds.append(c2)
 
+                genes = reaction_genes(rxn_id)
+                name = reaction_name(rxn_id)
+
+                LABEL = rxn_id
+                if self._args.detail == 'medium':
+                    LABEL = '{}\n{}'.format(rxn_id, name)
+                elif self._args.detail == 'all':
+                    LABEL = '{}\n{}\n{}\n{}'.format(rxn_id, name, genes, str(transfer[0]))
                 fpp_rxns[rxn_id] += 1
                 node = graph.Node({
                     'id': '{}_{}'.format(rxn_id, fpp_rxns[rxn_id]),
-                    'label': rxn_id,
+                    'label': LABEL,
                     'shape': 'box',
                     'style': 'filled',
                     'fillcolor': REACTION_COLOR})
@@ -195,7 +219,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     if edge_value_span == 0:
                         return 1
                     alpha = value / (max_edge_value - min_edge_value)
-                    return 29 * alpha + 1
+                    return 69 * alpha + 1
 
                 def dir_value(direction):
                     for reaction in model.reactions:
