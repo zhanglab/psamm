@@ -295,7 +295,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
                 def dir_value(direction):
                     if direction == Direction.Forward:
-
                         return 'forward'
                     elif direction == Direction.Reverse:
                         return 'back'
@@ -350,6 +349,25 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         edge2 = c, reaction
                         g.add_edge(graph.Edge(
                         node_ex, compound_nodes[c], final_props(exchange_rxn, edge1, edge2)))
+
+        biomass = nativemodel.biomass_reaction  #str
+        biomass_reaction = model.get_reaction(biomass)   #reaction object
+        bio_pair = Counter()
+        for c,_ in biomass_reaction.left:
+            if c in fpp_cpds:
+                bio_pair[biomass] += 1  # bio_pair = Counter({'biomass_rxn_id': 1}), Counter({'biomass_rxn_id': 2})...
+                node_bio = graph.Node({
+                    'id': '{}_{}'.format(biomass, bio_pair[biomass]),
+                    'label': biomass,
+                    'shape': 'box',
+                    'style': 'filled',
+                    'fillcolor': ALT_COLOR})
+                g.add_node(node_bio)
+
+                edge1 = c, biomass_reaction
+                edge2 = biomass_reaction, c
+                g.add_edge(graph.Edge(
+                    compound_nodes[c], node_bio, final_props(biomass_reaction, edge1, edge2)))
 
         return g
 
