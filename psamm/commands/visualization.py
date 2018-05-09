@@ -24,11 +24,13 @@ from ..command import (LoopRemovalMixin, ObjectiveMixin, SolverCommandMixin,
                        MetabolicMixin, Command, FilePrefixAppendAction)
 import csv
 from ..reaction import Direction
-from six import text_type, iteritems, itervalues
+from six import text_type, iteritems, itervalues, string_types, integer_types
 from .. import findprimarypairs
 from ..formula import Formula, Atom, ParseError
 from .. import graph
 from collections import Counter
+import re
+import json
 
 
 logger = logging.getLogger(__name__)
@@ -36,7 +38,7 @@ logger = logging.getLogger(__name__)
 REACTION_COLOR = '#ccebc5'
 COMPOUND_COLOR = '#b3cde3'
 ACTIVE_COLOR = '#fbb4ae'
-ALT_COLOR = '#ccb460'
+ALT_COLOR = '#f4fc55'
 
 class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                          SolverCommandMixin, Command, LoopRemovalMixin, FilePrefixAppendAction):
@@ -58,7 +60,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         parser.add_argument(
             '--detail',
             choices=['basic', 'medium', 'all'],
-            default='basic', help='infomation showed in final graph')
+            default='basic', help='reaction infomation showed in final graph')
         super(VisualizationCommand, cls).init_parser(parser)
 
     def run(self):
@@ -150,17 +152,63 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 f = Formula.parse(compound.formula).flattened()
                 cpd_formula[compound.id] = f
 
+        # parse compound_name
+        def compound_name(id):
+            if id not in nativemodel.compounds:
+                return id
+            return nativemodel.compounds[id].properties.get('name', id)
+
         # parse reaction_name
         def reaction_name(id):
             if id not in nativemodel.reactions:
                 return id
             return nativemodel.reactions[id].properties.get('name', id)
 
-        # parse reaction EC_number information
+        # parse reaction_genes information
         def reaction_genes(id):
             if id not in nativemodel.reactions:
                 return ''
             return nativemodel.reactions[id].properties.get('genes', '')
+
+        #parse all reaction infomation
+        _JSON_TYPES = string_types + integer_types + (
+            dict, list, tuple, float, bool, type(None))
+        _QUOTE_REGEXP = re.compile(r'[\t\n]')
+
+        def _encode_value(value):
+            if value is None:
+                return ''
+            if not isinstance(value, _JSON_TYPES):
+                value = text_type(value)
+            if (isinstance(value, string_types) and not _QUOTE_REGEXP.search(value) and
+                    value != ''):
+                return value
+            return json.dumps(value)
+
+        property_set = set()
+        for reaction in nativemodel.reactions:
+            property_set.update(reaction.properties)
+        property_list_sorted = sorted(
+            property_set, key=lambda x: (x != 'id', x != 'equation', x))
+
+        rxn_info = {}
+        for reaction in nativemodel.reactions:
+            rxn_line_content = [reaction.properties.get(property)
+                            for property in property_list_sorted]  #type = list, [rxn_id, rxn_object(equation?), genes, rxn_name, rxn_subsystem]
+            rxn_info[reaction.id] = '\n'.join(_encode_value(value)for value in rxn_line_content)
+
+        compound_set = set()
+        for compound in nativemodel.compounds:
+            compound_set.update(compound.properties)
+        compound_list_sorted = sorted(
+            compound_set, key=lambda x: (x != 'id', x != 'name', x))
+
+        cpd_info = {}
+        for compound in nativemodel.compounds:
+            #print(compound.id)
+            cpd_line_content = [compound.properties.get(property)
+                            for property in compound_list_sorted]
+            cpd_info[compound.id] = '\n'.join(i for i in cpd_line_content)
 
         if edge_values is not None and len(edge_values) > 0:
             min_edge_value = min(itervalues(edge_values))
@@ -175,12 +223,32 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         fpp_rxns = Counter()
         compound_nodes  = {}
 
+
         for rxn_id, fpp_pairs in sorted(fpp_results.iteritems()):
             for (c1, c2), transfer in fpp_pairs[0].iteritems():  #transfer = transferred_elements
+                #print(c1.name)   #c1.name = compound.id , no compartment
+                # for c in (c1, c2):
+                #     Label = text_type(c)
+                #     if self._args.detail == 'medium':
+                #         Label = '{}\n{}'.format(c, compound_name(c))
+                #     if self._args.detail == 'all':
+                #         Label = cpd_info[c.name]
+                Label_1 = text_type(c1)
+                if self._args.detail == 'medium':
+                    Label_1 = '{}\n{}'.format(c1, compound_name(c1))
+                if self._args.detail == 'all':
+                    Label_1 = cpd_info[c1.name]
+
+                Label_2 = text_type(c2)
+                if self._args.detail == 'medium':
+                    Label_2 = '{}\n{}'.format(c2, compound_name(c2))
+                if self._args.detail == 'all':
+                    Label_2 = cpd_info[c2.name]
+
                 if c1 not in fpp_cpds:
                     node = graph.Node({
                         'id': text_type(c1),
-                        'label': text_type(c1), #'{}\n{}\nTEXTTEST'.format(c1, c1.name),#,
+                        'label': Label_1, #'{}\n{}\nTEXTTEST'.format(c1, c1.name),#,
                         'shape': 'ellipse',
                         'style': 'filled',
                         'fillcolor': COMPOUND_COLOR})
@@ -189,7 +257,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 if c2 not in fpp_cpds:
                     node = graph.Node({
                         'id': text_type(c2),
-                        'label': text_type(c2),
+                        'label': Label_2,
                         'shape': 'ellipse',
                         'style': 'filled',
                         'fillcolor': COMPOUND_COLOR})
@@ -205,7 +273,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 if self._args.detail == 'medium':
                     LABEL = '{}\n{}'.format(rxn_id, name)
                 elif self._args.detail == 'all':
-                    LABEL = '{}\n{}\n{}\n{}'.format(rxn_id, name, genes, str(transfer[0]))
+                    # LABEL = '{}\n{}\n{}\n{}'.format(rxn_id, name, genes, str(transfer[0]))
+                    LABEL = '{}\n{}'.format(rxn_info[rxn_id], str(transfer[0]))
+
                 fpp_rxns[rxn_id] += 1
                 node = graph.Node({
                     'id': '{}_{}'.format(rxn_id, fpp_rxns[rxn_id]),
@@ -215,20 +285,22 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     'fillcolor': REACTION_COLOR})
                 g.add_node(node)
 
+
                 def pen_width(value):
                     if edge_value_span == 0:
                         return 1
-                    alpha = value / (max_edge_value - min_edge_value)
-                    return 69 * alpha + 1
+                    alpha = value / edge_value_span
+                    # return 1
+                    return 29 * alpha + 1
 
                 def dir_value(direction):
-                    for reaction in model.reactions:
-                        rx = model.get_reaction(reaction)
-                    if rx.direction == Direction.Forward:
+                    if direction == Direction.Forward:
+
                         return 'forward'
-                    elif rx.direction == Direction.Reverse:
+                    elif direction == Direction.Reverse:
                         return 'back'
-                    return 'both'
+                    else:
+                        return 'both'
 
                 rx = model.get_reaction(rxn_id)
                 edge_props = {'dir': dir_value(rx.direction)}
@@ -239,9 +311,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         if edge1 in edge_values:
                             p['dir'] = 'forward'
                             p['penwidth'] = pen_width(edge_values[edge1])
+                            #print('forward\t{}\t{}\t{}'.format(reaction, edge1, edge_values[edge1]))
                         elif edge2 in edge_values:
                             p['dir'] = 'back'
                             p['penwidth'] = pen_width(edge_values[edge2])
+                            #print('reverse\t{}\t{}\t{}'.format(reaction, edge2, edge_values[edge2]))
                         else:
                             p['style'] = 'dotted'
                             p['dir'] = dir_value(reaction.direction)
@@ -249,8 +323,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     else:
                         return dict(edge_props)
 
-                edge1 = c1, rxn_id
-                edge2 = rxn_id, c1
+                edge1 = c1, rxn_id  #forward
+                edge2 = rxn_id, c1  #backward
                 g.add_edge(graph.Edge(
                     compound_nodes[c1], node, final_props(rx, edge1, edge2)))
 
