@@ -18,7 +18,6 @@
 
 from __future__ import unicode_literals
 
-import time
 import logging
 from ..command import (LoopRemovalMixin, ObjectiveMixin, SolverCommandMixin,
                        MetabolicMixin, Command, FilePrefixAppendAction)
@@ -29,8 +28,7 @@ from .. import findprimarypairs
 from ..formula import Formula, Atom, ParseError
 from .. import graph
 from collections import Counter
-import re
-import json
+from tableexport import _encode_value
 
 
 logger = logging.getLogger(__name__)
@@ -39,6 +37,38 @@ REACTION_COLOR = '#ccebc5'
 COMPOUND_COLOR = '#b3cde3'
 ACTIVE_COLOR = '#fbb4ae'
 ALT_COLOR = '#f4fc55'
+
+
+def cpds_properties(compound, detail):
+    if detail == 'basic':
+        label = compound.id
+    elif detail == 'medium':
+        label = '{}\n{}'.format(compound.id, compound.name)
+    elif detail == 'all':
+        compound_set = set()
+        compound_set.update(compound.properties)
+        compound_list_sorted = sorted(
+            compound_set, key=lambda x: (x != 'id', x != 'name', x))
+        label = '\n'.join(_encode_value(compound.properties[value])
+                          for value in compound_list_sorted)
+
+    return label
+
+def rxns_properties(reaction, detail):
+    if detail == 'basic':
+        label = reaction.id
+    elif detail == 'medium':
+        label = '{}\n{}'.format(reaction.id, reaction.name)
+    elif detail == 'all':
+        reaction_set = set()
+        reaction_set.update(reaction.properties)
+        reaction_list_sorted = sorted(
+            reaction_set, key=lambda x: (x != 'id', x != 'equation', x))
+        label = '\n'.join(_encode_value(reaction.properties[value])
+                          for value in reaction_list_sorted)
+
+    return label
+
 
 class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                          SolverCommandMixin, Command, LoopRemovalMixin, FilePrefixAppendAction):
@@ -60,7 +90,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         parser.add_argument(
             '--detail',
             choices=['basic', 'medium', 'all'],
-            default='basic', help='reaction infomation showed in final graph')
+            default='basic', help='infomation showed in final graph')
         super(VisualizationCommand, cls).init_parser(parser)
 
     def run(self):
@@ -86,7 +116,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     if e.indicator is not None:
                         msg += '\n{}'.format(e.indicator)
                     logger.warning(msg)
-
+        #print(compound_formula)
 
         #set edge_values
         edge_values = None
@@ -118,6 +148,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         for compound, value in rx.right:
                             edge_values[compound, reaction] = (
                                     -flux * float(value))
+            #print(edge_values)
 
         reactions = self._model.reactions
         reaction_pairs = [(r.id, r.equation) for r in reactions if r.id not in self._args.exclude]
@@ -134,7 +165,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             pairs_tmp_2 = (pairs_tmp, {})
             filter_fpp[rxn_id] = pairs_tmp_2
 
-        g = self.create_split_bipartite_graph(self._mm, self._model, filter_fpp, self._args.element, edge_values)
+        g = self.create_split_bipartite_graph(self._mm, self._model,
+                                              filter_fpp, self._args.element, edge_values)
         with open('reactions.dot', 'w') as f:
             g.write_graphviz(f)
         with open('reactions.nodes.tsv', 'w') as f:
@@ -142,73 +174,27 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         with open('reactions.edges.tsv', 'w') as f:
             g.write_cytoscape_edges(f)
 
+
+
+
     def create_split_bipartite_graph(self, model, nativemodel, fpp_results, element, edge_values):
 
         g = graph.Graph()
 
+        cpd_entry = {}
+        for cpd in nativemodel.compounds:
+            cpd_entry[cpd.id] = cpd
+
+        rxn_entry = {}
+        for rxn in nativemodel.reactions:
+            rxn_entry[rxn.id] = rxn
+            # print(type(cpd))
+            # print(cpd.properties)
         cpd_formula = {}
         for compound in nativemodel.compounds:
             if compound.formula is not None:
                 f = Formula.parse(compound.formula).flattened()
-                cpd_formula[compound.id] = f
-
-        # parse compound_name
-        def compound_name(id):
-            if id not in nativemodel.compounds:
-                return id
-            return nativemodel.compounds[id].properties.get('name', id)
-
-        # parse reaction_name
-        def reaction_name(id):
-            if id not in nativemodel.reactions:
-                return id
-            return nativemodel.reactions[id].properties.get('name', id)
-
-        # parse reaction_genes information
-        def reaction_genes(id):
-            if id not in nativemodel.reactions:
-                return ''
-            return nativemodel.reactions[id].properties.get('genes', '')
-
-        #parse all reaction infomation
-        _JSON_TYPES = string_types + integer_types + (
-            dict, list, tuple, float, bool, type(None))
-        _QUOTE_REGEXP = re.compile(r'[\t\n]')
-
-        def _encode_value(value):
-            if value is None:
-                return ''
-            if not isinstance(value, _JSON_TYPES):
-                value = text_type(value)
-            if (isinstance(value, string_types) and not _QUOTE_REGEXP.search(value) and
-                    value != ''):
-                return value
-            return json.dumps(value)
-
-        property_set = set()
-        for reaction in nativemodel.reactions:
-            property_set.update(reaction.properties)
-        property_list_sorted = sorted(
-            property_set, key=lambda x: (x != 'id', x != 'equation', x))
-
-        rxn_info = {}
-        for reaction in nativemodel.reactions:
-            rxn_line_content = [reaction.properties.get(property)
-                            for property in property_list_sorted]  #type = list, [rxn_id, rxn_object(equation?), genes, rxn_name, rxn_subsystem]
-            rxn_info[reaction.id] = '\n'.join(_encode_value(value)for value in rxn_line_content)
-
-        compound_set = set()
-        for compound in nativemodel.compounds:
-            compound_set.update(compound.properties)
-        compound_list_sorted = sorted(
-            compound_set, key=lambda x: (x != 'id', x != 'name', x))
-
-        cpd_info = {}
-        for compound in nativemodel.compounds:
-            #print(compound.id)
-            cpd_line_content = [compound.properties.get(property)
-                            for property in compound_list_sorted]
-            cpd_info[compound.id] = '\n'.join(i for i in cpd_line_content)
+                cpd_formula[compound.id] = f    #can't use copmpound_formula in run(self) directly , so set it again
 
         if edge_values is not None and len(edge_values) > 0:
             min_edge_value = min(itervalues(edge_values))
@@ -223,32 +209,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         fpp_rxns = Counter()
         compound_nodes  = {}
 
-
         for rxn_id, fpp_pairs in sorted(fpp_results.iteritems()):
-            for (c1, c2), transfer in fpp_pairs[0].iteritems():  #transfer = transferred_elements
-                #print(c1.name)   #c1.name = compound.id , no compartment
-                # for c in (c1, c2):
-                #     Label = text_type(c)
-                #     if self._args.detail == 'medium':
-                #         Label = '{}\n{}'.format(c, compound_name(c))
-                #     if self._args.detail == 'all':
-                #         Label = cpd_info[c.name]
-                Label_1 = text_type(c1)
-                if self._args.detail == 'medium':
-                    Label_1 = '{}\n{}'.format(c1, compound_name(c1))
-                if self._args.detail == 'all':
-                    Label_1 = cpd_info[c1.name]
-
-                Label_2 = text_type(c2)
-                if self._args.detail == 'medium':
-                    Label_2 = '{}\n{}'.format(c2, compound_name(c2))
-                if self._args.detail == 'all':
-                    Label_2 = cpd_info[c2.name]
-
-                if c1 not in fpp_cpds:
+            for (c1, c2), transfer in fpp_pairs[0].iteritems():
+                if c1 not in fpp_cpds:          #c1.name = compound.id , no compartment
                     node = graph.Node({
                         'id': text_type(c1),
-                        'label': Label_1, #'{}\n{}\nTEXTTEST'.format(c1, c1.name),#,
+                        'label': cpds_properties(cpd_entry[c1.name], self._args.detail), #'{}\n{}\nTEXTTEST'.format(c1, c1.name),#,
                         'shape': 'ellipse',
                         'style': 'filled',
                         'fillcolor': COMPOUND_COLOR})
@@ -257,7 +223,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 if c2 not in fpp_cpds:
                     node = graph.Node({
                         'id': text_type(c2),
-                        'label': Label_2,
+                        'label': cpds_properties(cpd_entry[c2.name], self._args.detail),
                         'shape': 'ellipse',
                         'style': 'filled',
                         'fillcolor': COMPOUND_COLOR})
@@ -266,31 +232,23 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 fpp_cpds.append(c1)
                 fpp_cpds.append(c2)
 
-                genes = reaction_genes(rxn_id)
-                name = reaction_name(rxn_id)
-
-                LABEL = rxn_id
-                if self._args.detail == 'medium':
-                    LABEL = '{}\n{}'.format(rxn_id, name)
-                elif self._args.detail == 'all':
-                    # LABEL = '{}\n{}\n{}\n{}'.format(rxn_id, name, genes, str(transfer[0]))
-                    LABEL = '{}\n{}'.format(rxn_info[rxn_id], str(transfer[0]))
-
                 fpp_rxns[rxn_id] += 1
+                #print(fpp_rxns)
                 node = graph.Node({
                     'id': '{}_{}'.format(rxn_id, fpp_rxns[rxn_id]),
-                    'label': LABEL,
+                    'label': rxns_properties(rxn_entry[rxn_id], self._args.detail),
                     'shape': 'box',
                     'style': 'filled',
                     'fillcolor': REACTION_COLOR})
                 g.add_node(node)
 
+                # print(node)
+                # print(type(node))
 
                 def pen_width(value):
                     if edge_value_span == 0:
                         return 1
                     alpha = value / edge_value_span
-                    # return 1
                     return 29 * alpha + 1
 
                 def dir_value(direction):
@@ -302,15 +260,16 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         return 'both'
 
                 rx = model.get_reaction(rxn_id)
+                #print(type(rx))
                 edge_props = {'dir': dir_value(rx.direction)}
-
                 def final_props(reaction, edge1, edge2):
                     if edge_values is not None:
                         p = {}
                         if edge1 in edge_values:
                             p['dir'] = 'forward'
                             p['penwidth'] = pen_width(edge_values[edge1])
-                            #print('forward\t{}\t{}\t{}'.format(reaction, edge1, edge_values[edge1]))
+                            # print(edge1)
+                            # print('forward\t{}\t{}\t{}'.format(reaction, edge1, edge_values[edge1]))
                         elif edge2 in edge_values:
                             p['dir'] = 'back'
                             p['penwidth'] = pen_width(edge_values[edge2])
@@ -335,16 +294,33 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         for reaction in model.reactions:
             if model.is_exchange(reaction):
                 exchange_rxn = model.get_reaction(reaction)
-                if any(Atom(element) in cpd_formula[str(c[0].name)] for c in exchange_rxn.compounds):
-                    node_ex = graph.Node({
-                        'id': reaction,
-                        'label': reaction,
-                        'shape': 'box',
-                        'style': 'filled',
-                        'fillcolor': ACTIVE_COLOR})
-                    g.add_node(node_ex)
+                print(type(exchange_rxn))
+                print(exchange_rxn)
+                for c, _ in exchange_rxn.left:
+                    print(type(c))
+                    print(c)
+                    if c in fpp_cpds:
+                        if any(Atom(element) in cpd_formula[str(c[0].name)]):
+                # if any(Atom(element) in cpd_formula[str(c[0].name)] for c in exchange_rxn.compounds):
+                            node_ex = graph.Node({
+                                'id': reaction,
+                                'label': reaction,
+                                'shape': 'box',
+                                'style': 'filled',
+                                'fillcolor': ACTIVE_COLOR})
+                            g.add_node(node_ex)
 
-                    for c, _ in exchange_rxn.left:
+                        for c, _ in exchange_rxn.left:
+                            if c not in compound_nodes.keys():
+                                node_ex = graph.Node({
+                                    'id': text_type(c),
+                                    'label': cpds_properties(cpd_entry[c.name], self._args.detail),
+                                    'shape': 'ellipse',
+                                    'style': 'filled',
+                                    'fillcolor':'#5a95f4'})
+                                g.add_node(node_ex)
+                                compound_nodes[c] = node_ex
+
                         edge1 = reaction, c
                         edge2 = c, reaction
                         g.add_edge(graph.Edge(
@@ -352,6 +328,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         biomass = nativemodel.biomass_reaction  #str
         biomass_reaction = model.get_reaction(biomass)   #reaction object
+        #print(biomass_reaction)
         bio_pair = Counter()
         for c,_ in biomass_reaction.left:
             if c in fpp_cpds:
@@ -370,5 +347,4 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     compound_nodes[c], node_bio, final_props(biomass_reaction, edge1, edge2)))
 
         return g
-
 
