@@ -90,7 +90,10 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         parser.add_argument(
             '--detail',
             choices=['basic', 'medium', 'all'],
-            default='basic', help='infomation showed in final graph')
+            default='basic', help='information showed in final graph')
+        parser.add_argument(
+            '--subset', type=text_type, default=None,
+            help='subset of the whole model')
         super(VisualizationCommand, cls).init_parser(parser)
 
     def run(self):
@@ -174,9 +177,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         with open('reactions.edges.tsv', 'w') as f:
             g.write_cytoscape_edges(f)
 
-
-
-
     def create_split_bipartite_graph(self, model, nativemodel, fpp_results, element, edge_values):
 
         g = graph.Graph()
@@ -205,130 +205,136 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         edge_value_span = max_edge_value - min_edge_value
 
-        fpp_cpds = []     #cpds in fpp_results
+        subset_reactions = []
+
+        subset = None
+        if self._args.subset is not None:        # a file contains reaction_id in the subset users want to visualize
+            with open(self._args.subset, 'r') as f:
+                for row in csv.reader(f, delimiter=str(u'\t')):
+                    subset_reactions.append(row[0])
+        else:
+            for reaction in model.reactions:
+                subset_reactions.append(reaction)
+
+        fpp_cpds = []     # cpds in fpp_results
         fpp_rxns = Counter()
-        compound_nodes  = {}
+        compound_nodes = {}
 
         for rxn_id, fpp_pairs in sorted(fpp_results.iteritems()):
-            for (c1, c2), transfer in fpp_pairs[0].iteritems():
-                if c1 not in fpp_cpds:          #c1.name = compound.id , no compartment
+            if rxn_id in subset_reactions:
+                for (c1, c2), transfer in fpp_pairs[0].iteritems():
+                    if c1 not in fpp_cpds:          # c1.name = compound.id , no compartment
+                        node = graph.Node({
+                            'id': text_type(c1),
+                            'label': cpds_properties(cpd_entry[c1.name], self._args.detail),
+                            'shape': 'ellipse',
+                            'style': 'filled',
+                            'fillcolor': COMPOUND_COLOR})
+                        g.add_node(node)
+                        compound_nodes[c1] = node
+                    if c2 not in fpp_cpds:
+                        node = graph.Node({
+                            'id': text_type(c2),
+                            'label': cpds_properties(cpd_entry[c2.name], self._args.detail),
+                            'shape': 'ellipse',
+                            'style': 'filled',
+                            'fillcolor': COMPOUND_COLOR})
+                        g.add_node(node)
+                        compound_nodes[c2] = node
+                    fpp_cpds.append(c1)
+                    fpp_cpds.append(c2)
+
+                    fpp_rxns[rxn_id] += 1
+                    #print(fpp_rxns)
                     node = graph.Node({
-                        'id': text_type(c1),
-                        'label': cpds_properties(cpd_entry[c1.name], self._args.detail), #'{}\n{}\nTEXTTEST'.format(c1, c1.name),#,
-                        'shape': 'ellipse',
+                        'id': '{}_{}'.format(rxn_id, fpp_rxns[rxn_id]),
+                        'label': rxns_properties(rxn_entry[rxn_id], self._args.detail),
+                        'shape': 'box',
                         'style': 'filled',
-                        'fillcolor': COMPOUND_COLOR})
+                        'fillcolor': REACTION_COLOR})
                     g.add_node(node)
-                    compound_nodes[c1] = node
-                if c2 not in fpp_cpds:
-                    node = graph.Node({
-                        'id': text_type(c2),
-                        'label': cpds_properties(cpd_entry[c2.name], self._args.detail),
-                        'shape': 'ellipse',
-                        'style': 'filled',
-                        'fillcolor': COMPOUND_COLOR})
-                    g.add_node(node)
-                    compound_nodes[c2] = node
-                fpp_cpds.append(c1)
-                fpp_cpds.append(c2)
 
-                fpp_rxns[rxn_id] += 1
-                #print(fpp_rxns)
-                node = graph.Node({
-                    'id': '{}_{}'.format(rxn_id, fpp_rxns[rxn_id]),
-                    'label': rxns_properties(rxn_entry[rxn_id], self._args.detail),
-                    'shape': 'box',
-                    'style': 'filled',
-                    'fillcolor': REACTION_COLOR})
-                g.add_node(node)
+                    # print(node)
+                    # print(type(node))
 
-                # print(node)
-                # print(type(node))
+                    def pen_width(value):
+                        if edge_value_span == 0:
+                            return 1
+                        alpha = value / edge_value_span
+                        return 29 * alpha + 1
 
-                def pen_width(value):
-                    if edge_value_span == 0:
-                        return 1
-                    alpha = value / edge_value_span
-                    return 29 * alpha + 1
-
-                def dir_value(direction):
-                    if direction == Direction.Forward:
-                        return 'forward'
-                    elif direction == Direction.Reverse:
-                        return 'back'
-                    else:
-                        return 'both'
-
-                rx = model.get_reaction(rxn_id)
-                #print(type(rx))
-                edge_props = {'dir': dir_value(rx.direction)}
-                def final_props(reaction, edge1, edge2):
-                    if edge_values is not None:
-                        p = {}
-                        if edge1 in edge_values:
-                            p['dir'] = 'forward'
-                            p['penwidth'] = pen_width(edge_values[edge1])
-                            # print(edge1)
-                            # print('forward\t{}\t{}\t{}'.format(reaction, edge1, edge_values[edge1]))
-                        elif edge2 in edge_values:
-                            p['dir'] = 'back'
-                            p['penwidth'] = pen_width(edge_values[edge2])
-                            #print('reverse\t{}\t{}\t{}'.format(reaction, edge2, edge_values[edge2]))
+                    def dir_value(direction):
+                        if direction == Direction.Forward:
+                            return 'forward'
+                        elif direction == Direction.Reverse:
+                            return 'back'
                         else:
-                            p['style'] = 'dotted'
-                            p['dir'] = dir_value(reaction.direction)
-                        return p
-                    else:
-                        return dict(edge_props)
+                            return 'both'
 
-                edge1 = c1, rxn_id  #forward
-                edge2 = rxn_id, c1  #backward
-                g.add_edge(graph.Edge(
-                    compound_nodes[c1], node, final_props(rx, edge1, edge2)))
+                    rx = model.get_reaction(rxn_id)
+                    # print(type(rx))
+                    edge_props = {'dir': dir_value(rx.direction)}
 
-                edge1 = rxn_id, c2
-                edge2 = c2, rxn_id
-                g.add_edge(graph.Edge(
-                    node, compound_nodes[c2], final_props(rx, edge1, edge2)))
+                    def final_props(reaction, edge1, edge2):
+                        if edge_values is not None:
+                            p = {}
+                            if edge1 in edge_values:
+                                p['dir'] = 'forward'
+                                p['penwidth'] = pen_width(edge_values[edge1])
+                                # print(edge1)
+                                # print('forward\t{}\t{}\t{}'.format(reaction, edge1, edge_values[edge1]))
+                            elif edge2 in edge_values:
+                                p['dir'] = 'back'
+                                p['penwidth'] = pen_width(edge_values[edge2])
+                                # print('reverse\t{}\t{}\t{}'.format(reaction, edge2, edge_values[edge2]))
+                            else:
+                                p['style'] = 'dotted'
+                                p['dir'] = dir_value(reaction.direction)
+                            return p
+                        else:
+                            return dict(edge_props)
+
+                    edge1 = c1, rxn_id  # forward
+                    edge2 = rxn_id, c1  # backward
+                    g.add_edge(graph.Edge(
+                        compound_nodes[c1], node, final_props(rx, edge1, edge2)))
+
+                    edge1 = rxn_id, c2
+                    edge2 = c2, rxn_id
+                    g.add_edge(graph.Edge(
+                        node, compound_nodes[c2], final_props(rx, edge1, edge2)))
 
         for reaction in model.reactions:
             if model.is_exchange(reaction):
-                exchange_rxn = model.get_reaction(reaction)
-                print(type(exchange_rxn))
-                print(exchange_rxn)
-                for c, _ in exchange_rxn.left:
-                    print(type(c))
-                    print(c)
-                    if c in fpp_cpds:
-                        if any(Atom(element) in cpd_formula[str(c[0].name)]):
-                # if any(Atom(element) in cpd_formula[str(c[0].name)] for c in exchange_rxn.compounds):
+                if reaction in subset_reactions:
+                    exchange_rxn = model.get_reaction(reaction)
+                    if any(Atom(element) in cpd_formula[str(c[0].name)] for c in exchange_rxn.compounds):
+                        node_ex = graph.Node({
+                            'id': reaction,
+                            'label': reaction,
+                            'shape': 'box',
+                            'style': 'filled',
+                            'fillcolor': ACTIVE_COLOR})
+                        g.add_node(node_ex)
+
+                    for c, _ in exchange_rxn.left:
+                        if c not in compound_nodes.keys():
                             node_ex = graph.Node({
-                                'id': reaction,
-                                'label': reaction,
-                                'shape': 'box',
+                                'id': text_type(c),
+                                'label': cpds_properties(cpd_entry[c.name], self._args.detail),
+                                'shape': 'ellipse',
                                 'style': 'filled',
-                                'fillcolor': ACTIVE_COLOR})
+                                'fillcolor':'#5a95f4'})
                             g.add_node(node_ex)
+                            compound_nodes[c] = node_ex
 
-                        for c, _ in exchange_rxn.left:
-                            if c not in compound_nodes.keys():
-                                node_ex = graph.Node({
-                                    'id': text_type(c),
-                                    'label': cpds_properties(cpd_entry[c.name], self._args.detail),
-                                    'shape': 'ellipse',
-                                    'style': 'filled',
-                                    'fillcolor':'#5a95f4'})
-                                g.add_node(node_ex)
-                                compound_nodes[c] = node_ex
+                    edge1 = reaction, c
+                    edge2 = c, reaction
+                    g.add_edge(graph.Edge(
+                    node_ex, compound_nodes[c], final_props(exchange_rxn, edge1, edge2)))
 
-                        edge1 = reaction, c
-                        edge2 = c, reaction
-                        g.add_edge(graph.Edge(
-                        node_ex, compound_nodes[c], final_props(exchange_rxn, edge1, edge2)))
-
-        biomass = nativemodel.biomass_reaction  #str
-        biomass_reaction = model.get_reaction(biomass)   #reaction object
-        #print(biomass_reaction)
+        biomass = nativemodel.biomass_reaction  # str
+        biomass_reaction = model.get_reaction(biomass)   # reaction object
         bio_pair = Counter()
         for c,_ in biomass_reaction.left:
             if c in fpp_cpds:
