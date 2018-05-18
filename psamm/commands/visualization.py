@@ -29,6 +29,7 @@ from ..formula import Formula, Atom, ParseError
 from .. import graph
 from collections import Counter
 from tableexport import _encode_value
+import argparse
 
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ ALT_COLOR = '#f4fc55'
 
 
 def cpds_properties(compound, detail):
+    """define compound nodes label"""
     if detail == 'basic':
         label = compound.id
     elif detail == 'medium':
@@ -56,6 +58,7 @@ def cpds_properties(compound, detail):
 
 
 def rxns_properties(reaction, detail):
+    """define reaction nodes label"""
     if detail == 'basic':
         label = reaction.id
     elif detail == 'medium':
@@ -84,19 +87,22 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                   ' macromolecule synthesis)'))
         parser.add_argument(
             '--edge-values', type=text_type, default=None,
-            help='Values for edges')
+            help='Values for edges, derived from reaction flux')
         parser.add_argument(
             '--element', type=text_type, default=None,
             help='primary element flow')
+        # parser.add_argument(
+        #     '--detail', type=text_type, default=None,
+        #     help='reaction and compound information showed on nodes label')
         parser.add_argument(
             '--detail',
-            choices=['basic', 'medium', 'all'],
-            default='basic', help='information showed in final graph')
+            choices= ['basic', 'medium', 'all'],
+            default='basic', help='reaction and compound information showed on nodes label')
         parser.add_argument(
             '--subset', type=text_type, default=None,
-            help='subset of the whole model')
+            help='reactions designated to visualize')
         parser.add_argument(
-            '--color', type=text_type, default=None,
+            '--color', type=argparse.FileType('r'), default=None, nargs='+',
             help='customize color of reaction and compound nodes ')
         super(VisualizationCommand, cls).init_parser(parser)
 
@@ -141,41 +147,36 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         continue
 
                     if flux > 0:
-                        for compound, value in rx.right:
-                            edge_values[reaction, compound] = (
-                                    flux * float(value))
+                        for compound, value in rx.right:  # value=stoichiometry
+                            edge_values[reaction, compound] = (flux * float(value))
                         for compound, value in rx.left:
-                            edge_values[compound, reaction] = (
-                                    flux * float(value))
+                            edge_values[compound, reaction] = (flux * float(value))
                     else:
                         for compound, value in rx.left:
-                            edge_values[reaction, compound] = (
-                                    -flux * float(value))
+                            edge_values[reaction, compound] = (- flux * float(value))
                         for compound, value in rx.right:
-                            edge_values[compound, reaction] = (
-                                    -flux * float(value))
+                            edge_values[compound, reaction] = (- flux * float(value))
 
-        reactions = self._model.reactions
-        reaction_pairs = [(r.id, r.equation) for r in reactions if r.id not in self._args.exclude]
+        #reaction_pairs = [(r, r.equation) for r in self._mm.reactions if r not in self._args.exclude]
+        reaction_pairs = [(r, self._mm.get_reaction(r)) for r in self._mm.reactions if r not in self._args.exclude]
         element_weight = findprimarypairs.element_weight
         fpp_dict, _ = findprimarypairs.predict_compound_pairs_iterated(reaction_pairs, compound_formula,
                                                                        element_weight=element_weight)
 
-        element = self._args.element
         filter_fpp = {}
-        if element is None:
+        if self._args.element is None:
             filter_fpp = fpp_dict
         else:
             for rxn_id, fpp_pairs in fpp_dict.iteritems():
                 pairs_tmp = {}
                 for cpair, transfer in fpp_pairs[0].iteritems():
-                    if any(Atom(element) in k for k in transfer):
+                    if any(Atom(self._args.element) in k for k in transfer):
                         pairs_tmp[cpair] = transfer
                 pairs_tmp_2 = (pairs_tmp, {})
                 filter_fpp[rxn_id] = pairs_tmp_2
 
         g = self.create_split_bipartite_graph(self._mm, self._model,
-                                              filter_fpp, self._args.element, edge_values)
+                                              filter_fpp, self._args.element,edge_values, compound_formula)
         with open('reactions.dot', 'w') as f:
             g.write_graphviz(f)
         with open('reactions.nodes.tsv', 'w') as f:
@@ -183,8 +184,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         with open('reactions.edges.tsv', 'w') as f:
             g.write_cytoscape_edges(f)
 
-    def create_split_bipartite_graph(self, model, nativemodel, fpp_results, element, edge_values):
-
+    def create_split_bipartite_graph(self, model, nativemodel, fpp_results, element, edge_values, cpd_formula):
+        """create bipartite graph from fpp_dict"""
         g = graph.Graph()
 
         cpd_entry = {}
@@ -195,12 +196,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         for rxn in nativemodel.reactions:
             rxn_entry[rxn.id] = rxn
 
-        cpd_formula = {}
-        for compound in nativemodel.compounds:
-            if compound.formula is not None:
-                f = Formula.parse(compound.formula).flattened()
-                cpd_formula[compound.id] = f  # can't use compound_formula defined in run(self) directly so set it again
-
         if edge_values is not None and len(edge_values) > 0:
             min_edge_value = min(itervalues(edge_values))
             max_edge_value = max(itervalues(edge_values))
@@ -208,43 +203,78 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             min_edge_value = 1
             max_edge_value = 1
 
-        # edge_value_span = max_edge_value - min_edge_value
-
-        subset_reactions = []
-        if self._args.subset is not None:        # a file contains reaction_id in the subset users want to visualize
-            with open(self._args.subset, 'r') as f:
-                for row in csv.reader(f, delimiter=str(u'\t')):
-                    subset_reactions.append(row[0])
-        else:
-            for reaction in model.reactions:
-                subset_reactions.append(reaction)
-
-        fpp_cpds = []   # cpds in fpp_results
-        fpp_rxns = Counter()
-        compound_nodes = {}
+        edge_value_span = max_edge_value - min_edge_value
 
         color = {}
-        for reaction in model.reactions:
-            color[reaction] = REACTION_COLOR
-            if self._args.color is not None:
-                recolor_rxn = []
-                with open(self._args.color, 'r') as f:
-                    for row in csv.reader(f, delimiter=str(u'\t')):
-                        color[row[0]] = row[1]  # row[0] =reaction id, row[1] = hex color code, such as #cfe0fc
-                        recolor_rxn.append(row[0])
-                        if reaction not in recolor_rxn:
+        # for reaction in model.reactions:
+        #     color[reaction] = REACTION_COLOR
+        if self._args.color is not None:
+            recolor_nodes = []
+            for f in self._args.color:
+                for row in csv.reader(f, delimiter=str(u'\t')):
+                    color[row[0]] = row[1]  # row[0] =reaction id, row[1] = hex color code, such as #cfe0fc
+                    recolor_nodes.append(row[0])
+                    for reaction in model.reactions:
+                        if reaction not in recolor_nodes:
                             color[reaction] = REACTION_COLOR
+                    for compound in model.compounds:
+                        if str(compound.name) not in recolor_nodes:
+                            color[compound.name] = COMPOUND_COLOR
+                            # print(type(compound.name))
+        else:
+            for r in model.reactions:
+                color[r] = REACTION_COLOR
+            for c in model.compounds:
+                color[c.name] = COMPOUND_COLOR
+        #
+        # def cpds_properties(compound, detail):
+        #     """define compound nodes label"""
+        #     if detail is not None:
+        #         label = '\n'.join(_encode_value(compound.properties[value])
+        #                           for value in self._args.detail)
+        #     else:
+        #         label = compound.id
+        #
+        #     return label
+        #
+        # def rxns_properties(reaction, detail):
+        #     """define reaction nodes label"""
+        #     if self._args.edge_values is not None:
+        #         if detail is not None:
+        #             reaction_set =
+        #             label = '\n'.join(_encode_value(reaction.properties[value])
+        #                               for value in self._args.detail)
+        #         else:
+        #             label = '{}\n{}'.format(reaction.id, abs(raw_values[reaction.id]))
+        #     else:
+        #         if detail is not None:
+        #             label = '\n'.join(_encode_value(reaction.properties[value])
+        #                               for value in self._args.detail)
+        #         else:
+        #             label = reaction.id
+
+        if self._args.subset is not None:  # a file contains reaction_id in the subset users want to visualize
+            subset_reactions = []
+            with open(self._args.subset, 'r') as f:
+                for line in f.readlines():
+                    subset_reactions.append(line)
+        else:
+            subset_reactions = set(model.reactions)
+
+        fpp_cpds = []  # cpds in fpp_results
+        fpp_rxns = Counter()
+        compound_nodes = {}
 
         for rxn_id, fpp_pairs in sorted(fpp_results.iteritems()):
             if rxn_id in subset_reactions:
                 for (c1, c2), transfer in fpp_pairs[0].iteritems():
-                    if c1 not in fpp_cpds:          # c1.name = compound.id , no compartment
+                    if c1 not in fpp_cpds:          # c1.name = compound.id, no compartment
                         node = graph.Node({
                             'id': text_type(c1),
                             'label': cpds_properties(cpd_entry[c1.name], self._args.detail),
                             'shape': 'ellipse',
                             'style': 'filled',
-                            'fillcolor': COMPOUND_COLOR})
+                            'fillcolor': color[c1.name]})
                         g.add_node(node)
                         compound_nodes[c1] = node
                     if c2 not in fpp_cpds:
@@ -253,15 +283,13 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             'label': cpds_properties(cpd_entry[c2.name], self._args.detail),
                             'shape': 'ellipse',
                             'style': 'filled',
-                            'fillcolor': COMPOUND_COLOR})
+                            'fillcolor': color[c2.name]})
                         g.add_node(node)
                         compound_nodes[c2] = node
                     fpp_cpds.append(c1)
                     fpp_cpds.append(c2)
 
                     fpp_rxns[rxn_id] += 1
-                    # print(fpp_rxns)
-
                     node = graph.Node({
                         'id': '{}_{}'.format(rxn_id, fpp_rxns[rxn_id]),
                         'label': rxns_properties(rxn_entry[rxn_id], self._args.detail),
@@ -270,17 +298,16 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         'fillcolor': color[rxn_id]})
                     g.add_node(node)
 
-                    # print(node)
-                    # print(type(node))
-
                     def pen_width(value):
-                        return 1
-                        # if edge_value_span == 0:
-                        #     return 1
-                        # alpha = value / edge_value_span
-                        # return 29 * alpha + 1
+                        """calculate edges width"""
+                        if edge_value_span == 0:
+                            return 1
+                        else:
+                            alpha = value / edge_value_span
+                            return 19 * alpha + 1
 
                     def dir_value(direction):
+                        """assign value to different reaction directions"""
                         if direction == Direction.Forward:
                             return 'forward'
                         elif direction == Direction.Reverse:
@@ -289,10 +316,10 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             return 'both'
 
                     rx = model.get_reaction(rxn_id)
-                    # print(type(rx))
                     edge_props = {'dir': dir_value(rx.direction)}
 
                     def final_props(reaction, edge1, edge2):
+                        """set final properties of edges"""
                         if edge_values is not None:
                             p = {}
                             if edge1 in edge_values:
@@ -335,7 +362,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         g.add_node(node_ex)
 
                         for c, _ in exchange_rxn.left:
-                            print(c)
                             if c not in compound_nodes.keys():
                                 node_ex = graph.Node({
                                     'id': text_type(c),
@@ -351,24 +377,37 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         g.add_edge(graph.Edge(
                             node_ex, compound_nodes[c], final_props(exchange_rxn, edge1, edge2)))
 
-        biomass = nativemodel.biomass_reaction  # str
-        biomass_reaction = model.get_reaction(biomass)   # reaction object
-        bio_pair = Counter()
-        for c,_ in biomass_reaction.left:
-            if c in fpp_cpds:
-                bio_pair[biomass] += 1  # bio_pair = Counter({'biomass_rxn_id': 1}), Counter({'biomass_rxn_id': 2})...
-                node_bio = graph.Node({
-                    'id': '{}_{}'.format(biomass, bio_pair[biomass]),
-                    'label': biomass,
-                    'shape': 'box',
-                    'style': 'filled',
-                    'fillcolor': ALT_COLOR})
-                g.add_node(node_bio)
+        if nativemodel.biomass_reaction is not None:
+            bio_pair = Counter()
+            biomass_reaction = model.get_reaction(nativemodel.biomass_reaction)
+            for c, _ in biomass_reaction.left:
+                if Atom(element) in cpd_formula[str(c.name)]:
+                    bio_pair[nativemodel.biomass_reaction] += 1  # bio_pair = Counter({'biomass_rxn_id': 1}), Counter({'biomass_rxn_id': 2})...
+                    node_bio = graph.Node({
+                        'id': '{}_{}'.format(nativemodel.biomass_reaction, bio_pair[nativemodel.biomass_reaction]),
+                        'label': nativemodel.biomass_reaction,
+                        'shape': 'box',
+                        'style': 'filled',
+                        'fillcolor': ALT_COLOR})
+                    g.add_node(node_bio)
 
-                edge1 = c, biomass_reaction
-                edge2 = biomass_reaction, c
-                g.add_edge(graph.Edge(
-                    compound_nodes[c], node_bio, final_props(biomass_reaction, edge1, edge2)))
+                    if c not in compound_nodes.keys():
+                        node_bio_cpd = graph.Node({
+                            'id': text_type(c),
+                            'label': cpds_properties(cpd_entry[c.name], self._args.detail),
+                            'shape': 'ellipse',
+                            'style': 'filled',
+                            'fillcolor': '#82e593'})
+                        g.add_node(node_bio_cpd)
+                        compound_nodes[c] = node_bio_cpd
+
+                    edge1 = c, nativemodel.biomass_reaction
+                    edge2 = nativemodel.biomass_reaction, c
+                    g.add_edge(graph.Edge(
+                        compound_nodes[c], node_bio, final_props(biomass_reaction, edge1, edge2)))
+        else:
+            logger.warning(
+                'No biomass reaction in this model')
 
         return g
 
