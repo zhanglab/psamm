@@ -98,9 +98,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             action=FilePrefixAppendAction,
             help=('Reaction to exclude (e.g. biomass reactions or'
                   ' macromolecule synthesis)'))
-        # parser.add_argument(
-        #     '--edge-values', type=text_type, default=None,
-        #     help='Values for edges, derived from reaction flux')
+        parser.add_argument(
+            '--edge-values', type=text_type, default=None,
+            help='Values for edges, derived from reaction flux')
         parser.add_argument(
             '--flux-analysis', type=text_type, default=None,
             choices = ('None', 'fba'),
@@ -144,22 +144,32 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     logger.warning(msg)
 
         # set edge_values
-        edge_values = None
         reaction_flux = {}
         if self._args.flux_analysis is not None:
-            reaction = self._get_objective()
-            if not self._mm.has_reaction(reaction):
-                self.fail('Specified reaction is not in model: {}'.format(reaction))
-            solver = self._get_solver()
-            p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
-            try:
-                p.maximze(reaction)
-            except fluxanalysis.FluxBalanceError as e:
-                self.report_flux_balance_error(e)
-            for reaction_id in self._mm.reactions:
-                if abs(p.get_flux(reaction_id)) > 1e-9:
-                    reaction_flux[reaction_id] = p.get_flux(reaction_id)
+            if self._args.edge_values is None:
+                reaction = self._get_objective()
+                if not self._mm.has_reaction(reaction):
+                    self.fail('Specified reaction is not in model: {}'.format(reaction))
+                solver = self._get_solver()
+                p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+                try:
+                    p.maximze(reaction)
+                except fluxanalysis.FluxBalanceError as e:
+                    self.report_flux_balance_error(e)
+                for reaction_id in self._mm.reactions:
+                    if abs(p.get_flux(reaction_id)) > 1e-9:
+                        reaction_flux[reaction_id] = p.get_flux(reaction_id)
+            else:
+                logger.warning('Invalid command, the two arguments --flux-analysis and --edge-values should not present at the same time')
 
+        else:
+            if self._args.edge_values is not None:
+                with open(self._args.edge_values, 'r') as f:
+                    for row in csv.reader(f, delimiter=str(u'\t')):
+                        reaction_flux[row[0]] = float(row[1])
+
+        edge_values = None
+        if len(reaction_flux) > 0:
             edge_values = {}
             for reaction in self._mm.reactions:
                 rx = self._mm.get_reaction(reaction)
@@ -210,11 +220,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         elif self._args.prediction_method == 'no-prediction':
             g1 = self.create_split_bipartite_graph_without_fpp(self._mm, self._model, self._args.element,
                                                                edge_values, compound_formula, reaction_flux)
-            with open('reactions-nofpp.dot', 'w') as f:
+            with open('reactions.dot', 'w') as f:
                 g1.write_graphviz(f)
-            with open('reactions-nofpp.nodes.tsv', 'w') as f:
+            with open('reactions.nodes.tsv', 'w') as f:
                 g1.write_cytoscape_nodes(f)
-            with open('reactions-nofpp.edges.tsv', 'w') as f:
+            with open('reactions.edges.tsv', 'w') as f:
                 g1.write_cytoscape_edges(f)
 
         else:
@@ -330,7 +340,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             'fillcolor': color[c2.name]})
                         g.add_node(node)
                         compound_nodes[c2] = node
-                        print(node)
                     fpp_cpds.append(c1)
                     fpp_cpds.append(c2)
 
@@ -385,7 +394,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         'shape': 'ellipse',
                         'style': 'filled',
                         'fillcolor':'#5a95f4'})
-                    g.add_node(node_ex)
+                    g.add_node(node_ex_cpd)
                     compound_nodes[c] = node_ex_cpd
 
             edge1 = r, c
