@@ -574,7 +574,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             rx = model.get_reaction(rxn_id)
             for c in cpd_set:
                 node = graph.Node({
-                    'id': text_type(c.name),
+                    'id': text_type(c),
                     'label': cpds_properties(c, cpd_entry[c.name], self._args.detail),
                     'shape': 'ellipse',
                     'style': 'filled',
