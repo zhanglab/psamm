@@ -90,8 +90,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--prediction-method',
-            choices = ['fpp', 'no-prediction'],
+            '--method',
+            choices = ['fpp', 'no-fpp'],
             default = 'fpp', help='Compound pair prediction method')
         parser.add_argument(
             '--exclude', metavar='reaction', type=text_type, default=[],
@@ -142,25 +142,44 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     if e.indicator is not None:
                         msg += '\n{}'.format(e.indicator)
                     logger.warning(msg)
-
+        A=[]
+        for r in self._mm.reactions:
+            # A.append((r, self._mm.get_reaction(r)))
+            # print(len(A))
+            rx = self._mm.get_reaction(r)
+            if rx == '<=>':
+                print(r)
+                print(rx)
         # set edge_values
         reaction_flux = {}
         if self._args.flux_analysis is not None:
             if self._args.edge_values is None:
-                reaction = self._get_objective()
-                if not self._mm.has_reaction(reaction):
-                    self.fail('Specified reaction is not in model: {}'.format(reaction))
                 solver = self._get_solver()
                 p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
                 try:
-                    p.maximze(reaction)
+                    p.maximize(self._get_objective())
                 except fluxanalysis.FluxBalanceError as e:
                     self.report_flux_balance_error(e)
-                for reaction_id in self._mm.reactions:
-                    if abs(p.get_flux(reaction_id)) > 1e-9:
-                        reaction_flux[reaction_id] = p.get_flux(reaction_id)
+
+                fluxes = {r: p.get_flux(r) for r in self._mm.reactions}
+
+                # Run flux minimization
+                flux_var = p.get_flux_var(self._get_objective())
+                p.prob.add_linear_constraints(flux_var == p.get_flux(self._get_objective()))
+                p.minimize_l1()
+
+                count = 0
+                for r_id in self._mm.reactions:
+                    flux = p.get_flux(r_id)
+                    if abs(flux - fluxes[r_id]) > 1e-6:
+                        count += 1
+                    if abs(flux) > 1e-6:
+                        reaction_flux[r_id] = flux
+                logger.info('Minimized reactions: {}'.format(count))
+
             else:
                 logger.warning('Invalid command, the two arguments --flux-analysis and --edge-values should not present at the same time')
+                quit()
 
         else:
             if self._args.edge_values is not None:
@@ -207,7 +226,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 pairs_tmp_2 = (pairs_tmp, {})
                 filter_fpp[rxn_id] = pairs_tmp_2
 
-        if self._args.prediction_method == 'fpp':
+        if self._args.method == 'fpp':
             g = self.create_split_bipartite_graph(self._mm, self._model, filter_fpp,
                                                   self._args.element, edge_values, compound_formula, reaction_flux)
             with open('reactions.dot', 'w') as f:
@@ -217,7 +236,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             with open('reactions.edges.tsv', 'w') as f:
                 g.write_cytoscape_edges(f)
 
-        elif self._args.prediction_method == 'no-prediction':
+        elif self._args.method == 'no-fpp':
             g1 = self.create_split_bipartite_graph_without_fpp(self._mm, self._model, self._args.element,
                                                                edge_values, compound_formula, reaction_flux)
             with open('reactions.dot', 'w') as f:
