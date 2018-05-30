@@ -92,28 +92,26 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
     def init_parser(cls, parser):
         parser.add_argument(
             '--method',type=text_type,
-            #choices = ['fpp', 'no-fpp', file_path],
-            default = 'fpp', help=('Compound pair prediction method, choices'))
+            default='fpp', help='Compound pair prediction method, choices')
         parser.add_argument(
             '--exclude', metavar='reaction', type=text_type, default=[],
             action=FilePrefixAppendAction,
             help=('Reaction to exclude (e.g. biomass reactions or'
                   ' macromolecule synthesis)'))
         parser.add_argument(
-            '--edge-values', type=text_type, default=None,
+            '--edge-values', type=file, default=None,
             help='Values for edges, derived from reaction flux')
         parser.add_argument(
-            '--flux-analysis', type=text_type, default=None,
-            choices = ('None', 'fba'),
+            '--fba', action='store_true',
             help='flux balance analysis')
         parser.add_argument(
             '--element', type=text_type, default=None,
             help='primary element flow')
         parser.add_argument(
-            '--detail', type = text_type, default=None, action='append', nargs='+',
+            '--detail', type=text_type, default=None, action='append', nargs='+',
             help='reaction and compound properties showed on nodes label')
         parser.add_argument(
-            '--subset', type=text_type, default=None,
+            '--subset', type=file, default=None,
             help='reactions designated to visualize')
         parser.add_argument(
             '--color', type=argparse.FileType('r'), default=None, nargs='+',
@@ -146,7 +144,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         # set edge_values
         reaction_flux = {}
-        if self._args.flux_analysis is not None:
+        if self._args.fba is True:
             if self._args.edge_values is None:
                 solver = self._get_solver()
                 p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
@@ -172,12 +170,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 logger.info('Minimized reactions: {}'.format(count))
 
             else:
-                logger.warning('Invalid command, the two arguments --flux-analysis and --edge-values should not present at the same time')
+                logger.warning('Invalid command, the two arguments --flux-analysis and --edge-valuesb should not present at the same time')
                 quit()
 
         else:
             if self._args.edge_values is not None:
-                with open(self._args.edge_values, 'r') as f:
+                with self._args.edge_values as f:
                     for row in csv.reader(f, delimiter=str(u'\t')):
                         reaction_flux[row[0]] = float(row[1])
 
@@ -286,8 +284,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             min_edge_value = 1
             max_edge_value = 1
 
-        edge_value_span = max_edge_value - min_edge_value
-
         color = {}
         if self._args.color is not None:
             recolor_nodes = []
@@ -309,7 +305,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         if self._args.subset is not None:  # a file contains reaction_id in the subset users want to visualize
             subset_reactions = []
-            with open(self._args.subset, 'r') as f:
+            with self._args.subset as f:
                 for line in f.readlines():
                     subset_reactions.append(line.rstrip())
         else:
@@ -317,11 +313,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         def pen_width(value):
             """calculate edges width"""
-            if edge_value_span == 0:
+            if max_edge_value - min_edge_value == 0:
                 return 1
             else:
-                alpha = value / edge_value_span
-                return 19 * alpha + 1
+                alpha = (value - min_edge_value) / (max_edge_value - min_edge_value)
+                return 20 * alpha
 
         def dir_value(direction):
             """assign value to different reaction directions"""
