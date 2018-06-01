@@ -32,6 +32,7 @@ from tableexport import _encode_value
 import argparse
 from .. import fluxanalysis
 from collections import defaultdict
+from graphviz import render
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +117,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         parser.add_argument(
             '--color', type=argparse.FileType('r'), default=None, nargs='+',
             help='customize color of reaction and compound nodes ')
+        parser.add_argument(
+            '--format', type=text_type, default='png',
+            help='format of final graph')
         super(VisualizationCommand, cls).init_parser(parser)
 
     def run(self):
@@ -263,9 +267,16 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         with open('reactions.edges.tsv', 'w') as f:
             g.write_cytoscape_edges(f)
 
+        if len(set(self._mm.reactions)) > 500:
+            logger.info(
+                'The program is going to creat a big graph that contains {} reactions, it may take a long time'.format(len(set(self._mm.reactions))))
+        render('dot', 'png', 'reactions.dot')
+        if self._args.format is not None:
+            render('dot', self._args.format, 'reactions.dot')
+
 
     def create_split_bipartite_graph(self, model, nativemodel, predict_results, element,
-                                     edge_values, cpd_formula, reaction_flux, split_graph=True):
+                                         edge_values, cpd_formula, reaction_flux, split_graph=True):
         """create bipartite graph from filter_dict"""
         g = graph.Graph()
 
