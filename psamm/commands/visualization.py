@@ -23,7 +23,7 @@ from ..command import (LoopRemovalMixin, ObjectiveMixin, SolverCommandMixin,
                        MetabolicMixin, Command, FilePrefixAppendAction, CommandError)
 import csv
 from ..reaction import Direction
-from six import text_type, iteritems, iterkeys, itervalues, string_types, integer_types
+from six import text_type, iteritems, itervalues
 from .. import findprimarypairs
 from ..formula import Formula, Atom, ParseError
 from .. import graph
@@ -33,6 +33,11 @@ import argparse
 from .. import fluxanalysis
 from collections import defaultdict
 from graphviz import render
+import subprocess
+
+# from py2cytoscape.data.cyrest_client import CyRestClient
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -118,8 +123,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             '--color', type=argparse.FileType('r'), default=None, nargs='+',
             help='customize color of reaction and compound nodes ')
         parser.add_argument(
-            '--format', type=text_type, default='png',
-            help='format of final graph')
+            '--format', type = text_type, default=None,
+            help='generate the graph file directly and determine the format of final graphic file.'
+                 'choices = png, pdf, svg or eps')
+        parser.add_argument(
+            '--Cytoscape', action = 'store_true', help = 'generate graph in Cytoscape')
         super(VisualizationCommand, cls).init_parser(parser)
 
     def run(self):
@@ -174,7 +182,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 logger.info('Minimized reactions: {}'.format(count))
 
             else:
-                logger.warning('Invalid command, the two arguments --flux-analysis and --edge-valuesb should not present at the same time')
+                logger.warning('Invalid command, the two arguments --flux-analysis and --edge-values '
+                               'should not present at the same time')
                 quit()
 
         else:
@@ -208,6 +217,14 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         for cpd in self._mm.compounds:
             cpd_object[str(cpd)] = cpd
 
+        if self._args.subset is not None:  # a file contains reaction_id in the subset users want to visualize
+            subset_reactions = []
+            with self._args.subset as f:
+                for line in f.readlines():
+                    subset_reactions.append(line.rstrip())
+        else:
+            subset_reactions = set(self._mm.reactions)
+
         filter_dict = {}
         if self._args.method == 'fpp':
             split_reactions = True
@@ -215,9 +232,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             element_weight = findprimarypairs.element_weight
             fpp_dict, _ = findprimarypairs.predict_compound_pairs_iterated(reaction_pairs, compound_formula,
                                                                            element_weight=element_weight)
-            for rxn_id, fpp_pairs in fpp_dict.iteritems():
+            for rxn_id, fpp_pairs in iteritems(fpp_dict):
                 compound_pairs = []
-                for cpd_pair, transfer in fpp_pairs[0].iteritems():
+                for cpd_pair, transfer in iteritems(fpp_pairs[0]):
                     if self._args.element is None:
                         compound_pairs.append(cpd_pair)
                     else:
@@ -257,8 +274,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 for r, cpair in zip(rxn_list, cpair_list):
                     filter_dict[r].append(cpair)
 
-        g = self.create_split_bipartite_graph(self._mm, self._model, filter_dict, self._args.element,
-                                              edge_values, compound_formula, reaction_flux, split_graph=split_reactions)
+        g, g1 = self.create_split_bipartite_graph(self._mm, self._model, filter_dict, self._args.element,
+                                                  subset_reactions, edge_values, compound_formula, reaction_flux,
+                                                  split_graph=split_reactions)
 
         with open('reactions.dot', 'w') as f:
             g.write_graphviz(f)
@@ -266,19 +284,25 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             g.write_cytoscape_nodes(f)
         with open('reactions.edges.tsv', 'w') as f:
             g.write_cytoscape_edges(f)
+        with open('compound-graph.edges.tsv', 'w') as f:
+            g1.write_cytoscape_edges(f)
 
-        if len(set(self._mm.reactions)) > 500:
-            logger.info(
-                'The program is going to creat a big graph that contains {} reactions, it may take a long time'.format(len(set(self._mm.reactions))))
-        render('dot', 'png', 'reactions.dot')
         if self._args.format is not None:
-            render('dot', self._args.format, 'reactions.dot')
+            if len(subset_reactions) > 500:
+                logger.info(
+                    'The program is going to create a large graph that contains {} reactions, it may take a long time'
+                        .format(len(subset_reactions)))
+            try:
+                if self._args.format is not None:
+                    render('dot', self._args.format, 'reactions.dot')
+            except subprocess.CalledProcessError:
+                logger.warning('the graph is too large to create')
 
-
-    def create_split_bipartite_graph(self, model, nativemodel, predict_results, element,
-                                         edge_values, cpd_formula, reaction_flux, split_graph=True):
+    def create_split_bipartite_graph(self, model, nativemodel, predict_results, element, subset,
+                                     edge_values, cpd_formula, reaction_flux, split_graph=True):
         """create bipartite graph from filter_dict"""
         g = graph.Graph()
+        g1 = graph.Graph()
 
         cpd_entry = {}
         for cpd in nativemodel.compounds:
@@ -313,14 +337,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 color[r] = REACTION_COLOR
             for c in model.compounds:
                 color[c.name] = COMPOUND_COLOR
-
-        if self._args.subset is not None:  # a file contains reaction_id in the subset users want to visualize
-            subset_reactions = []
-            with self._args.subset as f:
-                for line in f.readlines():
-                    subset_reactions.append(line.rstrip())
-        else:
-            subset_reactions = set(model.reactions)
 
         def pen_width(value):
             """calculate edges width"""
@@ -362,9 +378,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         cpds = []  # cpds in predict_results
         rxns = Counter()
         compound_nodes = {}
-        edge_list=[]
-        for rxn_id, cpairs in sorted(predict_results.iteritems()):
-            if rxn_id in subset_reactions:
+        edge_list = []
+        for rxn_id, cpairs in sorted(iteritems(predict_results)):
+            if rxn_id in subset:
                 for (c1, c2) in cpairs:
                     if c1 not in cpds:          # c1.name = compound.id, no compartment
                         node = graph.Node({
@@ -374,6 +390,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             'style': 'filled',
                             'fillcolor': color[c1.name]})
                         g.add_node(node)
+                        g1.add_node(node)
                         compound_nodes[c1] = node
                     if c2 not in cpds:
                         node = graph.Node({
@@ -383,6 +400,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             'style': 'filled',
                             'fillcolor': color[c2.name]})
                         g.add_node(node)
+                        g1.add_node(node)
                         compound_nodes[c2] = node
                     cpds.append(c1)
                     cpds.append(c2)
@@ -426,11 +444,14 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             g.add_edge(graph.Edge(
                                 node, compound_nodes[c2], final_props(rx, edge1, edge2)))
 
+                    g1.add_edge(graph.Edge(
+                        compound_nodes[c1], compound_nodes[c2], {'dir': dir_value(rx.direction), 'reaction': rxn_id}))
+
         # add exchange reaction nodes
         rxn_set = set()
         for reaction in model.reactions:
             if model.is_exchange(reaction):
-                if reaction in subset_reactions:
+                if reaction in subset:
                     raw_exchange_rxn = model.get_reaction(reaction)
                     if element is not None:
                         if any(Atom(element) in cpd_formula[str(c[0].name)] for c in raw_exchange_rxn.compounds):
@@ -471,7 +492,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         bio_pair = Counter()
         biomass_cpds = set()
         if nativemodel.biomass_reaction is not None:
-            if nativemodel.biomass_reaction in subset_reactions:
+            if nativemodel.biomass_reaction in subset:
                 biomass_reaction = model.get_reaction(nativemodel.biomass_reaction)
                 for c, _ in biomass_reaction.left:
                     if element is not None:
@@ -507,4 +528,4 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             logger.warning(
                 'No biomass reaction in this model')
 
-        return g
+        return g, g1
