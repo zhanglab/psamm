@@ -37,8 +37,6 @@ import subprocess
 
 # from py2cytoscape.data.cyrest_client import CyRestClient
 
-
-
 logger = logging.getLogger(__name__)
 
 REACTION_COLOR = '#ccebc5'
@@ -56,9 +54,8 @@ def cpds_properties(cpd, compound, detail): # cpd=Compound object, compound = Co
         for prop in detail[0]:
             if prop in compound_set:
                 cpd_detail.append(str(prop))
-        A = '\n'.join(_encode_value(compound.properties[value])
-                          for value in cpd_detail if value != 'id')
-        label = '{}\n{}'.format(cpd, A)
+        pre_label = '\n'.join(_encode_value(compound.properties[value]) for value in cpd_detail if value != 'id')
+        label = '{}\n{}'.format(cpd, pre_label)
     else:
         label = cpd
     return label
@@ -91,7 +88,7 @@ def rxns_properties(reaction, detail, reaction_flux):
 
 
 class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
-                         SolverCommandMixin, Command, LoopRemovalMixin, FilePrefixAppendAction):
+                           SolverCommandMixin, Command, LoopRemovalMixin, FilePrefixAppendAction):
     """Run visualization command on the model."""
 
     @classmethod
@@ -123,11 +120,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             '--color', type=argparse.FileType('r'), default=None, nargs='+',
             help='customize color of reaction and compound nodes ')
         parser.add_argument(
-            '--format', type = text_type, default=None,
-            help='generate the graph file directly and determine the format of final graphic file.'
+            '--Image', type=text_type, default=None,
+            help='generate the graphic file directly and determine the format of final image.'
                  'choices = png, pdf, svg or eps')
-        parser.add_argument(
-            '--Cytoscape', action = 'store_true', help = 'generate graph in Cytoscape')
+        # parser.add_argument(
+        #     '--Cytoscape', action='store_true', help='generate graph in Cytoscape')
         super(VisualizationCommand, cls).init_parser(parser)
 
     def run(self):
@@ -287,14 +284,14 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         with open('compound-graph.edges.tsv', 'w') as f:
             g1.write_cytoscape_edges(f)
 
-        if self._args.format is not None:
+        if self._args.Image is not None:
             if len(subset_reactions) > 500:
                 logger.info(
-                    'The program is going to create a large graph that contains {} reactions, it may take a long time'
-                        .format(len(subset_reactions)))
+                    'The program is going to create a large graph that contains {} reactions, '
+                    'it may take a long time'.format(len(subset_reactions)))
             try:
                 if self._args.format is not None:
-                    render('dot', self._args.format, 'reactions.dot')
+                    render('dot', self._args.Image, 'reactions.dot')
             except subprocess.CalledProcessError:
                 logger.warning('the graph is too large to create')
 
@@ -415,7 +412,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         node_id = rxn_id
                     node = graph.Node({
                         'id': node_id,
-                        'edge_id':rxn_id,
+                        'edge_id': rxn_id,
                         'label': rxns_properties(rxn_entry[rxn_id], self._args.detail, reaction_flux),
                         'shape': 'box',
                         'style': 'filled',
