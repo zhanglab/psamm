@@ -23,7 +23,7 @@ from ..command import (LoopRemovalMixin, ObjectiveMixin, SolverCommandMixin,
                        MetabolicMixin, Command, FilePrefixAppendAction, CommandError)
 import csv
 from ..reaction import Direction
-from six import text_type, iteritems, itervalues
+from six import text_type, iteritems, itervalues, iterkeys
 from .. import findprimarypairs
 from ..formula import Formula, Atom, ParseError
 from .. import graph
@@ -76,11 +76,11 @@ def rxns_properties(reaction, detail, reaction_flux):
         label = '\n'.join(_encode_value(reaction.properties[value])
                           for value in rxn_detail)
         if len(reaction_flux) > 0:
-            if reaction.id in reaction_flux.iterkeys():
+            if reaction.id in iterkeys(reaction_flux):
                 label = '{}\n{}'.format(label, reaction_flux[reaction.id])
     else:
         if len(reaction_flux) > 0:
-            if reaction.id in reaction_flux.iterkeys():
+            if reaction.id in iterkeys(reaction_flux):
                 label = '{}\n{}'.format(reaction.id, reaction_flux[reaction.id])
             else:
                 label = reaction.id
@@ -282,7 +282,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             g.write_graphviz(f)
         with open('reactions.nodes.tsv', 'w') as f:
             g.write_cytoscape_nodes(f)
-        with open('reactions.edges.tsv', 'w') as f:
+        with open('reactions.edges.tsv-1', 'w') as f:
             g.write_cytoscape_edges(f)
         with open('compound-graph.edges.tsv', 'w') as f:
             g1.write_cytoscape_edges(f)
@@ -385,16 +385,19 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     if c1 not in cpds:          # c1.name = compound.id, no compartment
                         node = graph.Node({
                             'id': text_type(c1),
+                            'edge_id': text_type(c1),
                             'label': cpds_properties(c1, cpd_entry[c1.name], self._args.detail),
                             'shape': 'ellipse',
                             'style': 'filled',
                             'fillcolor': color[c1.name]})
                         g.add_node(node)
                         g1.add_node(node)
+                        print(node)
                         compound_nodes[c1] = node
                     if c2 not in cpds:
                         node = graph.Node({
                             'id': text_type(c2),
+                            'edge_id': text_type(c2),
                             'label': cpds_properties(c2, cpd_entry[c2.name], self._args.detail),
                             'shape': 'ellipse',
                             'style': 'filled',
@@ -412,6 +415,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         node_id = rxn_id
                     node = graph.Node({
                         'id': node_id,
+                        'edge_id':rxn_id,
                         'label': rxns_properties(rxn_entry[rxn_id], self._args.detail, reaction_flux),
                         'shape': 'box',
                         'style': 'filled',
@@ -462,10 +466,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             exchange_rxn = model.get_reaction(r)
             label = r
             if len(reaction_flux)>0:
-                if r in reaction_flux.iterkeys():
+                if r in iterkeys(reaction_flux):
                     label = '{}\n{}'.format(r, reaction_flux[r])
             node_ex = graph.Node({
                 'id': r,
+                'edge_id': r,
                 'label': label,
                 'shape': 'box',
                 'style': 'filled',
@@ -476,6 +481,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 if c not in compound_nodes.keys():
                     node_ex_cpd = graph.Node({
                         'id': text_type(c),
+                        'edge_id':text_type(c),
                         'label': cpds_properties(c, cpd_entry[c.name], self._args.detail),
                         'shape': 'ellipse',
                         'style': 'filled',
@@ -504,6 +510,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     bio_pair[nativemodel.biomass_reaction] += 1  # bio_pair = Counter({'biomass_rxn_id': 1}), Counter({'biomass_rxn_id': 2})...
                     node_bio = graph.Node({
                         'id': '{}_{}'.format(nativemodel.biomass_reaction, bio_pair[nativemodel.biomass_reaction]),
+                        'edge_id': nativemodel.biomass_reaction,
                         'label': nativemodel.biomass_reaction,
                         'shape': 'box',
                         'style': 'filled',
@@ -513,6 +520,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     if c not in compound_nodes.keys():
                         node_bio_cpd = graph.Node({
                             'id': text_type(c),
+                            'edge_id': text_type(c),
                             'label': cpds_properties(c, cpd_entry[c.name], self._args.detail),
                             'shape': 'ellipse',
                             'style': 'filled',
