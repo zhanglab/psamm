@@ -79,6 +79,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			exclude_lump_list.append(lump_id)
 			for sub_rxn in sub_rxn_list:
 				exclude_unkown_list.append(sub_rxn)
+		# Make list of all excluded, lumped, and unknown dgr.
+		exclude_lump_unkown = exclude_unkown_list + exclude_lump_list
 
 		# make an irreversible version of the metabolic model:
 		mm_irreversible, split_reversible = make_irreversible(mm, exclude_unkown_list, True)
@@ -96,11 +98,24 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		dgr_dict = calculate_dgr(mm_irreversible, dgf_dict, exclude_unkown_list, self._args.transport_parameters)
 
 		TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
+		TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
 
+		TMFA_Problem.prob.set_objective(TMFA_Problem.get_flux_var(objective))
+		TMFA_Problem.prob.set_objective_sense(lp.ObjectiveSense.Maximize)
+		TMFA_Problem.prob.solve()
+		result = TMFA_Problem.prob.result
+		logger.info('TMFA Problem Status: {}'.format(result.get_value(TMFA_Problem.get_flux_var(objective))))
 
+		TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
+												exclude_lump_unkown, dgr_dict, lump_to_rxnids, split_reversible)
 
-
-
+		# TMFA_Problem.prob.set_objective(TMFA_Problem.get_flux_var(objective))
+		# TMFA_Problem.prob.set_objective_sense(lp.ObjectiveSense.Maximize)
+		# TMFA_Problem.prob.solve()
+		# result = TMFA_Problem.prob.result
+		# logger.info('TMFA Problem Status: {}'.format(result.get_value(TMFA_Problem.get_flux_var(objective))))
+		# for reaction in mm_irreversible.reactions:
+		# 	print(result.get_value(TMFA_Problem.get_flux_var(reaction)), result.get_value('dgri_{}'.format(reaction)))
 
 
 def lump_parser(lump_file):
@@ -164,8 +179,8 @@ def add_conc_constraints(problem, conc_file):
 				cpd_conc_dict[cpd] = [fixed]
 	for cp in problem._model.compounds:
 		# define concentration variable for compound.
-		problem.prob.define(cp)
-		var = problem.prob.var(cp)
+		problem.prob.define(str(cp))
+		var = problem.prob.var(str(cp))
 		cpdid_xij_dict[str(cp)] = var
 		# Define default constraints for anything not set in the conc file
 		if str(cp) not in cpd_conc_dict.keys():
@@ -195,7 +210,7 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters):
 	T = 298
 	dph = 0.4
 	t_param = {}
-	for row in csv.reader(transport_parameters, delimiter='\t'):
+	for row in csv.reader(transport_parameters, delimiter=str('\t')):
 		rxn, c, h = row
 		t_param[rxn] = (c, h)
 
@@ -235,45 +250,90 @@ def detect_transporter(reaction):
 
 
 def make_irreversible(mm, exclude_list, reversible):
-    """Returns a new metabolic model with only irreversible reactions and list of split reactions.
+	"""Returns a new metabolic model with only irreversible reactions and list of split reactions.
 
-    This function will find every reversible reaction in the model and split it into two reactions
-    with the {rxnid}_forward or {rxnid}_reverse as the IDs.
+	This function will find every reversible reaction in the model and split it into two reactions
+	with the {rxnid}_forward or {rxnid}_reverse as the IDs.
 
-    Args:
-        mm: A metabolicmodel object
-        exclude_list: list of reactions to exclude in TMFA simulation
-        reversible: if True make all reactions in model reversible.
-    """
-    split_reversible = []
-    mm_irrev = mm.copy()
-    for rxn in mm.reactions:
-        if rxn not in exclude_list:
-            reaction = mm_irrev.get_reaction(rxn)
-            if reversible is False:
-                if reaction.direction == Direction.Both:
-                    mm_irrev.remove_reaction(rxn)
-                    r = Reaction(Direction.Forward, reaction.left, reaction.right)
-                    r2 = Reaction(Direction.Forward, reaction.right, reaction.left)
-                    r_id = str('{}_forward'.format(rxn))
-                    r2_id = str('{}_reverse'.format(rxn))
-                    mm_irrev.database.set_reaction(r_id, r)
-                    mm_irrev.database.set_reaction(r2_id, r2)
-                    mm_irrev.add_reaction(r_id)
-                    mm_irrev.add_reaction(r2_id)
-                    split_reversible.append((r_id, r2_id))
-            elif reversible is True:
-                mm_irrev.remove_reaction(rxn)
-                r = Reaction(Direction.Forward, reaction.left, reaction.right)
-                r2 = Reaction(Direction.Forward, reaction.right, reaction.left)
-                r_id = str('{}_forward'.format(rxn))
-                r2_id = str('{}_reverse'.format(rxn))
-                mm_irrev.database.set_reaction(r_id, r)
-                mm_irrev.database.set_reaction(r2_id, r2)
-                mm_irrev.add_reaction(r_id)
-                mm_irrev.add_reaction(r2_id)
-                split_reversible.append((r_id, r2_id))
-    return mm_irrev, split_reversible
+	Args:
+		mm: A metabolicmodel object
+		exclude_list: list of reactions to exclude in TMFA simulation
+		reversible: if True make all reactions in model reversible.
+	"""
+	split_reversible = []
+	mm_irrev = mm.copy()
+	for rxn in mm.reactions:
+		if rxn not in exclude_list:
+			reaction = mm_irrev.get_reaction(rxn)
+			if reversible is False:
+				if reaction.direction == Direction.Both:
+					mm_irrev.remove_reaction(rxn)
+					r = Reaction(Direction.Forward, reaction.left, reaction.right)
+					r2 = Reaction(Direction.Forward, reaction.right, reaction.left)
+					r_id = str('{}_forward'.format(rxn))
+					r2_id = str('{}_reverse'.format(rxn))
+					mm_irrev.database.set_reaction(r_id, r)
+					mm_irrev.database.set_reaction(r2_id, r2)
+					mm_irrev.add_reaction(r_id)
+					mm_irrev.add_reaction(r2_id)
+					split_reversible.append((r_id, r2_id))
+			elif reversible is True:
+				mm_irrev.remove_reaction(rxn)
+				r = Reaction(Direction.Forward, reaction.left, reaction.right)
+				r2 = Reaction(Direction.Forward, reaction.right, reaction.left)
+				r_id = str('{}_forward'.format(rxn))
+				r2_id = str('{}_reverse'.format(rxn))
+				mm_irrev.database.set_reaction(r_id, r)
+				mm_irrev.database.set_reaction(r2_id, r2)
+				mm_irrev.add_reaction(r_id)
+				mm_irrev.add_reaction(r2_id)
+				split_reversible.append((r_id, r2_id))
+	return mm_irrev, split_reversible
 
 
-def define_rxn_constraints():
+def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclude_lumps_unknown, dgr_dict,
+							 lump_rxn_list, split_rxns):
+	R = 1.9858775 / 1000
+	T = 298
+	k = 1000000
+	epsilon = 1e-6
+	excluded_cpd_list = ['h2o[e]', 'h2o[c]', 'h[e]', 'h[c]']
+	for reaction in mm.reactions:
+		# define variables for vmax, dgri, zi, yi, and vi
+		vmax = mm.limits[reaction].upper
+		problem.prob.define('zi_{}'.format(reaction), types=lp.VariableType.Binary)
+		problem.prob.define('yi_{}'.format(reaction), types=lp.VariableType.Binary)
+		problem.prob.define('dgri_{}'.format(reaction))
+		zi = problem.prob.var('zi_{}'.format(reaction))
+		yi = problem.prob.var('yi_{}'.format(reaction))
+		vi = problem.get_flux_var(reaction)
+		dgri = problem.prob.var('dgri_{}'.format(reaction))
+		rxn = mm.get_reaction(reaction)
+		# add flux constraint linking vi and zi for all reactions except lumps
+		if reaction not in exclude_lumps:
+			problem.prob.add_linear_constraints(vi - zi * vmax <= 0)
+		# add thermodynamic feasibility constraint for all reactions where dgr0 is known except for lumps
+		if reaction not in exclude_lumps_unknown:
+			problem.prob.add_linear_constraints(dgri - k + k * zi <= 0 - epsilon)
+		# add constraint to calculate dgri based on dgr0 and the concentrations of the metabolites
+		if reaction not in exclude_unknown:
+			dgr0 = dgr_dict[reaction]
+			ssxi = 0
+			for (cpd, stoich) in rxn.compounds:
+				if cpd not in excluded_cpd_list:
+					ssxi += problem.prob.var(str(cpd)) * float(stoich)
+			problem.prob.add_linear_constraints(dgri == dgr0 + R * T * ssxi)
+		# add constraints for thermodynamic feasibility of lump reactions and to constrain their constituent reactions
+	for reaction in mm.reactions:
+		if reaction in lump_rxn_list.keys():
+			problem.prob.add_linear_constraints(vi == 0)
+			problem.prob.add_linear_constraints(dgri - k * yi <= 0 - epsilon)
+			sub_rxn_list = lump_rxn_list[reaction]
+			sszi = 0
+			for sub_rxn in sub_rxn_list:
+				sszi += problem.prob.var('zi_{}'.format(sub_rxn))
+			problem.prob.add_linear_constraints(yi + sszi <= len(sub_rxn_list))
+	# Add linear constraint to disallow solutions that use both the forward and reverse reaction from a split reaction.
+	for (forward, reverse) in split_rxns:
+		problem.prob.add_linear_constraints(problem.prob.var('zi_{}'.format(forward)) + problem.prob.var('zi_{}'.format(reverse)) <= 1)
+	return problem
