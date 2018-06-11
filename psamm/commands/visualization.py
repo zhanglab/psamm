@@ -290,7 +290,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     'The program is going to create a large graph that contains {} reactions, '
                     'it may take a long time'.format(len(subset_reactions)))
             try:
-                if self._args.format is not None:
+                if self._args.Image is not None:
                     render('dot', self._args.Image, 'reactions.dot')
             except subprocess.CalledProcessError:
                 logger.warning('the graph is too large to create')
@@ -389,7 +389,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             'fillcolor': color[c1.name]})
                         g.add_node(node)
                         g1.add_node(node)
-                        print(node)
                         compound_nodes[c1] = node
                     if c2 not in cpds:
                         node = graph.Node({
