@@ -141,7 +141,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
 		# Add thermodynamic constraints to the model.
 		TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
-												exclude_lump_unkown, dgr_dict, lump_to_rxnids, split_reversible)
+												exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict, split_reversible)
 
 		# Set the objective function and solve the LP problem.
 		TMFA_Problem.prob.set_objective(TMFA_Problem.get_flux_var(objective))
@@ -387,6 +387,7 @@ def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 				new_lump_rxn_dict[rxn] = final_sub_rxn_list
 			elif reaction.direction == Direction.Both:
 				# split the lump reaction itself
+				lumped_rxns.append(rxn)
 				r = Reaction(Direction.Forward, reaction.left, reaction.right)
 				r2 = Reaction(Direction.Forward, reaction.right, reaction.left)
 				r_id = str('{}_forward'.format(rxn))
@@ -427,6 +428,9 @@ def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 						mm_irrev.add_reaction(sub_r2_id)
 				new_lump_rxn_dict[r_id] = for_sub_rxn_list
 				new_lump_rxn_dict[r2_id] = rev_sub_rxn_list
+
+	for rxn in lumped_rxns:
+		mm_irrev.remove_reaction(rxn)
 
 	return mm_irrev, split_reversible, new_lump_rxn_dict
 
