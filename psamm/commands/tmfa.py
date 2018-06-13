@@ -83,16 +83,20 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			if mm.is_exchange(reaction):
 				base_exclude_list.append(reaction)
 
+		# Remove following two lines in future. these lines will add ph_difference list to the base exclude list.
+		base_exclude_list = base_exclude_list + ph_difference_rxn
+		ph_difference_rxn = []
+
 		# exclude lump_list is a list of all excluded reactions and lump reactions.
 		# exclude_lump_unkown list is a list of all excluded reactions, lump reactions and lumped reactions.
-		exclude_lump_list = list(base_exclude_list)
-		exclude_unkown_list = list(base_exclude_list)
+		exclude_lump_list = set(base_exclude_list)
+		exclude_unkown_list = set(base_exclude_list)
 		for lump_id, sub_rxn_list in lump_to_rxnids.iteritems():
-			exclude_lump_list.append(lump_id)
+			exclude_lump_list.add(lump_id)
 			for sub_rxn in sub_rxn_list:
-				exclude_unkown_list.append(sub_rxn)
+				exclude_unkown_list.add(sub_rxn)
 		# Make list of all excluded, lumped, and unknown dgr.
-		exclude_lump_unkown = exclude_unkown_list + exclude_lump_list
+		exclude_lump_unkown = exclude_unkown_list.union(exclude_lump_list)
 
 		# make an irreversible version of the metabolic model:
 		mm_irreversible, split_reversible = make_irreversible(mm, exclude_unkown_list, False)
@@ -225,12 +229,8 @@ def add_conc_constraints(problem, conc_file):
 	# Parse file containing set concentrations and ranges.
 	if conc_file is not None:
 		for row in csv.reader(conc_file, delimiter=str('\t')):
-			if len(row) >= 3:
-				cpd, lower, upper = row
-				cpd_conc_dict[cpd] = [lower, upper]
-			else:
-				cpd, fixed = row
-				cpd_conc_dict[cpd] = [fixed]
+			cpd, lower, upper = row
+			cpd_conc_dict[cpd] = [lower, upper]
 	for cp in problem._model.compounds:
 		print(str(cp))
 		# define concentration variable for compound.
@@ -242,23 +242,21 @@ def add_conc_constraints(problem, conc_file):
 			if str(cp) not in excluded_compounds:
 				print('Default Conc Constraint Applied\t{}\t{}\t{}'.format(str(cp), math.log(0.0001), math.log(0.02)))
 				# Add concentration constraints as the ln of the concentration (M).
-				# problem.prob.add_linear_constraints(var >= math.log(0.00001))
+				problem.prob.add_linear_constraints(var >= math.log(0.00001))
 				problem.prob.add_linear_constraints(var <= math.log(0.02))
 		elif str(cp) in cpd_conc_dict.keys():
 			conc_limits = cpd_conc_dict[str(cp)]
-			if len(conc_limits) > 1:
+			if conc_limits[0] > conc_limits[1]:
+				logger.error('lower bound for {} concentration higher than upper bound'.format(conc_limits))
+				quit()
+			if float(conc_limits[0]) == float(conc_limits[1]):
+				problem.prob.add_linear_constraints(var == math.log(float(conc_limits[0])))
+			else:
 				problem.prob.add_linear_constraints(var >= math.log(float(conc_limits[0])))
 				problem.prob.add_linear_constraints(var <= math.log(float(conc_limits[1])))
-				lower = math.log(float(conc_limits[0]))
-				upper = math.log(float(conc_limits[1]))
-				print('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, lower))
-				if conc_limits[0] > conc_limits[1]:
-					logger.warning('lower bound for {} concentration higher than upper bound'.format(conc_limits))
-			else:
-				problem.prob.add_linear_constraints(var == math.log(float(conc_limits[0])))
-				print('Non default fixed constraints applied\t{}\t{}'.format(str(cp), math.log(float(conc_limits[0]))))
-		else:
-			logger.info('Compound {} had no concentration constraints added'.format(str(cp)))
+			lower = math.log(float(conc_limits[0]))
+			upper = math.log(float(conc_limits[1]))
+			print('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, lower))
 
 	return problem, cpdid_xij_dict
 
@@ -282,13 +280,13 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters, ph_dif
 	dgr_dict = {}
 	for reaction in mm.reactions:
 		if reaction not in excluded_reactions:
-			dgt = 0
+			dgr = 0
 			rxn = mm.get_reaction(reaction)
 			if any(dgf_dict.get(j[0]) is None for j in rxn.compounds):
 				if reaction not in ph_difference_rxn:
 					logger.error('Reaction {} contains at least 1 compound with an unknown deltaGf value'.format(reaction))
+					quit()
 			else:
-				dgf_sum = 0
 				# Make a variable dgf_sum that represents the sum of sij *  (stoichiometry *
 				# deltaGf for reaction j.
 				for cpd in rxn.compounds:
@@ -299,17 +297,12 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters, ph_dif
 					dg = dgf_dict[cpd[0]]
 					dgs = dg * (float(cpd[1])*dgscale)
 					print(cpd, dg, float(cpd[1]), dgs)
-					dgf_sum += dgs
+					dgr += dgs
 			if reaction in t_param.keys():
 				(c, h) = t_param[reaction]
-				dgt = (float(c) * F * dpsi) - (2.3 * float(h) * R * T * dph)
-			if reaction in ph_difference_rxn:
-				logger.info('{}'.format(reaction))
-				dgr = dgt
-			else:
-				dgr = dgt + dgf_sum
+				dgr += (float(c) * F * dpsi) - (2.3 * float(h) * R * T * dph)
 			dgr_dict[reaction] = dgr
-			print('Reaction DGR\t{}\t{}\t{}'.format(reaction, dgr, dgt))
+			print('Reaction DGR\t{}\t{}'.format(reaction, dgr))
 	return dgr_dict
 
 
@@ -324,7 +317,7 @@ def detect_transporter(reaction):
 		return False, []
 
 
-def make_irreversible(mm, exclude_list, reversible):
+def make_irreversible(mm, exclude_list, all_reversible):
 	"""Returns a new metabolic model with only irreversible reactions and list of split reactions.
 
 	This function will find every reversible reaction in the model and split it into two reactions
@@ -341,30 +334,28 @@ def make_irreversible(mm, exclude_list, reversible):
 		if rxn not in exclude_list:
 			reaction = mm_irrev.get_reaction(rxn)
 			# Allow for making all reversible reactions into a _forward and _reverse split reaction pair
-			if reversible is False:
-				if reaction.direction == Direction.Both:
+			r = Reaction(Direction.Forward, reaction.left, reaction.right)
+			r2 = Reaction(Direction.Forward, reaction.right, reaction.left)
+			r_id = str('{}_forward'.format(rxn))
+			r2_id = str('{}_reverse'.format(rxn))
+			if reaction.direction == Direction.Forward:
+				if all_reversible is False:
+					continue
+				else:
 					mm_irrev.remove_reaction(rxn)
-					r = Reaction(Direction.Forward, reaction.left, reaction.right)
-					r2 = Reaction(Direction.Forward, reaction.right, reaction.left)
-					r_id = str('{}_forward'.format(rxn))
-					r2_id = str('{}_reverse'.format(rxn))
 					mm_irrev.database.set_reaction(r_id, r)
 					mm_irrev.database.set_reaction(r2_id, r2)
 					mm_irrev.add_reaction(r_id)
 					mm_irrev.add_reaction(r2_id)
 					split_reversible.append((r_id, r2_id))
-			# Allow for making all reactions reversible
-			elif reversible is True:
+			elif reaction.direction == Direction.Both:
 				mm_irrev.remove_reaction(rxn)
-				r = Reaction(Direction.Forward, reaction.left, reaction.right)
-				r2 = Reaction(Direction.Forward, reaction.right, reaction.left)
-				r_id = str('{}_forward'.format(rxn))
-				r2_id = str('{}_reverse'.format(rxn))
 				mm_irrev.database.set_reaction(r_id, r)
 				mm_irrev.database.set_reaction(r2_id, r2)
 				mm_irrev.add_reaction(r_id)
 				mm_irrev.add_reaction(r2_id)
 				split_reversible.append((r_id, r2_id))
+
 	return mm_irrev, split_reversible
 
 
@@ -387,7 +378,7 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 		dgri = problem.prob.var('dgri_{}'.format(reaction))
 		rxn = mm.get_reaction(reaction)
 		# add flux constraint linking vi and zi for all reactions except lumps
-		if reaction not in exclude_lumps:
+		if reaction not in lump_rxn_list.keys():
 			problem.prob.add_linear_constraints(vi - zi * vmax <= 0)
 			problem.prob.add_linear_constraints(vi >= 0)
 			print('Reaction Zi Vi constraint\t{}\t{}-{}*{}<=0'.format(reaction, vi, zi, vmax))
@@ -412,6 +403,9 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# add constraints for thermodynamic feasibility of lump reactions and to constrain their constituent reactions
 	for reaction in mm.reactions:
 		if reaction in lump_rxn_list.keys():
+			vi = problem.get_flux_var(reaction)
+			yi = problem.prob.var('yi_{}'.format(reaction))
+			dgri = problem.prob.var('dgri_{}'.format(reaction))
 			problem.prob.add_linear_constraints(vi == 0)
 			print('Lumped Reaction flux = 0 constraint\t{}=0'.format(vi))
 			print('Lumped Reaction flux = 0 raw constraint {}=0'.format(reaction), (vi == 0))
