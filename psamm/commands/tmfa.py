@@ -72,11 +72,12 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
 		# Parse out the file of lumped reactions or set the lumps dictionaries to be empty
 		if self._args.lump_file is not None:
-			lumpid_to_rxn, rxn_lumpid, lump_to_rxnids = lump_parser(self._args.lump_file)
+			lumpid_to_rxn, rxn_lumpid, lump_to_rxnids, lump_to_rxnids_dir = lump_parser(self._args.lump_file)
 		else:
 			logger.info('No lumped reactions were provided')
 			lumpid_to_rxn = {}
 			lump_to_rxnids = {}
+			lump_to_rxnids_dir = {}
 
 		# Add exchange reactions to the exclude list
 		for reaction in mm.reactions:
@@ -98,17 +99,29 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# Make list of all excluded, lumped, and unknown dgr.
 		exclude_lump_unkown = exclude_unkown_list.union(exclude_lump_list)
 
+		# Add lump reactions to the mm_irreversible model
+		for lump_id, rxn in lumpid_to_rxn.iteritems():
+			reaction = parse_reaction(rxn)
+			mm.database.set_reaction(lump_id, reaction)
+			mm.add_reaction(lump_id)
+
 		# make an irreversible version of the metabolic model:
-		mm_irreversible, split_reversible = make_irreversible(mm, exclude_unkown_list, False)
+		mm_irreversible, split_reversible, reversible_lump_to_rxn_dict = make_irreversible(mm, exclude_lump_unkown, lump_to_rxnids_dir, False)
 		split_reactions = []
 		for (i,j) in split_reversible:
 			split_reactions.append(i[:-8])
 
-		# Add lump reactions to the mm_irreversible model
-		for lump_id, rxn in lumpid_to_rxn.iteritems():
-			reaction = parse_reaction(rxn)
-			mm_irreversible.database.set_reaction(lump_id, reaction)
-			mm_irreversible.add_reaction(lump_id)
+		# update these lists for the new reversible lumps and constituent reactions.
+		# exclude lump_list is a list of all excluded reactions and lump reactions.
+		# exclude_lump_unkown list is a list of all excluded reactions, lump reactions and lumped reactions.
+		for lump_id, sub_rxn_list in reversible_lump_to_rxn_dict.iteritems():
+			exclude_lump_list.add(lump_id)
+			for sub_rxn in sub_rxn_list:
+				exclude_unkown_list.add(sub_rxn)
+		# Make list of all excluded, lumped, and unknown dgr.
+		exclude_lump_unkown = exclude_unkown_list.union(exclude_lump_list)
+
+
 		# Parse the deltaGf values for all metaobolites from a supplied file.
 		dgf_dict = parse_dgf(mm_irreversible, self._args.dgf_file)
 		# Calculate the deltaGr values for all reactions
@@ -175,7 +188,6 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# 	print('CPD Conc Variability\t{}\t{}\t{}'.format(compound, math.exp(min), math.exp(max)))
 
 
-
 def lump_parser(lump_file):
 	"""Parses a supplied file and returns dictionaries containing lump information.
 
@@ -188,14 +200,21 @@ def lump_parser(lump_file):
 	rxn_to_lump_id = {}
 	lump_to_rxn = {}
 	lump_to_rxnids = {}
+	lump_to_rxnids_dir = {}
 	for row in csv.reader(lump_file, delimiter=str('\t')):
 		#print(row)
 		lump_id, lump_rxn_list, lump_rxn = row
+		rx_dir_list = []
+		rx_list = []
 		for i in lump_rxn_list.split(','):
+			subrxn, dir = i.split(':')
+			rx_dir_list.append((subrxn, dir))
+			rx_list.append(subrxn)
 			rxn_to_lump_id[i] = lump_id
 		lump_to_rxn[lump_id] = lump_rxn
-		lump_to_rxnids[lump_id] = lump_rxn_list.split(',')
-	return lump_to_rxn, rxn_to_lump_id, lump_to_rxnids
+		lump_to_rxnids[lump_id] = rx_list
+		lump_to_rxnids_dir[lump_id] = rx_dir_list
+	return lump_to_rxn, rxn_to_lump_id, lump_to_rxnids, lump_to_rxnids_dir
 
 
 def parse_dgf(mm, dgf_file):
@@ -317,7 +336,7 @@ def detect_transporter(reaction):
 		return False, []
 
 
-def make_irreversible(mm, exclude_list, all_reversible):
+def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 	"""Returns a new metabolic model with only irreversible reactions and list of split reactions.
 
 	This function will find every reversible reaction in the model and split it into two reactions
@@ -330,9 +349,11 @@ def make_irreversible(mm, exclude_list, all_reversible):
 	"""
 	split_reversible = []
 	mm_irrev = mm.copy()
+	lumped_rxns = []
+	new_lump_rxn_dict = {}
 	for rxn in mm.reactions:
+		reaction = mm_irrev.get_reaction(rxn)
 		if rxn not in exclude_list:
-			reaction = mm_irrev.get_reaction(rxn)
 			# Allow for making all reversible reactions into a _forward and _reverse split reaction pair
 			r = Reaction(Direction.Forward, reaction.left, reaction.right)
 			r2 = Reaction(Direction.Forward, reaction.right, reaction.left)
@@ -356,7 +377,58 @@ def make_irreversible(mm, exclude_list, all_reversible):
 				mm_irrev.add_reaction(r2_id)
 				split_reversible.append((r_id, r2_id))
 
-	return mm_irrev, split_reversible
+		elif rxn in lump_rxn_dir.keys():
+			final_sub_rxn_list = []
+			if reaction.direction == Direction.Forward:
+				sub_rxn_list = lump_rxn_dir[rxn]
+				for entry in sub_rxn_list:
+					(subrxn, dir)= entry
+					final_sub_rxn_list.append(subrxn)
+				new_lump_rxn_dict[rxn] = final_sub_rxn_list
+			elif reaction.direction == Direction.Both:
+				# split the lump reaction itself
+				r = Reaction(Direction.Forward, reaction.left, reaction.right)
+				r2 = Reaction(Direction.Forward, reaction.right, reaction.left)
+				r_id = str('{}_forward'.format(rxn))
+				r2_id = str('{}_reverse'.format(rxn))
+				mm_irrev.remove_reaction(rxn)
+				mm_irrev.database.set_reaction(r_id, r)
+				mm_irrev.database.set_reaction(r2_id, r2)
+				mm_irrev.add_reaction(r_id)
+				mm_irrev.add_reaction(r2_id)
+				split_reversible.append((r_id, r2_id))
+
+				sub_rxn_list = lump_rxn_dir[rxn]
+				for_sub_rxn_list = []
+				rev_sub_rxn_list = []
+				for entry in sub_rxn_list:
+					(subrxn, dir) = entry
+					dir = float(dir)
+					lumped_rxns.append(subrxn)
+					subreaction = mm.get_reaction(subrxn)
+					sub_r1 = Reaction(Direction.Forward, subreaction.left, subreaction.right)
+					sub_r1_id = '{}_forward'.format(subrxn)
+					sub_r2 = Reaction(Direction.Forward, subreaction.right, subreaction.left)
+					sub_r2_id = '{}_reverse'.format(subrxn)
+					split_reversible.append((sub_r1_id, sub_r2_id))
+					if dir == 1:
+						for_sub_rxn_list.append(sub_r1_id)
+						rev_sub_rxn_list.append(sub_r2_id)
+						mm_irrev.database.set_reaction(sub_r1_id, sub_r1)
+						mm_irrev.add_reaction(sub_r1_id)
+						mm_irrev.database.set_reaction(sub_r2_id, sub_r2)
+						mm_irrev.add_reaction(sub_r2_id)
+					elif dir == -1:
+						for_sub_rxn_list.append(sub_r2_id)
+						rev_sub_rxn_list.append(sub_r1_id)
+						mm_irrev.database.set_reaction(sub_r1_id, sub_r1)
+						mm_irrev.add_reaction(sub_r1_id)
+						mm_irrev.database.set_reaction(sub_r2_id, sub_r2)
+						mm_irrev.add_reaction(sub_r2_id)
+				new_lump_rxn_dict[r_id] = for_sub_rxn_list
+				new_lump_rxn_dict[r2_id] = rev_sub_rxn_list
+
+	return mm_irrev, split_reversible, new_lump_rxn_dict
 
 
 def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclude_lumps_unknown, dgr_dict,
