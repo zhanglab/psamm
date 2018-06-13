@@ -378,7 +378,7 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 		dgri = problem.prob.var('dgri_{}'.format(reaction))
 		rxn = mm.get_reaction(reaction)
 		# add flux constraint linking vi and zi for all reactions except lumps
-		if reaction not in lump_rxn_list.keys():
+		if reaction not in exclude_lumps:
 			problem.prob.add_linear_constraints(vi - zi * vmax <= 0)
 			problem.prob.add_linear_constraints(vi >= 0)
 			print('Reaction Zi Vi constraint\t{}\t{}-{}*{}<=0'.format(reaction, vi, zi, vmax))
