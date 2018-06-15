@@ -125,13 +125,14 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		exclude_lump_unkown = exclude_unkown_list.union(exclude_lump_list)
 
 
-		# Parse the deltaGf values for all metaobolites from a supplied file.
-		# dgf_dict = parse_dgf(mm_irreversible, self._args.dgf_file)
-		# Calculate the deltaGr values for all reactions
-		# dgr_dict = calculate_dgr(mm_irreversible, dgf_dict, exclude_unkown_list, self._args.transport_parameters, ph_difference_rxn, self._args.scaled_compounds)
 
-
-		dgr_dict = parse_dgr_file(self._args.dgr_file)
+		if self._args.dgr_file is None:
+			# Parse the deltaGf values for all metaobolites from a supplied file.
+			dgf_dict = parse_dgf(mm_irreversible, self._args.dgf_file)
+			# Calculate the deltaGr values for all reactions
+			dgr_dict = calculate_dgr(mm_irreversible, dgf_dict, exclude_unkown_list, self._args.transport_parameters, ph_difference_rxn, self._args.scaled_compounds)
+		elif self._args.dgr_file is not None:
+			dgr_dict = parse_dgr_file(self._args.dgr_file)
 
 		# Make a basic LP problem containing soitchiometric constraints and basic flux constraints.
 		TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
@@ -158,7 +159,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		for reaction in sorted(mm_irreversible.reactions):
 			print('RXN,Flux,DGRI,Zi\t{}\t{}\t{}\t{}'.format(reaction, result.get_value(TMFA_Problem.get_flux_var(reaction)), result.get_value('dgri_{}'.format(reaction)), result.get_value('zi_{}'.format(reaction))))
 		for compound in sorted(mm_irreversible.compounds):
-			print('CPD Activity\t{}\t{}'.format(compound, math.exp(result.get_value(TMFA_Problem.prob.var(str(compound))))))
+			print('CPD Activity\t{}\t{}'.format(compound, result.get_value(TMFA_Problem.prob.var(str(compound)))))
 		bio = TMFA_Problem.get_flux_var(objective)
 		max_val = result.get_value(bio)
 		TMFA_Problem.prob.add_linear_constraints(bio == max_val)
@@ -250,6 +251,8 @@ def parse_dgf(mm, dgf_file):
 def add_conc_constraints(problem, conc_file):
 	# Water needs to be excluded from these concentration constraints.
 	excluded_compounds = ['h2o[c]', 'h2o[e]']
+	# excluded_compounds = ['h2o[c]', 'h2o[e]', 'pe_ec[c]', '12dgr_ec[c]', 'agpc_EC[c]', 'agpe_EC[c]', 'agpg_EC[c]', 'cdpdag_EC[c]',
+	#                       'clpn_EC[c]', 'pa_EC[c]', 'pc_EC[c]', 'pg_EC[c]', 'pe_EC[c]', 'pgp_EC[c]', 'ps_EC[c]']
 	cpdid_xij_dict = {}
 	cpd_conc_dict = {}
 	# Parse file containing set concentrations and ranges.
@@ -268,8 +271,8 @@ def add_conc_constraints(problem, conc_file):
 			if str(cp) not in excluded_compounds:
 				print('Default Conc Constraint Applied\t{}\t{}\t{}'.format(str(cp), math.log(0.0001), math.log(0.02)))
 				# Add concentration constraints as the ln of the concentration (M).
-				problem.prob.add_linear_constraints(var >= math.log(0.00001)-2)
-				problem.prob.add_linear_constraints(var <= math.log(0.02)+1)
+				problem.prob.add_linear_constraints(var >= math.log(0.00001))
+				problem.prob.add_linear_constraints(var <= math.log(0.02))
 		elif str(cp) in cpd_conc_dict.keys():
 			conc_limits = cpd_conc_dict[str(cp)]
 			if conc_limits[0] > conc_limits[1]:
@@ -284,11 +287,11 @@ def add_conc_constraints(problem, conc_file):
 				problem.prob.add_linear_constraints(var >= math.log(float(conc_limits[0])))
 				problem.prob.add_linear_constraints(var <= math.log(float(conc_limits[1])))
 				# Constraints to allow the concentration constraints to be more flexible
-				problem.prob.add_linear_constraints(var >= math.log(float(conc_limits[0]))-1)
-				problem.prob.add_linear_constraints(var <= math.log(float(conc_limits[1]))+1)
+				# problem.prob.add_linear_constraints(var >= math.log(float(conc_limits[0]))-1)
+				# problem.prob.add_linear_constraints(var <= math.log(float(conc_limits[1]))+1)
 			lower = math.log(float(conc_limits[0]))
 			upper = math.log(float(conc_limits[1]))
-			print('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, lower))
+			print('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, upper))
 
 	return problem, cpdid_xij_dict
 
