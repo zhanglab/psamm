@@ -107,7 +107,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             help=('Reaction to exclude (e.g. biomass reactions or'
                   ' macromolecule synthesis)'))
         parser.add_argument(
-            '--edge-values', type=file, default=None,
+            '--edge-values', type=argparse.FileType('r'), default=None,
             help='Values for edges, derived from reaction flux')
         parser.add_argument(
             '--fba', action='store_true',
@@ -119,7 +119,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             '--detail', type=text_type, default=None, action='append', nargs='+',
             help='reaction and compound properties showed on nodes label')
         parser.add_argument(
-            '--subset', type=file, default=None,
+            '--subset', type=argparse.FileType('r'), default=None,
             help='reactions designated to visualize')
         parser.add_argument(
             '--color', type=argparse.FileType('r'), default=None, nargs='+',
@@ -128,7 +128,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             '--Image', type=text_type, default=None,
             help='generate the graphic file directly and determine the format of final image.'
                  'choices = png, pdf, svg or eps')
-
+        parser.add_argument(
+            '--exclude-pairs', type=argparse.FileType('r'), default=None,
+            help='remove edge of given compound pairs from final graph ')
         # parser.add_argument(
         #     '--Cytoscape', action='store_true', help='generate graph in Cytoscape')
         super(VisualizationCommand, cls).init_parser(parser)
@@ -191,9 +193,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         else:
             if self._args.edge_values is not None:
-                with self._args.edge_values as f:
-                    for row in csv.reader(f, delimiter=str(u'\t')):
-                        reaction_flux[row[0]] = float(row[1])
+                for row in csv.reader(self._args.edge_values, delimiter=str(u'\t')):
+                    reaction_flux[row[0]] = float(row[1])
 
         edge_values = None
         if len(reaction_flux) > 0:
@@ -222,11 +223,15 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         if self._args.subset is not None:  # a file contains reaction_id in the subset users want to visualize
             subset_reactions = []
-            with self._args.subset as f:
-                for line in f.readlines():
-                    subset_reactions.append(line.rstrip())
+            for line in self._args.subset.readlines():
+                subset_reactions.append(line.rstrip())
         else:
             subset_reactions = set(self._mm.reactions)
+
+        exclude_cpairs = []
+        if self._args.exclude_pairs is not None:
+            for row in csv.reader(self._args.exclude_pairs, delimiter=str('\t')):
+                exclude_cpairs.append((cpd_object[row[0]], cpd_object[row[1]]))
 
         filter_dict = {}
         if self._args.method == 'fpp':
@@ -238,11 +243,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             for rxn_id, fpp_pairs in iteritems(fpp_dict):
                 compound_pairs = []
                 for cpd_pair, transfer in iteritems(fpp_pairs[0]):
-                    if self._args.element is None:
-                        compound_pairs.append(cpd_pair)
-                    else:
-                        if any(Atom(self._args.element) in k for k in transfer):
+                    if cpd_pair not in exclude_cpairs:
+                        if self._args.element is None:
                             compound_pairs.append(cpd_pair)
+                        else:
+                            if any(Atom(self._args.element) in k for k in transfer):
+                                compound_pairs.append(cpd_pair)
                 filter_dict[rxn_id] = compound_pairs
 
         elif self._args.method == 'no-fpp':
@@ -253,25 +259,27 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     cpairs = []
                     for c1, _ in rx.left:
                         for c2, _ in rx.right:
-                            if self._args.element is not None:
-                                if Atom(self._args.element) in compound_formula[c1.name]:
-                                    if Atom(self._args.element) in compound_formula[c2.name]:
-                                        cpairs.append((c1, c2))
-                            else:
-                                cpairs.append((c1, c2))
+                            if (c1, c2) not in exclude_cpairs:
+                                if self._args.element is not None:
+                                    if Atom(self._args.element) in compound_formula[c1.name]:
+                                        if Atom(self._args.element) in compound_formula[c2.name]:
+                                            cpairs.append((c1, c2))
+                                else:
+                                    cpairs.append((c1, c2))
                     filter_dict[rxn_id] = cpairs
         else:
             split_reactions = True
             with open(self._args.method, 'r') as f:
                 cpair_list, rxn_list = [], []
                 for row in csv.reader(f, delimiter=str(u'\t')):
-                    if self._args.element is None:
-                        cpair_list.append((cpd_object[row[1]],cpd_object[row[2]]))
-                        rxn_list.append(row[0])
-                    else:
-                        if Atom(self._args.element) in Formula.parse(row[3]).flattened():
-                            cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
+                    if (cpd_object[row[1]], cpd_object[row[2]]) not in exclude_cpairs:
+                        if self._args.element is None:
+                            cpair_list.append((cpd_object[row[1]],cpd_object[row[2]]))
                             rxn_list.append(row[0])
+                        else:
+                            if Atom(self._args.element) in Formula.parse(row[3]).flattened():
+                                cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
+                                rxn_list.append(row[0])
 
                 filter_dict = defaultdict(list)
                 for r, cpair in zip(rxn_list, cpair_list):
@@ -285,7 +293,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             g.write_graphviz(f)
         with open('reactions.nodes.tsv', 'w') as f:
             g.write_cytoscape_nodes(f)
-        with open('reactions.edges.tsv-1', 'w') as f:
+        with open('reactions.edges.tsv', 'w') as f:
             g.write_cytoscape_edges(f)
         with open('compound-graph.edges.tsv', 'w') as f:
             g1.write_cytoscape_edges(f)
@@ -330,16 +338,15 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         color = {}
         if self._args.color is not None:
             recolor_nodes = []
-            for f in self._args.color:
-                for row in csv.reader(f, delimiter=str(u'\t')):
-                    color[row[0]] = row[1]  # row[0] =reaction id, row[1] = hex color code, such as #cfe0fc
-                    recolor_nodes.append(row[0])
-                    for reaction in model.reactions:
-                        if reaction not in recolor_nodes:
-                            color[reaction] = REACTION_COLOR
-                    for compound in model.compounds:
-                        if str(compound.name) not in recolor_nodes:
-                            color[compound.name] = COMPOUND_COLOR
+            for row in csv.reader(self._args.color, delimiter=str(u'\t')):
+                color[row[0]] = row[1]  # row[0] =reaction id, row[1] = hex color code, such as #cfe0fc
+                recolor_nodes.append(row[0])
+                for reaction in model.reactions:
+                    if reaction not in recolor_nodes:
+                        color[reaction] = REACTION_COLOR
+                for compound in model.compounds:
+                    if str(compound.name) not in recolor_nodes:
+                        color[compound.name] = COMPOUND_COLOR
         else:
             for r in model.reactions:
                 color[r] = REACTION_COLOR
@@ -455,8 +462,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             g.add_edge(graph.Edge(
                                 node, compound_nodes[c2], final_props(rx, edge1, edge2)))
 
-                    g1.add_edge(graph.Edge(
-                        compound_nodes[c1], compound_nodes[c2], {'dir': dir_value(rx.direction), 'reaction': rxn_id}))
+                        g1.add_edge(graph.Edge(
+                            compound_nodes[c1], compound_nodes[c2], {'dir': dir_value(rx.direction), 'reaction': rxn_id}))
 
         # add exchange reaction nodes
         rxn_set = set()
