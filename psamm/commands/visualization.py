@@ -32,7 +32,12 @@ from tableexport import _encode_value
 import argparse
 from .. import fluxanalysis
 from collections import defaultdict
-from graphviz import render
+
+try:
+    from graphviz import render
+except ImportError:
+    render = None
+
 import subprocess
 
 # from py2cytoscape.data.cyrest_client import CyRestClient
@@ -123,6 +128,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             '--Image', type=text_type, default=None,
             help='generate the graphic file directly and determine the format of final image.'
                  'choices = png, pdf, svg or eps')
+
         # parser.add_argument(
         #     '--Cytoscape', action='store_true', help='generate graph in Cytoscape')
         super(VisualizationCommand, cls).init_parser(parser)
@@ -285,15 +291,20 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             g1.write_cytoscape_edges(f)
 
         if self._args.Image is not None:
-            if len(subset_reactions) > 500:
-                logger.info(
-                    'The program is going to create a large graph that contains {} reactions, '
-                    'it may take a long time'.format(len(subset_reactions)))
-            try:
-                if self._args.Image is not None:
-                    render('dot', self._args.Image, 'reactions.dot')
-            except subprocess.CalledProcessError:
-                logger.warning('the graph is too large to create')
+            if render is None:
+                self.fail(
+                    'create image file requires python binding graphviz module'
+                    ' ("pip install graphviz")')
+            else:
+                if len(subset_reactions) > 500:
+                    logger.info(
+                        'The program is going to create a large graph that contains {} reactions, '
+                        'it may take a long time'.format(len(subset_reactions)))
+                try:
+                    if self._args.Image is not None:
+                        render('dot', self._args.Image, 'reactions.dot')
+                except subprocess.CalledProcessError:
+                    logger.warning('the graph is too large to create')
 
     def create_split_bipartite_graph(self, model, nativemodel, predict_results, element, subset,
                                      edge_values, cpd_formula, reaction_flux, split_graph=True):
