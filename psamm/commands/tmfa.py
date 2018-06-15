@@ -305,11 +305,16 @@ def parse_dgr_file(dgr_file):
 			return False
 	dgr_dict = {}
 	for row in csv.reader(dgr_file, delimiter=str('\t')):
-		rxn, dgr = row
+		rxn, dgr, err = row
 		if is_number(dgr):
-			dgr_dict[rxn] = float(dgr)
-			dgr_dict['{}_forward'.format(rxn)] = float(dgr)
-			dgr_dict['{}_reverse'.format(rxn)] = float(dgr)
+
+			if is_number(err):
+				err = float(err)
+			else:
+				err = float(2)
+			dgr_dict[rxn] = (float(dgr), err)
+			dgr_dict['{}_forward'.format(rxn)] = (float(dgr), err)
+			dgr_dict['{}_reverse'.format(rxn)] = (float(dgr), err)
 		else:
 			logger.info('Reaction {} was provided with dgr value of {}. Treating as an unknown value.'.format(rxn, dgr))
 	return dgr_dict
@@ -501,14 +506,18 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 			print('Reaction thermo feasibility raw constraint {}: '.format(reaction), (dgri - k + (k * zi) <= 0 - epsilon))
 		# add constraint to calculate dgri based on dgr0 and the concentrations of the metabolites
 		if reaction not in exclude_unknown:
-			dgr0 = dgr_dict[reaction]
+			(dgr0, err) = dgr_dict[reaction]
 			print('Reaction DGR0 dict lookup value: {}\t{}'.format(reaction, dgr_dict[reaction]))
 			ssxi = 0
+			problem.prob.define('dgr_err_{}'.format(reaction))
+			dgr_err = problem.prob.var('dgr_err_{}'.format(reaction))
+			problem.prob.add_linear_constraints(dgr_err <= 2*err)
+			problem.prob.add_linear_constraints(dgr_err >= -2*err)
 			for (cpd, stoich) in rxn.compounds:
 				if str(cpd) not in excluded_cpd_list:
 					print('ssxi calc for {} compound {}\t{}'.format(reaction, problem.prob.var(str(cpd)), stoich))
 					ssxi += problem.prob.var(str(cpd)) * float(stoich)
-			problem.prob.add_linear_constraints(dgri == dgr0 + (R * T * (ssxi)))
+			problem.prob.add_linear_constraints(dgri == dgr0 + (R * T * (ssxi)) + dgr_err)
 			print('Reaction dgri constraint calculation\t{}\t{}={}+({}*{}*({}))'.format(reaction, dgri, dgr0, R, T, ssxi))
 			print('Reaction dgri raw constraint calculation {}: '.format(reaction), (dgri == dgr0 + (R * T * (ssxi))))
 	# add constraints for thermodynamic feasibility of lump reactions and to constrain their constituent reactions
