@@ -357,9 +357,9 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters, ph_dif
 					dgs = dg * (float(cpd[1])*dgscale)
 					print(cpd, dg, float(cpd[1]), dgs)
 					dgr += dgs
-			# if reaction in t_param.keys():
-			# 	(c, h) = t_param[reaction]
-			# 	dgr += (float(c) * F * dpsi) - (2.3 * float(h) * R * T * dph)
+			if reaction in t_param.keys():
+				(c, h) = t_param[reaction]
+				dgr += (float(c) * F * dpsi) - (2.3 * float(h) * R * T * dph)
 			dgr_dict[reaction] = dgr
 			print('Reaction DGR\t{}\t{}'.format(reaction, dgr))
 	return dgr_dict
@@ -510,16 +510,20 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 			print('Reaction DGR0 dict lookup value: {}\t{}'.format(reaction, dgr_dict[reaction]))
 			ssxi = 0
 			problem.prob.define('dgr_err_{}'.format(reaction))
-			dgr_err = problem.prob.var('dgr_err_{}'.format(reaction))
-			problem.prob.add_linear_constraints(dgr_err <= 2*err)
-			problem.prob.add_linear_constraints(dgr_err >= -2*err)
+			# If no error then use this line
+			dgr_err = 0
+			# If you want to use the error estimates for dgr values then uncomment these lines
+			# dgr_err = problem.prob.var('dgr_err_{}'.format(reaction))
+			# problem.prob.add_linear_constraints(dgr_err <= 2*err)
+			# problem.prob.add_linear_constraints(dgr_err >= -2*err)
+			# print(reaction, 'error', 2*err)
 			for (cpd, stoich) in rxn.compounds:
 				if str(cpd) not in excluded_cpd_list:
 					print('ssxi calc for {} compound {}\t{}'.format(reaction, problem.prob.var(str(cpd)), stoich))
 					ssxi += problem.prob.var(str(cpd)) * float(stoich)
 			problem.prob.add_linear_constraints(dgri == dgr0 + (R * T * (ssxi)) + dgr_err)
 			print('Reaction dgri constraint calculation\t{}\t{}={}+({}*{}*({}))'.format(reaction, dgri, dgr0, R, T, ssxi))
-			print('Reaction dgri raw constraint calculation {}: '.format(reaction), (dgri == dgr0 + (R * T * (ssxi))))
+			print('Reaction dgri raw constraint calculation {}: '.format(reaction), (dgri == dgr0 + (R * T * (ssxi)) + dgr_err))
 	# add constraints for thermodynamic feasibility of lump reactions and to constrain their constituent reactions
 	for reaction in mm.reactions:
 		if reaction in lump_rxn_list.keys():
@@ -543,6 +547,6 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	for (forward, reverse) in split_rxns:
 		problem.prob.add_linear_constraints(problem.prob.var('zi_{}'.format(forward)) + problem.prob.var('zi_{}'.format(reverse)) <= 1)
 		print('Split reaction Zi constraints\t{}\t{}\t{}+{}<=1'.format(forward, reverse, problem.prob.var('zi_{}'.format(forward)), problem.prob.var('zi_{}'.format(reverse))))
-		print('Split reaction zi raw constraint {} :'.format(reaction), (problem.prob.var('zi_{}'.format(forward)) + problem.prob.var('zi_{}'.format(reverse)) <= 1))
+		print('Split reaction zi raw constraint {} :'.format(forward), (problem.prob.var('zi_{}'.format(forward)) + problem.prob.var('zi_{}'.format(reverse)) <= 1))
 	return problem
 
