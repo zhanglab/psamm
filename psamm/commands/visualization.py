@@ -338,15 +338,16 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         color = {}
         if self._args.color is not None:
             recolor_nodes = []
-            for row in csv.reader(self._args.color, delimiter=str(u'\t')):
-                color[row[0]] = row[1]  # row[0] =reaction id, row[1] = hex color code, such as #cfe0fc
-                recolor_nodes.append(row[0])
-                for reaction in model.reactions:
-                    if reaction not in recolor_nodes:
-                        color[reaction] = REACTION_COLOR
-                for compound in model.compounds:
-                    if str(compound.name) not in recolor_nodes:
-                        color[compound.name] = COMPOUND_COLOR
+            for f in self._args.color:
+                for row in csv.reader(f, delimiter=str(u'\t')):
+                    color[row[0]] = row[1]  # row[0] =reaction id, row[1] = hex color code, such as #cfe0fc
+                    recolor_nodes.append(row[0])
+                    for reaction in model.reactions:
+                        if reaction not in recolor_nodes:
+                            color[reaction] = REACTION_COLOR
+                    for compound in model.compounds:
+                        if str(compound.name) not in recolor_nodes:
+                            color[compound.name] = COMPOUND_COLOR
         else:
             for r in model.reactions:
                 color[r] = REACTION_COLOR
