@@ -462,8 +462,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             g.add_edge(graph.Edge(
                                 node, compound_nodes[c2], final_props(rx, edge1, edge2)))
 
-                        g1.add_edge(graph.Edge(
-                            compound_nodes[c1], compound_nodes[c2], {'dir': dir_value(rx.direction), 'reaction': rxn_id}))
+                    g1.add_edge(graph.Edge(
+                        compound_nodes[c1], compound_nodes[c2], {'dir': dir_value(rx.direction), 'reaction': rxn_id}))
 
         # add exchange reaction nodes
         rxn_set = set()
