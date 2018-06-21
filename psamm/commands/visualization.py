@@ -285,18 +285,15 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 for r, cpair in zip(rxn_list, cpair_list):
                     filter_dict[r].append(cpair)
 
-        cpair_dict = {}     # key=compound pair, value=list of reaction_id
-        cpair_list = []     # all the compound pairs, no duplicate
-        for r_id, cpairs in sorted(iteritems(filter_dict)):
-            for (c1, c2) in cpairs:
-                if (c1, c2) not in cpair_list:
-                    cpair_list.append((c1, c2))
+        cpairs_dict = defaultdict(list)     # key=compound pair, value=list of reaction_id
+        raw_dict = {k: v for k, v in iteritems(filter_dict) if k in subset_reactions}
+        for rxn_id, cpairs in iteritems(raw_dict):
+            for pair in cpairs:
+                cpairs_dict[pair].append(rxn_id)
 
-
-
-        g, g1 = self.create_split_bipartite_graph(self._mm, self._model, filter_dict, self._args.element,
-                                                  subset_reactions, edge_values, compound_formula, reaction_flux,
-                                                  split_graph=split_reactions)
+        g, g1, g2 = self.create_split_bipartite_graph(self._mm, self._model, filter_dict, cpairs_dict,
+                                                      self._args.element, subset_reactions, edge_values,
+                                                      compound_formula, reaction_flux, split_graph=split_reactions)
 
         with open('reactions.dot', 'w') as f:
             g.write_graphviz(f)
@@ -306,6 +303,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             g.write_cytoscape_edges(f)
         with open('compound-graph.edges.tsv', 'w') as f:
             g1.write_cytoscape_edges(f)
+        with open('combined-reactions.dot', 'w') as f:
+            g2.write_graphviz(f)
 
         if self._args.Image is not None:
             if render is None:
@@ -323,11 +322,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 except subprocess.CalledProcessError:
                     logger.warning('the graph is too large to create')
 
-    def create_split_bipartite_graph(self, model, nativemodel, predict_results, element, subset,
+    def create_split_bipartite_graph(self, model, nativemodel, predict_results, cpair_dict, element, subset,
                                      edge_values, cpd_formula, reaction_flux, split_graph=True):
         """create bipartite graph from filter_dict"""
         g = graph.Graph()
         g1 = graph.Graph()
+        g2 = graph.Graph()
 
         cpd_entry = {}
         for cpd in nativemodel.compounds:
@@ -400,6 +400,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             else:
                 return {'dir': dir_value(reaction.direction)}
 
+        # create standard bipartite graph
         cpds = []  # cpds in predict_results
         rxns = Counter()
         compound_nodes = {}
@@ -475,6 +476,81 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     g1.add_edge(graph.Edge(
                         compound_nodes[c1], compound_nodes[c2], {'dir': dir_value(rx.direction), 'reaction': rxn_id}))
 
+        # create bipartite and reactions-combined graph
+        compound_list = []
+        cpd_nodes = {}
+        compound_pair_list = []
+        for (c1, c2), rxns in iteritems(cpair_dict):
+            if (c2, c1) not in compound_pair_list:
+                compound_pair_list.append((c1, c2))
+                if c1 not in compound_list:  # c1.name = compound.id, no compartment
+                    node = graph.Node({
+                        'id': text_type(c1),
+                        'edge_id': text_type(c1),
+                        'label': cpds_properties(c1, cpd_entry[c1.name], self._args.detail),
+                        'shape': 'ellipse',
+                        'style': 'filled',
+                        'fillcolor': color[c1.name]})
+                    g2.add_node(node)
+                    cpd_nodes[c1] = node
+                if c2 not in compound_list:  # c1.name = compound.id, no compartment
+                    node = graph.Node({
+                        'id': text_type(c2),
+                        'edge_id': text_type(c2),
+                        'label': cpds_properties(c2, cpd_entry[c2.name], self._args.detail),
+                        'shape': 'ellipse',
+                        'style': 'filled',
+                        'fillcolor': color[c2.name]})
+                    g2.add_node(node)
+                    cpd_nodes[c2] = node
+                cpds.append(c1)
+                cpds.append(c2)
+
+                forward_rxns, back_rxns, bidirectional_rxns = [], [], []
+                for r in rxns:
+                    reaction = model.get_reaction(r)
+                    if reaction.direction == Direction.Forward:
+                        forward_rxns.append(r)
+                    elif reaction.direction == Direction.Reverse:
+                        back_rxns.append(r)
+                    else:
+                        bidirectional_rxns.append(r)
+
+                if (c2, c1) in iterkeys(cpair_dict):
+                    for r in cpair_dict[(c2, c1)]:
+                        reaction = model.get_reaction(r)
+                        if reaction.direction == Direction.Forward:
+                            back_rxns.append(r)
+                        elif reaction.direction == Direction.Reverse:
+                            forward_rxns.append(r)
+                        else:
+                            bidirectional_rxns.append(r)
+
+                def final_props_2(reaction_list):
+                    if reaction_list == forward_rxns:
+                        return {'dir': 'forward'}
+                    elif reaction_list == back_rxns:
+                        return {'dir': 'back'}
+                    else:
+                        return {'dir': 'both'}
+
+                for r_list in (forward_rxns, back_rxns, bidirectional_rxns):
+                    if len(r_list) > 0:
+                        node = graph.Node({
+                            'id': '{}\t{}'.format((str(c1), str(c2)), r_list),
+                            'edge_id': r_list,
+                            'label': '\n'.join(r for r in r_list),
+                            'shape': 'box',
+                            'style': 'filled',
+                            'fillcolor': REACTION_COLOR})
+                        g2.add_node(node)
+
+                        g2.add_edge(graph.Edge(
+                            cpd_nodes[c1], node, final_props_2(r_list)))
+
+                        g2.add_edge(graph.Edge(
+                            node, cpd_nodes[c2], final_props_2(r_list)))
+
         # add exchange reaction nodes
         rxn_set = set()
         for reaction in model.reactions:
@@ -500,6 +576,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 'style': 'filled',
                 'fillcolor': ACTIVE_COLOR})
             g.add_node(node_ex)
+            g2.add_node(node_ex)
 
             for c1, _ in exchange_rxn.left:
                 if c1 not in compound_nodes.keys():
@@ -513,16 +590,21 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     g.add_node(node_ex_cpd)
                     compound_nodes[c1] = node_ex_cpd
 
+                    g2.add_node(node_ex_cpd)
+                    cpd_nodes[c1] = node_ex_cpd
+
                 edge1 = c1, r
                 edge2 = r, c1
                 g.add_edge(graph.Edge(
                     compound_nodes[c1], node_ex, final_props(exchange_rxn, edge1, edge2)))
+                g2.add_edge(graph.Edge(
+                    cpd_nodes[c1], node_ex, final_props(exchange_rxn, edge1, edge2)))
 
             for c2, _ in exchange_rxn.right:
                 if c2 not in compound_nodes.keys():
                     node_ex_cpd = graph.Node({
                         'id': text_type(c2),
-                        'edge_id':text_type(c2),
+                        'edge_id': text_type(c2),
                         'label': cpds_properties(c2, cpd_entry[c2.name], self._args.detail),
                         'shape': 'ellipse',
                         'style': 'filled',
@@ -530,10 +612,15 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     g.add_node(node_ex_cpd)
                     compound_nodes[c2] = node_ex_cpd
 
+                    g2.add_node(node_ex_cpd)
+                    cpd_nodes[c2] = node_ex_cpd
+
                 edge1 = r, c2
                 edge2 = c2, r
                 g.add_edge(graph.Edge(
                     node_ex, compound_nodes[c2], final_props(exchange_rxn, edge1, edge2)))
+                g2.add_edge(graph.Edge(
+                    node_ex, cpd_nodes[c2], final_props(exchange_rxn, edge1, edge2)))
 
         # add biomass reaction nodes
         bio_pair = Counter()
@@ -557,6 +644,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         'style': 'filled',
                         'fillcolor': ALT_COLOR})
                     g.add_node(node_bio)
+                    # g2.add_node(node_bio)
 
                     if c not in compound_nodes.keys():
                         node_bio_cpd = graph.Node({
@@ -568,13 +656,20 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             'fillcolor': '#82e593'})
                         g.add_node(node_bio_cpd)
                         compound_nodes[c] = node_bio_cpd
+                        #
+                        # g2.add_node(node_bio_cpd)
+                        # cpd_nodes[c] = node_bio_cpd
 
                     edge1 = c, nativemodel.biomass_reaction
                     edge2 = nativemodel.biomass_reaction, c
                     g.add_edge(graph.Edge(
                         compound_nodes[c], node_bio, final_props(biomass_reaction, edge1, edge2)))
+                    g2.add_edge(graph.Edge(
+                        cpd_nodes[c], node_bio, final_props(biomass_reaction, edge1, edge2)))
         else:
             logger.warning(
                 'No biomass reaction in this model')
+        print(len(cpd_nodes))
+        print(len(compound_nodes))
 
-        return g, g1
+        return g, g1, g2
