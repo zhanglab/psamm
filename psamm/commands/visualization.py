@@ -285,6 +285,15 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 for r, cpair in zip(rxn_list, cpair_list):
                     filter_dict[r].append(cpair)
 
+        cpair_dict = {}     # key=compound pair, value=list of reaction_id
+        cpair_list = []     # all the compound pairs, no duplicate
+        for r_id, cpairs in sorted(iteritems(filter_dict)):
+            for (c1, c2) in cpairs:
+                if (c1, c2) not in cpair_list:
+                    cpair_list.append((c1, c2))
+
+
+
         g, g1 = self.create_split_bipartite_graph(self._mm, self._model, filter_dict, self._args.element,
                                                   subset_reactions, edge_values, compound_formula, reaction_flux,
                                                   split_graph=split_reactions)
@@ -480,7 +489,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         for r in rxn_set:
             exchange_rxn = model.get_reaction(r)
             label = r
-            if len(reaction_flux)>0:
+            if len(reaction_flux) > 0:
                 if r in iterkeys(reaction_flux):
                     label = '{}\n{}'.format(r, reaction_flux[r])
             node_ex = graph.Node({
@@ -492,22 +501,39 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 'fillcolor': ACTIVE_COLOR})
             g.add_node(node_ex)
 
-            for c, _ in exchange_rxn.left:
-                if c not in compound_nodes.keys():
+            for c1, _ in exchange_rxn.left:
+                if c1 not in compound_nodes.keys():
                     node_ex_cpd = graph.Node({
-                        'id': text_type(c),
-                        'edge_id':text_type(c),
-                        'label': cpds_properties(c, cpd_entry[c.name], self._args.detail),
+                        'id': text_type(c1),
+                        'edge_id':text_type(c1),
+                        'label': cpds_properties(c1, cpd_entry[c1.name], self._args.detail),
                         'shape': 'ellipse',
                         'style': 'filled',
-                        'fillcolor':'#5a95f4'})
+                        'fillcolor': '#5a95f4'})
                     g.add_node(node_ex_cpd)
-                    compound_nodes[c] = node_ex_cpd
+                    compound_nodes[c1] = node_ex_cpd
 
-            edge1 = r, c
-            edge2 = c, r
-            g.add_edge(graph.Edge(
-                node_ex, compound_nodes[c], final_props(exchange_rxn, edge1, edge2)))
+                edge1 = c1, r
+                edge2 = r, c1
+                g.add_edge(graph.Edge(
+                    compound_nodes[c1], node_ex, final_props(exchange_rxn, edge1, edge2)))
+
+            for c2, _ in exchange_rxn.right:
+                if c2 not in compound_nodes.keys():
+                    node_ex_cpd = graph.Node({
+                        'id': text_type(c2),
+                        'edge_id':text_type(c2),
+                        'label': cpds_properties(c2, cpd_entry[c2.name], self._args.detail),
+                        'shape': 'ellipse',
+                        'style': 'filled',
+                        'fillcolor': '#5a95f4'})
+                    g.add_node(node_ex_cpd)
+                    compound_nodes[c2] = node_ex_cpd
+
+                edge1 = r, c2
+                edge2 = c2, r
+                g.add_edge(graph.Edge(
+                    node_ex, compound_nodes[c2], final_props(exchange_rxn, edge1, edge2)))
 
         # add biomass reaction nodes
         bio_pair = Counter()
