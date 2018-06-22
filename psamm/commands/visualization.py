@@ -31,7 +31,7 @@ from collections import Counter
 from tableexport import _encode_value
 import argparse
 from .. import fluxanalysis
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 try:
     from graphviz import render
@@ -285,11 +285,40 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 for r, cpair in zip(rxn_list, cpair_list):
                     filter_dict[r].append(cpair)
 
-        cpairs_dict = defaultdict(list)     # key=compound pair, value=list of reaction_id
+        raw_cpairs_dict = defaultdict(list)     # key=compound pair, value=list of reaction_id
         raw_dict = {k: v for k, v in iteritems(filter_dict) if k in subset_reactions}
         for rxn_id, cpairs in iteritems(raw_dict):
             for pair in cpairs:
-                cpairs_dict[pair].append(rxn_id)
+                raw_cpairs_dict[pair].append(rxn_id)
+
+        cpairs_dict = {}
+        pair_list = []
+        for (c1, c2), rxns in iteritems(raw_cpairs_dict):
+            if (c1, c2) not in pair_list:
+                forward_rxns, back_rxns, bidirectional_rxns = [], [], []
+                for r in rxns:
+                    reaction = self._mm.get_reaction(r)
+                    if reaction.direction == Direction.Forward:
+                        forward_rxns.append(r)
+                    elif reaction.direction == Direction.Reverse:
+                        back_rxns.append(r)
+                    else:
+                        bidirectional_rxns.append(r)
+
+                if (c2, c1) in iterkeys(raw_cpairs_dict):
+                    for r in raw_cpairs_dict[(c2, c1)]:
+                        reaction = self._mm.get_reaction(r)
+                        if reaction.direction == Direction.Forward:
+                            back_rxns.append(r)
+                        elif reaction.direction == Direction.Reverse:
+                            forward_rxns.append(r)
+                        else:
+                            bidirectional_rxns.append(r)
+                cpair_rxn = namedtuple('cpair_rxn', ['forward', 'back', 'bidirection'])
+                cpairs_dict[(c1, c2)] = cpair_rxn._make([forward_rxns, back_rxns, bidirectional_rxns])
+            #print(cpairs_dict)
+            pair_list.append((c1, c2))
+            pair_list.append((c2, c1))
 
         g, g1, g2 = self.create_split_bipartite_graph(self._mm, self._model, filter_dict, cpairs_dict,
                                                       self._args.element, subset_reactions, edge_values,
@@ -305,6 +334,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             g1.write_cytoscape_edges(f)
         with open('combined-reactions.dot', 'w') as f:
             g2.write_graphviz(f)
+        with open('combined-reactions.edges.tsv', 'w') as f:
+            g2.write_cytoscape_edges(f)
 
         if self._args.Image is not None:
             if render is None:
@@ -323,7 +354,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     logger.warning('the graph is too large to create')
 
     def create_split_bipartite_graph(self, model, nativemodel, predict_results, cpair_dict, element, subset,
-                                     edge_values, cpd_formula, reaction_flux, split_graph=True):
+                                     edge_values, cpd_formula, reaction_flux, split_graph=True, ):
         """create bipartite graph from filter_dict"""
         g = graph.Graph()
         g1 = graph.Graph()
@@ -477,79 +508,68 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         compound_nodes[c1], compound_nodes[c2], {'dir': dir_value(rx.direction), 'reaction': rxn_id}))
 
         # create bipartite and reactions-combined graph
-        compound_list = []
         cpd_nodes = {}
-        compound_pair_list = []
+        cpd_pairs = Counter()
+        compound_list = []
         for (c1, c2), rxns in iteritems(cpair_dict):
-            if (c2, c1) not in compound_pair_list:
-                compound_pair_list.append((c1, c2))
-                if c1 not in compound_list:  # c1.name = compound.id, no compartment
+            if c1 not in compound_list:  # c1.name = compound.id, no compartment
+                node = graph.Node({
+                    'id': text_type(c1),
+                    'edge_id': text_type(c1),
+                    'label': cpds_properties(c1, cpd_entry[c1.name], self._args.detail),
+                    'shape': 'ellipse',
+                    'style': 'filled',
+                    'fillcolor': color[c1.name]})
+                g2.add_node(node)
+                cpd_nodes[c1] = node
+            if c2 not in compound_list:  # c1.name = compound.id, no compartment
+                node = graph.Node({
+                    'id': text_type(c2),
+                    'edge_id': text_type(c2),
+                    'label': cpds_properties(c2, cpd_entry[c2.name], self._args.detail),
+                    'shape': 'ellipse',
+                    'style': 'filled',
+                    'fillcolor': color[c2.name]})
+                g2.add_node(node)
+                cpd_nodes[c2] = node
+            compound_list.append(c1)
+            compound_list.append(c2)
+
+            def final_props_2(r_list):
+                if r_list == rxns.forward:
+                    return {'dir': 'forward'}
+                elif r_list == rxns.back:
+                    return {'dir': 'back'}
+                else:
+                    return {'dir': 'both'}
+                # if c1 in reaction.left :
+                #     return {'dir': dir_value(reaction.direction)}
+                # else:
+                #     if reaction.direction == Direction.Forward:
+                #         return {'dir': dir_value(Direction.Reverse)}
+                #     elif reaction.direction == Direction.Reverse:
+                #         return {'dir': dir_value(Direction.Forward)}
+                #     else:
+                #         return {'dir': dir_value(Direction.Both)}
+
+            for r_list in rxns:
+                if len(r_list) > 0:
+                    rx = model.get_reaction(r_list[0])
+                    cpd_pairs[(c1, c2)] += 1
                     node = graph.Node({
-                        'id': text_type(c1),
-                        'edge_id': text_type(c1),
-                        'label': cpds_properties(c1, cpd_entry[c1.name], self._args.detail),
-                        'shape': 'ellipse',
+                        'id': '{}_{}'.format((str(c1), str(c2)), cpd_pairs[(c1, c2)]),
+                        'edge_id': r_list,
+                        'label': '\n'.join(r for r in r_list),
+                        'shape': 'box',
                         'style': 'filled',
-                        'fillcolor': color[c1.name]})
+                        'fillcolor': REACTION_COLOR})
                     g2.add_node(node)
-                    cpd_nodes[c1] = node
-                if c2 not in compound_list:  # c1.name = compound.id, no compartment
-                    node = graph.Node({
-                        'id': text_type(c2),
-                        'edge_id': text_type(c2),
-                        'label': cpds_properties(c2, cpd_entry[c2.name], self._args.detail),
-                        'shape': 'ellipse',
-                        'style': 'filled',
-                        'fillcolor': color[c2.name]})
-                    g2.add_node(node)
-                    cpd_nodes[c2] = node
-                cpds.append(c1)
-                cpds.append(c2)
 
-                forward_rxns, back_rxns, bidirectional_rxns = [], [], []
-                for r in rxns:
-                    reaction = model.get_reaction(r)
-                    if reaction.direction == Direction.Forward:
-                        forward_rxns.append(r)
-                    elif reaction.direction == Direction.Reverse:
-                        back_rxns.append(r)
-                    else:
-                        bidirectional_rxns.append(r)
+                    g2.add_edge(graph.Edge(
+                        cpd_nodes[c1], node, final_props_2(r_list)))
 
-                if (c2, c1) in iterkeys(cpair_dict):
-                    for r in cpair_dict[(c2, c1)]:
-                        reaction = model.get_reaction(r)
-                        if reaction.direction == Direction.Forward:
-                            back_rxns.append(r)
-                        elif reaction.direction == Direction.Reverse:
-                            forward_rxns.append(r)
-                        else:
-                            bidirectional_rxns.append(r)
-
-                def final_props_2(reaction_list):
-                    if reaction_list == forward_rxns:
-                        return {'dir': 'forward'}
-                    elif reaction_list == back_rxns:
-                        return {'dir': 'back'}
-                    else:
-                        return {'dir': 'both'}
-
-                for r_list in (forward_rxns, back_rxns, bidirectional_rxns):
-                    if len(r_list) > 0:
-                        node = graph.Node({
-                            'id': '{}\t{}'.format((str(c1), str(c2)), r_list),
-                            'edge_id': r_list,
-                            'label': '\n'.join(r for r in r_list),
-                            'shape': 'box',
-                            'style': 'filled',
-                            'fillcolor': REACTION_COLOR})
-                        g2.add_node(node)
-
-                        g2.add_edge(graph.Edge(
-                            cpd_nodes[c1], node, final_props_2(r_list)))
-
-                        g2.add_edge(graph.Edge(
-                            node, cpd_nodes[c2], final_props_2(r_list)))
+                    g2.add_edge(graph.Edge(
+                        node, cpd_nodes[c2], final_props_2(r_list)))
 
         # add exchange reaction nodes
         rxn_set = set()
@@ -644,7 +664,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         'style': 'filled',
                         'fillcolor': ALT_COLOR})
                     g.add_node(node_bio)
-                    # g2.add_node(node_bio)
+                    g2.add_node(node_bio)
 
                     if c not in compound_nodes.keys():
                         node_bio_cpd = graph.Node({
@@ -656,9 +676,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             'fillcolor': '#82e593'})
                         g.add_node(node_bio_cpd)
                         compound_nodes[c] = node_bio_cpd
-                        #
-                        # g2.add_node(node_bio_cpd)
-                        # cpd_nodes[c] = node_bio_cpd
+
+                        g2.add_node(node_bio_cpd)
+                        cpd_nodes[c] = node_bio_cpd
 
                     edge1 = c, nativemodel.biomass_reaction
                     edge2 = nativemodel.biomass_reaction, c
@@ -669,7 +689,5 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         else:
             logger.warning(
                 'No biomass reaction in this model')
-        print(len(cpd_nodes))
-        print(len(compound_nodes))
 
         return g, g1, g2
