@@ -129,6 +129,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             help='generate the graphic file directly and determine the format of final image.'
                  'choices = png, pdf, svg or eps')
         parser.add_argument(
+            '--condensed-image', type=text_type, default=None,
+            help='generate condensed graph, reactions go through the same compound pair in same direction '
+                 'will present in one node.'
+                 'choices = png, pdf, svg or eps')
+        parser.add_argument(
             '--exclude-pairs', type=argparse.FileType('r'), default=None,
             help='remove edge of given compound pairs from final graph ')
         # parser.add_argument(
@@ -348,8 +353,22 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         'The program is going to create a large graph that contains {} reactions, '
                         'it may take a long time'.format(len(subset_reactions)))
                 try:
-                    if self._args.Image is not None:
-                        render('dot', self._args.Image, 'reactions.dot')
+                    render('dot', self._args.Image, 'reactions.dot')
+                except subprocess.CalledProcessError:
+                    logger.warning('the graph is too large to create')
+
+        if self._args.condensed_image is not None:
+            if render is None:
+                self.fail(
+                    'create image file requires python binding graphviz module'
+                    ' ("pip install graphviz")')
+            else:
+                if len(subset_reactions) > 500:
+                    logger.info(
+                        'The program is going to create a large graph that contains {} reactions, '
+                        'it may take a long time'.format(len(subset_reactions)))
+                try:
+                    render('dot', self._args.condensed_image, 'combined-reactions.dot')
                 except subprocess.CalledProcessError:
                     logger.warning('the graph is too large to create')
 
@@ -535,13 +554,49 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             compound_list.append(c1)
             compound_list.append(c2)
 
-            def final_props_2(r_list):
+            def condensed_rxn_props(detail, r_list, reaction_flux):
+                if len(r_list) == 1:
+                    label_comb = rxns_properties(rxn_entry[r_list[0]], detail, reaction_flux)
+                else:
+                    label_comb = '\n'.join(r for r in r_list)
+                return label_comb
+
+            def dir_value_2(r_list):
                 if r_list == rxns.forward:
                     return {'dir': 'forward'}
                 elif r_list == rxns.back:
                     return {'dir': 'back'}
                 else:
                     return {'dir': 'both'}
+
+            def final_props_2(rlist, c, n):
+                if edge_values is not None:
+                    if len(rlist) == 1:
+                        if n == 1 :
+                            edge1 = c, rlist[0]
+                            edge2 = rlist[0], c
+                        else:
+                            edge1 = rlist[0], c
+                            edge2 = c, rlist[0]
+                        rx = model.get_reaction(rlist[0])
+                        return final_props(rx, edge1, edge2)
+                    else:
+                        if n == 1:
+                            edges1 = [(r, c) for r in rlist]
+                            edges2 = [(c, r) for r in rlist]
+                        else:
+                            edges1 = [(c, r) for r in rlist]
+                            edges2 = [(r, c) for r in rlist]
+                        if any(i for i in edges1) and any(j for j in edges2) in edge_values:
+                            p = {}
+                            p['style'] = 'dotted'
+                            p['dir'] = dir_value_2(rlist)
+                            return p
+                        else:
+                            return dir_value_2(rlist)
+                else:
+                    return dir_value_2(rlist)
+
                 # if c1 in reaction.left :
                 #     return {'dir': dir_value(reaction.direction)}
                 # else:
@@ -554,22 +609,21 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
             for r_list in rxns:
                 if len(r_list) > 0:
-                    rx = model.get_reaction(r_list[0])
                     cpd_pairs[(c1, c2)] += 1
                     node = graph.Node({
                         'id': '{}_{}'.format((str(c1), str(c2)), cpd_pairs[(c1, c2)]),
                         'edge_id': r_list,
-                        'label': '\n'.join(r for r in r_list),
+                        'label': condensed_rxn_props(self._args.detail, r_list, reaction_flux),
                         'shape': 'box',
                         'style': 'filled',
                         'fillcolor': REACTION_COLOR})
                     g2.add_node(node)
 
                     g2.add_edge(graph.Edge(
-                        cpd_nodes[c1], node, final_props_2(r_list)))
+                        cpd_nodes[c1], node, final_props_2(r_list,c1, 1)))
 
                     g2.add_edge(graph.Edge(
-                        node, cpd_nodes[c2], final_props_2(r_list)))
+                        node, cpd_nodes[c2], final_props_2(r_list,c2, 2)))
 
         # add exchange reaction nodes
         rxn_set = set()
