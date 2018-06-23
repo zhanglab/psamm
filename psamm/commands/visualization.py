@@ -46,8 +46,11 @@ logger = logging.getLogger(__name__)
 
 REACTION_COLOR = '#ccebc5'
 COMPOUND_COLOR = '#fbb4ae'
-ACTIVE_COLOR = '#b3cde3'
-ALT_COLOR = '#f4fc55'
+ACTIVE_COLOR = '#b3cde3'    # exchange reaction  color
+ALT_COLOR = '#f4fc55'       # biomass reaction color
+RXN_COMBINED_COLOR = '#fc9a44'
+CPD_ONLY_IN_BIO = '#82e593'
+CPD_ONLY_IN_EXC = '#5a95f4'
 
 
 def cpds_properties(cpd, compound, detail): # cpd=Compound object, compound = CompoundEntry object
@@ -237,6 +240,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         if self._args.exclude_pairs is not None:
             for row in csv.reader(self._args.exclude_pairs, delimiter=str('\t')):
                 exclude_cpairs.append((cpd_object[row[0]], cpd_object[row[1]]))
+                exclude_cpairs.append((cpd_object[row[1]], cpd_object[row[0]]))
 
         filter_dict = {}
         if self._args.method == 'fpp':
@@ -326,7 +330,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             pair_list.append((c2, c1))
 
         g, g1, g2 = self.create_split_bipartite_graph(self._mm, self._model, filter_dict, cpairs_dict,
-                                                      self._args.element, subset_reactions, edge_values,
+                                                      self._args.element, subset_reactions, edge_values, cpd_object,
                                                       compound_formula, reaction_flux, split_graph=split_reactions)
 
         with open('reactions.dot', 'w') as f:
@@ -373,7 +377,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     logger.warning('the graph is too large to create')
 
     def create_split_bipartite_graph(self, model, nativemodel, predict_results, cpair_dict, element, subset,
-                                     edge_values, cpd_formula, reaction_flux, split_graph=True, ):
+                                     edge_values, cpd_object, cpd_formula, reaction_flux, split_graph=True):
         """create bipartite graph from filter_dict"""
         g = graph.Graph()
         g1 = graph.Graph()
@@ -394,24 +398,54 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             min_edge_value = 1
             max_edge_value = 1
 
-        color = {}
+        # def final_color(color_arg, node):   # node = str(compound object) or reaction id
+        #     color = {}
+        #     all_cpds = []
+        #     for c in model.compounds:
+        #         all_cpds.append(str(c))
+        #     if color_arg is not None:
+        #         recolor_dict = {}
+        #         for f in color_arg:
+        #             for row in csv.reader(f, delimiter=str(u'\t')):
+        #                 recolor_dict[row[0]] = row[1]  # row[0] =reaction id, row[1] = hex color code, such as #cfe0fc
+        #         if node in model.reactions:
+        #             if node in recolor_dict:
+        #                 color[node] = recolor_dict[node]
+        #             else:
+        #                 color[node] = REACTION_COLOR
+        #         elif node in all_cpds:
+        #             if node in recolor_dict:
+        #                 color[node] = recolor_dict[node]
+        #             else:
+        #                 color[node] = COMPOUND_COLOR
+        #         else:
+        #             logger.warning('Invalid compound or reaction:{}'.format(node))
+        #     else:
+        #         if node in model.reactions:
+        #             color[node] = REACTION_COLOR
+        #         elif cpd_object[node] in model.compounds:
+        #             color[node] = COMPOUND_COLOR
+        #         else:
+        #             logger.warning('Invalid compound or reaction:{}'.format(node))
+        #
+        #     return color[node]
+
+        recolor_dict = {}
         if self._args.color is not None:
-            recolor_nodes = []
             for f in self._args.color:
                 for row in csv.reader(f, delimiter=str(u'\t')):
-                    color[row[0]] = row[1]  # row[0] =reaction id, row[1] = hex color code, such as #cfe0fc
-                    recolor_nodes.append(row[0])
-                    for reaction in model.reactions:
-                        if reaction not in recolor_nodes:
-                            color[reaction] = REACTION_COLOR
-                    for compound in model.compounds:
-                        if str(compound.name) not in recolor_nodes:
-                            color[compound.name] = COMPOUND_COLOR
-        else:
-            for r in model.reactions:
+                    recolor_dict[row[0]] = row[1]  # row[0] =reaction id, row[1] = hex color code, such as #cfe0fc
+        color = {}
+        for c in model.compounds:
+            if str(c) in recolor_dict:
+                color[c] = recolor_dict[str(c)]
+            else:
+                color[c] = COMPOUND_COLOR
+        for r in model.reactions:
+            if r in recolor_dict:
+                color[r] = recolor_dict[r]
+            else:
                 color[r] = REACTION_COLOR
-            for c in model.compounds:
-                color[c.name] = COMPOUND_COLOR
 
         def pen_width(value):
             """calculate edges width"""
@@ -465,7 +499,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             'label': cpds_properties(c1, cpd_entry[c1.name], self._args.detail),
                             'shape': 'ellipse',
                             'style': 'filled',
-                            'fillcolor': color[c1.name]})
+                            'fillcolor':color[c1]})
+                            # 'fillcolor': final_color(self._args.color, str(c1))})
                         g.add_node(node)
                         g1.add_node(node)
                         compound_nodes[c1] = node
@@ -476,7 +511,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             'label': cpds_properties(c2, cpd_entry[c2.name], self._args.detail),
                             'shape': 'ellipse',
                             'style': 'filled',
-                            'fillcolor': color[c2.name]})
+                            'fillcolor': color[c2]})
+                            # 'fillcolor': final_color(self._args.color, str(c2))})
                         g.add_node(node)
                         g1.add_node(node)
                         compound_nodes[c2] = node
@@ -495,6 +531,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         'shape': 'box',
                         'style': 'filled',
                         'fillcolor': color[rxn_id]})
+                        # 'fillcolor': final_color(self._args.color, rxn_id)})
                     g.add_node(node)
 
                     rx = model.get_reaction(rxn_id)
@@ -538,7 +575,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     'label': cpds_properties(c1, cpd_entry[c1.name], self._args.detail),
                     'shape': 'ellipse',
                     'style': 'filled',
-                    'fillcolor': color[c1.name]})
+                    'fillcolor': color[c1]})
                 g2.add_node(node)
                 cpd_nodes[c1] = node
             if c2 not in compound_list:  # c1.name = compound.id, no compartment
@@ -548,11 +585,23 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     'label': cpds_properties(c2, cpd_entry[c2.name], self._args.detail),
                     'shape': 'ellipse',
                     'style': 'filled',
-                    'fillcolor': color[c2.name]})
+                    'fillcolor': color[c2]})
                 g2.add_node(node)
                 cpd_nodes[c2] = node
             compound_list.append(c1)
             compound_list.append(c2)
+
+            def final_rxn_color(color_args, rlist):
+                if color_args is not None:
+                    if len(rlist) == 1:
+                        return color[rlist[0]]
+                    else:
+                        if any(r in recolor_dict for r in rlist):
+                            return RXN_COMBINED_COLOR
+                        else:
+                            return REACTION_COLOR
+                else:
+                    return REACTION_COLOR
 
             def condensed_rxn_props(detail, r_list, reaction_flux):
                 if len(r_list) == 1:
@@ -616,7 +665,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         'label': condensed_rxn_props(self._args.detail, r_list, reaction_flux),
                         'shape': 'box',
                         'style': 'filled',
-                        'fillcolor': REACTION_COLOR})
+                        'fillcolor': final_rxn_color(self._args.color, r_list)})
                     g2.add_node(node)
 
                     g2.add_edge(graph.Edge(
@@ -660,7 +709,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         'label': cpds_properties(c1, cpd_entry[c1.name], self._args.detail),
                         'shape': 'ellipse',
                         'style': 'filled',
-                        'fillcolor': '#5a95f4'})
+                        'fillcolor': CPD_ONLY_IN_EXC})
                     g.add_node(node_ex_cpd)
                     compound_nodes[c1] = node_ex_cpd
 
@@ -682,7 +731,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         'label': cpds_properties(c2, cpd_entry[c2.name], self._args.detail),
                         'shape': 'ellipse',
                         'style': 'filled',
-                        'fillcolor': '#5a95f4'})
+                        'fillcolor': CPD_ONLY_IN_EXC})
                     g.add_node(node_ex_cpd)
                     compound_nodes[c2] = node_ex_cpd
 
@@ -727,7 +776,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             'label': cpds_properties(c, cpd_entry[c.name], self._args.detail),
                             'shape': 'ellipse',
                             'style': 'filled',
-                            'fillcolor': '#82e593'})
+                            'fillcolor': CPD_ONLY_IN_BIO})
                         g.add_node(node_bio_cpd)
                         compound_nodes[c] = node_bio_cpd
 
