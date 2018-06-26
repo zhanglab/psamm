@@ -32,6 +32,7 @@ from .tableexport import _encode_value
 import argparse
 from .. import fluxanalysis
 from collections import defaultdict, namedtuple
+from py2cytoscape.data.cyrest_client import CyRestClient
 
 try:
     from graphviz import render
@@ -363,8 +364,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 except subprocess.CalledProcessError:
                     logger.warning('the graph is too large to create')
 
-        if self._args.method != 'no-fpp':
-            if self._args.condensed_image is not None:
+        if self._args.condensed_image is not None:
+            if self._args.method != 'no-fpp':
                 if render is None:
                     self.fail(
                         'create image file requires python binding graphviz module'
@@ -378,9 +379,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         render('dot', self._args.condensed_image, 'combined-reactions.dot')
                     except subprocess.CalledProcessError:
                         logger.warning('the graph is too large to create')
-        else:
-            if self._args.condensed_image is not None:
-                logger.info('condensed-image could not applied to no-fpp method')
+            else:
+                logger.warning('condensed-image could not applied to no-fpp method')
 
     def create_split_bipartite_graph(self, model, nativemodel, predict_results, cpair_dict, element, subset,
                                      edge_values,  cpd_formula, reaction_flux, split_graph=True):
@@ -440,7 +440,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         if self._args.color is not None:
             for f in self._args.color:
                 for row in csv.reader(f, delimiter=str(u'\t')):
-                    recolor_dict[row[0]] = row[1]  # row[0] =reaction id, row[1] = hex color code, such as #cfe0fc
+                    recolor_dict[row[0]] = row[1]  # row[0] =reaction id or str(cpd object), row[1] = hex color code
         color = {}
         for c in model.compounds:
             if str(c) in recolor_dict:

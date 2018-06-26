@@ -57,7 +57,7 @@ class Graph(Entity):
         if edge.source not in self._nodes or edge.dest not in self._nodes:
             raise ValueError('Edge nodes not in graph')
 
-        s_nodes = tuple(sorted([edge.source, edge.dest]))
+        s_nodes = tuple([edge.source, edge.dest])
         self._edges.setdefault(s_nodes, set()).add(edge)
         self._edge_count += 1
 
