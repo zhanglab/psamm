@@ -28,7 +28,7 @@ from .. import findprimarypairs
 from ..formula import Formula, Atom, ParseError
 from .. import graph
 from collections import Counter
-from tableexport import _encode_value
+from .tableexport import _encode_value
 import argparse
 from .. import fluxanalysis
 from collections import defaultdict, namedtuple
@@ -39,7 +39,7 @@ except ImportError:
     render = None
 
 import subprocess
-
+#
 # from py2cytoscape.data.cyrest_client import CyRestClient
 
 logger = logging.getLogger(__name__)
@@ -330,7 +330,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             pair_list.append((c2, c1))
 
         g, g1, g2 = self.create_split_bipartite_graph(self._mm, self._model, filter_dict, cpairs_dict,
-                                                      self._args.element, subset_reactions, edge_values, cpd_object,
+                                                      self._args.element, subset_reactions, edge_values,
                                                       compound_formula, reaction_flux, split_graph=split_reactions)
 
         with open('reactions.dot', 'w') as f:
@@ -341,10 +341,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             g.write_cytoscape_edges(f)
         with open('compound-graph.edges.tsv', 'w') as f:
             g1.write_cytoscape_edges(f)
-        with open('combined-reactions.dot', 'w') as f:
-            g2.write_graphviz(f)
-        with open('combined-reactions.edges.tsv', 'w') as f:
-            g2.write_cytoscape_edges(f)
+
+        if self._args.method != 'no-fpp':
+            with open('combined-reactions.dot', 'w') as f:
+                g2.write_graphviz(f)
+            with open('combined-reactions.edges.tsv', 'w') as f:
+                g2.write_cytoscape_edges(f)
 
         if self._args.Image is not None:
             if render is None:
@@ -361,23 +363,27 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 except subprocess.CalledProcessError:
                     logger.warning('the graph is too large to create')
 
-        if self._args.condensed_image is not None:
-            if render is None:
-                self.fail(
-                    'create image file requires python binding graphviz module'
-                    ' ("pip install graphviz")')
-            else:
-                if len(subset_reactions) > 500:
-                    logger.info(
-                        'The program is going to create a large graph that contains {} reactions, '
-                        'it may take a long time'.format(len(subset_reactions)))
-                try:
-                    render('dot', self._args.condensed_image, 'combined-reactions.dot')
-                except subprocess.CalledProcessError:
-                    logger.warning('the graph is too large to create')
+        if self._args.method != 'no-fpp':
+            if self._args.condensed_image is not None:
+                if render is None:
+                    self.fail(
+                        'create image file requires python binding graphviz module'
+                        ' ("pip install graphviz")')
+                else:
+                    if len(subset_reactions) > 500:
+                        logger.info(
+                            'The program is going to create a large graph that contains {} reactions, '
+                            'it may take a long time'.format(len(subset_reactions)))
+                    try:
+                        render('dot', self._args.condensed_image, 'combined-reactions.dot')
+                    except subprocess.CalledProcessError:
+                        logger.warning('the graph is too large to create')
+        else:
+            if self._args.condensed_image is not None:
+                logger.info('condensed-image could not applied to no-fpp method')
 
     def create_split_bipartite_graph(self, model, nativemodel, predict_results, cpair_dict, element, subset,
-                                     edge_values, cpd_object, cpd_formula, reaction_flux, split_graph=True):
+                                     edge_values,  cpd_formula, reaction_flux, split_graph=True):
         """create bipartite graph from filter_dict"""
         g = graph.Graph()
         g1 = graph.Graph()
@@ -563,7 +569,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     g1.add_edge(graph.Edge(
                         compound_nodes[c1], compound_nodes[c2], {'dir': dir_value(rx.direction), 'reaction': rxn_id}))
 
-        # create bipartite and reactions-combined graph
+        # create bipartite and reactions-combined graph if --method is nt no-fpp
         cpd_nodes = {}
         cpd_pairs = Counter()
         compound_list = []
