@@ -32,7 +32,7 @@ from .tableexport import _encode_value
 import argparse
 from .. import fluxanalysis
 from collections import defaultdict, namedtuple
-from py2cytoscape.data.cyrest_client import CyRestClient
+# from py2cytoscape.data.cyrest_client import CyRestClient
 
 try:
     from graphviz import render
@@ -246,7 +246,29 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         filter_dict = {}
         if self._args.method == 'fpp':
             split_reactions = True
-            reaction_pairs = [(r, self._mm.get_reaction(r)) for r in self._mm.reactions if r not in self._args.exclude]
+
+            def iter_reactions():
+                for reaction in self._model.reactions:
+                    if (reaction.id not in self._model.model or
+                            reaction.id in self._args.exclude):
+                        continue
+
+                    if reaction.equation is None:
+                        logger.warning(
+                            'Reaction {} has no reaction equation'.format(
+                                reaction.id))
+                        continue
+
+                    if any(c.name not in compound_formula
+                           for c, _ in reaction.equation.compounds):
+                        logger.warning(
+                            'Reaction {} has compounds with undefined'
+                            ' formula'.format(reaction.id))
+                        continue
+
+                    yield reaction
+
+            reaction_pairs = [(r.id, r.equation) for r in iter_reactions()]
             element_weight = findprimarypairs.element_weight
             fpp_dict, _ = findprimarypairs.predict_compound_pairs_iterated(reaction_pairs, compound_formula,
                                                                            element_weight=element_weight)
@@ -326,7 +348,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             bidirectional_rxns.append(r)
                 cpair_rxn = namedtuple('cpair_rxn', ['forward', 'back', 'bidirection'])
                 cpairs_dict[(c1, c2)] = cpair_rxn._make([forward_rxns, back_rxns, bidirectional_rxns])
-            #print(cpairs_dict)
             pair_list.append((c1, c2))
             pair_list.append((c2, c1))
 
