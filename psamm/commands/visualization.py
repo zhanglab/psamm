@@ -32,7 +32,6 @@ from .tableexport import _encode_value
 import argparse
 from .. import fluxanalysis
 from collections import defaultdict, namedtuple
-# from py2cytoscape.data.cyrest_client import CyRestClient
 
 try:
     from graphviz import render
@@ -40,8 +39,6 @@ except ImportError:
     render = None
 
 import subprocess
-#
-# from py2cytoscape.data.cyrest_client import CyRestClient
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +91,14 @@ def rxns_properties(reaction, detail, reaction_flux):
             label = reaction.id
 
     return label
+
+
+def primary_element(element):
+    if element is not None:
+        if element in ['c', 'h', 'o', 'n', 'p', 's', 'k', 'b', 'f', 'v', 'y', 'i', 'w']:
+            return element.upper()
+        else:
+            return element
 
 
 class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
@@ -237,6 +242,27 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         else:
             subset_reactions = set(self._mm.reactions)
 
+        def iter_reactions():
+            for reaction in self._model.reactions:
+                if (reaction.id not in self._model.model or
+                        reaction.id in self._args.exclude):
+                    continue
+
+                if reaction.equation is None:
+                    logger.warning(
+                        'Reaction {} has no reaction equation, so remove this reaction from final graph'.format(
+                            reaction.id))
+                    continue
+
+                if any(c.name not in compound_formula
+                       for c, _ in reaction.equation.compounds):
+                    logger.warning(
+                        'Reaction {} has compounds with undefined formula, so remove this reaction from '
+                        'final graph'.format(reaction.id))
+                    continue
+
+                yield reaction
+
         exclude_cpairs = []
         if self._args.exclude_pairs is not None:
             for row in csv.reader(self._args.exclude_pairs, delimiter=str('\t')):
@@ -246,27 +272,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         filter_dict = {}
         if self._args.method == 'fpp':
             split_reactions = True
-
-            def iter_reactions():
-                for reaction in self._model.reactions:
-                    if (reaction.id not in self._model.model or
-                            reaction.id in self._args.exclude):
-                        continue
-
-                    if reaction.equation is None:
-                        logger.warning(
-                            'Reaction {} has no reaction equation'.format(
-                                reaction.id))
-                        continue
-
-                    if any(c.name not in compound_formula
-                           for c, _ in reaction.equation.compounds):
-                        logger.warning(
-                            'Reaction {} has compounds with undefined'
-                            ' formula'.format(reaction.id))
-                        continue
-
-                    yield reaction
 
             reaction_pairs = [(r.id, r.equation) for r in iter_reactions()]
             element_weight = findprimarypairs.element_weight
@@ -279,26 +284,26 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         if self._args.element is None:
                             compound_pairs.append(cpd_pair)
                         else:
-                            if any(Atom(self._args.element) in k for k in transfer):
+                            if any(Atom(primary_element(self._args.element)) in k for k in transfer):
                                 compound_pairs.append(cpd_pair)
                 filter_dict[rxn_id] = compound_pairs
 
         elif self._args.method == 'no-fpp':
             split_reactions = False
-            for rxn_id in self._mm.reactions:
-                if rxn_id != self._model.biomass_reaction:
-                    rx = self._mm.get_reaction(rxn_id)
+            for rxn in iter_reactions():
+                if rxn.id != self._model.biomass_reaction:
+                    rx = self._mm.get_reaction(rxn.id)
                     cpairs = []
                     for c1, _ in rx.left:
                         for c2, _ in rx.right:
                             if (c1, c2) not in exclude_cpairs:
                                 if self._args.element is not None:
-                                    if Atom(self._args.element) in compound_formula[c1.name]:
-                                        if Atom(self._args.element) in compound_formula[c2.name]:
+                                    if Atom(primary_element(self._args.element)) in compound_formula[c1.name]:
+                                        if Atom(primary_element(self._args.element)) in compound_formula[c2.name]:
                                             cpairs.append((c1, c2))
                                 else:
                                     cpairs.append((c1, c2))
-                    filter_dict[rxn_id] = cpairs
+                    filter_dict[rxn.id] = cpairs
         else:
             split_reactions = True
             with open(self._args.method, 'r') as f:
@@ -306,10 +311,10 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 for row in csv.reader(f, delimiter=str(u'\t')):
                     if (cpd_object[row[1]], cpd_object[row[2]]) not in exclude_cpairs:
                         if self._args.element is None:
-                            cpair_list.append((cpd_object[row[1]],cpd_object[row[2]]))
+                            cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
                             rxn_list.append(row[0])
                         else:
-                            if Atom(self._args.element) in Formula.parse(row[3]).flattened():
+                            if Atom(primary_element(self._args.element)) in Formula.parse(row[3]).flattened():
                                 cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
                                 rxn_list.append(row[0])
 
@@ -526,8 +531,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             'label': cpds_properties(c1, cpd_entry[c1.name], self._args.detail),
                             'shape': 'ellipse',
                             'style': 'filled',
-                            'fillcolor':color[c1]})
-                            # 'fillcolor': final_color(self._args.color, str(c1))})
+                            'fillcolor': color[c1]})
                         g.add_node(node)
                         g1.add_node(node)
                         compound_nodes[c1] = node
@@ -539,7 +543,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                             'shape': 'ellipse',
                             'style': 'filled',
                             'fillcolor': color[c2]})
-                            # 'fillcolor': final_color(self._args.color, str(c2))})
                         g.add_node(node)
                         g1.add_node(node)
                         compound_nodes[c2] = node
@@ -558,7 +561,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         'shape': 'box',
                         'style': 'filled',
                         'fillcolor': color[rxn_id]})
-                        # 'fillcolor': final_color(self._args.color, rxn_id)})
                     g.add_node(node)
 
                     rx = model.get_reaction(rxn_id)
@@ -648,7 +650,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             def final_props_2(rlist, c, n):
                 if edge_values is not None:
                     if len(rlist) == 1:
-                        if n == 1 :
+                        if n == 1:
                             edge1 = c, rlist[0]
                             edge2 = rlist[0], c
                         else:
@@ -708,7 +710,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 if reaction in subset:
                     raw_exchange_rxn = model.get_reaction(reaction)
                     if element is not None:
-                        if any(Atom(element) in cpd_formula[str(c[0].name)] for c in raw_exchange_rxn.compounds):
+                        if any(Atom(primary_element(element)) in cpd_formula[str(c[0].name)] for c in raw_exchange_rxn.compounds):
                             rxn_set.add(reaction)
                     else:
                         rxn_set.add(reaction)
@@ -780,7 +782,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 biomass_reaction = model.get_reaction(nativemodel.biomass_reaction)
                 for c, _ in biomass_reaction.left:
                     if element is not None:
-                        if Atom(element) in cpd_formula[str(c.name)]:
+                        if Atom(primary_element(element)) in cpd_formula[str(c.name)]:
                             biomass_cpds.add(c)
                     else:
                         biomass_cpds.add(c)

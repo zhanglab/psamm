@@ -23,13 +23,9 @@ from collections import Counter
 
 from six import iteritems
 from six.moves import reduce
-
 from .formula import Formula, Atom
 
-try:
-    from math import gcd
-except ImportError:
-    from fractions import gcd
+from fractions import gcd
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +84,7 @@ def _reaction_to_dicts(reaction):
             d[k] += int(v / div)
         return d
 
-    div = reduce(gcd, (abs(int(v)) for _, v in reaction.compounds), 0)
+    div = reduce(gcd, (abs(v) for _, v in reaction.compounds), 0)
     if div == 0:
         raise ValueError('Empty reaction')
 
