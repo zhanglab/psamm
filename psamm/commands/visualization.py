@@ -40,6 +40,10 @@ except ImportError:
 
 import subprocess
 
+from py2cytoscape.data.cyrest_client import CyRestClient
+import networkx as nx
+from py2cytoscape.util.util_networkx import from_networkx, to_networkx
+
 logger = logging.getLogger(__name__)
 
 REACTION_COLOR = '#ccebc5'
@@ -61,9 +65,9 @@ def cpds_properties(cpd, compound, detail): # cpd=Compound object, compound = Co
             if prop in compound_set:
                 cpd_detail.append(str(prop))
         pre_label = '\n'.join(_encode_value(compound.properties[value]) for value in cpd_detail if value != 'id')
-        label = '{}\n{}'.format(cpd, pre_label)
+        label = '{}\n{}'.format(str(cpd), pre_label)
     else:
-        label = cpd
+        label = str(cpd)
     return label
 
 
@@ -109,7 +113,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
     def init_parser(cls, parser):
         parser.add_argument(
             '--method',type=text_type,
-            default='fpp', help='Compound pair prediction method, choices')
+            default='fpp', help='Compound pair prediction method')
         parser.add_argument(
             '--exclude', metavar='reaction', type=text_type, default=[],
             action=FilePrefixAppendAction,
@@ -375,6 +379,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             with open('combined-reactions.edges.tsv', 'w') as f:
                 g2.write_cytoscape_edges(f)
 
+        raw_network_1 = nx.drawing.nx_agraph.read_dot('./combined-reactions.dot')  # NetworkX graph object
+        raw_network_2 = from_networkx(raw_network_1)    # convert NetworkX graph object to cyjs
+        cy = CyRestClient()
+        network = cy.network.create(name='metabolic network', data=raw_network_2)
+        print(network.get_id())
+
         if self._args.Image is not None:
             if render is None:
                 self.fail(
@@ -600,7 +610,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             if c1 not in compound_list:  # c1.name = compound.id, no compartment
                 node = graph.Node({
                     'id': text_type(c1),
-                    'edge_id': text_type(c1),
                     'label': cpds_properties(c1, cpd_entry[c1.name], self._args.detail),
                     'shape': 'ellipse',
                     'style': 'filled',
@@ -610,7 +619,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             if c2 not in compound_list:  # c1.name = compound.id, no compartment
                 node = graph.Node({
                     'id': text_type(c2),
-                    'edge_id': text_type(c2),
                     'label': cpds_properties(c2, cpd_entry[c2.name], self._args.detail),
                     'shape': 'ellipse',
                     'style': 'filled',
@@ -690,7 +698,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     cpd_pairs[(c1, c2)] += 1
                     node = graph.Node({
                         'id': '{}_{}'.format((str(c1), str(c2)), cpd_pairs[(c1, c2)]),
-                        'edge_id': r_list,
                         'label': condensed_rxn_props(self._args.detail, r_list, reaction_flux),
                         'shape': 'box',
                         'style': 'filled',

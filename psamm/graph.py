@@ -210,7 +210,7 @@ class Graph(Entity):
         f.write('\t'.join(header) + '\n')
         for edge in self.edges:
             f.write('{}\t{}\t{}\n'.format(
-                edge.source.props['edge_id'], edge.dest.props['edge_id'],
+                edge.source.props['id'], edge.dest.props['id'],
                 '\t'.join(text_type(edge.props.get(x)) for x in properties)))
 
 
