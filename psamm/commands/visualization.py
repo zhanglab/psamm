@@ -40,9 +40,7 @@ except ImportError:
 
 import subprocess
 
-from py2cytoscape.data.cyrest_client import CyRestClient
-import networkx as nx
-from py2cytoscape.util.util_networkx import from_networkx, to_networkx
+# from py2cytoscape.data.cyrest_client import CyRestClient
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +124,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             '--fba', action='store_true',
             help='flux balance analysis')
         parser.add_argument(
-            '--element', type=text_type, default=None,
+            '--element', type=text_type, default='C',
             help='primary element flow')
         parser.add_argument(
             '--detail', type=text_type, default=None, action='append', nargs='+',
@@ -138,17 +136,13 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             '--color', type=argparse.FileType('r'), default=None, nargs='+',
             help='customize color of reaction and compound nodes ')
         parser.add_argument(
-            '--Image', type=text_type, default=None,
-            help='generate the graphic file directly and determine the format of final image.'
-                 'choices = png, pdf, svg or eps')
-        parser.add_argument(
-            '--condensed-image', type=text_type, default=None,
-            help='generate condensed graph, reactions go through the same compound pair in same direction '
-                 'will present in one node.'
-                 'choices = png, pdf, svg or eps')
+            '--Image', type=text_type, default=None, help='generate image file directly')
         parser.add_argument(
             '--exclude-pairs', type=argparse.FileType('r'), default=None,
             help='remove edge of given compound pairs from final graph ')
+        parser.add_argument(
+            '--split-map', action='store_true',
+            help='create dot file for reaction-splitted metabolic network visualization')
         # parser.add_argument(
         #     '--Cytoscape', action='store_true', help='generate graph in Cytoscape')
         super(VisualizationCommand, cls).init_parser(parser)
@@ -363,27 +357,32 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         g, g1, g2 = self.create_split_bipartite_graph(self._mm, self._model, filter_dict, cpairs_dict,
                                                       self._args.element, subset_reactions, edge_values,
                                                       compound_formula, reaction_flux, split_graph=split_reactions)
+        final_graph = None
+        if self._args.method != 'no-fpp':
+            if self._args.split_map is True:
+                final_graph = g
+            else:
+                final_graph = g2
+        else:
+            if self._args.split_map is True:
+                logger.warning('--split-map option can\'t be applied on visualization when method is no-fpp,'
+                               ' break program')
+                quit()
+            else:
+                final_graph = g
 
         with open('reactions.dot', 'w') as f:
-            g.write_graphviz(f)
+            final_graph.write_graphviz(f)
         with open('reactions.nodes.tsv', 'w') as f:
-            g.write_cytoscape_nodes(f)
+            final_graph.write_cytoscape_nodes(f)
         with open('reactions.edges.tsv', 'w') as f:
-            g.write_cytoscape_edges(f)
-        with open('compound-graph.edges.tsv', 'w') as f:
-            g1.write_cytoscape_edges(f)
+            final_graph.write_cytoscape_edges(f)
 
-        if self._args.method != 'no-fpp':
-            with open('combined-reactions.dot', 'w') as f:
-                g2.write_graphviz(f)
-            with open('combined-reactions.edges.tsv', 'w') as f:
-                g2.write_cytoscape_edges(f)
-
-        raw_network_1 = nx.drawing.nx_agraph.read_dot('./combined-reactions.dot')  # NetworkX graph object
-        raw_network_2 = from_networkx(raw_network_1)    # convert NetworkX graph object to cyjs
-        cy = CyRestClient()
-        network = cy.network.create(name='metabolic network', data=raw_network_2)
-        print(network.get_id())
+        # raw_network_1 = nx.drawing.nx_agraph.read_dot('./combined-reactions.dot')  # NetworkX graph object
+        # raw_network_2 = from_networkx(raw_network_1)    # convert NetworkX graph object to cyjs
+        # cy = CyRestClient()
+        # network = cy.network.create(name='metabolic network', data=raw_network_2)
+        # print(network.get_id())
 
         if self._args.Image is not None:
             if render is None:
@@ -399,24 +398,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     render('dot', self._args.Image, 'reactions.dot')
                 except subprocess.CalledProcessError:
                     logger.warning('the graph is too large to create')
-
-        if self._args.condensed_image is not None:
-            if self._args.method != 'no-fpp':
-                if render is None:
-                    self.fail(
-                        'create image file requires python binding graphviz module'
-                        ' ("pip install graphviz")')
-                else:
-                    if len(subset_reactions) > 500:
-                        logger.info(
-                            'The program is going to create a large graph that contains {} reactions, '
-                            'it may take a long time'.format(len(subset_reactions)))
-                    try:
-                        render('dot', self._args.condensed_image, 'combined-reactions.dot')
-                    except subprocess.CalledProcessError:
-                        logger.warning('the graph is too large to create')
-            else:
-                logger.warning('condensed-image could not applied to no-fpp method')
 
     def create_split_bipartite_graph(self, model, nativemodel, predict_results, cpair_dict, element, subset,
                                      edge_values,  cpd_formula, reaction_flux, split_graph=True):
