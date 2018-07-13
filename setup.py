@@ -100,7 +100,7 @@ setup(
         sbmlexport = psamm.commands.sbmlexport:SBMLExport
         search = psamm.commands.search:SearchCommand
         tableexport = psamm.commands.tableexport:ExportTableCommand
-        visualization = psamm.commands.visualization:VisualizationCommand
+        vis = psamm.commands.vis:VisualizationCommand
         
         [psamm.importer]
         JSON = psamm.importers.cobrajson:Importer
