@@ -59,6 +59,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		mm = self._mm
 		# Parse exclude file provided through command line.
 		base_exclude_list = []
+
 		for line in self._args.exclude.readlines():
 			base_exclude_list.append(line.rstrip())
 
@@ -108,11 +109,13 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			mm.database.set_reaction(lump_id, reaction)
 			mm.add_reaction(lump_id)
 
+
 		# make an irreversible version of the metabolic model:
 		mm_irreversible, split_reversible, reversible_lump_to_rxn_dict = make_irreversible(mm, exclude_lump_unkown, lump_to_rxnids_dir, False)
 		split_reactions = []
 		for (i,j) in split_reversible:
 			split_reactions.append(i[:-8])
+
 
 		# update these lists for the new reversible lumps and constituent reactions.
 		# exclude lump_list is a list of all excluded reactions and lump reactions.
@@ -154,6 +157,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		TMFA_Problem.prob.set_objective(TMFA_Problem.get_flux_var(objective))
 		TMFA_Problem.prob.set_objective_sense(lp.ObjectiveSense.Maximize)
 		# Print problem Type from CPLEX
+
 		print('PROBLEM TYPE:', TMFA_Problem.prob.cplex.problem_type[TMFA_Problem.prob.cplex.get_problem_type()])
 
 
@@ -161,8 +165,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		for i, j in TMFA_Problem.prob._variables.iteritems():
 			index_dict_vars[j] = str(i)
 		for key, value in index_dict_vars.iteritems():
-			print('## LP variable name, lp var lower bound, lp var upper bound')
-			print(value, TMFA_Problem.prob.cplex.variables.get_lower_bounds(key), TMFA_Problem.prob.cplex.variables.get_upper_bounds(key))
+			print('## LP variable name, lp var lower bound, lp var upper bound, var type')
+			print(value, key, TMFA_Problem.prob.cplex.variables.get_lower_bounds(key), TMFA_Problem.prob.cplex.variables.get_upper_bounds(key), TMFA_Problem.prob.cplex.variables.get_types(key))
 
 		for i in TMFA_Problem.prob.cplex.linear_constraints.get_names():
 			linear_constraint = TMFA_Problem.prob.cplex.linear_constraints.get_rows(i)
@@ -190,6 +194,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			elif sense == 'E':
 				sign = '=='
 			print('{} {} {}'.format(' + '.join(equation), sign, TMFA_Problem.prob.cplex.linear_constraints.get_rhs(i)))
+			print('-------------------------------------------------------------------')
 
 
 		# Print out all constraints in the model:
@@ -450,6 +455,7 @@ def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 					mm_irrev.add_reaction(r_id)
 					mm_irrev.add_reaction(r2_id)
 					split_reversible.append((r_id, r2_id))
+					# Reapply the limits here from the original reaction limits. (for and rev)
 			elif reaction.direction == Direction.Both:
 				mm_irrev.remove_reaction(rxn)
 				mm_irrev.database.set_reaction(r_id, r)
@@ -568,7 +574,9 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# add constraints for thermodynamic feasibility of lump reactions and to constrain their constituent reactions
 	for reaction in mm.reactions:
 		if reaction in lump_rxn_list.keys():
+			print('TEST THIS IS A TEST', reaction)
 			vi = problem.get_flux_var(reaction)
+			print('TEST VI TEST', vi)
 			yi = problem.prob.var('yi_{}'.format(reaction))
 			dgri = problem.prob.var('dgri_{}'.format(reaction))
 			problem.prob.add_linear_constraints(vi == 0)
@@ -591,3 +599,10 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 		print('Split reaction zi raw constraint {} :'.format(forward), (problem.prob.var('zi_{}'.format(forward)) + problem.prob.var('zi_{}'.format(reverse)) <= 1))
 	return problem
 
+def solve_objective(problem, objective):
+	problem.prob.set_objective(problem.get_flux_var(objective))
+	problem.prob.set_objective_sense(lp.ObjectiveSense.Maximize)
+	problem.prob.solve()
+	result = problem.prob.result
+	print('TMFA Problem Status: {}'.format(result.get_value(problem.get_flux_var(objective))))
+	quit()
