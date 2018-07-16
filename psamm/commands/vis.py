@@ -32,15 +32,12 @@ from .tableexport import _encode_value
 import argparse
 from .. import fluxanalysis
 from collections import defaultdict, namedtuple
-
 try:
     from graphviz import render
 except ImportError:
     render = None
 
 import subprocess
-
-# from py2cytoscape.data.cyrest_client import CyRestClient
 
 logger = logging.getLogger(__name__)
 
@@ -115,14 +112,10 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         parser.add_argument(
             '--exclude', metavar='reaction', type=text_type, default=[],
             action=FilePrefixAppendAction,
-            help=('Reaction to exclude (e.g. biomass reactions or'
-                  ' macromolecule synthesis)'))
+            help='Reaction to exclude (e.g. biomass reactions or macromolecule synthesis)')
         parser.add_argument(
-            '--edge-values', type=argparse.FileType('r'), default=None,
-            help='Values for edges, derived from reaction flux')
-        parser.add_argument(
-            '--fba', action='store_true',
-            help='flux balance analysis')
+            '--fba', type=text_type, default=None,
+            help='visualize reaction flux')
         parser.add_argument(
             '--element', type=text_type, default='C',
             help='primary element flow')
@@ -143,8 +136,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         parser.add_argument(
             '--split-map', action='store_true',
             help='create dot file for reaction-splitted metabolic network visualization')
-        # parser.add_argument(
-        #     '--Cytoscape', action='store_true', help='generate graph in Cytoscape')
         super(VisualizationCommand, cls).init_parser(parser)
 
     def run(self):
@@ -173,8 +164,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         # set edge_values
         reaction_flux = {}
-        if self._args.fba is True:
-            if self._args.edge_values is None:
+        if self._args.fba is not None:
+            if self._args.fba == 'psamm-fba':
                 solver = self._get_solver()
                 p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
                 try:
@@ -197,16 +188,10 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     if abs(flux) > 1e-6:
                         reaction_flux[r_id] = flux
                 logger.info('Minimized reactions: {}'.format(count))
-
             else:
-                logger.warning('Invalid command, the two arguments --flux-analysis and --edge-values '
-                               'should not present at the same time')
-                quit()
-
-        else:
-            if self._args.edge_values is not None:
-                for row in csv.reader(self._args.edge_values, delimiter=str(u'\t')):
-                    reaction_flux[row[0]] = float(row[1])
+                with open(self._args.fba, 'r') as f:
+                    for row in csv.reader(f, delimiter=str(u'\t')):
+                        reaction_flux[row[0]] = float(row[1])
 
         edge_values = None
         if len(reaction_flux) > 0:
@@ -248,15 +233,15 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
                 if reaction.equation is None:
                     logger.warning(
-                        'Reaction {} has no reaction equation, so remove this reaction from final graph'.format(
-                            reaction.id))
+                        'Reaction {} has no reaction equation, so remove this reaction from metabolic'
+                        ' map'.format(reaction.id))
                     continue
 
                 if any(c.name not in compound_formula
                        for c, _ in reaction.equation.compounds):
                     logger.warning(
                         'Reaction {} has compounds with undefined formula, so remove this reaction from '
-                        'final graph'.format(reaction.id))
+                        'metabolic map'.format(reaction.id))
                     continue
 
                 yield reaction
@@ -378,12 +363,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         with open('reactions.edges.tsv', 'w') as f:
             final_graph.write_cytoscape_edges(f)
 
-        # raw_network_1 = nx.drawing.nx_agraph.read_dot('./combined-reactions.dot')  # NetworkX graph object
-        # raw_network_2 = from_networkx(raw_network_1)    # convert NetworkX graph object to cyjs
-        # cy = CyRestClient()
-        # network = cy.network.create(name='metabolic network', data=raw_network_2)
-        # print(network.get_id())
-
         if self._args.Image is not None:
             if render is None:
                 self.fail(
@@ -420,38 +399,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         else:
             min_edge_value = 1
             max_edge_value = 1
-
-        # def final_color(color_arg, node):   # node = str(compound object) or reaction id
-        #     color = {}
-        #     all_cpds = []
-        #     for c in model.compounds:
-        #         all_cpds.append(str(c))
-        #     if color_arg is not None:
-        #         recolor_dict = {}
-        #         for f in color_arg:
-        #             for row in csv.reader(f, delimiter=str(u'\t')):
-        #                 recolor_dict[row[0]] = row[1]  # row[0] =reaction id, row[1] = hex color code, such as #cfe0fc
-        #         if node in model.reactions:
-        #             if node in recolor_dict:
-        #                 color[node] = recolor_dict[node]
-        #             else:
-        #                 color[node] = REACTION_COLOR
-        #         elif node in all_cpds:
-        #             if node in recolor_dict:
-        #                 color[node] = recolor_dict[node]
-        #             else:
-        #                 color[node] = COMPOUND_COLOR
-        #         else:
-        #             logger.warning('Invalid compound or reaction:{}'.format(node))
-        #     else:
-        #         if node in model.reactions:
-        #             color[node] = REACTION_COLOR
-        #         elif cpd_object[node] in model.compounds:
-        #             color[node] = COMPOUND_COLOR
-        #         else:
-        #             logger.warning('Invalid compound or reaction:{}'.format(node))
-        #
-        #     return color[node]
 
         recolor_dict = {}
         if self._args.color is not None:
@@ -583,7 +530,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     g1.add_edge(graph.Edge(
                         compound_nodes[c1], compound_nodes[c2], {'dir': dir_value(rx.direction), 'reaction': rxn_id}))
 
-        # create bipartite and reactions-combined graph if --method is nt no-fpp
+        # create bipartite and reactions-combined graph if --method is fpp
         cpd_nodes = {}
         cpd_pairs = Counter()
         compound_list = []
@@ -664,16 +611,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 else:
                     return dir_value_2(rlist)
 
-                # if c1 in reaction.left :
-                #     return {'dir': dir_value(reaction.direction)}
-                # else:
-                #     if reaction.direction == Direction.Forward:
-                #         return {'dir': dir_value(Direction.Reverse)}
-                #     elif reaction.direction == Direction.Reverse:
-                #         return {'dir': dir_value(Direction.Forward)}
-                #     else:
-                #         return {'dir': dir_value(Direction.Both)}
-
             for r_list in rxns:
                 if len(r_list) > 0:
                     cpd_pairs[(c1, c2)] += 1
@@ -698,7 +635,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 if reaction in subset:
                     raw_exchange_rxn = model.get_reaction(reaction)
                     if element is not None:
-                        if any(Atom(primary_element(element)) in cpd_formula[str(c[0].name)] for c in raw_exchange_rxn.compounds):
+                        if any(Atom(primary_element(element)) in cpd_formula[str(c[0].name)]
+                               for c in raw_exchange_rxn.compounds):
                             rxn_set.add(reaction)
                     else:
                         rxn_set.add(reaction)
@@ -775,7 +713,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     else:
                         biomass_cpds.add(c)
                 for c in biomass_cpds:
-                    bio_pair[nativemodel.biomass_reaction] += 1  # bio_pair = Counter({'biomass_rxn_id': 1}), Counter({'biomass_rxn_id': 2})...
+                    bio_pair[nativemodel.biomass_reaction] += 1
+                    # bio_pair = Counter({'biomass_rxn_id': 1}), Counter({'biomass_rxn_id': 2})...
                     node_bio = graph.Node({
                         'id': '{}_{}'.format(nativemodel.biomass_reaction, bio_pair[nativemodel.biomass_reaction]),
                         'edge_id': nativemodel.biomass_reaction,
