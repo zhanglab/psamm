@@ -39,6 +39,8 @@ except ImportError:
 
 import subprocess
 
+import unittest
+
 logger = logging.getLogger(__name__)
 
 REACTION_COLOR = '#ccebc5'
@@ -64,7 +66,6 @@ def cpds_properties(cpd, compound, detail): # cpd=Compound object, compound = Co
     else:
         label = str(cpd)
     return label
-
 
 def rxns_properties(reaction, detail, reaction_flux):
     """define reaction nodes label"""
@@ -93,6 +94,7 @@ def rxns_properties(reaction, detail, reaction_flux):
 
 
 def primary_element(element):
+    """allow both lower and upper case for one-letter element """
     if element is not None:
         if element in ['c', 'h', 'o', 'n', 'p', 's', 'k', 'b', 'f', 'v', 'y', 'i', 'w']:
             return element.upper()
@@ -141,7 +143,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
     def run(self):
         """Run visualization command."""
 
-        # parse compound id and formula
+        # Mapping from compound id to formula
         compound_formula = {}
         for compound in self._model.compounds:
             if compound.formula is not None:
@@ -162,7 +164,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         msg += '\n{}'.format(e.indicator)
                     logger.warning(msg)
 
-        # set edge_values
+        # set edge_values based on reaction fluxes
         reaction_flux = {}
         if self._args.fba is not None:
             if self._args.fba == 'psamm-fba':
@@ -214,14 +216,31 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         for compound, value in rx.right:
                             edge_values[compound, reaction] = (- flux * float(value))
 
+        # Mapping from string of cpd_id+compartment(eg: pyr_c[c]) to Compound object
         cpd_object = {}
         for cpd in self._mm.compounds:
             cpd_object[str(cpd)] = cpd
 
-        if self._args.subset is not None:  # a file contains reaction_id in the subset users want to visualize
-            subset_reactions = []
+        # set of reactions to visualize
+        if self._args.subset is not None:
+            raw_subset, subset_reactions, mm_cpds = [], [], []
             for line in self._args.subset.readlines():
-                subset_reactions.append(line.rstrip())
+                raw_subset.append(line.rstrip())
+            for c in self._mm.compounds:
+                mm_cpds.append(str(c))
+            if set(raw_subset).issubset(set(self._mm.reactions)):
+                subset_reactions = raw_subset
+            elif set(raw_subset).issubset(set(mm_cpds)):
+                for reaction in self._mm.reactions:
+                    rx = self._mm.get_reaction(reaction)
+                    if any(str(c) in raw_subset for (c, _) in rx.compounds):
+                        subset_reactions.append(reaction)
+            else:
+                logger.warning('Invalid subset file. The file should contain a column of reaction id or a column '
+                               'of compound id with compartment, mix of reactions, compounds and other infomation '
+                               'in one subset file is not allowed. The function will generate entire metabolic '
+                               'network of the model')
+                subset_reactions = set(self._mm.reactions)
         else:
             subset_reactions = set(self._mm.reactions)
 
