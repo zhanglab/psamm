@@ -57,6 +57,10 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		solver = self._get_solver()
 		objective = self._get_objective()
 		mm = self._mm
+
+
+
+
 		# Parse exclude file provided through command line.
 		base_exclude_list = []
 
@@ -108,6 +112,10 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			reaction = parse_reaction(rxn)
 			mm.database.set_reaction(lump_id, reaction)
 			mm.add_reaction(lump_id)
+			mm.limits[lump_id].lower = 0
+			mm.limits[lump_id].upper = 0
+
+
 
 
 		# make an irreversible version of the metabolic model:
@@ -115,6 +123,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		split_reactions = []
 		for (i,j) in split_reversible:
 			split_reactions.append(i[:-8])
+
 
 
 		# update these lists for the new reversible lumps and constituent reactions.
@@ -143,6 +152,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# Add constraints for the compound concentration variables to this LP problem
 		TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
 
+
 		# TMFA_Problem.prob.set_objective(TMFA_Problem.get_flux_var(objective))
 		# TMFA_Problem.prob.set_objective_sense(lp.ObjectiveSense.Maximize)
 		# TMFA_Problem.prob.solve()
@@ -152,6 +162,9 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# Add thermodynamic constraints to the model.
 		TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
 												exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict, split_reversible)
+
+		solve_objective(TMFA_Problem, objective)
+		quit()
 
 		# Set the objective function and solve the LP problem.
 		TMFA_Problem.prob.set_objective(TMFA_Problem.get_flux_var(objective))
@@ -438,6 +451,8 @@ def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 	lumped_rxns = []
 	new_lump_rxn_dict = {}
 	for rxn in mm.reactions:
+		upper = mm.limits[rxn].upper
+		lower = mm.limits[rxn].lower
 		reaction = mm_irrev.get_reaction(rxn)
 		if rxn not in exclude_list:
 			# Allow for making all reversible reactions into a _forward and _reverse split reaction pair
@@ -464,9 +479,22 @@ def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 				mm_irrev.add_reaction(r2_id)
 				split_reversible.append((r_id, r2_id))
 
+			mm_irrev.limits[r_id].upper = upper
+			mm_irrev.limits[r_id].lower = 0
+			mm_irrev.limits[r2_id].upper = -lower
+			mm_irrev.limits[r2_id].lower = 0
+
 		elif rxn in lump_rxn_dir.keys():
 			final_sub_rxn_list = []
-			if reaction.direction == Direction.Forward:
+			sub = lump_rxn_dir[rxn]
+			check = 0
+			for (x,y) in sub:
+				rn = mm_irrev.get_reaction(x)
+				if rn.direction != Direction.Both:
+					check += 1
+			if reaction.direction == Direction.Forward or check != 0:
+				mm_irrev.limits[rxn].upper = 0
+				mm_irrev.limits[rxn].lower = 0
 				sub_rxn_list = lump_rxn_dir[rxn]
 				for entry in sub_rxn_list:
 					(subrxn, dir)= entry
@@ -489,6 +517,10 @@ def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 				sub_rxn_list = lump_rxn_dir[rxn]
 				for_sub_rxn_list = []
 				rev_sub_rxn_list = []
+				mm_irrev.limits[r_id].upper = 0
+				mm_irrev.limits[r_id].lower = 0
+				mm_irrev.limits[r2_id].upper = 0
+				mm_irrev.limits[r2_id].lower = 0
 				for entry in sub_rxn_list:
 					(subrxn, dir) = entry
 					dir = float(dir)
@@ -498,6 +530,7 @@ def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 					sub_r1_id = '{}_forward'.format(subrxn)
 					sub_r2 = Reaction(Direction.Forward, subreaction.right, subreaction.left)
 					sub_r2_id = '{}_reverse'.format(subrxn)
+
 					split_reversible.append((sub_r1_id, sub_r2_id))
 					if dir == 1:
 						for_sub_rxn_list.append(sub_r1_id)
@@ -513,6 +546,10 @@ def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 						mm_irrev.add_reaction(sub_r1_id)
 						mm_irrev.database.set_reaction(sub_r2_id, sub_r2)
 						mm_irrev.add_reaction(sub_r2_id)
+					mm_irrev.limits[sub_r1_id].lower = 0
+					mm_irrev.limits[sub_r1_id].upper = 1000
+					mm_irrev.limits[sub_r2_id].lower = 0
+					mm_irrev.limits[sub_r2_id].upper = 1000
 				new_lump_rxn_dict[r_id] = for_sub_rxn_list
 				new_lump_rxn_dict[r2_id] = rev_sub_rxn_list
 
@@ -560,10 +597,12 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 			# If no error then use this line
 			dgr_err = 0
 			# If you want to use the error estimates for dgr values then uncomment these lines
-			# dgr_err = problem.prob.var('dgr_err_{}'.format(reaction))
-			# problem.prob.add_linear_constraints(dgr_err <= 2*err)
-			# problem.prob.add_linear_constraints(dgr_err >= -2*err)
-			# print(reaction, 'error', 2*err)
+			dgr_err = problem.prob.var('dgr_err_{}'.format(reaction))
+			problem.prob.add_linear_constraints(dgr_err <= 2*err)
+			problem.prob.add_linear_constraints(dgr_err >= -2*err)
+			problem.prob.add_linear_constraints(dgr_err <= 0)
+			problem.prob.add_linear_constraints(dgr_err >= -20)
+			print(reaction, 'error', 2*err)
 			for (cpd, stoich) in rxn.compounds:
 				if str(cpd) not in excluded_cpd_list:
 					print('ssxi calc for {} compound {}\t{}'.format(reaction, problem.prob.var(str(cpd)), stoich))
@@ -599,10 +638,18 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 		print('Split reaction zi raw constraint {} :'.format(forward), (problem.prob.var('zi_{}'.format(forward)) + problem.prob.var('zi_{}'.format(reverse)) <= 1))
 	return problem
 
-def solve_objective(problem, objective):
+
+def solve_objective(problem, objective, all_rxns=True):
 	problem.prob.set_objective(problem.get_flux_var(objective))
 	problem.prob.set_objective_sense(lp.ObjectiveSense.Maximize)
 	problem.prob.solve()
 	result = problem.prob.result
-	print('TMFA Problem Status: {}'.format(result.get_value(problem.get_flux_var(objective))))
+	if all_rxns is True:
+		for rxn in sorted(problem._model.reactions):
+			try:
+				print('{}\t{}\t{}\t{}'.format(rxn, problem.get_flux(rxn), problem._model.get_reaction(rxn), problem.prob.result.get_value('dgri_{}'.format(rxn))))
+			except:
+				print('{}\t{}\t{}\t{}'.format(rxn, problem.get_flux(rxn), problem._model.get_reaction(rxn), 'No Err'))
+
+	print('Biomass Objective: {}'.format(result.get_value(problem.get_flux_var(objective))))
 	quit()
