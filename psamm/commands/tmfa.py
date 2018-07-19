@@ -23,7 +23,7 @@ from .. import fluxanalysis
 from ..lpsolver import lp
 from ..datasource.reaction import parse_reaction
 from decimal import Decimal
-
+import copy
 import csv
 import math
 from collections import Counter
@@ -147,10 +147,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			dgr_dict = parse_dgr_file(self._args.dgr_file)
 
 		# Make a basic LP problem containing soitchiometric constraints and basic flux constraints.
-		TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
 
 		# Add constraints for the compound concentration variables to this LP problem
-		TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
 
 
 		# TMFA_Problem.prob.set_objective(TMFA_Problem.get_flux_var(objective))
@@ -160,11 +158,45 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# logger.info('TMFA Problem Status: {}'.format(result.get_value(TMFA_Problem.get_flux_var(objective))))
 
 		# Add thermodynamic constraints to the model.
-		TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
-												exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict, split_reversible)
 
-		solve_objective(TMFA_Problem, objective)
+
+		biomax = solve_objective(fluxanalysis.FluxBalanceProblem(mm_irreversible, solver), objective)
+		checked_list = []
+		bad_constraint_list = []
+		timeout = []
+		for reaction in sorted(mm_irreversible.reactions):
+			logger.info('TESTING REACTION {}'.format(reaction))
+			testing_list = [reaction] + checked_list
+			TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
+			TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
+			TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
+													exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict, split_reversible, testing_list)
+
+
+			try:
+				bioflux = timelimit(60, solve_objective, args=(TMFA_Problem, objective))
+				if bioflux >= 0.9 * biomax:
+					checked_list.append(reaction)
+					logger.info('{} Reaction Passed Constraint Test'.format(reaction))
+
+				else:
+					bad_constraint_list.append(reaction)
+					logger.info('{} Reaction Failed Constraint Test'.format(reaction))
+			except TimeLimitExpired:
+				logger.info('{} Reaction timed out'.format(reaction))
+				timeout.append(reaction)
+			# bioflux = solve_objective(TMFA_Problem, objective)
+
+
+
+		for j in checked_list:
+			print('CheckedConstraint\t{}'.format(j))
+		for i in bad_constraint_list:
+			print('BadConstraint\t{}'.format(i))
+		for i in timeout:
+			print('TIMOUT\t{}'.format(reaction))
 		quit()
+
 
 		# Set the objective function and solve the LP problem.
 		TMFA_Problem.prob.set_objective(TMFA_Problem.get_flux_var(objective))
@@ -320,7 +352,7 @@ def add_conc_constraints(problem, conc_file):
 			cpd, lower, upper = row
 			cpd_conc_dict[cpd] = [lower, upper]
 	for cp in problem._model.compounds:
-		print(str(cp))
+		# print(str(cp))
 		# define concentration variable for compound.
 		problem.prob.define(str(cp))
 		var = problem.prob.var(str(cp))
@@ -328,7 +360,7 @@ def add_conc_constraints(problem, conc_file):
 		# Define default constraints for anything not set in the conc file
 		if str(cp) not in cpd_conc_dict.keys():
 			if str(cp) not in excluded_compounds:
-				print('Default Conc Constraint Applied\t{}\t{}\t{}'.format(str(cp), math.log(0.0001), math.log(0.02)))
+				# print('Default Conc Constraint Applied\t{}\t{}\t{}'.format(str(cp), math.log(0.0001), math.log(0.02)))
 				# Add concentration constraints as the ln of the concentration (M).
 				problem.prob.add_linear_constraints(var >= math.log(0.00001))
 				problem.prob.add_linear_constraints(var <= math.log(0.02))
@@ -350,7 +382,7 @@ def add_conc_constraints(problem, conc_file):
 				# problem.prob.add_linear_constraints(var <= math.log(float(conc_limits[1]))+1)
 			lower = math.log(float(conc_limits[0]))
 			upper = math.log(float(conc_limits[1]))
-			print('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, upper))
+			# print('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, upper))
 
 	return problem, cpdid_xij_dict
 
@@ -414,13 +446,13 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters, ph_dif
 						dgscale = 1
 					dg = dgf_dict[cpd[0]]
 					dgs = dg * (float(cpd[1])*dgscale)
-					print(cpd, dg, float(cpd[1]), dgs)
+					# print(cpd, dg, float(cpd[1]), dgs)
 					dgr += dgs
 			if reaction in t_param.keys():
 				(c, h) = t_param[reaction]
 				dgr += (float(c) * F * dpsi) - (2.3 * float(h) * R * T * dph)
 			dgr_dict[reaction] = dgr
-			print('Reaction DGR\t{}\t{}'.format(reaction, dgr))
+			# print('Reaction DGR\t{}\t{}'.format(reaction, dgr))
 	return dgr_dict
 
 
@@ -560,7 +592,7 @@ def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 
 
 def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclude_lumps_unknown, dgr_dict,
-							 lump_rxn_list, split_rxns):
+							 lump_rxn_list, split_rxns, testing_list):
 	R = 1.9858775 / 1000
 	T = 303.15
 	k = 1000000
@@ -581,17 +613,18 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 		if reaction not in exclude_lumps:
 			problem.prob.add_linear_constraints(vi - zi * vmax <= 0)
 			problem.prob.add_linear_constraints(vi >= 0)
-			print('Reaction Zi Vi constraint\t{}\t{}-{}*{}<=0'.format(reaction, vi, zi, vmax))
-			print('Reaction Zi Vi constraint {}: '.format(reaction), (vi - zi * vmax <= 0))
+			# print('Reaction Zi Vi constraint\t{}\t{}-{}*{}<=0'.format(reaction, vi, zi, vmax))
+			# print('Reaction Zi Vi constraint {}: '.format(reaction), (vi - zi * vmax <= 0))
 		# add thermodynamic feasibility constraint for all reactions where dgr0 is known except for lumps
 		if reaction not in exclude_lumps_unknown:
-			problem.prob.add_linear_constraints(dgri - k + (k * zi) <= 0 - epsilon)
-			print('Reaction thermo feasibility constraint\t{}\t{}-{}+{}*{}<=-{}'.format(reaction, dgri, k, k, zi, epsilon))
-			print('Reaction thermo feasibility raw constraint {}: '.format(reaction), (dgri - k + (k * zi) <= 0 - epsilon))
+			if reaction in testing_list:
+				problem.prob.add_linear_constraints(dgri - k + (k * zi) <= 0 - epsilon)
+				# print('Reaction thermo feasibility constraint\t{}\t{}-{}+{}*{}<=-{}'.format(reaction, dgri, k, k, zi, epsilon))
+				# print('Reaction thermo feasibility raw constraint {}: '.format(reaction), (dgri - k + (k * zi) <= 0 - epsilon))
 		# add constraint to calculate dgri based on dgr0 and the concentrations of the metabolites
 		if reaction not in exclude_unknown:
 			(dgr0, err) = dgr_dict[reaction]
-			print('Reaction DGR0 dict lookup value: {}\t{}'.format(reaction, dgr_dict[reaction]))
+			# print('Reaction DGR0 dict lookup value: {}\t{}'.format(reaction, dgr_dict[reaction]))
 			ssxi = 0
 			problem.prob.define('dgr_err_{}'.format(reaction))
 			# If no error then use this line
@@ -602,40 +635,40 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 			problem.prob.add_linear_constraints(dgr_err >= -2*err)
 			problem.prob.add_linear_constraints(dgr_err <= 0)
 			problem.prob.add_linear_constraints(dgr_err >= -20)
-			print(reaction, 'error', 2*err)
+			# print(reaction, 'error', 2*err)
 			for (cpd, stoich) in rxn.compounds:
 				if str(cpd) not in excluded_cpd_list:
-					print('ssxi calc for {} compound {}\t{}'.format(reaction, problem.prob.var(str(cpd)), stoich))
+					# print('ssxi calc for {} compound {}\t{}'.format(reaction, problem.prob.var(str(cpd)), stoich))
 					ssxi += problem.prob.var(str(cpd)) * float(stoich)
 			problem.prob.add_linear_constraints(dgri == dgr0 + (R * T * (ssxi)) + dgr_err)
-			print('Reaction dgri constraint calculation\t{}\t{}={}+({}*{}*({}))'.format(reaction, dgri, dgr0, R, T, ssxi))
-			print('Reaction dgri raw constraint calculation {}: '.format(reaction), (dgri == dgr0 + (R * T * (ssxi)) + dgr_err))
+			# print('Reaction dgri constraint calculation\t{}\t{}={}+({}*{}*({}))'.format(reaction, dgri, dgr0, R, T, ssxi))
+			# print('Reaction dgri raw constraint calculation {}: '.format(reaction), (dgri == dgr0 + (R * T * (ssxi)) + dgr_err))
 	# add constraints for thermodynamic feasibility of lump reactions and to constrain their constituent reactions
 	for reaction in mm.reactions:
 		if reaction in lump_rxn_list.keys():
-			print('TEST THIS IS A TEST', reaction)
+			# print('TEST THIS IS A TEST', reaction)
 			vi = problem.get_flux_var(reaction)
-			print('TEST VI TEST', vi)
+			# print('TEST VI TEST', vi)
 			yi = problem.prob.var('yi_{}'.format(reaction))
 			dgri = problem.prob.var('dgri_{}'.format(reaction))
 			problem.prob.add_linear_constraints(vi == 0)
-			print('Lumped Reaction flux = 0 constraint\t{}=0'.format(vi))
-			print('Lumped Reaction flux = 0 raw constraint {}=0'.format(reaction), (vi == 0))
+			# print('Lumped Reaction flux = 0 constraint\t{}=0'.format(vi))
+			# print('Lumped Reaction flux = 0 raw constraint {}=0'.format(reaction), (vi == 0))
 			problem.prob.add_linear_constraints(dgri - (k * yi) <= - epsilon)
-			print('Lumped Reaction feasibility constraint\t{}\t{}-{}*{}<={}'.format(reaction, dgri, k, yi, epsilon))
-			print('Lumped reaction feasibility raw constraint {}: '.format(reaction), (dgri - (k * yi) <= - epsilon))
+			# print('Lumped Reaction feasibility constraint\t{}\t{}-{}*{}<={}'.format(reaction, dgri, k, yi, epsilon))
+			# print('Lumped reaction feasibility raw constraint {}: '.format(reaction), (dgri - (k * yi) <= - epsilon))
 			sub_rxn_list = lump_rxn_list[reaction]
 			sszi = 0
 			for sub_rxn in sub_rxn_list:
 				sszi += problem.prob.var('zi_{}'.format(sub_rxn))
 			problem.prob.add_linear_constraints(yi + sszi <= len(sub_rxn_list))
-			print('Lump component constraints\t{}\t{}+{}<={}'.format(reaction, yi, sszi, sub_rxn_list))
-			print('Lumped component raw constraint {} :'.format(reaction), (yi + sszi <= len(sub_rxn_list)))
+			# print('Lump component constraints\t{}\t{}+{}<={}'.format(reaction, yi, sszi, sub_rxn_list))
+			# print('Lumped component raw constraint {} :'.format(reaction), (yi + sszi <= len(sub_rxn_list)))
 	# Add linear constraint to disallow solutions that use both the forward and reverse reaction from a split reaction.
 	for (forward, reverse) in split_rxns:
 		problem.prob.add_linear_constraints(problem.prob.var('zi_{}'.format(forward)) + problem.prob.var('zi_{}'.format(reverse)) <= 1)
-		print('Split reaction Zi constraints\t{}\t{}\t{}+{}<=1'.format(forward, reverse, problem.prob.var('zi_{}'.format(forward)), problem.prob.var('zi_{}'.format(reverse))))
-		print('Split reaction zi raw constraint {} :'.format(forward), (problem.prob.var('zi_{}'.format(forward)) + problem.prob.var('zi_{}'.format(reverse)) <= 1))
+		# print('Split reaction Zi constraints\t{}\t{}\t{}+{}<=1'.format(forward, reverse, problem.prob.var('zi_{}'.format(forward)), problem.prob.var('zi_{}'.format(reverse))))
+		# print('Split reaction zi raw constraint {} :'.format(forward), (problem.prob.var('zi_{}'.format(forward)) + problem.prob.var('zi_{}'.format(reverse)) <= 1))
 	return problem
 
 
@@ -644,12 +677,37 @@ def solve_objective(problem, objective, all_rxns=True):
 	problem.prob.set_objective_sense(lp.ObjectiveSense.Maximize)
 	problem.prob.solve()
 	result = problem.prob.result
-	if all_rxns is True:
-		for rxn in sorted(problem._model.reactions):
-			try:
-				print('{}\t{}\t{}\t{}'.format(rxn, problem.get_flux(rxn), problem._model.get_reaction(rxn), problem.prob.result.get_value('dgri_{}'.format(rxn))))
-			except:
-				print('{}\t{}\t{}\t{}'.format(rxn, problem.get_flux(rxn), problem._model.get_reaction(rxn), 'No Err'))
+	# if all_rxns is True:
+	# 	for rxn in sorted(problem._model.reactions):
+	# 		try:
+	# 			print('{}\t{}\t{}\t{}'.format(rxn, problem.get_flux(rxn), problem._model.get_reaction(rxn), problem.prob.result.get_value('dgri_{}'.format(rxn))))
+	# 		except:
+	# 			print('{}\t{}\t{}\t{}'.format(rxn, problem.get_flux(rxn), problem._model.get_reaction(rxn), 'No Err'))
+	#
+	# print('Biomass Objective: {}'.format(result.get_value(problem.get_flux_var(objective))))
+	return result.get_value(problem.get_flux_var(objective))
 
-	print('Biomass Objective: {}'.format(result.get_value(problem.get_flux_var(objective))))
-	quit()
+class TimeLimitExpired(Exception): pass
+
+def timelimit(timeout, func, args=(), kwargs={}):
+	import threading
+	class FuncThread(threading.Thread):
+		def __init__(self):
+			threading.Thread.__init__(self)
+			self.result = None
+
+		def run(self):
+			self.result = func(*args, **kwargs)
+
+		def _stop(self):
+			if self.isAlive():
+				threading.Thread._Thread__stop(self)
+
+	it = FuncThread()
+	it.start()
+	it.join(timeout)
+	if it.isAlive():
+		it._stop()
+		raise(TimeLimitExpired())
+	else:
+		return it.result
