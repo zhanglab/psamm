@@ -101,6 +101,7 @@ def primary_element(element):
         else:
             return element
 
+
 def make_edge_values(reaction_flux, mm):
     """set edge_values according to reaction fluxes"""
     edge_values = {}
@@ -214,26 +215,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             logger.info('Minimized reactions: {}'.format(count))
 
         edge_values = make_edge_values(reaction_flux, self._mm)
-
-        # edge_values = {}
-        # if len(reaction_flux) > 0:
-        #     for reaction in self._mm.reactions:
-        #         rx = self._mm.get_reaction(reaction)
-        #         if reaction in reaction_flux:
-        #             flux = reaction_flux[reaction]
-        #             if abs(flux) < 1e-9:
-        #                 continue
-        #
-        #             if flux > 0:
-        #                 for compound, value in rx.right:  # value=stoichiometry
-        #                     edge_values[reaction, compound] = (flux * float(value))
-        #                 for compound, value in rx.left:
-        #                     edge_values[compound, reaction] = (flux * float(value))
-        #             else:
-        #                 for compound, value in rx.left:
-        #                     edge_values[reaction, compound] = (- flux * float(value))
-        #                 for compound, value in rx.right:
-        #                     edge_values[compound, reaction] = (- flux * float(value))
 
         # Mapping from string of cpd_id+compartment(eg: pyr_c[c]) to Compound object
         cpd_object = {}
@@ -569,31 +550,26 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         compound_nodes[c1], compound_nodes[c2], {'dir': dir_value(rx.direction), 'reaction': rxn_id}))
 
         # create bipartite and reactions-combined graph if --method is fpp
-        cpd_nodes = {}
-        cpd_pairs = Counter()
-        compound_list = []
-        for (c1, c2), rxns in iteritems(cpair_dict):
-            if c1 not in compound_list:  # c1.name = compound.id, no compartment
-                node = graph.Node({
-                    'id': text_type(c1),
-                    'label': cpds_properties(c1, cpd_entry[c1.name], self._args.detail),
-                    'shape': 'ellipse',
-                    'style': 'filled',
-                    'fillcolor': color[c1]})
-                g2.add_node(node)
-                cpd_nodes[c1] = node
-            if c2 not in compound_list:  # c1.name = compound.id, no compartment
-                node = graph.Node({
-                    'id': text_type(c2),
-                    'label': cpds_properties(c2, cpd_entry[c2.name], self._args.detail),
-                    'shape': 'ellipse',
-                    'style': 'filled',
-                    'fillcolor': color[c2]})
-                g2.add_node(node)
-                cpd_nodes[c2] = node
-            compound_list.append(c1)
-            compound_list.append(c2)
 
+        # create compound nodes and add nodes to Graph object
+        compound_set = set()
+        for (c1, c2), rxns in iteritems(cpair_dict):
+            compound_set.add(c1)
+            compound_set.add(c2)
+        cpd_nodes = {}
+        for cpd in compound_set:    # cpd=compound object, cpd.name=compound id, no compartment
+            node = graph.Node({
+                'id': text_type(cpd),
+                'label': cpds_properties(cpd, cpd_entry[cpd.name], self._args.detail),
+                'shape': 'ellipse',
+                'style': 'filled',
+                'fillcolor': color[cpd]})
+            cpd_nodes[cpd] = node
+            g2.add_node(node)
+
+        # create and add reaction nodes, add edges
+        cpd_pairs = Counter()
+        for (c1, c2), rxns in iteritems(cpair_dict):
             def final_rxn_color(color_args, rlist):
                 if color_args is not None:
                     if len(rlist) == 1:
