@@ -51,6 +51,8 @@ RXN_COMBINED_COLOR = '#fc9a44'
 CPD_ONLY_IN_BIO = '#82e593'
 CPD_ONLY_IN_EXC = '#5a95f4'
 
+from psamm.reaction import Compound
+
 
 def cpds_properties(cpd, compound, detail): # cpd=Compound object, compound = CompoundEntry object
     """define compound nodes label"""
@@ -116,28 +118,28 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             action=FilePrefixAppendAction,
             help='Reaction to exclude (e.g. biomass reactions or macromolecule synthesis)')
         parser.add_argument(
-            '--fba', type=text_type, default=None,
-            help='visualize reaction flux')
+            '--edge-values', type=argparse.FileType('r'), default=None,
+            help='Values of edges')
         parser.add_argument(
             '--element', type=text_type, default='C',
-            help='primary element flow')
+            help='Primary element flow')
         parser.add_argument(
             '--detail', type=text_type, default=None, action='append', nargs='+',
-            help='reaction and compound properties showed on nodes label')
+            help='Reaction and compound properties showed on nodes label')
         parser.add_argument(
             '--subset', type=argparse.FileType('r'), default=None,
-            help='reactions designated to visualize')
+            help='Reactions designated to visualize')
         parser.add_argument(
             '--color', type=argparse.FileType('r'), default=None, nargs='+',
-            help='customize color of reaction and compound nodes ')
+            help='Customize color of reaction and compound nodes ')
         parser.add_argument(
             '--Image', type=text_type, default=None, help='generate image file directly')
         parser.add_argument(
             '--exclude-pairs', type=argparse.FileType('r'), default=None,
-            help='remove edge of given compound pairs from final graph ')
+            help='Remove edge of given compound pairs from final graph ')
         parser.add_argument(
             '--split-map', action='store_true',
-            help='create dot file for reaction-splitted metabolic network visualization')
+            help='Create dot file for reaction-splitted metabolic network visualization')
         super(VisualizationCommand, cls).init_parser(parser)
 
     def run(self):
@@ -164,57 +166,32 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         msg += '\n{}'.format(e.indicator)
                     logger.warning(msg)
 
-        # set edge_values based on reaction fluxes
-        reaction_flux = {}
-        if self._args.fba is not None:
-            if self._args.fba == 'psamm-fba':
-                solver = self._get_solver()
-                p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
-                try:
-                    p.maximize(self._get_objective())
-                except fluxanalysis.FluxBalanceError as e:
-                    self.report_flux_balance_error(e)
+        # set edge_values
+        edge_values = {}
+        if self._args.edge_values is not None:
+            for row in csv.reader(self._args.edge_values, delimiter=str(u'\t')):
+                edge_values[row[0]] = float(row[1])
 
-                fluxes = {r: p.get_flux(r) for r in self._mm.reactions}
-
-                # Run flux minimization
-                flux_var = p.get_flux_var(self._get_objective())
-                p.prob.add_linear_constraints(flux_var == p.get_flux(self._get_objective()))
-                p.minimize_l1()
-
-                count = 0
-                for r_id in self._mm.reactions:
-                    flux = p.get_flux(r_id)
-                    if abs(flux - fluxes[r_id]) > 1e-6:
-                        count += 1
-                    if abs(flux) > 1e-6:
-                        reaction_flux[r_id] = flux
-                logger.info('Minimized reactions: {}'.format(count))
-            else:
-                with open(self._args.fba, 'r') as f:
-                    for row in csv.reader(f, delimiter=str(u'\t')):
-                        reaction_flux[row[0]] = float(row[1])
-
-        edge_values = None
-        if len(reaction_flux) > 0:
-            edge_values = {}
-            for reaction in self._mm.reactions:
-                rx = self._mm.get_reaction(reaction)
-                if reaction in reaction_flux:
-                    flux = reaction_flux[reaction]
-                    if abs(flux) < 1e-9:
-                        continue
-
-                    if flux > 0:
-                        for compound, value in rx.right:  # value=stoichiometry
-                            edge_values[reaction, compound] = (flux * float(value))
-                        for compound, value in rx.left:
-                            edge_values[compound, reaction] = (flux * float(value))
-                    else:
-                        for compound, value in rx.left:
-                            edge_values[reaction, compound] = (- flux * float(value))
-                        for compound, value in rx.right:
-                            edge_values[compound, reaction] = (- flux * float(value))
+        # edge_values = None
+        # if len(reaction_flux) > 0:
+        #     edge_values = {}
+        #     for reaction in self._mm.reactions:
+        #         rx = self._mm.get_reaction(reaction)
+        #         if reaction in reaction_flux:
+        #             flux = reaction_flux[reaction]
+        #             if abs(flux) < 1e-9:
+        #                 continue
+        #
+        #             if flux > 0:
+        #                 for compound, value in rx.right:  # value=stoichiometry
+        #                     edge_values[reaction, compound] = (flux * float(value))
+        #                 for compound, value in rx.left:
+        #                     edge_values[compound, reaction] = (flux * float(value))
+        #             else:
+        #                 for compound, value in rx.left:
+        #                     edge_values[reaction, compound] = (- flux * float(value))
+        #                 for compound, value in rx.right:
+        #                     edge_values[compound, reaction] = (- flux * float(value))
 
         # Mapping from string of cpd_id+compartment(eg: pyr_c[c]) to Compound object
         cpd_object = {}
@@ -360,7 +337,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         g, g1, g2 = self.create_split_bipartite_graph(self._mm, self._model, filter_dict, cpairs_dict,
                                                       self._args.element, subset_reactions, edge_values,
-                                                      compound_formula, reaction_flux, split_graph=split_reactions)
+                                                      compound_formula, split_graph=split_reactions)
         final_graph = None
         if self._args.method != 'no-fpp':
             if self._args.split_map is True:
@@ -398,7 +375,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     logger.warning('the graph is too large to create')
 
     def create_split_bipartite_graph(self, model, nativemodel, predict_results, cpair_dict, element, subset,
-                                     edge_values,  cpd_formula, reaction_flux, split_graph=True):
+                                     edge_values, cpd_formula, split_graph=True):
         """create bipartite graph from filter_dict"""
         g = graph.Graph()
         g1 = graph.Graph()
@@ -412,9 +389,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         for rxn in nativemodel.reactions:
             rxn_entry[rxn.id] = rxn
 
-        if edge_values is not None and len(edge_values) > 0:
-            min_edge_value = min(itervalues(edge_values))
-            max_edge_value = max(itervalues(edge_values))
+        if len(edge_values) > 0:
+            scale_edge = {}
+            for r, v in iteritems(edge_values):
+                scale_edge[r] = abs(v)
+            min_edge_value = min(itervalues(scale_edge))
+            max_edge_value = max(itervalues(scale_edge))
         else:
             min_edge_value = 1
             max_edge_value = 1
@@ -441,7 +421,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             if max_edge_value - min_edge_value == 0:
                 return 1
             else:
-                alpha = (value - min_edge_value) / (max_edge_value - min_edge_value)
+                # alpha = (value - min_edge_value) / (max_edge_value - min_edge_value)
+                alpha = abs(value) / abs(max_edge_value)
                 return 20 * alpha
 
         def dir_value(direction):
@@ -453,19 +434,34 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             else:
                 return 'both'
 
-        def final_props(reaction, edge1, edge2):
-            """set final properties of edges"""
-            if edge_values is not None:
+        # def final_props(reaction, edge1, edge2):
+        #     """set final properties of edges"""
+        #     if edge_values is not None:
+        #         p = {}
+        #         if edge1 in edge_values:
+        #             p['dir'] = 'forward'
+        #             p['penwidth'] = pen_width(edge_values[edge1])
+        #             # print(edge1)
+        #             # print('forward\t{}\t{}\t{}'.format(reaction, edge1, edge_values[edge1]))
+        #         elif edge2 in edge_values:
+        #             p['dir'] = 'back'
+        #             p['penwidth'] = pen_width(edge_values[edge2])
+        #             # print('reverse\t{}\t{}\t{}'.format(reaction, edge2, edge_values[edge2]))
+        #         else:
+        #             p['style'] = 'dotted'
+        #             p['dir'] = dir_value(reaction.direction)
+        #         return p
+        #     else:
+        #         return {'dir': dir_value(reaction.direction)}
+
+        def final_props(rxn_id):
+            """set final properties of edges, including direction and width"""
+            reaction = model.get_reaction(rxn_id)
+            if len(edge_values) > 0:
                 p = {}
-                if edge1 in edge_values:
-                    p['dir'] = 'forward'
-                    p['penwidth'] = pen_width(edge_values[edge1])
-                    # print(edge1)
-                    # print('forward\t{}\t{}\t{}'.format(reaction, edge1, edge_values[edge1]))
-                elif edge2 in edge_values:
-                    p['dir'] = 'back'
-                    p['penwidth'] = pen_width(edge_values[edge2])
-                    # print('reverse\t{}\t{}\t{}'.format(reaction, edge2, edge_values[edge2]))
+                if rxn_id in edge_values:
+                    p['dir'] = dir_value(reaction.direction)
+                    p['penwidth'] = pen_width(edge_values[rxn_id])
                 else:
                     p['style'] = 'dotted'
                     p['dir'] = dir_value(reaction.direction)
@@ -514,7 +510,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     node = graph.Node({
                         'id': node_id,
                         'edge_id': rxn_id,
-                        'label': rxns_properties(rxn_entry[rxn_id], self._args.detail, reaction_flux),
+                        'label': rxns_properties(rxn_entry[rxn_id], self._args.detail, edge_values),
                         'shape': 'box',
                         'style': 'filled',
                         'fillcolor': color[rxn_id]})
@@ -522,29 +518,29 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
                     rx = model.get_reaction(rxn_id)
 
-                    edge1 = c1, rxn_id  # forward
-                    edge2 = rxn_id, c1
+                    # edge1 = c1, rxn_id  # forward
+                    # edge2 = rxn_id, c1
                     if split_graph is True:
                         g.add_edge(graph.Edge(
-                            compound_nodes[c1], node, final_props(rx, edge1, edge2)))
+                            compound_nodes[c1], node, final_props(rxn_id)))
                     else:
-                        if edge1 and edge2 not in edge_list:
-                            edge_list.append(edge1)
-                            edge_list.append(edge2)
-                            g.add_edge(graph.Edge(
-                                compound_nodes[c1], node, final_props(rx, edge1, edge2)))
+                        # if edge1 and edge2 not in edge_list:
+                        #     edge_list.append(edge1)
+                        #     edge_list.append(edge2)
+                        g.add_edge(graph.Edge(
+                            compound_nodes[c1], node, final_props(rxn_id)))
 
-                    edge1 = rxn_id, c2 # forward
-                    edge2 = c2, rxn_id
+                    # edge1 = rxn_id, c2 # forward
+                    # edge2 = c2, rxn_id
                     if split_graph is True:
                         g.add_edge(graph.Edge(
-                            node, compound_nodes[c2], final_props(rx, edge1, edge2)))
+                            node, compound_nodes[c2], final_props(rxn_id)))
                     else:
-                        if edge1 and edge2 not in edge_list:
-                            edge_list.append(edge1)
-                            edge_list.append(edge2)
-                            g.add_edge(graph.Edge(
-                                node, compound_nodes[c2], final_props(rx, edge1, edge2)))
+                        # if edge1 and edge2 not in edge_list:
+                        #     edge_list.append(edge1)
+                        #     edge_list.append(edge2)
+                        g.add_edge(graph.Edge(
+                            node, compound_nodes[c2], final_props(rxn_id)))
 
                     g1.add_edge(graph.Edge(
                         compound_nodes[c1], compound_nodes[c2], {'dir': dir_value(rx.direction), 'reaction': rxn_id}))
@@ -602,31 +598,26 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 else:
                     return {'dir': 'both'}
 
-            def final_props_2(rlist, c, n):
-                if edge_values is not None:
+            def final_props_2(rlist):
+                if len(edge_values) > 0:
                     if len(rlist) == 1:
-                        if n == 1:
-                            edge1 = c, rlist[0]
-                            edge2 = rlist[0], c
-                        else:
-                            edge1 = rlist[0], c
-                            edge2 = c, rlist[0]
-                        rx = model.get_reaction(rlist[0])
-                        return final_props(rx, edge1, edge2)
+                        return final_props(rlist[0])
                     else:
-                        if n == 1:
-                            edges1 = [(r, c) for r in rlist]
-                            edges2 = [(c, r) for r in rlist]
-                        else:
-                            edges1 = [(c, r) for r in rlist]
-                            edges2 = [(r, c) for r in rlist]
-                        if any(i for i in edges1) and any(j for j in edges2) in edge_values:
-                            p = {}
+                        p = {}
+                        # edge_value_list = []
+                        # for r in rlist:
+                        #     if r in edge_values:
+                        #         edge_value_list.append(edge_values[r])
+                        #     else:
+                        #         edge_value_list.append(0)
+                        # comb_edge_value = sum(edge_value_list)
+                        # if comb_edge_value == 0:
+                        if all(r for r in rlist) not in edge_values:
                             p['style'] = 'dotted'
-                            p['dir'] = dir_value_2(rlist)
-                            return p
+                            p['dir'] = dir_value_2(rlist)['dir']
                         else:
-                            return dir_value_2(rlist)
+                            p['dir'] = dir_value_2(rlist)['dir']
+                    return p
                 else:
                     return dir_value_2(rlist)
 
@@ -635,36 +626,38 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     cpd_pairs[(c1, c2)] += 1
                     node = graph.Node({
                         'id': '{}_{}'.format((str(c1), str(c2)), cpd_pairs[(c1, c2)]),
-                        'label': condensed_rxn_props(self._args.detail, r_list, reaction_flux),
+                        'label': condensed_rxn_props(self._args.detail, r_list, edge_values),
                         'shape': 'box',
                         'style': 'filled',
                         'fillcolor': final_rxn_color(self._args.color, r_list)})
                     g2.add_node(node)
 
                     g2.add_edge(graph.Edge(
-                        cpd_nodes[c1], node, final_props_2(r_list,c1, 1)))
+                        cpd_nodes[c1], node, final_props_2(r_list)))
 
                     g2.add_edge(graph.Edge(
-                        node, cpd_nodes[c2], final_props_2(r_list,c2, 2)))
+                        node, cpd_nodes[c2], final_props_2(r_list)))
 
         # add exchange reaction nodes
         rxn_set = set()
-        for reaction in model.reactions:
+        for reaction in subset:
             if model.is_exchange(reaction):
-                if reaction in subset:
-                    raw_exchange_rxn = model.get_reaction(reaction)
-                    if element is not None:
-                        if any(Atom(primary_element(element)) in cpd_formula[str(c[0].name)]
-                               for c in raw_exchange_rxn.compounds):
+                raw_exchange_rxn = model.get_reaction(reaction)
+                if element is not None:
+                    # for c in raw_exchange_rxn.compounds: # c = <class 'psamm.reaction.Compound'>
+                    #     print(c)
+                    #     if Atom(primary_element(element)) in cpd_formula[c.name]:
+                    if any(Atom(primary_element(element)) in cpd_formula[str(c[0].name)]
+                           for c in raw_exchange_rxn.compounds):
                             rxn_set.add(reaction)
-                    else:
-                        rxn_set.add(reaction)
+                else:
+                    rxn_set.add(reaction)
         for r in rxn_set:
             exchange_rxn = model.get_reaction(r)
             label = r
-            if len(reaction_flux) > 0:
-                if r in iterkeys(reaction_flux):
-                    label = '{}\n{}'.format(r, reaction_flux[r])
+            if len(edge_values) > 0:
+                if r in iterkeys(edge_values):
+                    label = '{}\n{}'.format(r, edge_values[r])
             node_ex = graph.Node({
                 'id': r,
                 'edge_id': r,
@@ -690,12 +683,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     g2.add_node(node_ex_cpd)
                     cpd_nodes[c1] = node_ex_cpd
 
-                edge1 = c1, r
-                edge2 = r, c1
+                # edge1 = c1, r
+                # edge2 = r, c1
                 g.add_edge(graph.Edge(
-                    compound_nodes[c1], node_ex, final_props(exchange_rxn, edge1, edge2)))
+                    compound_nodes[c1], node_ex, final_props(r)))
                 g2.add_edge(graph.Edge(
-                    cpd_nodes[c1], node_ex, final_props(exchange_rxn, edge1, edge2)))
+                    cpd_nodes[c1], node_ex, final_props(r)))
 
             for c2, _ in exchange_rxn.right:
                 if c2 not in compound_nodes.keys():
@@ -712,12 +705,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     g2.add_node(node_ex_cpd)
                     cpd_nodes[c2] = node_ex_cpd
 
-                edge1 = r, c2
-                edge2 = c2, r
+                # edge1 = r, c2
+                # edge2 = c2, r
                 g.add_edge(graph.Edge(
-                    node_ex, compound_nodes[c2], final_props(exchange_rxn, edge1, edge2)))
+                    node_ex, compound_nodes[c2], final_props(exchange_rxn)))
                 g2.add_edge(graph.Edge(
-                    node_ex, cpd_nodes[c2], final_props(exchange_rxn, edge1, edge2)))
+                    node_ex, cpd_nodes[c2], final_props(exchange_rxn)))
 
         # add biomass reaction nodes
         bio_pair = Counter()
@@ -758,12 +751,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         g2.add_node(node_bio_cpd)
                         cpd_nodes[c] = node_bio_cpd
 
-                    edge1 = c, nativemodel.biomass_reaction
-                    edge2 = nativemodel.biomass_reaction, c
+                    # edge1 = c, nativemodel.biomass_reaction
+                    # edge2 = nativemodel.biomass_reaction, c
                     g.add_edge(graph.Edge(
-                        compound_nodes[c], node_bio, final_props(biomass_reaction, edge1, edge2)))
+                        compound_nodes[c], node_bio, final_props(nativemodel.biomass_reaction)))
                     g2.add_edge(graph.Edge(
-                        cpd_nodes[c], node_bio, final_props(biomass_reaction, edge1, edge2)))
+                        cpd_nodes[c], node_bio, final_props(nativemodel.biomass_reaction)))
         else:
             logger.warning(
                 'No biomass reaction in this model')
