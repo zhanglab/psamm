@@ -101,6 +101,29 @@ def primary_element(element):
         else:
             return element
 
+def make_edge_values(reaction_flux, mm):
+    """set edge_values according to reaction fluxes"""
+    edge_values = {}
+    if len(reaction_flux) > 0:
+        for reaction in mm.reactions:
+            rx = mm.get_reaction(reaction)
+            if reaction in reaction_flux:
+                flux = reaction_flux[reaction]
+                if abs(flux) < 1e-9:
+                    continue
+
+                if flux > 0:
+                    for compound, value in rx.right:  # value=stoichiometry
+                        edge_values[reaction, compound] = (flux * float(value))
+                    for compound, value in rx.left:
+                        edge_values[compound, reaction] = (flux * float(value))
+                else:
+                    for compound, value in rx.left:
+                        edge_values[reaction, compound] = (- flux * float(value))
+                    for compound, value in rx.right:
+                        edge_values[compound, reaction] = (- flux * float(value))
+    return edge_values
+
 
 class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                            SolverCommandMixin, Command, LoopRemovalMixin, FilePrefixAppendAction):
@@ -116,7 +139,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             action=FilePrefixAppendAction,
             help='Reaction to exclude (e.g. biomass reactions or macromolecule synthesis)')
         parser.add_argument(
-            '--fba', type=text_type, default=None,
+            '--fba', action='store_true',
             help='visualize reaction flux')
         parser.add_argument(
             '--element', type=text_type, default='C',
@@ -164,57 +187,53 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         msg += '\n{}'.format(e.indicator)
                     logger.warning(msg)
 
-        # set edge_values based on reaction fluxes
+        # run l1min_fba, get reaction fluxes
         reaction_flux = {}
-        if self._args.fba is not None:
-            if self._args.fba == 'psamm-fba':
-                solver = self._get_solver()
-                p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
-                try:
-                    p.maximize(self._get_objective())
-                except fluxanalysis.FluxBalanceError as e:
-                    self.report_flux_balance_error(e)
+        if self._args.fba is True:
+            solver = self._get_solver()
+            p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+            try:
+                p.maximize(self._get_objective())
+            except fluxanalysis.FluxBalanceError as e:
+                self.report_flux_balance_error(e)
 
-                fluxes = {r: p.get_flux(r) for r in self._mm.reactions}
+            fluxes = {r: p.get_flux(r) for r in self._mm.reactions}
 
-                # Run flux minimization
-                flux_var = p.get_flux_var(self._get_objective())
-                p.prob.add_linear_constraints(flux_var == p.get_flux(self._get_objective()))
-                p.minimize_l1()
+            # Run flux minimization
+            flux_var = p.get_flux_var(self._get_objective())
+            p.prob.add_linear_constraints(flux_var == p.get_flux(self._get_objective()))
+            p.minimize_l1()
 
-                count = 0
-                for r_id in self._mm.reactions:
-                    flux = p.get_flux(r_id)
-                    if abs(flux - fluxes[r_id]) > 1e-6:
-                        count += 1
-                    if abs(flux) > 1e-6:
-                        reaction_flux[r_id] = flux
-                logger.info('Minimized reactions: {}'.format(count))
-            else:
-                with open(self._args.fba, 'r') as f:
-                    for row in csv.reader(f, delimiter=str(u'\t')):
-                        reaction_flux[row[0]] = float(row[1])
+            count = 0
+            for r_id in self._mm.reactions:
+                flux = p.get_flux(r_id)
+                if abs(flux - fluxes[r_id]) > 1e-6:
+                    count += 1
+                if abs(flux) > 1e-6:
+                    reaction_flux[r_id] = flux
+            logger.info('Minimized reactions: {}'.format(count))
 
-        edge_values = None
-        if len(reaction_flux) > 0:
-            edge_values = {}
-            for reaction in self._mm.reactions:
-                rx = self._mm.get_reaction(reaction)
-                if reaction in reaction_flux:
-                    flux = reaction_flux[reaction]
-                    if abs(flux) < 1e-9:
-                        continue
+        edge_values = make_edge_values(reaction_flux, self._mm)
 
-                    if flux > 0:
-                        for compound, value in rx.right:  # value=stoichiometry
-                            edge_values[reaction, compound] = (flux * float(value))
-                        for compound, value in rx.left:
-                            edge_values[compound, reaction] = (flux * float(value))
-                    else:
-                        for compound, value in rx.left:
-                            edge_values[reaction, compound] = (- flux * float(value))
-                        for compound, value in rx.right:
-                            edge_values[compound, reaction] = (- flux * float(value))
+        # edge_values = {}
+        # if len(reaction_flux) > 0:
+        #     for reaction in self._mm.reactions:
+        #         rx = self._mm.get_reaction(reaction)
+        #         if reaction in reaction_flux:
+        #             flux = reaction_flux[reaction]
+        #             if abs(flux) < 1e-9:
+        #                 continue
+        #
+        #             if flux > 0:
+        #                 for compound, value in rx.right:  # value=stoichiometry
+        #                     edge_values[reaction, compound] = (flux * float(value))
+        #                 for compound, value in rx.left:
+        #                     edge_values[compound, reaction] = (flux * float(value))
+        #             else:
+        #                 for compound, value in rx.left:
+        #                     edge_values[reaction, compound] = (- flux * float(value))
+        #                 for compound, value in rx.right:
+        #                     edge_values[compound, reaction] = (- flux * float(value))
 
         # Mapping from string of cpd_id+compartment(eg: pyr_c[c]) to Compound object
         cpd_object = {}
@@ -412,7 +431,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         for rxn in nativemodel.reactions:
             rxn_entry[rxn.id] = rxn
 
-        if edge_values is not None and len(edge_values) > 0:
+        if len(edge_values) > 0:
             min_edge_value = min(itervalues(edge_values))
             max_edge_value = max(itervalues(edge_values))
         else:
@@ -455,7 +474,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         def final_props(reaction, edge1, edge2):
             """set final properties of edges"""
-            if edge_values is not None:
+            if len(edge_values) > 0:
                 p = {}
                 if edge1 in edge_values:
                     p['dir'] = 'forward'
@@ -603,7 +622,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     return {'dir': 'both'}
 
             def final_props_2(rlist, c, n):
-                if edge_values is not None:
+                if len(edge_values) > 0:
                     if len(rlist) == 1:
                         if n == 1:
                             edge1 = c, rlist[0]
