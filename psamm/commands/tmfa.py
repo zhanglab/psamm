@@ -158,7 +158,16 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# logger.info('TMFA Problem Status: {}'.format(result.get_value(TMFA_Problem.get_flux_var(objective))))
 
 		# Add thermodynamic constraints to the model.
+		testing_list = list(mm_irreversible.reactions)
+		TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
+		TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
+		TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
+		                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
+		                                        split_reversible, testing_list)
+		biomax = solve_objective(TMFA_Problem, objective)
+		print(biomax)
 
+		quit()
 
 		biomax = solve_objective(fluxanalysis.FluxBalanceProblem(mm_irreversible, solver), objective)
 		checked_list = []
@@ -194,7 +203,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		for i in bad_constraint_list:
 			print('BadConstraint\t{}'.format(i))
 		for i in timeout:
-			print('TIMOUT\t{}'.format(reaction))
+			print('TIMOUT\t{}'.format(i))
 		quit()
 
 
