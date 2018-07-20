@@ -471,19 +471,27 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             else:
                 color[r] = REACTION_COLOR
 
+        # preparing for scaling width of edges
+        if len(edge_values) > 0:
+            value_list = sorted(iteritems(edge_values), key=lambda x: x[1])  # sort edge_values by values from
+            #  smallest to largest, return a lsit of tuples, each tuple contain key(cpd, rxn) and value(of edge)
+            a = int(0.90 * len(value_list)) + 1
+            min_edge_value = min(itervalues(edge_values))
+            max_edge_value = value_list[a][1]
+        else:
+            min_edge_value = 1
+            max_edge_value = 1
+
         def pen_width(value):
             """calculate final edges width"""
-            if len(edge_values) > 0:
-                min_edge_value = min(itervalues(edge_values))
-                max_edge_value = max(itervalues(edge_values))
-            else:
-                min_edge_value = 1
-                max_edge_value = 1
             if max_edge_value - min_edge_value == 0:
                 return 1
             else:
-                alpha = (value - min_edge_value) / (max_edge_value - min_edge_value)
-                return 20 * alpha
+                if value > max_edge_value:
+                    value = max_edge_value
+                # alpha = (value - min_edge_value) / (max_edge_value - min_edge_value)
+                alpha = value / (max_edge_value - min_edge_value)
+                return 12 * alpha
 
         def dir_value(direction):
             """assign value to different reaction directions"""
