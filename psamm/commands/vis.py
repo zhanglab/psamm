@@ -126,6 +126,68 @@ def make_edge_values(reaction_flux, mm):
     return edge_values
 
 
+def make_filter_dict(model, mm, fpp_rxns, method, element, compound_formula, cpd_object, exclude_cpairs):
+    """create a dictionary of reaction id(key) and a list of related compound pairs(value)"""
+    filter_dict = {}
+    if method == 'fpp':
+        # fpp_rxns = iter_reactions(model, exclude_rxns, compound_formula)
+        split_reaction = True
+        reaction_pairs = [(r.id, r.equation) for r in fpp_rxns]
+        element_weight = findprimarypairs.element_weight
+        fpp_dict, _ = findprimarypairs.predict_compound_pairs_iterated(reaction_pairs, compound_formula,
+                                                                       element_weight=element_weight)
+        for rxn_id, fpp_pairs in iteritems(fpp_dict):
+            compound_pairs = []
+            for cpd_pair, transfer in iteritems(fpp_pairs[0]):
+                if cpd_pair not in exclude_cpairs:
+                    if element is None:
+                        compound_pairs.append(cpd_pair)
+                    else:
+                        if any(Atom(primary_element(element)) in k for k in transfer):
+                            compound_pairs.append(cpd_pair)
+            filter_dict[rxn_id] = compound_pairs
+
+    elif method == 'no-fpp':
+        split_reaction = False
+        for rxn_id in mm.reactions:
+            if rxn_id != model.biomass_reaction:
+                rx = mm.get_reaction(rxn_id)
+                cpairs = []
+                for c1, _ in rx.left:
+                    for c2, _ in rx.right:
+                        if (c1, c2) not in exclude_cpairs:
+                            if element is not None:
+                                if Atom(primary_element(element)) in compound_formula[c1.name]:
+                                    if Atom(primary_element(element)) in compound_formula[c2.name]:
+                                        cpairs.append((c1, c2))
+                            else:
+                                cpairs.append((c1, c2))
+                filter_dict[rxn_id] = cpairs
+    else:
+        split_reaction = True
+        try:
+            with open(method, 'r') as f:
+                cpair_list, rxn_list = [], []
+                for row in csv.reader(f, delimiter=str(u'\t')):
+                    if (cpd_object[row[1]], cpd_object[row[2]]) not in exclude_cpairs:
+                        if element is None:
+                            cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
+                            rxn_list.append(row[0])
+                        else:
+                            if Atom(primary_element(element)) in Formula.parse(row[3]).flattened():
+                                cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
+                                rxn_list.append(row[0])
+
+                filter_dict = defaultdict(list)
+                for r, cpair in zip(rxn_list, cpair_list):
+                    filter_dict[r].append(cpair)
+        except:
+            if IOError:
+                logger.error('Invalid file path: {}' .format(method))
+            quit()
+
+    return filter_dict, split_reaction
+
 class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                            SolverCommandMixin, Command, LoopRemovalMixin, FilePrefixAppendAction):
     """Run visualization command on the model."""
@@ -221,6 +283,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         for cpd in self._mm.compounds:
             cpd_object[str(cpd)] = cpd
 
+
         # set of reactions to visualize
         if self._args.subset is not None:
             raw_subset, subset_reactions, mm_cpds = [], [], []
@@ -245,6 +308,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             subset_reactions = set(self._mm.reactions)
 
         def iter_reactions():
+            """yield reactions that can run fpp"""
             for reaction in self._model.reactions:
                 if (reaction.id not in self._model.model or
                         reaction.id in self._args.exclude):
@@ -265,65 +329,19 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
                 yield reaction
 
+        # read exclude_compound_pairs from command-line argument
         exclude_cpairs = []
+        print(self._args.exclude)
         if self._args.exclude_pairs is not None:
             for row in csv.reader(self._args.exclude_pairs, delimiter=str('\t')):
                 exclude_cpairs.append((cpd_object[row[0]], cpd_object[row[1]]))
                 exclude_cpairs.append((cpd_object[row[1]], cpd_object[row[0]]))
 
-        filter_dict = {}
-        if self._args.method == 'fpp':
-            split_reactions = True
+        # create {rxn_id:[(c1, c2),(c3,c4),...], ...} dictionary, key = rxn id, value = list of compound pairs
+        filter_dict, split_reaction = make_filter_dict(self._model, self._mm, iter_reactions(), self._args.method,
+                                                       self._args.element, compound_formula,cpd_object, exclude_cpairs)
 
-            reaction_pairs = [(r.id, r.equation) for r in iter_reactions()]
-            element_weight = findprimarypairs.element_weight
-            fpp_dict, _ = findprimarypairs.predict_compound_pairs_iterated(reaction_pairs, compound_formula,
-                                                                           element_weight=element_weight)
-            for rxn_id, fpp_pairs in iteritems(fpp_dict):
-                compound_pairs = []
-                for cpd_pair, transfer in iteritems(fpp_pairs[0]):
-                    if cpd_pair not in exclude_cpairs:
-                        if self._args.element is None:
-                            compound_pairs.append(cpd_pair)
-                        else:
-                            if any(Atom(primary_element(self._args.element)) in k for k in transfer):
-                                compound_pairs.append(cpd_pair)
-                filter_dict[rxn_id] = compound_pairs
-
-        elif self._args.method == 'no-fpp':
-            split_reactions = False
-            for rxn in iter_reactions():
-                if rxn.id != self._model.biomass_reaction:
-                    rx = self._mm.get_reaction(rxn.id)
-                    cpairs = []
-                    for c1, _ in rx.left:
-                        for c2, _ in rx.right:
-                            if (c1, c2) not in exclude_cpairs:
-                                if self._args.element is not None:
-                                    if Atom(primary_element(self._args.element)) in compound_formula[c1.name]:
-                                        if Atom(primary_element(self._args.element)) in compound_formula[c2.name]:
-                                            cpairs.append((c1, c2))
-                                else:
-                                    cpairs.append((c1, c2))
-                    filter_dict[rxn.id] = cpairs
-        else:
-            split_reactions = True
-            with open(self._args.method, 'r') as f:
-                cpair_list, rxn_list = [], []
-                for row in csv.reader(f, delimiter=str(u'\t')):
-                    if (cpd_object[row[1]], cpd_object[row[2]]) not in exclude_cpairs:
-                        if self._args.element is None:
-                            cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
-                            rxn_list.append(row[0])
-                        else:
-                            if Atom(primary_element(self._args.element)) in Formula.parse(row[3]).flattened():
-                                cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
-                                rxn_list.append(row[0])
-
-                filter_dict = defaultdict(list)
-                for r, cpair in zip(rxn_list, cpair_list):
-                    filter_dict[r].append(cpair)
-
+        # create {(c1, c2):[[forward rxns], [back rxns], [bidir rxns]], ...} dictionary, key=cpd_pair, value=rxn list
         raw_cpairs_dict = defaultdict(list)     # key=compound pair, value=list of reaction_id
         raw_dict = {k: v for k, v in iteritems(filter_dict) if k in subset_reactions}
         for rxn_id, cpairs in iteritems(raw_dict):
@@ -360,7 +378,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         g, g1, g2 = self.create_split_bipartite_graph(self._mm, self._model, filter_dict, cpairs_dict,
                                                       self._args.element, subset_reactions, edge_values,
-                                                      compound_formula, reaction_flux, split_graph=split_reactions)
+                                                      compound_formula, reaction_flux, split_graph=split_reaction)
+
         final_graph = None
         if self._args.method != 'no-fpp':
             if self._args.split_map is True:
@@ -570,6 +589,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         # create and add reaction nodes, add edges
         cpd_pairs = Counter()
         for (c1, c2), rxns in iteritems(cpair_dict):
+            # define reaction node color
             def final_rxn_color(color_args, rlist):
                 if color_args is not None:
                     if len(rlist) == 1:
@@ -582,6 +602,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 else:
                     return REACTION_COLOR
 
+            # define rxn node property
             def condensed_rxn_props(detail, r_list, reaction_flux):
                 if len(r_list) == 1:
                     label_comb = rxns_properties(rxn_entry[r_list[0]], detail, reaction_flux)
