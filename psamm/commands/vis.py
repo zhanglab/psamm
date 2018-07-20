@@ -102,9 +102,11 @@ def primary_element(element):
             return element
 
 
-def make_edge_values(reaction_flux, mm):
+def make_edge_values(reaction_flux, mm, compound_formula, element):
     """set edge_values according to reaction fluxes"""
     edge_values = {}
+    A = []
+    B=set()
     if len(reaction_flux) > 0:
         for reaction in mm.reactions:
             rx = mm.get_reaction(reaction)
@@ -115,14 +117,18 @@ def make_edge_values(reaction_flux, mm):
 
                 if flux > 0:
                     for compound, value in rx.right:  # value=stoichiometry
-                        edge_values[reaction, compound] = (flux * float(value))
+                        if Atom(element) in compound_formula[compound.name]:
+                            edge_values[reaction, compound] = (flux * float(value))
                     for compound, value in rx.left:
-                        edge_values[compound, reaction] = (flux * float(value))
+                        if Atom(element) in compound_formula[compound.name]:
+                            edge_values[compound, reaction] = (flux * float(value))
                 else:
                     for compound, value in rx.left:
-                        edge_values[reaction, compound] = (- flux * float(value))
+                        if Atom(element) in compound_formula[compound.name]:
+                            edge_values[reaction, compound] = (- flux * float(value))
                     for compound, value in rx.right:
-                        edge_values[compound, reaction] = (- flux * float(value))
+                        if Atom(element) in compound_formula[compound.name]:
+                            edge_values[compound, reaction] = (- flux * float(value))
     return edge_values
 
 
@@ -277,7 +283,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     reaction_flux[r_id] = flux
             logger.info('Minimized reactions: {}'.format(count))
 
-        edge_values = make_edge_values(reaction_flux, self._mm)
+        edge_values = make_edge_values(reaction_flux, self._mm, compound_formula, self._args.element)
 
         # Mapping from string of cpd_id+compartment(eg: pyr_c[c]) to Compound object
         cpd_object = {}
@@ -437,11 +443,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         cpd_formula: Dictionary mapping compound IDs to
             :class:`psamm.formula.Formula`. Formulas must be flattened.
         reaction_flux: Dictionary mapping reaction ID to reaction flux. Flux is a float number.
-        split_graph = True: An argument used to decide if split node for one reaction"""
+        split_graph: An argument used to decide if split node for one reaction. Default is 'True'"""
 
         g = graph.Graph()
         g1 = graph.Graph()
         g2 = graph.Graph()
+        g3 = graph.Graph()
 
         # Mapping from compound id to DictCompoundEntry object
         cpd_entry = {}
@@ -471,13 +478,27 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             else:
                 color[r] = REACTION_COLOR
 
+        # define reaction node color for rxns-combined graph
+        def final_rxn_color(color_args, rlist):
+            if color_args is not None:
+                if len(rlist) == 1:
+                    return color[rlist[0]]
+                else:
+                    if any(r in recolor_dict for r in rlist):
+                        return RXN_COMBINED_COLOR
+                    else:
+                        return REACTION_COLOR
+            else:
+                return REACTION_COLOR
+
         # preparing for scaling width of edges
         if len(edge_values) > 0:
-            value_list = sorted(iteritems(edge_values), key=lambda x: x[1])  # sort edge_values by values from
-            #  smallest to largest, return a lsit of tuples, each tuple contain key(cpd, rxn) and value(of edge)
-            a = int(0.90 * len(value_list)) + 1
+            # for k, v in iteritems(edge_values):
+
+            value_list = sorted(edge_values.values())
+            ninty_percentile = value_list[int(len(value_list)*0.9)+1]
             min_edge_value = min(itervalues(edge_values))
-            max_edge_value = value_list[a][1]
+            max_edge_value = ninty_percentile
         else:
             min_edge_value = 1
             max_edge_value = 1
@@ -489,8 +510,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             else:
                 if value > max_edge_value:
                     value = max_edge_value
-                # alpha = (value - min_edge_value) / (max_edge_value - min_edge_value)
-                alpha = value / (max_edge_value - min_edge_value)
+                alpha = value / max_edge_value
+
                 return 12 * alpha
 
         def dir_value(direction):
@@ -509,12 +530,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 if edge1 in edge_values:
                     p['dir'] = 'forward'
                     p['penwidth'] = pen_width(edge_values[edge1])
-                    # print(edge1)
-                    # print('forward\t{}\t{}\t{}'.format(reaction, edge1, edge_values[edge1]))
                 elif edge2 in edge_values:
                     p['dir'] = 'back'
                     p['penwidth'] = pen_width(edge_values[edge2])
-                    # print('reverse\t{}\t{}\t{}'.format(reaction, edge2, edge_values[edge2]))
                 else:
                     p['style'] = 'dotted'
                     p['dir'] = dir_value(reaction.direction)
@@ -600,6 +618,49 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         # create bipartite and reactions-combined graph if --method is fpp
 
+        def condensed_rxn_props(detail, r_list, reaction_flux):
+            if len(r_list) == 1:
+                label_comb = rxns_properties(rxn_entry[r_list[0]], detail, reaction_flux)
+            else:
+                label_comb = '\n'.join(r for r in r_list)
+            return label_comb
+
+        def dir_value_2(r_list):
+            if r_list == rxns.forward:
+                return {'dir': 'forward'}
+            elif r_list == rxns.back:
+                return {'dir': 'back'}
+            else:
+                return {'dir': 'both'}
+
+        def final_props_2(rlist, c, n):
+            if len(edge_values) > 0:
+                if len(rlist) == 1:
+                    if n == 1:
+                        edge1 = c, rlist[0]
+                        edge2 = rlist[0], c
+                    else:
+                        edge1 = rlist[0], c
+                        edge2 = c, rlist[0]
+                    rx = model.get_reaction(rlist[0])
+                    return final_props(rx, edge1, edge2)
+                else:
+                    if n == 1:
+                        edges1 = [(r, c) for r in rlist]
+                        edges2 = [(c, r) for r in rlist]
+                    else:
+                        edges1 = [(c, r) for r in rlist]
+                        edges2 = [(r, c) for r in rlist]
+                    if any(i for i in edges1) and any(j for j in edges2) in edge_values:
+                        p = {}
+                        p['style'] = 'dotted'
+                        p['dir'] = dir_value_2(rlist)
+                        return p
+                    else:
+                        return dir_value_2(rlist)
+            else:
+                return dir_value_2(rlist)
+
         # create compound nodes and add nodes to Graph object
         compound_set = set()
         for (c1, c2), rxns in iteritems(cpair_dict):
@@ -615,67 +676,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 'fillcolor': color[cpd]})
             cpd_nodes[cpd] = node
             g2.add_node(node)
+            g3.add_node(node)       # g3=new split map
 
         # create and add reaction nodes, add edges
         cpd_pairs = Counter()
         for (c1, c2), rxns in iteritems(cpair_dict):
-            # define reaction node color
-            def final_rxn_color(color_args, rlist):
-                if color_args is not None:
-                    if len(rlist) == 1:
-                        return color[rlist[0]]
-                    else:
-                        if any(r in recolor_dict for r in rlist):
-                            return RXN_COMBINED_COLOR
-                        else:
-                            return REACTION_COLOR
-                else:
-                    return REACTION_COLOR
-
-            # define rxn node property
-            def condensed_rxn_props(detail, r_list, reaction_flux):
-                if len(r_list) == 1:
-                    label_comb = rxns_properties(rxn_entry[r_list[0]], detail, reaction_flux)
-                else:
-                    label_comb = '\n'.join(r for r in r_list)
-                return label_comb
-
-            def dir_value_2(r_list):
-                if r_list == rxns.forward:
-                    return {'dir': 'forward'}
-                elif r_list == rxns.back:
-                    return {'dir': 'back'}
-                else:
-                    return {'dir': 'both'}
-
-            def final_props_2(rlist, c, n):
-                if len(edge_values) > 0:
-                    if len(rlist) == 1:
-                        if n == 1:
-                            edge1 = c, rlist[0]
-                            edge2 = rlist[0], c
-                        else:
-                            edge1 = rlist[0], c
-                            edge2 = c, rlist[0]
-                        rx = model.get_reaction(rlist[0])
-                        return final_props(rx, edge1, edge2)
-                    else:
-                        if n == 1:
-                            edges1 = [(r, c) for r in rlist]
-                            edges2 = [(c, r) for r in rlist]
-                        else:
-                            edges1 = [(c, r) for r in rlist]
-                            edges2 = [(r, c) for r in rlist]
-                        if any(i for i in edges1) and any(j for j in edges2) in edge_values:
-                            p = {}
-                            p['style'] = 'dotted'
-                            p['dir'] = dir_value_2(rlist)
-                            return p
-                        else:
-                            return dir_value_2(rlist)
-                else:
-                    return dir_value_2(rlist)
-
             for r_list in rxns:
                 if len(r_list) > 0:
                     cpd_pairs[(c1, c2)] += 1
