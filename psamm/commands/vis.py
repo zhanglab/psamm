@@ -188,6 +188,7 @@ def make_filter_dict(model, mm, fpp_rxns, method, element, compound_formula, cpd
 
     return filter_dict, split_reaction
 
+
 class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                            SolverCommandMixin, Command, LoopRemovalMixin, FilePrefixAppendAction):
     """Run visualization command on the model."""
@@ -286,7 +287,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         # set of reactions to visualize
         if self._args.subset is not None:
-            raw_subset, subset_reactions, mm_cpds = [], [], []
+            raw_subset, subset_reactions, mm_cpds = [], set(), []
             for line in self._args.subset.readlines():
                 raw_subset.append(line.rstrip())
             for c in self._mm.compounds:
@@ -297,7 +298,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 for reaction in self._mm.reactions:
                     rx = self._mm.get_reaction(reaction)
                     if any(str(c) in raw_subset for (c, _) in rx.compounds):
-                        subset_reactions.append(reaction)
+                        subset_reactions.add(reaction)
             else:
                 logger.warning('Invalid subset file. The file should contain a column of reaction id or a column '
                                'of compound id with compartment, mix of reactions, compounds and other infomation '
@@ -331,7 +332,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         # read exclude_compound_pairs from command-line argument
         exclude_cpairs = []
-        print(self._args.exclude)
         if self._args.exclude_pairs is not None:
             for row in csv.reader(self._args.exclude_pairs, delimiter=str('\t')):
                 exclude_cpairs.append((cpd_object[row[0]], cpd_object[row[1]]))
@@ -376,9 +376,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             pair_list.append((c1, c2))
             pair_list.append((c2, c1))
 
-        g, g1, g2 = self.create_split_bipartite_graph(self._mm, self._model, filter_dict, cpairs_dict,
-                                                      self._args.element, subset_reactions, edge_values,
-                                                      compound_formula, reaction_flux, split_graph=split_reaction)
+        g, g1, g2 = self.create_bipartite_graph(self._mm, self._model, filter_dict, cpairs_dict,self._args.element,
+                                                subset_reactions, edge_values,compound_formula, reaction_flux,
+                                                split_graph=split_reaction)
 
         final_graph = None
         if self._args.method != 'no-fpp':
@@ -416,28 +416,44 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 except subprocess.CalledProcessError:
                     logger.warning('the graph is too large to create')
 
-    def create_split_bipartite_graph(self, model, nativemodel, predict_results, cpair_dict, element, subset,
-                                     edge_values,  cpd_formula, reaction_flux, split_graph=True):
-        """create bipartite graph from filter_dict"""
+
+    def create_bipartite_graph(self, model, nativemodel, predict_results, cpair_dict, element, subset,
+                                     edge_values, cpd_formula, reaction_flux, split_graph=True):
+        """create bipartite graph of given metabolic network
+
+        Start from a dictionary comprises compound pairs and related reaction ids, Returns a Graph object
+        that contains a set of nodes and a dictionary of edges, node and edge properties(such as node color, shape and
+        edge direction) are included.
+
+        Args:
+        model: class 'psamm.metabolicmodel.MetabolicModel'.
+        nativemodel: class 'psamm.datasource.native.NativeModel'.
+        predict_results: Dictionary mapping reaction IDs to compound pairs(reactant/product pair that transfers
+            specific element,by default the ekement is carbon(C).
+        cpair_dict: Dictionary mapping compound pair to a list of reaction IDs.
+        element: a string that represent a specific chemical element, such as C(carbon), S(sulfur), N(nitrogen).
+        subset: Set of reactions for visualizing.
+        edge_values: Dictionary mapping (reaction ID, compound ID) to values of edge between them.
+        cpd_formula: Dictionary mapping compound IDs to
+            :class:`psamm.formula.Formula`. Formulas must be flattened.
+        reaction_flux: Dictionary mapping reaction ID to reaction flux. Flux is a float number.
+        split_graph = True: An argument used to decide if split node for one reaction"""
+
         g = graph.Graph()
         g1 = graph.Graph()
         g2 = graph.Graph()
 
+        # Mapping from compound id to DictCompoundEntry object
         cpd_entry = {}
         for cpd in nativemodel.compounds:
             cpd_entry[cpd.id] = cpd
 
+        # Mapping from reaction id to DictReactionEntry object
         rxn_entry = {}
         for rxn in nativemodel.reactions:
             rxn_entry[rxn.id] = rxn
 
-        if len(edge_values) > 0:
-            min_edge_value = min(itervalues(edge_values))
-            max_edge_value = max(itervalues(edge_values))
-        else:
-            min_edge_value = 1
-            max_edge_value = 1
-
+        # setting node color
         recolor_dict = {}
         if self._args.color is not None:
             for f in self._args.color:
@@ -456,7 +472,13 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 color[r] = REACTION_COLOR
 
         def pen_width(value):
-            """calculate edges width"""
+            """calculate final edges width"""
+            if len(edge_values) > 0:
+                min_edge_value = min(itervalues(edge_values))
+                max_edge_value = max(itervalues(edge_values))
+            else:
+                min_edge_value = 1
+                max_edge_value = 1
             if max_edge_value - min_edge_value == 0:
                 return 1
             else:
