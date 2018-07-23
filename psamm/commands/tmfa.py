@@ -167,9 +167,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		biomax = solve_objective(TMFA_Problem, objective)
 		print(biomax)
 
-		quit()
 
-		biomax = solve_objective(fluxanalysis.FluxBalanceProblem(mm_irreversible, solver), objective)
+		# biomax = solve_objective(fluxanalysis.FluxBalanceProblem(mm_irreversible, solver), objective)
 		checked_list = []
 		bad_constraint_list = []
 		timeout = []
@@ -184,7 +183,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
 			try:
 				bioflux = timelimit(60, solve_objective, args=(TMFA_Problem, objective))
-				if bioflux >= 0.9 * biomax:
+				if bioflux >= 0.99 * biomax:
 					checked_list.append(reaction)
 					logger.info('{} Reaction Passed Constraint Test'.format(reaction))
 
@@ -639,11 +638,11 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 			# If no error then use this line
 			dgr_err = 0
 			# If you want to use the error estimates for dgr values then uncomment these lines
-			dgr_err = problem.prob.var('dgr_err_{}'.format(reaction))
-			problem.prob.add_linear_constraints(dgr_err <= 2*err)
-			problem.prob.add_linear_constraints(dgr_err >= -2*err)
-			problem.prob.add_linear_constraints(dgr_err <= 0)
-			problem.prob.add_linear_constraints(dgr_err >= -20)
+			# dgr_err = problem.prob.var('dgr_err_{}'.format(reaction))
+			# problem.prob.add_linear_constraints(dgr_err <= 2*err)
+			# problem.prob.add_linear_constraints(dgr_err >= -2*err)
+			# problem.prob.add_linear_constraints(dgr_err <= 0)
+			# problem.prob.add_linear_constraints(dgr_err >= -20)
 			# print(reaction, 'error', 2*err)
 			for (cpd, stoich) in rxn.compounds:
 				if str(cpd) not in excluded_cpd_list:
