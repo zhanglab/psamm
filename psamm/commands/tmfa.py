@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2017-2017  Keith Dufault-Thompson <keitht547@uri.edu>
+# Copyright 2017-2018  Keith Dufault-Thompson <keitht547@uri.edu>
 
 from __future__ import unicode_literals
 import logging
@@ -26,6 +26,7 @@ from decimal import Decimal
 import copy
 import csv
 import math
+import random
 from collections import Counter
 logger = logging.getLogger(__name__)
 
@@ -158,23 +159,24 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# logger.info('TMFA Problem Status: {}'.format(result.get_value(TMFA_Problem.get_flux_var(objective))))
 
 		# Add thermodynamic constraints to the model.
-		testing_list = list(mm_irreversible.reactions)
-		TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
-		TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
-		TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
-		                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
-		                                        split_reversible, testing_list)
-		biomax = solve_objective(TMFA_Problem, objective)
+		# testing_list = list(mm_irreversible.reactions)
+		# TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
+		# TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
+		# TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
+		#                                         exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
+		#                                         split_reversible, testing_list)
+		# biomax = solve_objective(TMFA_Problem, objective)
+
+		biomax = solve_objective(fluxanalysis.FluxBalanceProblem(mm_irreversible, solver), objective)
 		print(biomax)
-
-
-		# biomax = solve_objective(fluxanalysis.FluxBalanceProblem(mm_irreversible, solver), objective)
 		checked_list = []
 		bad_constraint_list = []
 		timeout = []
-		for reaction in sorted(mm_irreversible.reactions):
+		# mm_random = random.shuffle(mm_irreversible.reactions)
+		for reaction in mm_irreversible.reactions:
+			print('biomax: {}'.format(biomax))
 			logger.info('TESTING REACTION {}'.format(reaction))
-			testing_list = [reaction] + checked_list
+			testing_list = [reaction] # + checked_list
 			TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
 			TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
 			TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
