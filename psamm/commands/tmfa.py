@@ -159,21 +159,25 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# logger.info('TMFA Problem Status: {}'.format(result.get_value(TMFA_Problem.get_flux_var(objective))))
 
 		# Add thermodynamic constraints to the model.
-		# testing_list = list(mm_irreversible.reactions)
-		# TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
-		# TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
-		# TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
-		#                                         exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
-		#                                         split_reversible, testing_list)
-		# biomax = solve_objective(TMFA_Problem, objective)
+		testing_list = list(mm_irreversible.reactions)
+		TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
+		TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
+		TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
+		                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
+		                                        split_reversible, testing_list)
+		biomax = solve_objective(TMFA_Problem, objective)
 
 		biomax = solve_objective(fluxanalysis.FluxBalanceProblem(mm_irreversible, solver), objective)
 		print(biomax)
+
+		quit()
 		checked_list = []
 		bad_constraint_list = []
 		timeout = []
-		# mm_random = random.shuffle(mm_irreversible.reactions)
-		for reaction in mm_irreversible.reactions:
+		print(mm_irreversible.reactions)
+		mm_random = [i for i in mm_irreversible.reactions]
+		random.shuffle(mm_random)
+		for reaction in mm_random:
 			print('biomax: {}'.format(biomax))
 			logger.info('TESTING REACTION {}'.format(reaction))
 			testing_list = [reaction] # + checked_list
@@ -185,7 +189,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
 			try:
 				bioflux = timelimit(60, solve_objective, args=(TMFA_Problem, objective))
-				if bioflux >= 0.99 * biomax:
+				if bioflux >= 0.9999 * biomax:
 					checked_list.append(reaction)
 					logger.info('{} Reaction Passed Constraint Test'.format(reaction))
 
@@ -608,7 +612,20 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	k = 1000000
 	epsilon = 1e-6
 	excluded_cpd_list = ['h2o[e]', 'h2o[c]', 'h[e]', 'h[c]']
+	new_excluded_reactions = []
 	for reaction in mm.reactions:
+		rxn = mm.get_reaction(reaction)
+		rhs_check = 0
+		lhs_check = 0
+		for (cpd, stoich) in rxn.compounds:
+			if stoich < 0:
+				if str(cpd) not in excluded_cpd_list:
+					lhs_check += 1
+			if stoich > 0:
+				if str(cpd) not in excluded_cpd_list:
+					rhs_check += 1
+		if rhs_check == 0 or lhs_check == 0:
+			new_excluded_reactions.append(reaction)
 		# define variables for vmax, dgri, zi, yi, and vi
 		vmax = mm.limits[reaction].upper
 		problem.prob.define('zi_{}'.format(reaction), types=lp.VariableType.Binary)
@@ -618,7 +635,6 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 		yi = problem.prob.var('yi_{}'.format(reaction))
 		vi = problem.get_flux_var(reaction)
 		dgri = problem.prob.var('dgri_{}'.format(reaction))
-		rxn = mm.get_reaction(reaction)
 		# add flux constraint linking vi and zi for all reactions except lumps
 		if reaction not in exclude_lumps:
 			problem.prob.add_linear_constraints(vi - zi * vmax <= 0)
@@ -628,9 +644,10 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 		# add thermodynamic feasibility constraint for all reactions where dgr0 is known except for lumps
 		if reaction not in exclude_lumps_unknown:
 			if reaction in testing_list:
-				problem.prob.add_linear_constraints(dgri - k + (k * zi) <= 0 - epsilon)
-				# print('Reaction thermo feasibility constraint\t{}\t{}-{}+{}*{}<=-{}'.format(reaction, dgri, k, k, zi, epsilon))
-				# print('Reaction thermo feasibility raw constraint {}: '.format(reaction), (dgri - k + (k * zi) <= 0 - epsilon))
+				if rhs_check != 0 and lhs_check != 0:
+					problem.prob.add_linear_constraints(dgri - k + (k * zi) <= 0 - epsilon)
+					# print('Reaction thermo feasibility constraint\t{}\t{}-{}+{}*{}<=-{}'.format(reaction, dgri, k, k, zi, epsilon))
+					# print('Reaction thermo feasibility raw constraint {}: '.format(reaction), (dgri - k + (k * zi) <= 0 - epsilon))
 		# add constraint to calculate dgri based on dgr0 and the concentrations of the metabolites
 		if reaction not in exclude_unknown:
 			(dgr0, err) = dgr_dict[reaction]
@@ -656,24 +673,25 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# add constraints for thermodynamic feasibility of lump reactions and to constrain their constituent reactions
 	for reaction in mm.reactions:
 		if reaction in lump_rxn_list.keys():
-			# print('TEST THIS IS A TEST', reaction)
-			vi = problem.get_flux_var(reaction)
-			# print('TEST VI TEST', vi)
-			yi = problem.prob.var('yi_{}'.format(reaction))
-			dgri = problem.prob.var('dgri_{}'.format(reaction))
-			problem.prob.add_linear_constraints(vi == 0)
-			# print('Lumped Reaction flux = 0 constraint\t{}=0'.format(vi))
-			# print('Lumped Reaction flux = 0 raw constraint {}=0'.format(reaction), (vi == 0))
-			problem.prob.add_linear_constraints(dgri - (k * yi) <= - epsilon)
-			# print('Lumped Reaction feasibility constraint\t{}\t{}-{}*{}<={}'.format(reaction, dgri, k, yi, epsilon))
-			# print('Lumped reaction feasibility raw constraint {}: '.format(reaction), (dgri - (k * yi) <= - epsilon))
-			sub_rxn_list = lump_rxn_list[reaction]
-			sszi = 0
-			for sub_rxn in sub_rxn_list:
-				sszi += problem.prob.var('zi_{}'.format(sub_rxn))
-			problem.prob.add_linear_constraints(yi + sszi <= len(sub_rxn_list))
-			# print('Lump component constraints\t{}\t{}+{}<={}'.format(reaction, yi, sszi, sub_rxn_list))
-			# print('Lumped component raw constraint {} :'.format(reaction), (yi + sszi <= len(sub_rxn_list)))
+			if reaction not in new_excluded_reactions:
+				# print('TEST THIS IS A TEST', reaction)
+				vi = problem.get_flux_var(reaction)
+				# print('TEST VI TEST', vi)
+				yi = problem.prob.var('yi_{}'.format(reaction))
+				dgri = problem.prob.var('dgri_{}'.format(reaction))
+				problem.prob.add_linear_constraints(vi == 0)
+				# print('Lumped Reaction flux = 0 constraint\t{}=0'.format(vi))
+				# print('Lumped Reaction flux = 0 raw constraint {}=0'.format(reaction), (vi == 0))
+				problem.prob.add_linear_constraints(dgri - (k * yi) <= - epsilon)
+				# print('Lumped Reaction feasibility constraint\t{}\t{}-{}*{}<={}'.format(reaction, dgri, k, yi, epsilon))
+				# print('Lumped reaction feasibility raw constraint {}: '.format(reaction), (dgri - (k * yi) <= - epsilon))
+				sub_rxn_list = lump_rxn_list[reaction]
+				sszi = 0
+				for sub_rxn in sub_rxn_list:
+					sszi += problem.prob.var('zi_{}'.format(sub_rxn))
+				problem.prob.add_linear_constraints(yi + sszi <= len(sub_rxn_list))
+				# print('Lump component constraints\t{}\t{}+{}<={}'.format(reaction, yi, sszi, sub_rxn_list))
+				# print('Lumped component raw constraint {} :'.format(reaction), (yi + sszi <= len(sub_rxn_list)))
 	# Add linear constraint to disallow solutions that use both the forward and reverse reaction from a split reaction.
 	for (forward, reverse) in split_rxns:
 		problem.prob.add_linear_constraints(problem.prob.var('zi_{}'.format(forward)) + problem.prob.var('zi_{}'.format(reverse)) <= 1)
