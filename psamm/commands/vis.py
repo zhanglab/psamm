@@ -69,6 +69,7 @@ def cpds_properties(cpd, compound, detail): # cpd=Compound object, compound = Co
         label = str(cpd)
     return label
 
+
 def rxns_properties(reaction, detail, reaction_flux):
     """define reaction nodes label"""
     reaction_set = set()
@@ -197,11 +198,38 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map, cp
     return edge_values
 
 
-def make_filter_dict(model, mm, fpp_rxns, method, element, compound_formula, cpd_object, exclude_cpairs):
+def make_filter_dict(model, mm, method, element, compound_formula, cpd_object, exclude_cpairs, exclude_rxns):
     """create a dictionary of reaction id(key) and a list of related compound pairs(value)"""
     filter_dict = {}
     if method == 'fpp':
-        # fpp_rxns = iter_reactions(model, exclude_rxns, compound_formula)
+        # def iter_reactions():
+        #     """yield reactions that can applied to fpp"""
+        fpp_rxns, rxns_no_equation, rxns_no_formula = set(), set(), []
+        for reaction in model.reactions:
+            if (reaction.id in model.model and
+                    reaction.id not in exclude_rxns):
+                if reaction.equation is None:
+                    rxns_no_equation.add(reaction.id)
+                    continue
+
+                if any(c.name not in compound_formula for c, _ in reaction.equation.compounds):
+                    rxns_no_formula.append(reaction.id)
+                    continue
+
+                fpp_rxns.add(reaction)
+
+        if len(rxns_no_equation) > 0:
+            logger.warning(
+                '{} reactions have no reaction equation, fix them or try no-fpp method. '
+                'These reactions contain {}'.format(len(rxns_no_equation), rxns_no_equation))
+            quit()
+
+        if len(rxns_no_formula) > 0:
+            logger.warning(
+                '{} reactions have compounds with undefined formula, fix them or try no-fpp method.'
+                'These reactions contain {}'.format(len(rxns_no_formula), rxns_no_formula))
+            quit()
+
         split_reaction = True
         reaction_pairs = [(r.id, r.equation) for r in fpp_rxns]
         element_weight = findprimarypairs.element_weight
@@ -255,7 +283,7 @@ def make_filter_dict(model, mm, fpp_rxns, method, element, compound_formula, cpd
                     filter_dict[r].append(cpair)
         except:
             if IOError:
-                logger.error('Invalid file path: {}' .format(method))
+                logger.error(' Invalid file path, no such file or directory : {}' .format(method))
             quit()
 
     return filter_dict, split_reaction
@@ -323,6 +351,23 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         msg += '\n{}'.format(e.indicator)
                     logger.warning(msg)
 
+        # Mapping from string of cpd_id+compartment(eg: pyr_c[c]) to Compound object
+        cpd_object = {}
+        for cpd in self._mm.compounds:
+            cpd_object[str(cpd)] = cpd
+
+        # read exclude_compound_pairs from command-line argument
+        exclude_cpairs = []
+        if self._args.exclude_pairs is not None:
+            for row in csv.reader(self._args.exclude_pairs, delimiter=str('\t')):
+                exclude_cpairs.append((cpd_object[row[0]], cpd_object[row[1]]))
+                exclude_cpairs.append((cpd_object[row[1]], cpd_object[row[0]]))
+
+        # create {rxn_id:[(c1, c2),(c3,c4),...], ...} dictionary, key = rxn id, value = list of compound pairs
+        filter_dict, split_reaction = make_filter_dict(self._model, self._mm, self._args.method, self._args.element,
+                                                           compound_formula, cpd_object, exclude_cpairs,
+                                                           self._args.exclude)
+
         # run l1min_fba, get reaction fluxes
         reaction_flux = {}
         if self._args.fba is True:
@@ -352,11 +397,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         # edge_values = make_edge_values(reaction_flux, self._mm, compound_formula, self._args.element,
         #                                self._args.split_map, cpairs_dict)
 
-        # Mapping from string of cpd_id+compartment(eg: pyr_c[c]) to Compound object
-        cpd_object = {}
-        for cpd in self._mm.compounds:
-            cpd_object[str(cpd)] = cpd
-
 
         # set of reactions to visualize
         if self._args.subset is not None:
@@ -380,39 +420,37 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 subset_reactions = set(self._mm.reactions)
         else:
             subset_reactions = set(self._mm.reactions)
+        #
+        # def iter_reactions():
+        #     """yield reactions that can applied to fpp"""
+        #     for reaction in self._model.reactions:
+        #         if (reaction.id not in self._model.model or
+        #                 reaction.id in self._args.exclude):
+        #             continue
+        #
+        #         if reaction.equation is None:
+        #             logger.warning(
+        #                 'Reaction {} has no reaction equation'.format(reaction.id))
+        #             continue
+        #
+        #         if any(c.name not in compound_formula
+        #                for c, _ in reaction.equation.compounds):
+        #             logger.warning(
+        #                 'Reaction {} has compounds with undefined formula'.format(reaction.id))
+        #             continue
+        #
+        #         yield reaction
 
-        def iter_reactions():
-            """yield reactions that can run fpp"""
-            for reaction in self._model.reactions:
-                if (reaction.id not in self._model.model or
-                        reaction.id in self._args.exclude):
-                    continue
-
-                if reaction.equation is None:
-                    logger.warning(
-                        'Reaction {} has no reaction equation, so remove this reaction from metabolic'
-                        ' map'.format(reaction.id))
-                    continue
-
-                if any(c.name not in compound_formula
-                       for c, _ in reaction.equation.compounds):
-                    logger.warning(
-                        'Reaction {} has compounds with undefined formula, so remove this reaction from '
-                        'metabolic map'.format(reaction.id))
-                    continue
-
-                yield reaction
-
-        # read exclude_compound_pairs from command-line argument
-        exclude_cpairs = []
-        if self._args.exclude_pairs is not None:
-            for row in csv.reader(self._args.exclude_pairs, delimiter=str('\t')):
-                exclude_cpairs.append((cpd_object[row[0]], cpd_object[row[1]]))
-                exclude_cpairs.append((cpd_object[row[1]], cpd_object[row[0]]))
-
-        # create {rxn_id:[(c1, c2),(c3,c4),...], ...} dictionary, key = rxn id, value = list of compound pairs
-        filter_dict, split_reaction = make_filter_dict(self._model, self._mm, iter_reactions(), self._args.method,
-                                                       self._args.element, compound_formula,cpd_object, exclude_cpairs)
+        # # read exclude_compound_pairs from command-line argument
+        # exclude_cpairs = []
+        # if self._args.exclude_pairs is not None:
+        #     for row in csv.reader(self._args.exclude_pairs, delimiter=str('\t')):
+        #         exclude_cpairs.append((cpd_object[row[0]], cpd_object[row[1]]))
+        #         exclude_cpairs.append((cpd_object[row[1]], cpd_object[row[0]]))
+        #
+        # # create {rxn_id:[(c1, c2),(c3,c4),...], ...} dictionary, key = rxn id, value = list of compound pairs
+        # filter_dict, split_reaction = make_filter_dict(self._model, self._mm, self._args.method, self._args.element,
+        #                                                compound_formula,cpd_object, exclude_cpairs, self._args.exclude)
 
         # create {(c1, c2):[[forward rxns], [back rxns], [bidir rxns]], ...} dictionary, key=cpd_pair, value=rxn list
         raw_cpairs_dict = defaultdict(list)     # key=compound pair, value=list of reaction_id
@@ -724,8 +762,10 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     for r in r_list:
                         if r in reaction_flux:
                             sum_flux += abs(reaction_flux[r])
-                label_rxns = '\n'.join(r for r in r_list)
-                label_comb = '{}\n{}'.format(label_rxns, sum_flux)
+                    label_rxns = '\n'.join(r for r in r_list)
+                    label_comb = '{}\n{}'.format(label_rxns, sum_flux)
+                else:
+                    label_comb = '\n'.join(r for r in r_list)
             return label_comb
 
         def dir_value_2(r_list):
