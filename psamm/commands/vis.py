@@ -98,11 +98,12 @@ def rxns_properties(reaction, detail, reaction_flux):
 
 def primary_element(element):
     """allow both lower and upper case for one-letter element """
-    if element is not None:
+    if element != 'none':
         if element in ['c', 'h', 'o', 'n', 'p', 's', 'k', 'b', 'f', 'v', 'y', 'i', 'w']:
             return element.upper()
         else:
             return element
+
 
 
 def make_edge_values(reaction_flux, mm, compound_formula, element, split_map, cpair_dict):
@@ -118,18 +119,30 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map, cp
 
                 if flux > 0:
                     for compound, value in rx.right:  # value=stoichiometry
-                        if Atom(element) in compound_formula[compound.name]:
+                        if element == 'none':
                             edge_values[reaction, compound] = (flux * float(value))
+                        else:
+                            if Atom(element) in compound_formula[compound.name]:
+                                edge_values[reaction, compound] = (flux * float(value))
                     for compound, value in rx.left:
-                        if Atom(element) in compound_formula[compound.name]:
+                        if element == 'none':
                             edge_values[compound, reaction] = (flux * float(value))
+                        else:
+                            if Atom(element) in compound_formula[compound.name]:
+                                edge_values[compound, reaction] = (flux * float(value))
                 else:
                     for compound, value in rx.left:
-                        if Atom(element) in compound_formula[compound.name]:
+                        if element == 'none':
                             edge_values[reaction, compound] = (- flux * float(value))
+                        else:
+                            if Atom(element) in compound_formula[compound.name]:
+                                edge_values[reaction, compound] = (- flux * float(value))
                     for compound, value in rx.right:
-                        if Atom(element) in compound_formula[compound.name]:
+                        if element == 'none':
                             edge_values[compound, reaction] = (- flux * float(value))
+                        else:
+                            if Atom(element) in compound_formula[compound.name]:
+                                edge_values[compound, reaction] = (- flux * float(value))
 
         if split_map is not True:
             remove_edges = set()
@@ -220,14 +233,14 @@ def make_filter_dict(model, mm, method, element, compound_formula, cpd_object, e
 
         if len(rxns_no_equation) > 0:
             logger.warning(
-                '{} reactions have no reaction equation, fix them or try no-fpp method. '
+                '{} reactions have no reaction equation, fix or exclude them.'
                 'These reactions contain {}'.format(len(rxns_no_equation), rxns_no_equation))
             quit()
 
         if len(rxns_no_formula) > 0:
             logger.warning(
-                '{} reactions have compounds with undefined formula, fix them or try no-fpp method.'
-                'These reactions contain {}'.format(len(rxns_no_formula), rxns_no_formula))
+                '{} reactions have compounds with undefined formula, fix them or add "--method no-fpp element none"to '
+                'command. These reactions contain {}'.format(len(rxns_no_formula), rxns_no_formula))
             quit()
 
         split_reaction = True
@@ -240,7 +253,7 @@ def make_filter_dict(model, mm, method, element, compound_formula, cpd_object, e
             compound_pairs = []
             for cpd_pair, transfer in iteritems(fpp_pairs[0]):
                 if cpd_pair not in exclude_cpairs:
-                    if element is None:
+                    if element == 'none':
                         compound_pairs.append(cpd_pair)
                     else:
                         if any(Atom(primary_element(element)) in k for k in transfer):
@@ -256,7 +269,7 @@ def make_filter_dict(model, mm, method, element, compound_formula, cpd_object, e
                 for c1, _ in rx.left:
                     for c2, _ in rx.right:
                         if (c1, c2) not in exclude_cpairs:
-                            if element is not None:
+                            if element != 'none':
                                 if Atom(primary_element(element)) in compound_formula[c1.name]:
                                     if Atom(primary_element(element)) in compound_formula[c2.name]:
                                         cpairs.append((c1, c2))
@@ -270,7 +283,7 @@ def make_filter_dict(model, mm, method, element, compound_formula, cpd_object, e
                 cpair_list, rxn_list = [], []
                 for row in csv.reader(f, delimiter=str(u'\t')):
                     if (cpd_object[row[1]], cpd_object[row[2]]) not in exclude_cpairs:
-                        if element is None:
+                        if element == 'none':
                             cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
                             rxn_list.append(row[0])
                         else:
@@ -572,7 +585,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         model: class 'psamm.metabolicmodel.MetabolicModel'.
         nativemodel: class 'psamm.datasource.native.NativeModel'.
         predict_results: Dictionary mapping reaction IDs to compound pairs(reactant/product pair that transfers
-            specific element,by default the ekement is carbon(C).
+            specific element,by default the element is carbon(C).
         cpair_dict: Dictionary mapping compound pair to a list of reaction IDs.
         element: a string that represent a specific chemical element, such as C(carbon), S(sulfur), N(nitrogen).
         subset: Set of reactions for visualizing.
@@ -843,7 +856,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         for reaction in subset:
             if model.is_exchange(reaction):
                 raw_exchange_rxn = model.get_reaction(reaction)
-                if element is not None:
+                if element != 'none':
                     if any(Atom(primary_element(element)) in cpd_formula[str(c[0].name)]
                            for c in raw_exchange_rxn.compounds):
                             rxn_set.add(reaction)
@@ -916,7 +929,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             if nativemodel.biomass_reaction in subset:
                 biomass_reaction = model.get_reaction(nativemodel.biomass_reaction)
                 for c, _ in biomass_reaction.left:
-                    if element is not None:
+                    if element != 'none':
                         if Atom(primary_element(element)) in cpd_formula[str(c.name)]:
                             biomass_cpds.add(c)
                     else:
