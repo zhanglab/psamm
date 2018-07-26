@@ -254,35 +254,35 @@ def make_filter_dict(model, mm, method, element, compound_formula, cpd_object, e
         element_weight = findprimarypairs.element_weight
         fpp_dict, _ = findprimarypairs.predict_compound_pairs_iterated(reaction_pairs, compound_formula,
                                                                        element_weight=element_weight)
+        # print(fpp_dict)
 
         for rxn_id, fpp_pairs in iteritems(fpp_dict):
-            if rxn_id in subset_reactions:
-                compound_pairs = []
-                for cpd_pair, transfer in iteritems(fpp_pairs[0]):
-                    if cpd_pair not in exclude_cpairs:
-                        if element == 'none':
+            compound_pairs = []
+            for cpd_pair, transfer in iteritems(fpp_pairs[0]):
+                if cpd_pair not in exclude_cpairs:
+                    if element == 'none':
+                        compound_pairs.append(cpd_pair)
+                    else:
+                        if any(Atom(primary_element(element)) in k for k in transfer):
                             compound_pairs.append(cpd_pair)
-                        else:
-                            if any(Atom(primary_element(element)) in k for k in transfer):
-                                compound_pairs.append(cpd_pair)
-                filter_dict[rxn_id] = compound_pairs
+            filter_dict[rxn_id] = compound_pairs
 
     elif method == 'no-fpp':
         split_reaction = False
-        for rxn_id in subset_reactions:
-            if rxn_id != model.biomass_reaction:
-                rx = mm.get_reaction(rxn_id)
-                cpairs = []
-                for c1, _ in rx.left:
-                    for c2, _ in rx.right:
-                        if (c1, c2) not in exclude_cpairs:
-                            if element != 'none':
-                                if Atom(primary_element(element)) in compound_formula[c1.name]:
-                                    if Atom(primary_element(element)) in compound_formula[c2.name]:
-                                        cpairs.append((c1, c2))
-                            else:
-                                cpairs.append((c1, c2))
-                filter_dict[rxn_id] = cpairs
+        for rxn_id in mm.reactions:
+            # if rxn_id != model.biomass_reaction and not mm.is_exchange(rxn_id):
+            rx = mm.get_reaction(rxn_id)
+            cpairs = []
+            for c1, _ in rx.left:
+                for c2, _ in rx.right:
+                    if (c1, c2) not in exclude_cpairs:
+                        if element != 'none':
+                            if Atom(primary_element(element)) in compound_formula[c1.name]:
+                                if Atom(primary_element(element)) in compound_formula[c2.name]:
+                                    cpairs.append((c1, c2))
+                        else:
+                            cpairs.append((c1, c2))
+            filter_dict[rxn_id] = cpairs
 
         # for r, cpairs in iteritems(filter_dict):
         #     print('{}\t{}'.format(r, cpairs))
@@ -294,14 +294,12 @@ def make_filter_dict(model, mm, method, element, compound_formula, cpd_object, e
                 for row in csv.reader(f, delimiter=str(u'\t')):
                     if (cpd_object[row[1]], cpd_object[row[2]]) not in exclude_cpairs:
                         if element == 'none':
-                            if row[0] in subset_reactions:
+                            cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
+                            rxn_list.append(row[0])
+                        else:
+                            if Atom(primary_element(element)) in Formula.parse(row[3]).flattened():
                                 cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
                                 rxn_list.append(row[0])
-                        else:
-                            if row[0] in subset_reactions:
-                                if Atom(primary_element(element)) in Formula.parse(row[3]).flattened():
-                                    cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
-                                    rxn_list.append(row[0])
 
                 filter_dict = defaultdict(list)
                 for r, cpair in zip(rxn_list, cpair_list):
@@ -453,8 +451,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         raw_cpair_dict = defaultdict(list)     # key=compound pair, value=list of reaction_id
         raw_dict = {k: v for k, v in iteritems(filter_dict) if k in subset_reactions}
         for rxn_id, cpairs in iteritems(raw_dict):
-            for pair in cpairs:
-                raw_cpair_dict[pair].append(rxn_id)
+            if rxn_id in subset_reactions:
+                for pair in cpairs:
+                    raw_cpair_dict[pair].append(rxn_id)
         #
         # for (c1, c2), v in iteritems(raw_cpair_dict):
         #     print('{}\t{}\t{}'.format(c1, c2, v))
@@ -547,16 +546,20 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         # for cpair in remove_cpairs:
         #     del cpair_dict[(cpair)]
 
+        # print(cpair_dict)
         # for (c1,c2), v in iteritems(cpair_dict):
         #     print('{}\t{}\t{}'.format(c1, c2, v))
+        # for r, v in iteritems(filter_dict):
+        #     print('{}\t{}'.format(r, v))
+
         edge_values = make_edge_values(reaction_flux, self._mm, compound_formula, self._args.element,
                                        self._args.split_map, cpair_dict, new_id_mapping, self._args.method)
         # for (a, b), v in iteritems(edge_values):
         #     print('{}\t{}\t{}'.format(a,b,v))
 
         g = self.create_bipartite_graph(self._mm, self._model, filter_dict, cpair_dict,self._args.element,
-                                                self._args.split_map, subset_reactions, edge_values,compound_formula,
-                                                reaction_flux, self._args.method, new_id_mapping, split_graph=split_reaction)
+                                        self._args.split_map, subset_reactions, edge_values,compound_formula,
+                                        reaction_flux, self._args.method, new_id_mapping, split_graph=split_reaction)
 
         # for node in g.nodes:
         #     if node.props['shape'] == 'box':
@@ -740,9 +743,28 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         # create compound nodes and add nodes to Graph object
         compound_set = set()
-        for (c1, c2), rxns in iteritems(cpair_dict):
-            compound_set.add(c1)
-            compound_set.add(c2)
+        for r in subset:
+            rx = mm.get_reaction(r)
+            if r != model.biomass_reaction:
+                for c, _ in rx.compounds:
+                    if element != 'none':
+                        if Atom(primary_element(element)) in cpd_formula[str(c.name)]:
+                            compound_set.add(c)
+                    else:
+                        compound_set.add(c)
+            # if model.biomass_reaction is not None:
+            #     if model.biomass_reaction in subset:
+            #         for c, _ in rx.compounds:
+            #             if element != 'none':
+            #                 if Atom(primary_element(element)) in cpd_formula[str(c.name)]:
+            #                     compound_set.add(c)
+            #             else:
+            #                 compound_set.add(c)
+            #             if c, _ in mm.get(model.biomass_reaction).right:
+            #                 compound_set.remove(c)
+            # else:
+            #     logger.warning('No biomass reaction in this model')
+
         compound_nodes = {}
         for cpd in compound_set:    # cpd=compound object, cpd.name=compound id, no compartment
             node = graph.Node({
@@ -811,7 +833,47 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         # for edge in g.edges:
         #     print('{}\t{}\t{}'.format(edge.source, edge.dest, edge.props))
 
-        # 7-26 new exchange and biomass rxns nodes
+        # # 7-26 new exchange and biomass rxns nodes
+        # rxn_set = set()
+        # for r in subset:    # here r is reaction id
+        #     if model.biomass_reaction is not None:
+        #         if mm.is_exchange(r) or r == model.biomass_reaction:
+        #             rxn_set.add(r)
+        #     else:
+        #         logger.warning('No biomass reaction in this model')
+        #         if mm.is_exchange(r):
+        #             rxn_set.add(r)
+        # for r in rxn_set:
+        #     rx = mm.get_reaction(r)
+        #     for c in rx.compounds:
+        #         if c not in compound_set:
+        #             color_new = CPD_ONLY_IN_EXC
+        #             if r == model.biomass_reaction:
+        #                 color_new = CPD_ONLY_IN_BIO
+        #             node_cpd = graph.Node({
+        #                 'id': text_type(c),
+        #                 'edge_id': text_type(c),
+        #                 'label': cpds_properties(c, cpd_entry[c.name], self._args.detail),
+        #                 'shape': 'ellipse',
+        #                 'style': 'filled',
+        #                 'fillcolor': color_new})
+        #             g.add_node(node_cpd)
+        #             compound_nodes[c] = node_cpd
+        #     # label = r
+        #     # if len(reaction_flux) > 0 and r != model.biomass_reaction:
+        #     #     label = '{}\n{}'.format(r, reaction_flux[r])
+        #     #
+        #     # # if r == model.biomass_reaction:
+        #     #
+        #     #
+        #     # node_ex = graph.Node({
+        #     #         'id': r,
+        #     #         'edge_id': r,
+        #     #         'label': label,
+        #     #         'shape': 'box',
+        #     #         'style': 'filled',
+        #     #         'fillcolor': ACTIVE_COLOR})
+        #     #     g.add_node(node_ex)
 
         # add exchange reaction nodes
         rxn_set = set()
@@ -840,34 +902,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             g.add_node(node_ex)
 
             for c1, _ in exchange_rxn.left:
-                if c1 not in compound_nodes.keys():
-                    node_ex_cpd = graph.Node({
-                        'id': text_type(c1),
-                        'edge_id':text_type(c1),
-                        'label': cpds_properties(c1, cpd_entry[c1.name], self._args.detail),
-                        'shape': 'ellipse',
-                        'style': 'filled',
-                        'fillcolor': CPD_ONLY_IN_EXC})
-                    g.add_node(node_ex_cpd)
-                    compound_nodes[c1] = node_ex_cpd
-
                 edge1 = c1, r
                 edge2 = r, c1
                 g.add_edge(graph.Edge(
                     compound_nodes[c1], node_ex, final_props(exchange_rxn, edge1, edge2)))
 
             for c2, _ in exchange_rxn.right:
-                if c2 not in compound_nodes.keys():
-                    node_ex_cpd = graph.Node({
-                        'id': text_type(c2),
-                        'edge_id': text_type(c2),
-                        'label': cpds_properties(c2, cpd_entry[c2.name], self._args.detail),
-                        'shape': 'ellipse',
-                        'style': 'filled',
-                        'fillcolor': CPD_ONLY_IN_EXC})
-                    g.add_node(node_ex_cpd)
-                    compound_nodes[c2] = node_ex_cpd
-
                 edge1 = r, c2
                 edge2 = c2, r
                 g.add_edge(graph.Edge(
@@ -875,43 +915,26 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         # add biomass reaction nodes
         bio_pair = Counter()
-        biomass_cpds = set()
         if model.biomass_reaction is not None:
             if model.biomass_reaction in subset:
                 biomass_reaction = mm.get_reaction(model.biomass_reaction)
                 for c, _ in biomass_reaction.left:
-                    if element != 'none':
-                        if Atom(primary_element(element)) in cpd_formula[str(c.name)]:
-                            biomass_cpds.add(c)
-                    else:
-                        biomass_cpds.add(c)
-                for c in biomass_cpds:
-                    bio_pair[model.biomass_reaction] += 1
-                    # bio_pair = Counter({'biomass_rxn_id': 1}), Counter({'biomass_rxn_id': 2})...
-                    node_bio = graph.Node({
-                        'id': '{}_{}'.format(model.biomass_reaction, bio_pair[model.biomass_reaction]),
-                        'edge_id': model.biomass_reaction,
-                        'label': model.biomass_reaction,
-                        'shape': 'box',
-                        'style': 'filled',
-                        'fillcolor': ALT_COLOR})
-                    g.add_node(node_bio)
-
-                    if c not in compound_nodes.keys():
-                        node_bio_cpd = graph.Node({
-                            'id': text_type(c),
-                            'edge_id': text_type(c),
-                            'label': cpds_properties(c, cpd_entry[c.name], self._args.detail),
-                            'shape': 'ellipse',
+                    if c in compound_nodes:
+                        bio_pair[model.biomass_reaction] += 1
+                        # bio_pair = Counter({'biomass_rxn_id': 1}), Counter({'biomass_rxn_id': 2})...
+                        node_bio = graph.Node({
+                            'id': '{}_{}'.format(model.biomass_reaction, bio_pair[model.biomass_reaction]),
+                            'edge_id': model.biomass_reaction,
+                            'label': model.biomass_reaction,
+                            'shape': 'box',
                             'style': 'filled',
-                            'fillcolor': CPD_ONLY_IN_BIO})
-                        g.add_node(node_bio_cpd)
-                        compound_nodes[c] = node_bio_cpd
+                            'fillcolor': ALT_COLOR})
+                        g.add_node(node_bio)
 
-                    edge1 = c, model.biomass_reaction
-                    edge2 = model.biomass_reaction, c
-                    g.add_edge(graph.Edge(
-                        compound_nodes[c], node_bio, final_props(biomass_reaction, edge1, edge2)))
+                        edge1 = c, model.biomass_reaction
+                        edge2 = model.biomass_reaction, c
+                        g.add_edge(graph.Edge(
+                            compound_nodes[c], node_bio, final_props(biomass_reaction, edge1, edge2)))
         else:
             logger.warning(
                 'No biomass reaction in this model')
