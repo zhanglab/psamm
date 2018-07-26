@@ -833,48 +833,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         # for edge in g.edges:
         #     print('{}\t{}\t{}'.format(edge.source, edge.dest, edge.props))
 
-        # # 7-26 new exchange and biomass rxns nodes
-        # rxn_set = set()
-        # for r in subset:    # here r is reaction id
-        #     if model.biomass_reaction is not None:
-        #         if mm.is_exchange(r) or r == model.biomass_reaction:
-        #             rxn_set.add(r)
-        #     else:
-        #         logger.warning('No biomass reaction in this model')
-        #         if mm.is_exchange(r):
-        #             rxn_set.add(r)
-        # for r in rxn_set:
-        #     rx = mm.get_reaction(r)
-        #     for c in rx.compounds:
-        #         if c not in compound_set:
-        #             color_new = CPD_ONLY_IN_EXC
-        #             if r == model.biomass_reaction:
-        #                 color_new = CPD_ONLY_IN_BIO
-        #             node_cpd = graph.Node({
-        #                 'id': text_type(c),
-        #                 'edge_id': text_type(c),
-        #                 'label': cpds_properties(c, cpd_entry[c.name], self._args.detail),
-        #                 'shape': 'ellipse',
-        #                 'style': 'filled',
-        #                 'fillcolor': color_new})
-        #             g.add_node(node_cpd)
-        #             compound_nodes[c] = node_cpd
-        #     # label = r
-        #     # if len(reaction_flux) > 0 and r != model.biomass_reaction:
-        #     #     label = '{}\n{}'.format(r, reaction_flux[r])
-        #     #
-        #     # # if r == model.biomass_reaction:
-        #     #
-        #     #
-        #     # node_ex = graph.Node({
-        #     #         'id': r,
-        #     #         'edge_id': r,
-        #     #         'label': label,
-        #     #         'shape': 'box',
-        #     #         'style': 'filled',
-        #     #         'fillcolor': ACTIVE_COLOR})
-        #     #     g.add_node(node_ex)
-
         # add exchange reaction nodes
         rxn_set = set()
         for reaction in subset:
@@ -894,7 +852,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     label = '{}\n{}'.format(r, edge_values[r])
             node_ex = graph.Node({
                 'id': r,
-                'edge_id': r,
+                # 'edge_id': r,
                 'label': label,
                 'shape': 'box',
                 'style': 'filled',
@@ -924,7 +882,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         # bio_pair = Counter({'biomass_rxn_id': 1}), Counter({'biomass_rxn_id': 2})...
                         node_bio = graph.Node({
                             'id': '{}_{}'.format(model.biomass_reaction, bio_pair[model.biomass_reaction]),
-                            'edge_id': model.biomass_reaction,
+                            # 'edge_id': model.biomass_reaction,
                             'label': model.biomass_reaction,
                             'shape': 'box',
                             'style': 'filled',
