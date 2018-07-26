@@ -184,9 +184,9 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map, cp
             for edge in remove_edges:
                 del edge_values[edge]
 
-    for (a, b), v in iteritems(edge_values):
-        if v == 0:
-            print('{}\t{}\t{}'.format(a, b, v))
+    # for (a, b), v in iteritems(edge_values):
+    #     if v == 0:
+    #         print('{}\t{}\t{}'.format(a, b, v))
 
                     # if split_map is not True:
     #     for (c1, c2), rxns in cpair_dict:  # rxns=[ [forward_rxns], [back_rxns], [bidir_rxns] ]
@@ -283,6 +283,9 @@ def make_filter_dict(model, mm, method, element, compound_formula, cpd_object, e
                             else:
                                 cpairs.append((c1, c2))
                 filter_dict[rxn_id] = cpairs
+
+        # for r, cpairs in iteritems(filter_dict):
+        #     print('{}\t{}'.format(r, cpairs))
     else:
         split_reaction = True
         try:
@@ -291,12 +294,14 @@ def make_filter_dict(model, mm, method, element, compound_formula, cpd_object, e
                 for row in csv.reader(f, delimiter=str(u'\t')):
                     if (cpd_object[row[1]], cpd_object[row[2]]) not in exclude_cpairs:
                         if element == 'none':
-                            cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
-                            rxn_list.append(row[0])
-                        else:
-                            if Atom(primary_element(element)) in Formula.parse(row[3]).flattened():
+                            if row[0] in subset_reactions:
                                 cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
                                 rxn_list.append(row[0])
+                        else:
+                            if row[0] in subset_reactions:
+                                if Atom(primary_element(element)) in Formula.parse(row[3]).flattened():
+                                    cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
+                                    rxn_list.append(row[0])
 
                 filter_dict = defaultdict(list)
                 for r, cpair in zip(rxn_list, cpair_list):
@@ -542,8 +547,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         # for cpair in remove_cpairs:
         #     del cpair_dict[(cpair)]
 
-        for (c1,c2), v in iteritems(cpair_dict):
-            print('{}\t{}\t{}'.format(c1, c2, v))
+        # for (c1,c2), v in iteritems(cpair_dict):
+        #     print('{}\t{}\t{}'.format(c1, c2, v))
         edge_values = make_edge_values(reaction_flux, self._mm, compound_formula, self._args.element,
                                        self._args.split_map, cpair_dict, new_id_mapping, self._args.method)
         # for (a, b), v in iteritems(edge_values):
@@ -581,7 +586,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 except subprocess.CalledProcessError:
                     logger.warning('the graph is too large to create')
 
-    def create_bipartite_graph(self, model, nativemodel, predict_results, cpair_dict, element, split_map, subset,
+    def create_bipartite_graph(self, mm, model, predict_results, cpair_dict, element, split_map, subset,
                                      edge_values, cpd_formula, reaction_flux, method, new_id_mapping, split_graph=True):
         """create bipartite graph of given metabolic network
 
@@ -590,8 +595,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         edge direction) are included.
 
         Args:
-        model: class 'psamm.metabolicmodel.MetabolicModel'.
-        nativemodel: class 'psamm.datasource.native.NativeModel'.
+        mm: class 'psamm.metabolicmodel.MetabolicModel'.
+        model: class 'psamm.datasource.native.NativeModel'.
         predict_results: Dictionary mapping reaction IDs to compound pairs(reactant/product pair that transfers
             specific element,by default the element is carbon(C).
         cpair_dict: Dictionary mapping compound pair to a list of reaction IDs.
@@ -607,12 +612,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         # Mapping from compound id to DictCompoundEntry object
         cpd_entry = {}
-        for cpd in nativemodel.compounds:
+        for cpd in model.compounds:
             cpd_entry[cpd.id] = cpd
 
         # Mapping from reaction id to DictReactionEntry object
         rxn_entry = {}
-        for rxn in nativemodel.reactions:
+        for rxn in model.reactions:
             rxn_entry[rxn.id] = rxn
 
         # setting node color
@@ -622,12 +627,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 for row in csv.reader(f, delimiter=str(u'\t')):
                     recolor_dict[row[0]] = row[1]  # row[0] =reaction id or str(cpd object), row[1] = hex color code
         color = {}
-        for c in model.compounds:
+        for c in mm.compounds:
             if str(c) in recolor_dict:
                 color[c] = recolor_dict[str(c)]
             else:
                 color[c] = COMPOUND_COLOR
-        for r in model.reactions:
+        for r in mm.reactions:
             if r in recolor_dict:
                 color[r] = recolor_dict[r]
             else:
@@ -799,18 +804,20 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         edge_test_1 = c1, test
                         edge_test_2 = test, c1
                         if edge1 and edge2 not in edge_list:
-                            edge_list.append(edge1)
-                            edge_list.append(edge2)
+                            edge_list.append(edge_test_1)
+                            edge_list.append(edge_test_2)
                             g.add_edge(graph.Edge(
                                 node, compound_nodes[c2], final_props_2(r_list, edge1, edge2)))
         # for edge in g.edges:
         #     print('{}\t{}\t{}'.format(edge.source, edge.dest, edge.props))
 
+        # 7-26 new exchange and biomass rxns nodes
+
         # add exchange reaction nodes
         rxn_set = set()
         for reaction in subset:
-            if model.is_exchange(reaction):
-                raw_exchange_rxn = model.get_reaction(reaction)
+            if mm.is_exchange(reaction):
+                raw_exchange_rxn = mm.get_reaction(reaction)
                 if element != 'none':
                     if any(Atom(primary_element(element)) in cpd_formula[str(c[0].name)]
                            for c in raw_exchange_rxn.compounds):
@@ -818,7 +825,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                 else:
                     rxn_set.add(reaction)
         for r in rxn_set:
-            exchange_rxn = model.get_reaction(r)
+            exchange_rxn = mm.get_reaction(r)
             label = r
             if len(edge_values) > 0:
                 if r in iterkeys(edge_values):
@@ -869,9 +876,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         # add biomass reaction nodes
         bio_pair = Counter()
         biomass_cpds = set()
-        if nativemodel.biomass_reaction is not None:
-            if nativemodel.biomass_reaction in subset:
-                biomass_reaction = model.get_reaction(nativemodel.biomass_reaction)
+        if model.biomass_reaction is not None:
+            if model.biomass_reaction in subset:
+                biomass_reaction = mm.get_reaction(model.biomass_reaction)
                 for c, _ in biomass_reaction.left:
                     if element != 'none':
                         if Atom(primary_element(element)) in cpd_formula[str(c.name)]:
@@ -879,12 +886,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     else:
                         biomass_cpds.add(c)
                 for c in biomass_cpds:
-                    bio_pair[nativemodel.biomass_reaction] += 1
+                    bio_pair[model.biomass_reaction] += 1
                     # bio_pair = Counter({'biomass_rxn_id': 1}), Counter({'biomass_rxn_id': 2})...
                     node_bio = graph.Node({
-                        'id': '{}_{}'.format(nativemodel.biomass_reaction, bio_pair[nativemodel.biomass_reaction]),
-                        'edge_id': nativemodel.biomass_reaction,
-                        'label': nativemodel.biomass_reaction,
+                        'id': '{}_{}'.format(model.biomass_reaction, bio_pair[model.biomass_reaction]),
+                        'edge_id': model.biomass_reaction,
+                        'label': model.biomass_reaction,
                         'shape': 'box',
                         'style': 'filled',
                         'fillcolor': ALT_COLOR})
@@ -901,8 +908,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         g.add_node(node_bio_cpd)
                         compound_nodes[c] = node_bio_cpd
 
-                    edge1 = c, nativemodel.biomass_reaction
-                    edge2 = nativemodel.biomass_reaction, c
+                    edge1 = c, model.biomass_reaction
+                    edge2 = model.biomass_reaction, c
                     g.add_edge(graph.Edge(
                         compound_nodes[c], node_bio, final_props(biomass_reaction, edge1, edge2)))
         else:
