@@ -146,70 +146,54 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map, cp
         # for (a, b), v in iteritems(edge_values):
         #     print('{}\t{}\t{}'.format(a,b,v))
 
-        if split_map is not True and method != 'no-fpp':
-            remove_edges = set()
-            for (c1, c2), rxns in iteritems(cpair_dict):
-                if len(rxns['forward']) > 1:
-                    if all(new_id_mapping[r] not in reaction_flux for r in rxns['forward']):
-                        continue
-                    else:
-                    # for r in rxns.fo
-                    # if any(new_id_mapping[r] in reaction_flux for r in rxns.forward):
-                        x_forward_c1, x_forward_c2 = 0, 0
-                        for r in rxns['forward']:
-                            real_r = new_id_mapping[r]
-                            if real_r in reaction_flux:
-                                x_forward_c1 += edge_values[(c1, real_r)]
-                                x_forward_c2 += edge_values[(real_r, c2)]
-                        edge_values[(c1, tuple(rxns['forward']))] = x_forward_c1
-                        edge_values[(tuple(rxns['forward']), c2)] = x_forward_c2
-                if len(rxns['back']) > 1:
-                    if all(new_id_mapping[r] not in reaction_flux for r in rxns['back']):
-                        continue
-                    else:
-                        x_back_c1, x_back_c2 = 0, 0
-                        for r in rxns['back']:
-                            real_r = new_id_mapping[r]
-                            if real_r in reaction_flux:
-                                x_back_c1 += edge_values[(real_r, c1)]
-                                x_back_c2 += edge_values[(c2, real_r)]
-                        edge_values[(tuple(rxns['back']), c1)] = x_back_c1
-                        edge_values[(c2, tuple(rxns['back']))] = x_back_c2
-
-    # for (a, b), v in iteritems(edge_values):
-    #     print('{}\t{}\t{}'.format(a, b, v))
-
-                    # if split_map is not True:
-    #     for (c1, c2), rxns in cpair_dict:  # rxns=[ [forward_rxns], [back_rxns], [bidir_rxns] ]
-    #         for rlist in rxns:
-    #             if len(rlist) > 1:
-    #             x_for = 0
-    #             for j in forward:
-    #                 y = edge_values.get(c1, j)
-    #                 if y is not None:
-    #                     x_for += y
-    #         if len(fowrard) > 1:
-    #             x_rev = 0
-    #             for j in forward:
-    #                 y_2 = edge_values.get(c1, j)
-    #                 if y_2 is not None:
-    #                     x_rev += y_2
-    #         if len(bid) > 1:
-    #             x_bid = 0
-    #             for j in bid:
-    #                 y_3 = edge_values.get(c1, j)
-    #                 if y_3 < 0:
-    #                     x_rev += y_3
-    #
-    #                 if y_3 > 0:
-    #                     x_for += y_3
+    if split_map is not True and method != 'no-fpp':
+        remove_edges = set()
+        for (c1, c2), rxns in iteritems(cpair_dict):
+            if len(rxns['forward']) > 1:
+                if all(new_id_mapping[r] not in reaction_flux for r in rxns['forward']):
+                    continue
+                else:
+                # for r in rxns.fo
+                # if any(new_id_mapping[r] in reaction_flux for r in rxns.forward):
+                    x_forward_c1, x_forward_c2 = 0, 0
+                    for r in rxns['forward']:
+                        real_r = new_id_mapping[r]
+                        if real_r in reaction_flux:
+                            x_forward_c1 += edge_values[(c1, real_r)]
+                            x_forward_c2 += edge_values[(real_r, c2)]
+                    edge_values[(c1, tuple(rxns['forward']))] = x_forward_c1
+                    edge_values[(tuple(rxns['forward']), c2)] = x_forward_c2
+            if len(rxns['back']) > 1:
+                if all(new_id_mapping[r] not in reaction_flux for r in rxns['back']):
+                    continue
+                else:
+                    x_back_c1, x_back_c2 = 0, 0
+                    for r in rxns['back']:
+                        real_r = new_id_mapping[r]
+                        if real_r in reaction_flux:
+                            x_back_c1 += edge_values[(real_r, c1)]
+                            x_back_c2 += edge_values[(c2, real_r)]
+                    edge_values[(tuple(rxns['back']), c1)] = x_back_c1
+                    edge_values[(c2, tuple(rxns['back']))] = x_back_c2
 
     return edge_values
 
 
-def make_filter_dict(model, mm, method, element, compound_formula, cpd_object, exclude_cpairs, exclude_rxns,
-                     subset_reactions):
+def make_filter_dict(model, mm, method, element, compound_formula, args_exclude_cpairs, exclude_rxns):
     """create a dictionary of reaction id(key) and a list of related compound pairs(value)"""
+
+    # Mapping from string of cpd_id+compartment(eg: pyr_c[c]) to Compound object
+    cpd_object = {}
+    for cpd in mm.compounds:
+        cpd_object[str(cpd)] = cpd
+
+    # read exclude_compound_pairs from command-line argument
+    exclude_cpairs = []
+    if args_exclude_cpairs is not None:
+        for row in csv.reader(args_exclude_cpairs, delimiter=str('\t')):
+            exclude_cpairs.append((cpd_object[row[0]], cpd_object[row[1]]))
+            exclude_cpairs.append((cpd_object[row[1]], cpd_object[row[0]]))
+
     filter_dict = {}
     if method == 'fpp':
         # def iter_reactions():
@@ -236,8 +220,7 @@ def make_filter_dict(model, mm, method, element, compound_formula, cpd_object, e
         if len(rxns_no_formula) > 0:
             logger.warning(
                 '{} reactions have compounds with undefined formula'
-                # ', fix them or add "--method no-fpp --element none"to '
-                'command. These reactions contain {}'.format(len(rxns_no_formula), rxns_no_formula))
+                'These reactions contain {}'.format(len(rxns_no_formula), rxns_no_formula))
 
         if len(fpp_rxns) == 0:
             logger.warning(
@@ -306,8 +289,8 @@ def make_filter_dict(model, mm, method, element, compound_formula, cpd_object, e
                 for r, cpair in zip(rxn_list, cpair_list):
                     filter_dict[r].append(cpair)
 
-            for r, cpairs in iteritems(filter_dict):
-                print(r)
+            # for r, cpairs in iteritems(filter_dict):
+            #     print(r)
                 # print('{}\t{}'.format(r, cpairs))
 
         except:
@@ -349,7 +332,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
         parser.add_argument(
             '--Image', type=text_type, default=None, help='generate image file directly')
         parser.add_argument(
-            '--exclude-pairs', type=argparse.FileType('r'), default=None,
+            '--exclude-cpairs', type=argparse.FileType('r'), default=None,
             help='Remove edge of given compound pairs from final graph ')
         parser.add_argument(
             '--split-map', action='store_true',
@@ -380,17 +363,17 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                         msg += '\n{}'.format(e.indicator)
                     logger.warning(msg)
 
-        # Mapping from string of cpd_id+compartment(eg: pyr_c[c]) to Compound object
-        cpd_object = {}
-        for cpd in self._mm.compounds:
-            cpd_object[str(cpd)] = cpd
-
-        # read exclude_compound_pairs from command-line argument
-        exclude_cpairs = []
-        if self._args.exclude_pairs is not None:
-            for row in csv.reader(self._args.exclude_pairs, delimiter=str('\t')):
-                exclude_cpairs.append((cpd_object[row[0]], cpd_object[row[1]]))
-                exclude_cpairs.append((cpd_object[row[1]], cpd_object[row[0]]))
+        # # Mapping from string of cpd_id+compartment(eg: pyr_c[c]) to Compound object
+        # cpd_object = {}
+        # for cpd in self._mm.compounds:
+        #     cpd_object[str(cpd)] = cpd
+        #
+        # # read exclude_compound_pairs from command-line argument
+        # exclude_cpairs = []
+        # if self._args.exclude_pairs is not None:
+        #     for row in csv.reader(self._args.exclude_pairs, delimiter=str('\t')):
+        #         exclude_cpairs.append((cpd_object[row[0]], cpd_object[row[1]]))
+        #         exclude_cpairs.append((cpd_object[row[1]], cpd_object[row[0]]))
 
         # set of reactions to visualize
         if self._args.subset is not None:
@@ -417,8 +400,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         # create {rxn_id:[(c1, c2),(c3,c4),...], ...} dictionary, key = rxn id, value = list of compound pairs
         filter_dict, split_reaction = make_filter_dict(self._model, self._mm, self._args.method, self._args.element,
-                                                           compound_formula, cpd_object, exclude_cpairs,
-                                                           self._args.exclude, subset_reactions)
+                                                       compound_formula, self._args.exclude_cpairs, self._args.exclude)
 
         # run l1min_fba, get reaction fluxes
         reaction_flux = {}
@@ -448,7 +430,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         # edge_values = make_edge_values(reaction_flux, self._mm, compound_formula, self._args.element,
         #                                self._args.split_map, cpairs_dict)
-
 
         # create {(c1, c2):[[forward rxns], [back rxns], [bidir rxns]], ...} dictionary, key=cpd_pair, value=rxn list
         raw_cpair_dict = defaultdict(list)     # key=compound pair, value=list of reaction_id
