@@ -39,8 +39,6 @@ except ImportError:
 
 import subprocess
 
-import unittest
-
 logger = logging.getLogger(__name__)
 
 REACTION_COLOR = '#ccebc5'
@@ -48,8 +46,8 @@ COMPOUND_COLOR = '#fbb4ae'
 ACTIVE_COLOR = '#b3cde3'    # exchange reaction  color
 ALT_COLOR = '#f4fc55'       # biomass reaction color
 RXN_COMBINED_COLOR = '#fc9a44'
-CPD_ONLY_IN_BIO = '#82e593'
-CPD_ONLY_IN_EXC = '#5a95f4'
+# CPD_ONLY_IN_BIO = '#82e593'
+# CPD_ONLY_IN_EXC = '#5a95f4'
 
 from psamm.reaction import Compound
 
@@ -223,12 +221,11 @@ def make_filter_dict(model, mm, method, element, compound_formula, args_exclude_
                 'These reactions contain {}'.format(len(rxns_no_formula), rxns_no_formula))
 
         if len(fpp_rxns) == 0:
-            logger.warning(
+            logger.error(
                 'All the reactions have compounds with undefined formula or have no reaction equation, fix them or '
                 'add "--method no-fpp --element none" to command')
             quit()
 
-        split_reaction = True
         reaction_pairs = [(r.id, r.equation) for r in fpp_rxns]
         element_weight = findprimarypairs.element_weight
         fpp_dict, _ = findprimarypairs.predict_compound_pairs_iterated(reaction_pairs, compound_formula,
@@ -247,11 +244,7 @@ def make_filter_dict(model, mm, method, element, compound_formula, args_exclude_
             if len(compound_pairs) != 0:
                 filter_dict[rxn_id] = compound_pairs
 
-        for r, cpairs in iteritems(filter_dict):
-            print(r, cpairs)
-
     elif method == 'no-fpp':
-        split_reaction = False
         for rxn_id in mm.reactions:
             if rxn_id != model.biomass_reaction:
                 rx = mm.get_reaction(rxn_id)
@@ -268,10 +261,7 @@ def make_filter_dict(model, mm, method, element, compound_formula, args_exclude_
                 if len(cpairs) > 0:
                     filter_dict[rxn_id] = cpairs
 
-        for r, cpairs in iteritems(filter_dict):
-            print('{}\t{}'.format(r, cpairs))
     else:
-        split_reaction = True
         try:
             with open(method, 'r') as f:
                 cpair_list, rxn_list = [], []
@@ -292,13 +282,12 @@ def make_filter_dict(model, mm, method, element, compound_formula, args_exclude_
             # for r, cpairs in iteritems(filter_dict):
             #     print(r)
                 # print('{}\t{}'.format(r, cpairs))
-
         except:
             if IOError:
                 logger.error(' Invalid file path, no such file or directory : {}' .format(method))
             quit()
 
-    return filter_dict, split_reaction
+    return filter_dict
 
 
 class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
@@ -399,8 +388,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             subset_reactions = set(self._mm.reactions)
 
         # create {rxn_id:[(c1, c2),(c3,c4),...], ...} dictionary, key = rxn id, value = list of compound pairs
-        filter_dict, split_reaction = make_filter_dict(self._model, self._mm, self._args.method, self._args.element,
-                                                       compound_formula, self._args.exclude_cpairs, self._args.exclude)
+        filter_dict = make_filter_dict(self._model, self._mm, self._args.method, self._args.element, compound_formula,
+                                       self._args.exclude_cpairs, self._args.exclude)
 
         # run l1min_fba, get reaction fluxes
         reaction_flux = {}
@@ -736,14 +725,21 @@ def create_bipartite_graph(mm, model, cpair_dict, element, split_map, subset, ed
     # create compound nodes and add nodes to Graph object
     compound_set = set()
     for r in subset:
-        rx = mm.get_reaction(r)
         if r != model.biomass_reaction:
+            rx = mm.get_reaction(r)
             for c, _ in rx.compounds:
                 if element != 'none':
                     if Atom(primary_element(element)) in cpd_formula[str(c.name)]:
                         compound_set.add(c)
                 else:
                     compound_set.add(c)
+    if model.biomass_reaction is not None:
+        if model.biomass_reaction in subset:
+            for c, _ in mm.get_reaction(model.biomass_reaction).left:
+                compound_set.add(c)
+    else:
+        logger.warning('No biomass reaction in this model')
+
         # if model.biomass_reaction is not None:
         #     if model.biomass_reaction in subset:
         #         for c, _ in rx.compounds:
@@ -863,24 +859,18 @@ def create_bipartite_graph(mm, model, cpair_dict, element, split_map, subset, ed
         if model.biomass_reaction in subset:
             biomass_reaction = mm.get_reaction(model.biomass_reaction)
             for c, _ in biomass_reaction.left:
-                if c in compound_nodes:
-                    bio_pair[model.biomass_reaction] += 1
-                    # bio_pair = Counter({'biomass_rxn_id': 1}), Counter({'biomass_rxn_id': 2})...
-                    node_bio = graph.Node({
-                        'id': '{}_{}'.format(model.biomass_reaction, bio_pair[model.biomass_reaction]),
-                        # 'edge_id': model.biomass_reaction,
-                        'label': model.biomass_reaction,
-                        'shape': 'box',
-                        'style': 'filled',
-                        'fillcolor': ALT_COLOR})
-                    g.add_node(node_bio)
+                bio_pair[model.biomass_reaction] += 1
+                node_bio = graph.Node({
+                    'id': '{}_{}'.format(model.biomass_reaction, bio_pair[model.biomass_reaction]),
+                    'label': model.biomass_reaction,
+                    'shape': 'box',
+                    'style': 'filled',
+                    'fillcolor': ALT_COLOR})
+                g.add_node(node_bio)
 
-                    edge1 = c, model.biomass_reaction
-                    edge2 = model.biomass_reaction, c
-                    g.add_edge(graph.Edge(
-                        compound_nodes[c], node_bio, final_props_2('forward', edge1, edge2)))
-    else:
-        logger.warning(
-            'No biomass reaction in this model')
+                edge1 = c, model.biomass_reaction
+                edge2 = model.biomass_reaction, c
+                g.add_edge(graph.Edge(
+                    compound_nodes[c], node_bio, final_props_2('forward', edge1, edge2)))
 
     return g
