@@ -192,38 +192,38 @@ def make_filter_dict(model, mm, method, element, compound_formula, args_exclude_
             exclude_cpairs.append((cpd_object[row[0]], cpd_object[row[1]]))
             exclude_cpairs.append((cpd_object[row[1]], cpd_object[row[0]]))
 
+    # def iter_reactions():
+    #     """yield reactions that can applied to fpp"""
+    fpp_rxns, rxns_no_equation, rxns_no_formula = set(), set(), []
+    for reaction in model.reactions:
+        if (reaction.id in model.model and
+                reaction.id not in exclude_rxns):
+            if reaction.equation is None:
+                rxns_no_equation.add(reaction.id)
+                continue
+
+            if any(c.name not in compound_formula for c, _ in reaction.equation.compounds):
+                rxns_no_formula.append(reaction.id)
+                continue
+
+            fpp_rxns.add(reaction)
+
+    if len(rxns_no_equation) > 0:
+        logger.warning(
+            '{} reactions have no reaction equation, fix or exclude them.'
+            'These reactions contain {}'.format(len(rxns_no_equation), rxns_no_equation))
+
+    if len(rxns_no_formula) > 0:
+        logger.warning(
+            '{} reactions have compounds with undefined formula. '
+            'These reactions contain {}'.format(len(rxns_no_formula), rxns_no_formula))
+
     filter_dict = {}
     if method == 'fpp':
-        # def iter_reactions():
-        #     """yield reactions that can applied to fpp"""
-        fpp_rxns, rxns_no_equation, rxns_no_formula = set(), set(), []
-        for reaction in model.reactions:
-            if (reaction.id in model.model and
-                    reaction.id not in exclude_rxns):
-                if reaction.equation is None:
-                    rxns_no_equation.add(reaction.id)
-                    continue
-
-                if any(c.name not in compound_formula for c, _ in reaction.equation.compounds):
-                    rxns_no_formula.append(reaction.id)
-                    continue
-
-                fpp_rxns.add(reaction)
-
-        if len(rxns_no_equation) > 0:
-            logger.warning(
-                '{} reactions have no reaction equation, fix or exclude them.'
-                'These reactions contain {}'.format(len(rxns_no_equation), rxns_no_equation))
-
-        if len(rxns_no_formula) > 0:
-            logger.warning(
-                '{} reactions have compounds with undefined formula'
-                'These reactions contain {}'.format(len(rxns_no_formula), rxns_no_formula))
-
         if len(fpp_rxns) == 0:
             logger.error(
                 'All the reactions have compounds with undefined formula or have no reaction equation, fix them or '
-                'add "--method no-fpp --element none" to command')
+                'add "--method no-fpp --element none" to the command')
             quit()
 
         reaction_pairs = [(r.id, r.equation) for r in fpp_rxns]
