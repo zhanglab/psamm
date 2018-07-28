@@ -230,7 +230,6 @@ def make_filter_dict(model, mm, method, element, compound_formula, args_exclude_
         element_weight = findprimarypairs.element_weight
         fpp_dict, _ = findprimarypairs.predict_compound_pairs_iterated(reaction_pairs, compound_formula,
                                                                        element_weight=element_weight)
-        # print(fpp_dict)
 
         for rxn_id, fpp_pairs in iteritems(fpp_dict):
             compound_pairs = []
@@ -278,10 +277,6 @@ def make_filter_dict(model, mm, method, element, compound_formula, args_exclude_
                 filter_dict = defaultdict(list)
                 for r, cpair in zip(rxn_list, cpair_list):
                     filter_dict[r].append(cpair)
-
-            # for r, cpairs in iteritems(filter_dict):
-            #     print(r)
-                # print('{}\t{}'.format(r, cpairs))
         except:
             if IOError:
                 logger.error(' Invalid file path, no such file or directory : {}' .format(method))
@@ -417,85 +412,38 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     reaction_flux[r_id] = flux
             logger.info('Minimized reactions: {}'.format(count))
 
-        # edge_values = make_edge_values(reaction_flux, self._mm, compound_formula, self._args.element,
-        #                                self._args.split_map, cpairs_dict)
-
-        # create {(c1, c2):[[forward rxns], [back rxns], [bidir rxns]], ...} dictionary, key=cpd_pair, value=rxn list
-        raw_cpair_dict = defaultdict(list)     # key=compound pair, value=list of reaction_id
-        raw_dict = {k: v for k, v in iteritems(filter_dict) if k in subset_reactions}
-        for rxn_id, cpairs in iteritems(raw_dict):
-            for pair in cpairs:
-                raw_cpair_dict[pair].append(rxn_id)
-
-        # for (c1, c2), v in iteritems(raw_cpair_dict):
-        #     print('{}\t{}\t{}'.format(c1, c2, v))
-
-        cpair_dict = {}
-        pair_list = []
+        # 2018-7-27 create a new cpair_dict: mapping from cpair to a defaultdict of rxns,
+        new_id_mapping = {}
         rxn_count = Counter()
-        new_id_mapping = {} # mapping from reactiion id with suffix (such as 'PGK_2) to reaction id (PGK)
-        for (c1, c2), rxns in iteritems(raw_cpair_dict):
-            if (c1, c2) not in pair_list:
-                forward_rxns, back_rxns, bidirectional_rxns = [], [], []
-                for r in rxns:
+        cpair_dict = defaultdict(lambda: defaultdict(list))
+        for r, cpairs in iteritems(filter_dict):
+            if r in subset_reactions:
+                rx = self._mm.get_reaction(r)
+                for (c1, c2) in cpairs:
                     if self._args.method == 'no-fpp':
                         r_id = r
+                        new_id_mapping[r_id] = r
                     else:
                         rxn_count[r] += 1
                         r_id = str('{}_{}'.format(r, rxn_count[r]))
-                    new_id_mapping[r_id] = r
-
-                    reaction = self._mm.get_reaction(r)
-                    if reaction.direction == Direction.Forward:
-                        forward_rxns.append(r_id)
-                    elif reaction.direction == Direction.Reverse:
-                        back_rxns.append(r_id)
+                        new_id_mapping[r_id] = r
+                    a = tuple(sorted((c1,c2))) == (c1,c2)
+                    if rx.direction == Direction.Forward:
+                        if a:
+                            cpair_dict[(c1, c2)]['forward'].append(r_id)
+                        else:
+                            cpair_dict[(c2, c1)]['back'].append(r_id)
+                    elif rx.direction == Direction.Reverse:
+                        if a:
+                            cpair_dict[(c1, c2)]['back'].append(r_id)
+                        else:
+                            cpair_dict[(c2, c1)]['forward'].append(r_id)
                     else:
-                        if self._args.fba is True:
-                            a = reaction_flux.get(r)
-                            if a is not None:
-                                if a > 0:
-                                    forward_rxns.append(r_id)
-                                else:
-                                    back_rxns.append(r_id)
-                            else:
-                                bidirectional_rxns.append(r_id)
-                        else:
-                            bidirectional_rxns.append(r_id)
-                    # rxn_list.append(r_id)
+                        cpair_dict[tuple(sorted((c1, c2)))]['bidir'].append(r_id)
+        print(len(cpair_dict))
+        # for k, rxns in iteritems(new_cpair_dict):
+        #     print('{}\t{}'.format(k, rxns))
 
-                if (c2, c1) in raw_cpair_dict:
-                    for rx in raw_cpair_dict[(c2, c1)]:
-                        if self._args.method == 'no-fpp':
-                            rx_id = rx
-                        else:
-                            rxn_count[rx] += 1
-                            # rxn_list.append(r)
-                            rx_id = str('{}_{}'.format(rx, rxn_count[rx]))
-                        new_id_mapping[rx_id] = rx
-                        reaction = self._mm.get_reaction(rx)
-                        if reaction.direction == Direction.Forward:
-                            back_rxns.append(rx_id)
-                        elif reaction.direction == Direction.Reverse:
-                            forward_rxns.append(rx_id)
-                        else:
-                            if self._args.fba is True:
-                                a = reaction_flux.get(rx)
-                                if a is not None:
-                                    if a > 0:
-                                        back_rxns.append(rx_id)
-                                    else:
-                                        forward_rxns.append(rx_id)
-                                else:
-                                    bidirectional_rxns.append(rx_id)
-                            else:
-                                bidirectional_rxns.append(rx_id)
-
-                # cpair_rxn = namedtuple('cpair_rxn', ['forward', 'back', 'bidirection'])
-                cpair_rxn = {'forward': forward_rxns, 'back': back_rxns, 'bidirectional': bidirectional_rxns}
-                cpair_dict[(c1, c2)] = cpair_rxn
-            pair_list.append((c1, c2))
-            pair_list.append((c2, c1))
         # for k, v in iteritems(new_id_mapping):
         #     print('{}\t{}'.format(k,v))
         # print(len(cpair_dict))
@@ -535,8 +483,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
 
         edge_values = make_edge_values(reaction_flux, self._mm, compound_formula, self._args.element,
                                        self._args.split_map, cpair_dict, new_id_mapping, self._args.method)
-        # for (a, b), v in iteritems(edge_values):
-        #     print('{}\t{}\t{}'.format(a,b,v))
+        for (a, b), v in iteritems(edge_values):
+            print('{}\t{}\t{}'.format(a,b,v))
 
         g = create_bipartite_graph(self._mm, self._model, cpair_dict,self._args.element, self._args.split_map,
                                    subset_reactions, edge_values,compound_formula, reaction_flux, self._args.method,
@@ -736,9 +684,13 @@ def create_bipartite_graph(mm, model, cpair_dict, element, split_map, subset, ed
     if model.biomass_reaction is not None:
         if model.biomass_reaction in subset:
             for c, _ in mm.get_reaction(model.biomass_reaction).left:
-                compound_set.add(c)
+                if element != 'none':
+                    if Atom(primary_element(element)) in cpd_formula[str(c.name)]:
+                        compound_set.add(c)
+                else:
+                    compound_set.add(c)
     else:
-        logger.warning('No biomass reaction in this model')
+        logger.warning('The objective reaction was not specified (No biomass reaction in this model).')
 
         # if model.biomass_reaction is not None:
         #     if model.biomass_reaction in subset:
@@ -776,7 +728,6 @@ def create_bipartite_graph(mm, model, cpair_dict, element, split_map, subset, ed
                 else:
                     r_node.append(r_list)
                 for i in r_node:
-                    # print(i)
                     node = graph.Node({
                         'id': i,
                         'label': condensed_rxn_props(args_detail, i, reaction_flux),
@@ -859,18 +810,19 @@ def create_bipartite_graph(mm, model, cpair_dict, element, split_map, subset, ed
         if model.biomass_reaction in subset:
             biomass_reaction = mm.get_reaction(model.biomass_reaction)
             for c, _ in biomass_reaction.left:
-                bio_pair[model.biomass_reaction] += 1
-                node_bio = graph.Node({
-                    'id': '{}_{}'.format(model.biomass_reaction, bio_pair[model.biomass_reaction]),
-                    'label': model.biomass_reaction,
-                    'shape': 'box',
-                    'style': 'filled',
-                    'fillcolor': ALT_COLOR})
-                g.add_node(node_bio)
+                if c in compound_nodes:
+                    bio_pair[model.biomass_reaction] += 1
+                    node_bio = graph.Node({
+                        'id': '{}_{}'.format(model.biomass_reaction, bio_pair[model.biomass_reaction]),
+                        'label': model.biomass_reaction,
+                        'shape': 'box',
+                        'style': 'filled',
+                        'fillcolor': ALT_COLOR})
+                    g.add_node(node_bio)
 
-                edge1 = c, model.biomass_reaction
-                edge2 = model.biomass_reaction, c
-                g.add_edge(graph.Edge(
-                    compound_nodes[c], node_bio, final_props_2('forward', edge1, edge2)))
+                    edge1 = c, model.biomass_reaction
+                    edge2 = model.biomass_reaction, c
+                    g.add_edge(graph.Edge(
+                        compound_nodes[c], node_bio, final_props_2('forward', edge1, edge2)))
 
     return g
