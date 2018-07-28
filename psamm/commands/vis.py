@@ -46,8 +46,6 @@ COMPOUND_COLOR = '#fbb4ae'
 ACTIVE_COLOR = '#b3cde3'    # exchange reaction  color
 ALT_COLOR = '#f4fc55'       # biomass reaction color
 RXN_COMBINED_COLOR = '#fc9a44'
-# CPD_ONLY_IN_BIO = '#82e593'
-# CPD_ONLY_IN_EXC = '#5a95f4'
 
 from psamm.reaction import Compound
 
@@ -479,56 +477,14 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                                 cpair_dict[tuple(sorted((c1, c2)))]['both'].append(r_id)
                         else:
                             cpair_dict[tuple(sorted((c1, c2)))]['both'].append(r_id)
-        # print(len(cpair_dict))
-        # for k, rxns in iteritems(cpair_dict):
-        #     print('{}\t{}'.format(k, rxns))
-
-        # for k, v in iteritems(new_id_mapping):
-        #     print('{}\t{}'.format(k,v))
-        # print(len(cpair_dict))
-        # for (c1, c2) in cpair_dict:
-        #     print(cpair_dict[(c1, c2)]['forward'])
-
-        # for (c1,c2), v in iteritems(cpair_dict):
-        #     print(type(v.back))
-        # remove_cpairs = []
-        # for (c1, c2), rxns in iteritems(cpair_dict):
-        #     if (c2, c1) in cpair_dict:
-        #         # A = []
-        #         # for r in cpair_dict[(c2, c1)].back:
-        #         #     A.append(r)
-        #         # print(A)
-        #
-        #         rxns.forward.append(r for r in cpair_dict[(c2, c1)].back)
-        #         rxns.back.append(r for r in cpair_dict[(c2, c1)].forward)
-        #         rxns.bidirection.append(r for r in cpair_dict[(c2, c1)].bidirection)
-        #         remove_cpairs.append((c2, c1))
-        # for cpair in remove_cpairs:
-        #     del cpair_dict[(cpair)]
-
-        # print(len(filter_dict))
-        # print(cpair_dict)
-        # for (c1,c2), v in iteritems(cpair_dict):
-        #     print('{}\t{}\t{}'.format(c1, c2, v))
-        # for r, v in iteritems(filter_dict):
-        #     print('{}\t{}'.format(r, v))
-
-        # print(len(cpair_dict))
-        # for rxn_id, cpairs in sorted(iteritems(raw_dict)):
-        #     for (c1, c2) in cpairs:
 
         edge_values = make_edge_values(reaction_flux, self._mm, compound_formula, self._args.element,
                                        self._args.split_map, cpair_dict, new_id_mapping, self._args.method)
-        # for (a, b), v in iteritems(edge_values):
-        #     print('{}\t{}\t{}'.format(a,b,v))
 
         g = create_bipartite_graph(self._mm, self._model, cpair_dict,self._args.element, self._args.split_map,
                                    subset_reactions, edge_values,compound_formula, reaction_flux, self._args.method,
                                    new_id_mapping, self._args.color, self._args.detail)
 
-        # for node in g.nodes:
-        #     if node.props['shape'] == 'box':
-        #         print(node)
         if self._args.method == 'no-fpp' and self._args.split_map is True:
             logger.warning('--split-map option makes no difference when method is no-fpp')
 
