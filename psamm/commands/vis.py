@@ -19,19 +19,20 @@
 from __future__ import unicode_literals
 
 import logging
-from ..command import (LoopRemovalMixin, ObjectiveMixin, SolverCommandMixin,
-                       MetabolicMixin, Command, FilePrefixAppendAction, CommandError)
 import csv
-from ..reaction import Direction
+import argparse
+from collections import defaultdict, Counter
 from six import text_type, iteritems, itervalues, iterkeys
+
+from .tableexport import _encode_value
 from .. import findprimarypairs
+from ..command import (LoopRemovalMixin, ObjectiveMixin, SolverCommandMixin,
+                       MetabolicMixin, Command, FilePrefixAppendAction)
+from ..reaction import Direction, Compound
 from ..formula import Formula, Atom, ParseError
 from .. import graph
-from collections import Counter
-from .tableexport import _encode_value
-import argparse
 from .. import fluxanalysis
-from collections import defaultdict, namedtuple
+
 try:
     from graphviz import render
 except ImportError:
@@ -46,8 +47,6 @@ COMPOUND_COLOR = '#fbb4ae'
 ACTIVE_COLOR = '#b3cde3'    # exchange reaction  color
 ALT_COLOR = '#f4fc55'       # biomass reaction color
 RXN_COMBINED_COLOR = '#fc9a44'
-
-from psamm.reaction import Compound
 
 
 def cpds_properties(cpd, compound, detail): # cpd=Compound object, compound = CompoundEntry object
@@ -92,15 +91,6 @@ def rxns_properties(reaction, detail, reaction_flux):
     return label
 
 
-def primary_element(element):
-    """allow both lower and upper case for one-letter element """
-    if element != 'none':
-        if element in ['c', 'h', 'o', 'n', 'p', 's', 'k', 'b', 'f', 'v', 'y', 'i', 'w']:
-            return element.upper()
-        else:
-            return element
-
-
 def make_edge_values(reaction_flux, mm, compound_formula, element, split_map, cpair_dict,
                      new_id_mapping, method):
     """set edge_values according to reaction fluxes"""
@@ -135,18 +125,21 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map, cp
             else:
                 cpd = y
             if cpd.name in compound_formula:
-                if Atom(primary_element(element)) in compound_formula[cpd.name]:
+                if Atom(element) in compound_formula[cpd.name]:
                     new_edge_values[x, y] = edge_values[(x, y)]
             else:
                 new_edge_values[x, y] = edge_values[(x, y)]
-
+                #
                 # if flux > 0:
                 #     for compound, value in rx.right:  # value=stoichiometry
                 #         if element == 'none':
                 #             edge_values[reaction, compound] = (flux * float(value))
                 #         else:
-                #             if Atom(element) in compound_formula[compound.name]:
-                #                 edge_values[reaction, compound] = (flux * float(value))
+                #             if c in compound_formula:
+                #                 if Atom(element) in compound_formula[compound.name]:
+                #                     edge_values[reaction, compound] = (flux * float(value))
+                #             else:
+                #
                 #     for compound, value in rx.left:
                 #         if element == 'none':
                 #             edge_values[compound, reaction] = (flux * float(value))
@@ -208,8 +201,6 @@ def make_filter_dict(model, mm, method, element, compound_formula, args_exclude_
             exclude_cpairs.append((cpd_object[row[0]], cpd_object[row[1]]))
             exclude_cpairs.append((cpd_object[row[1]], cpd_object[row[0]]))
 
-    # def iter_reactions():
-    #     """yield reactions that can applied to fpp"""
     fpp_rxns, rxns_no_equation, rxns_no_formula = set(), set(), []
     for reaction in model.reactions:
         if (reaction.id in model.model and
@@ -254,7 +245,7 @@ def make_filter_dict(model, mm, method, element, compound_formula, args_exclude_
                     if element == 'none':
                         compound_pairs.append(cpd_pair)
                     else:
-                        if any(Atom(primary_element(element)) in k for k in transfer):
+                        if any(Atom(element) in k for k in transfer):
                             compound_pairs.append(cpd_pair)
             if len(compound_pairs) != 0:
                 filter_dict[rxn_id] = compound_pairs
@@ -269,8 +260,8 @@ def make_filter_dict(model, mm, method, element, compound_formula, args_exclude_
                         if (c1, c2) not in exclude_cpairs:
                             if element != 'none':
                                 if c1 in compound_formula and c2 in compound_formula:
-                                    if Atom(primary_element(element)) in compound_formula[c1.name]:
-                                        if Atom(primary_element(element)) in compound_formula[c2.name]:
+                                    if Atom(element) in compound_formula[c1.name]:
+                                        if Atom(element) in compound_formula[c2.name]:
                                             cpairs.append((c1, c2))
                                 else:
                                     cpairs.append((c1,c2))
@@ -289,7 +280,7 @@ def make_filter_dict(model, mm, method, element, compound_formula, args_exclude_
                             cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
                             rxn_list.append(row[0])
                         else:
-                            if Atom(primary_element(element)) in Formula.parse(row[3]).flattened():
+                            if Atom(element) in Formula.parse(row[3]).flattened():
                                 cpair_list.append((cpd_object[row[1]], cpd_object[row[2]]))
                                 rxn_list.append(row[0])
 
@@ -312,7 +303,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
     def init_parser(cls, parser):
         parser.add_argument(
             '--method',type=text_type,
-            default='fpp', help='Compound pair prediction method')
+            default='fpp', help='Compound pair prediction method, ')
         parser.add_argument(
             '--exclude', metavar='reaction', type=text_type, default=[],
             action=FilePrefixAppendAction,
@@ -327,15 +318,15 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             '--detail', type=text_type, default=None, action='append', nargs='+',
             help='Reaction and compound properties showed on nodes label')
         parser.add_argument(
-            '--subset', type=argparse.FileType('r'), default=None,
+            '--subset', type=argparse.FileType('rU'), default=None,
             help='Reactions designated to visualize')
         parser.add_argument(
-            '--color', type=argparse.FileType('r'), default=None, nargs='+',
+            '--color', type=argparse.FileType('rU'), default=None, nargs='+',
             help='Customize color of reaction and compound nodes ')
         parser.add_argument(
             '--Image', type=text_type, default=None, help='generate image file directly')
         parser.add_argument(
-            '--exclude-cpairs', type=argparse.FileType('r'), default=None,
+            '--exclude-cpairs', type=argparse.FileType('rU'), default=None,
             help='Remove edge of given compound pairs from final graph ')
         parser.add_argument(
             '--split-map', action='store_true',
@@ -384,10 +375,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             for line in self._args.subset.readlines():
                 raw_subset.append(line.rstrip())
 
-            # for r in raw_subset:
-            #     if r not in self._mm.reactions:
-            #         print(r)
-
             for c in self._mm.compounds:
                 mm_cpds.append(str(c))
             if set(raw_subset).issubset(set(self._mm.reactions)):
@@ -398,11 +385,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                     if any(str(c) in raw_subset for (c, _) in rx.compounds):
                         subset_reactions.add(reaction)
             else:
-                logger.warning('Invalid subset file. The file should contain a column of reaction id or a column '
+                logger.error('Invalid subset file. The file should contain a column of reaction id or a column '
                                'of compound id with compartment, mix of reactions, compounds and other infomation '
                                'in one subset file is not allowed. The function will generate entire metabolic '
                                'network of the model')
-                subset_reactions = set(self._mm.reactions)
+                quit()
         else:
             subset_reactions = set(self._mm.reactions)
 
@@ -488,7 +475,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
                                    self._args.detail)
 
         if self._args.method == 'no-fpp' and self._args.split_map is True:
-            logger.warning('--split-map option makes no difference when method is no-fpp')
+            logger.warning('--split-map is not compatible with no-fpp option')
 
         with open('reactions.dot', 'w') as f:
             g.write_graphviz(f)
@@ -505,8 +492,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             else:
                 if len(subset_reactions) > 500:
                     logger.info(
-                        'The program is going to create a large graph that contains {} reactions, '
-                        'it may take a long time'.format(len(subset_reactions)))
+                        'This graph contains {} reactions, graphs of this '
+                        'size may take a long time'.format(len(subset_reactions)))
                 try:
                     render('dot', self._args.Image, 'reactions.dot')
                 except subprocess.CalledProcessError:
@@ -588,8 +575,6 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, subset, edge_values
         min_edge_value = 1
         max_edge_value = 1
 
-    print(max_edge_value)
-
     def pen_width(value):
         """calculate final edges width"""
         if max_edge_value - min_edge_value == 0:
@@ -610,23 +595,6 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, subset, edge_values
         else:
             return 'both'
 
-    # def final_props(reaction, edge1, edge2):
-    #     """set final properties of edges"""
-    #     if len(edge_values) > 0:
-    #         p = {}
-    #         if edge1 in edge_values:
-    #             p['dir'] = 'forward'
-    #             p['penwidth'] = pen_width(edge_values[edge1])
-    #         elif edge2 in edge_values:
-    #             p['dir'] = 'back'
-    #             p['penwidth'] = pen_width(edge_values[edge2])
-    #         else:
-    #             p['style'] = 'dotted'
-    #             p['dir'] = dir_value(reaction.direction)
-    #         return p
-    #     else:
-    #         return {'dir': dir_value(reaction.direction)}
-
     def condensed_rxn_props(detail, r_list, reaction_flux):
         if len(r_list) == 1:
             r = new_id_mapping[r_list[0]]
@@ -643,14 +611,6 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, subset, edge_values
             else:
                 label_comb = '\n'.join(new_id_mapping[r] for r in r_list)
         return label_comb
-
-    # def dir_value_2(r_list):
-    #     if r_list == rxns['forward']:
-    #         return {'dir': 'forward'}
-    #     elif r_list == rxns.back:
-    #         return {'dir': 'back'}
-    #     else:
-    #         return {'dir': 'both'}
 
     def final_props(dir, edge1, edge2):
         if len(edge_values) > 0:
@@ -672,27 +632,6 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, subset, edge_values
         compound_set.add(c1)
         compound_set.add(c2)
 
-    # for r in subset:
-    #     rx = mm.get_reaction(r)
-    #     if method != 'no-fpp':
-    #         if r in fpp_rxns or r == model.biomass_reaction:
-    #             if element != 'none':
-    #                 if Atom(primary_element(element)) in cpd_formula[str(c.name)]:
-    #                     compound_set.add(c)
-    #             else:
-    #                 compound_set.add(c)
-    #     else:
-    #         if element != 'none':
-    #             if Atom(primary_element(element)) in cpd_formula[str(c.name)]:
-    #                 compound_set.add(c)
-    #         else:
-    #             compound_set.add(c)
-    #     for c, _ in rx.compounds:
-    #         if element != 'none':
-    #             if Atom(primary_element(element)) in cpd_formula[str(c.name)]:
-    #                 compound_set.add(c)
-    #         else:
-    #             compound_set.add(c)
     compound_nodes = {}
     for cpd in compound_set:    # cpd=compound object, cpd.name=compound id, no compartment
         node = graph.Node({
@@ -750,8 +689,6 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, subset, edge_values
                         edge_list.append(edge_test_2)
                         g.add_edge(graph.Edge(
                             node, compound_nodes[c2], final_props(dir, edge1, edge2)))
-    # for edge in g.edges:
-    #     print('{}\t{}\t{}'.format(edge.source, edge.dest, edge.props))
 
     # add exchange reaction nodes
     rxn_set = set()
@@ -792,37 +729,34 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, subset, edge_values
 
     # add biomass reaction nodes
     bio_pair = Counter()
-    if model.biomass_reaction is not None:
-        if model.biomass_reaction in subset:
-            biomass_rxn = mm.get_reaction(model.biomass_reaction)
-            dir = dir_value(biomass_rxn.direction)
-            A, B = [], []
-            for c, _ in biomass_rxn.left:
-                A.append(c)
-            for c, _ in biomass_rxn.right:
-                B.append(c)
-            for c, _ in biomass_rxn.compounds:
-                if c in compound_nodes:
-                    bio_pair[model.biomass_reaction] += 1
-                    node_bio = graph.Node({
-                        'id': '{}_{}'.format(model.biomass_reaction, bio_pair[model.biomass_reaction]),
-                        'label': model.biomass_reaction,
-                        'shape': 'box',
-                        'style': 'filled',
-                        'fillcolor': ALT_COLOR})
-                    g.add_node(node_bio)
+    if model.biomass_reaction in subset:
+        biomass_rxn = mm.get_reaction(model.biomass_reaction)
+        dir = dir_value(biomass_rxn.direction)
+        A, B = [], []
+        for c, _ in biomass_rxn.left:
+            A.append(c)
+        for c, _ in biomass_rxn.right:
+            B.append(c)
+        for c, _ in biomass_rxn.compounds:
+            if c in compound_nodes:
+                bio_pair[model.biomass_reaction] += 1
+                node_bio = graph.Node({
+                    'id': '{}_{}'.format(model.biomass_reaction, bio_pair[model.biomass_reaction]),
+                    'label': model.biomass_reaction,
+                    'shape': 'box',
+                    'style': 'filled',
+                    'fillcolor': ALT_COLOR})
+                g.add_node(node_bio)
 
-                    if c in A:
-                        edge1 = c, model.biomass_reaction
-                        edge2 = model.biomass_reaction, c
-                        g.add_edge(graph.Edge(
-                            compound_nodes[c], node_bio, final_props(dir, edge1, edge2)))
-                    if c in B:
-                        edge1 = model.biomass_reaction, c
-                        edge2 = c, model.biomass_reaction
-                        g.add_edge(graph.Edge(
-                            node_bio, compound_nodes[c], final_props(dir, edge1, edge2)))
-    else:
-        logger.warning('No biomass reaction in this model.')
+                if c in A:
+                    edge1 = c, model.biomass_reaction
+                    edge2 = model.biomass_reaction, c
+                    g.add_edge(graph.Edge(
+                        compound_nodes[c], node_bio, final_props(dir, edge1, edge2)))
+                if c in B:
+                    edge1 = model.biomass_reaction, c
+                    edge2 = c, model.biomass_reaction
+                    g.add_edge(graph.Edge(
+                        node_bio, compound_nodes[c], final_props(dir, edge1, edge2)))
 
     return g
