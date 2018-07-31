@@ -384,9 +384,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             for line in self._args.subset.readlines():
                 raw_subset.append(line.rstrip())
 
-            for r in raw_subset:
-                if r not in self._mm.reactions:
-                    print(r)
+            # for r in raw_subset:
+            #     if r not in self._mm.reactions:
+            #         print(r)
 
             for c in self._mm.compounds:
                 mm_cpds.append(str(c))
@@ -581,12 +581,14 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, subset, edge_values
     # preparing for scaling width of edges
     if len(edge_values) > 0:
         value_list = sorted(edge_values.values())
-        ninty_percentile = value_list[int(len(value_list)*0.85)+1]
+        ninty_percentile = value_list[int(len(value_list)*0.9)+1]
         min_edge_value = min(itervalues(edge_values))
         max_edge_value = ninty_percentile
     else:
         min_edge_value = 1
         max_edge_value = 1
+
+    print(max_edge_value)
 
     def pen_width(value):
         """calculate final edges width"""
@@ -799,7 +801,7 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, subset, edge_values
                 A.append(c)
             for c, _ in biomass_rxn.right:
                 B.append(c)
-            for c, _ in biomass_rxn.left:
+            for c, _ in biomass_rxn.compounds:
                 if c in compound_nodes:
                     bio_pair[model.biomass_reaction] += 1
                     node_bio = graph.Node({
@@ -810,10 +812,16 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, subset, edge_values
                         'fillcolor': ALT_COLOR})
                     g.add_node(node_bio)
 
-                    edge1 = c, model.biomass_reaction
-                    edge2 = model.biomass_reaction, c
-                    g.add_edge(graph.Edge(
-                        compound_nodes[c], node_bio, final_props(dir, edge1, edge2)))
+                    if c in A:
+                        edge1 = c, model.biomass_reaction
+                        edge2 = model.biomass_reaction, c
+                        g.add_edge(graph.Edge(
+                            compound_nodes[c], node_bio, final_props(dir, edge1, edge2)))
+                    if c in B:
+                        edge1 = model.biomass_reaction, c
+                        edge2 = c, model.biomass_reaction
+                        g.add_edge(graph.Edge(
+                            node_bio, compound_nodes[c], final_props(dir, edge1, edge2)))
     else:
         logger.warning('No biomass reaction in this model.')
 
