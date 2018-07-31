@@ -160,7 +160,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# TMFA_Problem.prob.solve()
 		# result = TMFA_Problem.prob.result
 		# logger.info('TMFA Problem Status: {}'.format(result.get_value(TMFA_Problem.get_flux_var(objective))))
-
+		#
 		# Add thermodynamic constraints to the model.
 		# testing_list = list(mm_irreversible.reactions)
 		# TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
@@ -169,10 +169,10 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		#                                         exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
 		#                                         split_reversible, transport_parameters, testing_list)
 		# biomax = solve_objective(TMFA_Problem, objective)
-
-
+		# print(biomax)
+		#
 		biomax = solve_objective(fluxanalysis.FluxBalanceProblem(mm_irreversible, solver), objective)
-		print(biomax)
+		# print(biomax)
 		# TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
 		# solve_objective_tmfa(TMFA_Problem, objective, mm_irreversible.compounds)
 		# quit()
@@ -192,13 +192,12 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
 													exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict, split_reversible, transport_parameters, testing_list)
 
-
 			try:
 				bioflux = timelimit(60, solve_objective, args=(TMFA_Problem, objective))
+				print(bioflux)
 				if bioflux >= 0.9999 * biomax:
 					checked_list.append(reaction)
 					logger.info('{} Reaction Passed Constraint Test'.format(reaction))
-
 				else:
 					bad_constraint_list.append(reaction)
 					logger.info('{} Reaction Failed Constraint Test'.format(reaction))
@@ -271,6 +270,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# 	print('RXN,Flux,DGRI,Zi\t{}\t{}\t{}\t{}'.format(reaction, result.get_value(TMFA_Problem.get_flux_var(reaction)), result.get_value('dgri_{}'.format(reaction)), result.get_value('zi_{}'.format(reaction))))
 		# for compound in sorted(mm_irreversible.compounds):
 		# 	print('CPD Activity\t{}\t{}'.format(compound, TMFA_Problem.prob.result.get_value(TMFA_Problem.prob.var(str(compound)))))
+
 		# bio = TMFA_Problem.get_flux_var(objective)
 		# max_val = result.get_value(bio)
 		# TMFA_Problem.prob.add_linear_constraints(bio == max_val)
@@ -453,7 +453,7 @@ def parse_dgr_file(dgr_file):
 				err = float(2)
 			dgr_dict[rxn] = (float(dgr), err)
 			dgr_dict['{}_forward'.format(rxn)] = (float(dgr), err)
-			dgr_dict['{}_reverse'.format(rxn)] = (float(dgr), err)
+			dgr_dict['{}_reverse'.format(rxn)] = (-float(dgr), err)
 		else:
 			logger.info('Reaction {} was provided with dgr value of {}. Treating as an unknown value.'.format(rxn, dgr))
 	return dgr_dict
@@ -705,11 +705,11 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 			ssxi = 0
 			problem.prob.define('dgr_err_{}'.format(reaction))
 			# If no error then use this line
-			# dgr_err = 0
+			dgr_err = 0
 			# If you want to use the error estimates for dgr values then uncomment these lines
-			dgr_err = problem.prob.var('dgr_err_{}'.format(reaction))
-			problem.prob.add_linear_constraints(dgr_err <= 2*err)
-			problem.prob.add_linear_constraints(dgr_err >= -2*err)
+			# dgr_err = problem.prob.var('dgr_err_{}'.format(reaction))
+			# problem.prob.add_linear_constraints(dgr_err <= 2*err)
+			# problem.prob.add_linear_constraints(dgr_err >= -2*err)
 			# problem.prob.add_linear_constraints(dgr_err <= 0)
 			# problem.prob.add_linear_constraints(dgr_err >= -20)
 
