@@ -49,6 +49,199 @@ ALT_COLOR = '#f4fc55'       # biomass reaction color
 RXN_COMBINED_COLOR = '#fc9a44'
 
 
+class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
+                           SolverCommandMixin, Command, LoopRemovalMixin, FilePrefixAppendAction):
+    """Run visualization command on the model."""
+
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument(
+            '--method',type=text_type,
+            default='fpp', help='Compound pair prediction method, ')
+        parser.add_argument(
+            '--exclude', metavar='reaction', type=text_type, default=[],
+            action=FilePrefixAppendAction,
+            help='Reaction to exclude (e.g. biomass reactions or macromolecule synthesis)')
+        parser.add_argument(
+            '--fba', action='store_true',
+            help='visualize reaction flux')
+        parser.add_argument(
+            '--element', type=text_type, default='C',
+            help='Primary element flow')
+        parser.add_argument(
+            '--detail', type=text_type, default=None, action='append', nargs='+',
+            help='Reaction and compound properties showed on nodes label')
+        parser.add_argument(
+            '--subset', type=argparse.FileType('rU'), default=None,
+            help='Reactions designated to visualize')
+        parser.add_argument(
+            '--color', type=argparse.FileType('rU'), default=None, nargs='+',
+            help='Customize color of reaction and compound nodes ')
+        parser.add_argument(
+            '--Image', type=text_type, default=None, help='generate image file directly')
+        parser.add_argument(
+            '--exclude-cpairs', type=argparse.FileType('rU'), default=None,
+            help='Remove edge of given compound pairs from final graph ')
+        parser.add_argument(
+            '--split-map', action='store_true',
+            help='Create dot file for reaction-splitted metabolic network visualization')
+        super(VisualizationCommand, cls).init_parser(parser)
+
+    def run(self):
+        """Run visualization command."""
+
+        # Mapping from compound id to formula
+        compound_formula = {}
+        for compound in self._model.compounds:
+            if compound.formula is not None:
+                try:
+                    f = Formula.parse(compound.formula).flattened()
+                    if not f.is_variable():
+                        compound_formula[compound.id] = f
+                    else:
+                        logger.warning(
+                            'Skipping variable formula {}: {}'.format(
+                                compound.id, compound.formula))    #skip generic compounds
+                except ParseError as e:
+                    msg = (
+                        'Error parsing formula'
+                        ' for compound {}:\n{}\n{}'.format(
+                            compound.id, e, compound.formula))
+                    if e.indicator is not None:
+                        msg += '\n{}'.format(e.indicator)
+                    logger.warning(msg)
+
+        # set of reactions to visualize
+        if self._args.subset is not None:
+            raw_subset, subset_reactions, mm_cpds = [], set(), []
+            for line in self._args.subset.readlines():
+                raw_subset.append(line.rstrip())
+
+            for c in self._mm.compounds:
+                mm_cpds.append(str(c))
+            if set(raw_subset).issubset(set(self._mm.reactions)):
+                subset_reactions = raw_subset
+            elif set(raw_subset).issubset(set(mm_cpds)):
+                for reaction in self._mm.reactions:
+                    rx = self._mm.get_reaction(reaction)
+                    if any(str(c) in raw_subset for (c, _) in rx.compounds):
+                        subset_reactions.add(reaction)
+            else:
+                logger.error('Invalid subset file. The file should contain a column of reaction id or a column '
+                               'of compound id with compartment, mix of reactions, compounds and other infomation '
+                               'in one subset file is not allowed. The function will generate entire metabolic '
+                               'network of the model')
+                quit()
+        else:
+            subset_reactions = set(self._mm.reactions)
+
+        # create {rxn_id:[(c1, c2),(c3,c4),...], ...} dictionary, key = rxn id, value = list of compound pairs
+        filter_dict, fpp_rxns = make_filter_dict(self._model, self._mm, self._args.method, self._args.element, compound_formula,
+                                       self._args.exclude_cpairs, self._args.exclude)
+
+        # run l1min_fba, get reaction fluxes
+        reaction_flux = {}
+        if self._args.fba is True:
+            solver = self._get_solver()
+            p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
+            try:
+                p.maximize(self._get_objective())
+            except fluxanalysis.FluxBalanceError as e:
+                self.report_flux_balance_error(e)
+
+            fluxes = {r: p.get_flux(r) for r in self._mm.reactions}
+
+            # Run flux minimization
+            flux_var = p.get_flux_var(self._get_objective())
+            p.prob.add_linear_constraints(flux_var == p.get_flux(self._get_objective()))
+            p.minimize_l1()
+
+            count = 0
+            for r_id in self._mm.reactions:
+                flux = p.get_flux(r_id)
+                if abs(flux - fluxes[r_id]) > 1e-6:
+                    count += 1
+                if abs(flux) > 1e-6:
+                    reaction_flux[r_id] = flux
+            logger.info('Minimized reactions: {}'.format(count))
+
+        # 2018-7-27 create a new cpair_dict: mapping from cpair to a defaultdict of rxns,
+        new_id_mapping = {}
+        rxn_count = Counter()
+        cpair_dict = defaultdict(lambda: defaultdict(list))
+        for r, cpairs in iteritems(filter_dict):
+            if r in subset_reactions:
+                rx = self._mm.get_reaction(r)
+                for (c1, c2) in cpairs:
+                    if self._args.method == 'no-fpp':
+                        r_id = r
+                        new_id_mapping[r_id] = r
+                    else:
+                        rxn_count[r] += 1
+                        r_id = str('{}_{}'.format(r, rxn_count[r]))
+                        new_id_mapping[r_id] = r
+                    a = tuple(sorted((c1,c2))) == (c1,c2)
+                    if rx.direction == Direction.Forward:
+                        if a:
+                            cpair_dict[(c1, c2)]['forward'].append(r_id)
+                        else:
+                            cpair_dict[(c2, c1)]['back'].append(r_id)
+                    elif rx.direction == Direction.Reverse:
+                        if a:
+                            cpair_dict[(c1, c2)]['back'].append(r_id)
+                        else:
+                            cpair_dict[(c2, c1)]['forward'].append(r_id)
+                    else:
+                        if self._args.fba is True:
+                            if r in reaction_flux:
+                                if reaction_flux[r] > 0:
+                                    if a:
+                                        cpair_dict[(c1, c2)]['forward'].append(r_id)
+                                    else:
+                                        cpair_dict[(c2, c1)]['back'].append(r_id)
+                                else:
+                                    if a:
+                                        cpair_dict[(c1, c2)]['back'].append(r_id)
+                                    else:
+                                        cpair_dict[(c2, c1)]['forward'].append(r_id)
+                            else:
+                                cpair_dict[tuple(sorted((c1, c2)))]['both'].append(r_id)
+                        else:
+                            cpair_dict[tuple(sorted((c1, c2)))]['both'].append(r_id)
+
+        edge_values = make_edge_values(reaction_flux, self._mm, compound_formula, self._args.element,
+                                       self._args.split_map, cpair_dict, new_id_mapping, self._args.method)
+
+        g = create_bipartite_graph(self._mm, self._model, cpair_dict, self._args.split_map, subset_reactions,
+                                   edge_values, reaction_flux, self._args.method, new_id_mapping, self._args.color,
+                                   self._args.detail)
+
+        if self._args.method == 'no-fpp' and self._args.split_map is True:
+            logger.warning('--split-map is not compatible with no-fpp option')
+
+        with open('reactions.dot', 'w') as f:
+            g.write_graphviz(f)
+        with open('reactions.nodes.tsv', 'w') as f:
+            g.write_cytoscape_nodes(f)
+        with open('reactions.edges.tsv', 'w') as f:
+            g.write_cytoscape_edges(f)
+
+        if self._args.Image is not None:
+            if render is None:
+                self.fail(
+                    'create image file requires python binding graphviz module'
+                    ' ("pip install graphviz")')
+            else:
+                if len(subset_reactions) > 500:
+                    logger.info(
+                        'This graph contains {} reactions, graphs of this '
+                        'size may take a long time'.format(len(subset_reactions)))
+                try:
+                    render('dot', self._args.Image, 'reactions.dot')
+                except subprocess.CalledProcessError:
+                    logger.warning('the graph is too large to create')
+
+
 def cpds_properties(cpd, compound, detail): # cpd=Compound object, compound = CompoundEntry object
     """define compound nodes label"""
     compound_set = set()
@@ -295,211 +488,6 @@ def make_filter_dict(model, mm, method, element, compound_formula, args_exclude_
     return filter_dict, fpp_rxns
 
 
-class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
-                           SolverCommandMixin, Command, LoopRemovalMixin, FilePrefixAppendAction):
-    """Run visualization command on the model."""
-
-    @classmethod
-    def init_parser(cls, parser):
-        parser.add_argument(
-            '--method',type=text_type,
-            default='fpp', help='Compound pair prediction method, ')
-        parser.add_argument(
-            '--exclude', metavar='reaction', type=text_type, default=[],
-            action=FilePrefixAppendAction,
-            help='Reaction to exclude (e.g. biomass reactions or macromolecule synthesis)')
-        parser.add_argument(
-            '--fba', action='store_true',
-            help='visualize reaction flux')
-        parser.add_argument(
-            '--element', type=text_type, default='C',
-            help='Primary element flow')
-        parser.add_argument(
-            '--detail', type=text_type, default=None, action='append', nargs='+',
-            help='Reaction and compound properties showed on nodes label')
-        parser.add_argument(
-            '--subset', type=argparse.FileType('rU'), default=None,
-            help='Reactions designated to visualize')
-        parser.add_argument(
-            '--color', type=argparse.FileType('rU'), default=None, nargs='+',
-            help='Customize color of reaction and compound nodes ')
-        parser.add_argument(
-            '--Image', type=text_type, default=None, help='generate image file directly')
-        parser.add_argument(
-            '--exclude-cpairs', type=argparse.FileType('rU'), default=None,
-            help='Remove edge of given compound pairs from final graph ')
-        parser.add_argument(
-            '--split-map', action='store_true',
-            help='Create dot file for reaction-splitted metabolic network visualization')
-        super(VisualizationCommand, cls).init_parser(parser)
-
-    def run(self):
-        """Run visualization command."""
-
-        # Mapping from compound id to formula
-        compound_formula = {}
-        for compound in self._model.compounds:
-            if compound.formula is not None:
-                try:
-                    f = Formula.parse(compound.formula).flattened()
-                    if not f.is_variable():
-                        compound_formula[compound.id] = f
-                    else:
-                        logger.warning(
-                            'Skipping variable formula {}: {}'.format(
-                                compound.id, compound.formula))    #skip generic compounds
-                except ParseError as e:
-                    msg = (
-                        'Error parsing formula'
-                        ' for compound {}:\n{}\n{}'.format(
-                            compound.id, e, compound.formula))
-                    if e.indicator is not None:
-                        msg += '\n{}'.format(e.indicator)
-                    logger.warning(msg)
-
-        # # Mapping from string of cpd_id+compartment(eg: pyr_c[c]) to Compound object
-        # cpd_object = {}
-        # for cpd in self._mm.compounds:
-        #     cpd_object[str(cpd)] = cpd
-        #
-        # # read exclude_compound_pairs from command-line argument
-        # exclude_cpairs = []
-        # if self._args.exclude_pairs is not None:
-        #     for row in csv.reader(self._args.exclude_pairs, delimiter=str('\t')):
-        #         exclude_cpairs.append((cpd_object[row[0]], cpd_object[row[1]]))
-        #         exclude_cpairs.append((cpd_object[row[1]], cpd_object[row[0]]))
-
-        # set of reactions to visualize
-        if self._args.subset is not None:
-            raw_subset, subset_reactions, mm_cpds = [], set(), []
-            for line in self._args.subset.readlines():
-                raw_subset.append(line.rstrip())
-
-            for c in self._mm.compounds:
-                mm_cpds.append(str(c))
-            if set(raw_subset).issubset(set(self._mm.reactions)):
-                subset_reactions = raw_subset
-            elif set(raw_subset).issubset(set(mm_cpds)):
-                for reaction in self._mm.reactions:
-                    rx = self._mm.get_reaction(reaction)
-                    if any(str(c) in raw_subset for (c, _) in rx.compounds):
-                        subset_reactions.add(reaction)
-            else:
-                logger.error('Invalid subset file. The file should contain a column of reaction id or a column '
-                               'of compound id with compartment, mix of reactions, compounds and other infomation '
-                               'in one subset file is not allowed. The function will generate entire metabolic '
-                               'network of the model')
-                quit()
-        else:
-            subset_reactions = set(self._mm.reactions)
-
-        # create {rxn_id:[(c1, c2),(c3,c4),...], ...} dictionary, key = rxn id, value = list of compound pairs
-        filter_dict, fpp_rxns = make_filter_dict(self._model, self._mm, self._args.method, self._args.element, compound_formula,
-                                       self._args.exclude_cpairs, self._args.exclude)
-
-        # run l1min_fba, get reaction fluxes
-        reaction_flux = {}
-        if self._args.fba is True:
-            solver = self._get_solver()
-            p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
-            try:
-                p.maximize(self._get_objective())
-            except fluxanalysis.FluxBalanceError as e:
-                self.report_flux_balance_error(e)
-
-            fluxes = {r: p.get_flux(r) for r in self._mm.reactions}
-
-            # Run flux minimization
-            flux_var = p.get_flux_var(self._get_objective())
-            p.prob.add_linear_constraints(flux_var == p.get_flux(self._get_objective()))
-            p.minimize_l1()
-
-            count = 0
-            for r_id in self._mm.reactions:
-                flux = p.get_flux(r_id)
-                if abs(flux - fluxes[r_id]) > 1e-6:
-                    count += 1
-                if abs(flux) > 1e-6:
-                    reaction_flux[r_id] = flux
-            logger.info('Minimized reactions: {}'.format(count))
-
-        # 2018-7-27 create a new cpair_dict: mapping from cpair to a defaultdict of rxns,
-        new_id_mapping = {}
-        rxn_count = Counter()
-        cpair_dict = defaultdict(lambda: defaultdict(list))
-        for r, cpairs in iteritems(filter_dict):
-            if r in subset_reactions:
-                rx = self._mm.get_reaction(r)
-                for (c1, c2) in cpairs:
-                    if self._args.method == 'no-fpp':
-                        r_id = r
-                        new_id_mapping[r_id] = r
-                    else:
-                        rxn_count[r] += 1
-                        r_id = str('{}_{}'.format(r, rxn_count[r]))
-                        new_id_mapping[r_id] = r
-                    a = tuple(sorted((c1,c2))) == (c1,c2)
-                    if rx.direction == Direction.Forward:
-                        if a:
-                            cpair_dict[(c1, c2)]['forward'].append(r_id)
-                        else:
-                            cpair_dict[(c2, c1)]['back'].append(r_id)
-                    elif rx.direction == Direction.Reverse:
-                        if a:
-                            cpair_dict[(c1, c2)]['back'].append(r_id)
-                        else:
-                            cpair_dict[(c2, c1)]['forward'].append(r_id)
-                    else:
-                        if self._args.fba is True:
-                            if r in reaction_flux:
-                                if reaction_flux[r] > 0:
-                                    if a:
-                                        cpair_dict[(c1, c2)]['forward'].append(r_id)
-                                    else:
-                                        cpair_dict[(c2, c1)]['back'].append(r_id)
-                                else:
-                                    if a:
-                                        cpair_dict[(c1, c2)]['back'].append(r_id)
-                                    else:
-                                        cpair_dict[(c2, c1)]['forward'].append(r_id)
-                            else:
-                                cpair_dict[tuple(sorted((c1, c2)))]['both'].append(r_id)
-                        else:
-                            cpair_dict[tuple(sorted((c1, c2)))]['both'].append(r_id)
-
-        edge_values = make_edge_values(reaction_flux, self._mm, compound_formula, self._args.element,
-                                       self._args.split_map, cpair_dict, new_id_mapping, self._args.method)
-
-        g = create_bipartite_graph(self._mm, self._model, cpair_dict, self._args.split_map, subset_reactions,
-                                   edge_values, reaction_flux, self._args.method, new_id_mapping, self._args.color,
-                                   self._args.detail)
-
-        if self._args.method == 'no-fpp' and self._args.split_map is True:
-            logger.warning('--split-map is not compatible with no-fpp option')
-
-        with open('reactions.dot', 'w') as f:
-            g.write_graphviz(f)
-        with open('reactions.nodes.tsv', 'w') as f:
-            g.write_cytoscape_nodes(f)
-        with open('reactions.edges.tsv', 'w') as f:
-            g.write_cytoscape_edges(f)
-
-        if self._args.Image is not None:
-            if render is None:
-                self.fail(
-                    'create image file requires python binding graphviz module'
-                    ' ("pip install graphviz")')
-            else:
-                if len(subset_reactions) > 500:
-                    logger.info(
-                        'This graph contains {} reactions, graphs of this '
-                        'size may take a long time'.format(len(subset_reactions)))
-                try:
-                    render('dot', self._args.Image, 'reactions.dot')
-                except subprocess.CalledProcessError:
-                    logger.warning('the graph is too large to create')
-
-
 def create_bipartite_graph(mm, model, cpair_dict, split_map, subset, edge_values,
                            reaction_flux, method, new_id_mapping, args_color, args_detail):
     """create bipartite graph of given metabolic network
@@ -707,7 +695,6 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, subset, edge_values
                 label = '{}\n{}'.format(r, edge_values[r])
         node_ex = graph.Node({
             'id': r,
-            # 'edge_id': r,
             'label': label,
             'shape': 'box',
             'style': 'filled',
