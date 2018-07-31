@@ -383,9 +383,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin,
             raw_subset, subset_reactions, mm_cpds = [], set(), []
             for line in self._args.subset.readlines():
                 raw_subset.append(line.rstrip())
+
             for r in raw_subset:
                 if r not in self._mm.reactions:
                     print(r)
+
             for c in self._mm.compounds:
                 mm_cpds.append(str(c))
             if set(raw_subset).issubset(set(self._mm.reactions)):
@@ -585,8 +587,6 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, subset, edge_values
     else:
         min_edge_value = 1
         max_edge_value = 1
-
-    print(max_edge_value)
 
     def pen_width(value):
         """calculate final edges width"""
@@ -815,6 +815,6 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, subset, edge_values
                     g.add_edge(graph.Edge(
                         compound_nodes[c], node_bio, final_props(dir, edge1, edge2)))
     else:
-        logger.warning('The objective reaction was not specified (No biomass reaction in this model).')
+        logger.warning('No biomass reaction in this model.')
 
     return g
