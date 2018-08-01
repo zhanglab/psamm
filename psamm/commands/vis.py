@@ -269,7 +269,10 @@ def cpds_properties(cpd, compound, detail):
 
     Args:
     cpd: class 'psamm.reaction.Compound'.
-    compound: class 'psamm.datasource.entry.DictCompoundEntry' """
+    compound: class 'psamm.datasource.entry.DictCompoundEntry'.
+    detail: A list of reaction or compound properties name included
+            in the model. e.g. [formula, genes, equation].
+    """
 
     compound_set = set()
     compound_set.update(compound.properties)
@@ -287,7 +290,14 @@ def cpds_properties(cpd, compound, detail):
 
 
 def rxns_properties(reaction, detail, reaction_flux):
-    """define reaction nodes label"""
+    """define reaction nodes label.
+
+    Args:
+        reaction: class 'psamm.datasource.entry.DictReactionEntry'.
+        detail: A list of reaction or compound properties name included
+            in the model. e.g. [formula, genes, equation].
+        reaction_flux: Dictionary of reaction ID and flux value.
+    """
     reaction_set = set()
     reaction_set.update(reaction.properties)
     if detail is not None:
