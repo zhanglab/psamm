@@ -272,8 +272,6 @@ def cpds_properties(cpd, compound, detail):
     compound: class 'psamm.datasource.entry.DictCompoundEntry' """
 
     compound_set = set()
-    print(type(cpd))
-    print(type(compound))
     compound_set.update(compound.properties)
     if detail is not None:
         cpd_detail = []
@@ -322,8 +320,23 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
     that key is an edge(a tuple of (c, r) or (r, c)) and vlaue is flux
     between the compound and reaction
 
-    Args:"""
-
+    Args:
+        reactions_flux: Dictionary of reaction id and flux value.
+        mm: class 'psamm.metabolicmodel.MetabolicModel'.
+        compound_formula: Dictionary of compound id and
+            class 'psamm.formula.Formula'.
+        element: Chemical symbol of an element, such as C(carbon),
+            N(nitrogen), S(sulfer).
+        slit_map: True or False, determine which kind of gragh to create(
+            combine multiple reactions in one node or not).
+        cpair_dict: Defauldict of compound pair and another defaultdict of
+            list(in the latter defaultdict, key is direction(forward, back or
+            both), value is reaction list),{(c1, c2): {'forward':[rxns],...}}.
+        new_id_mapping: Dictionary of reaction is with suffix(number) and
+            real reaction id, e.g.{r_1:r, r_2: r,...}.
+        method: Command line argument, including 3 options:'fpp', 'no-fpp'
+            and file path.
+        """
     edge_values = {}
     if len(reaction_flux) > 0:
         for reaction in reaction_flux:
@@ -420,7 +433,24 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
 def make_filter_dict(model, mm, method, element, compound_formula,
                      args_exclude_cpairs, exclude_rxns):
     """create a dictionary of reaction id(key) and a list of related
-    compound pairs(value)"""
+    compound pairs(value) by 3 different methods.
+
+    Args:
+        model: class 'psamm.datasource.native.NativeModel'.
+        mm: class 'psamm.metabolicmodel.MetabolicModel'.
+        method: Command line argument, including 'fpp', 'no-fpp' and
+            file path.
+        element: Chemical symbol of an element, such as C(carbon),
+            N(nitrogen), S(sulfer).
+        compound_formula: A dictionary that key is compound id (a string) and
+            value is class 'psamm.formula.Formula'.
+        args_exclude_cpairs: Command line argument, a file that contains two
+            columns(tab-separated) of compounds(in the format of
+            compound_id[compartment], such as atp[c], akg[c],each row
+            represent two reactant/product pairs((c1, c2)and (c2,c1)).
+        exclude_rxns: Command line argument, a file that contains one column
+            of reaction IDs, these reaction will be removed for visualization
+            when method is fpp."""
 
     # Mapping from cpd_id+compartment(eg: pyr_c[c]) to Compound object
     cpd_object = {}
@@ -551,30 +581,29 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, edge_values,
     direction) are included.
 
     Args:
-    mm: class 'psamm.metabolicmodel.MetabolicModel'.
-    model: class 'psamm.datasource.native.NativeModel'.
-    cpair_dict: Dictionary mapping compound pair(c1,c2) to another
-        dictionary that mapping from direction to a list of reaction IDs.
-    split_map: Command line option, expressed as "self._args.split_map" in
-        Class.
-    element: A string that represent a specific chemical element, such as
-        C(carbon), S(sulfur), N(nitrogen).
-    subset: Set of reactions for visualizing.
-    edge_values: Dictionary mapping an edge (a tuple, (r, c) or (c, r)) to
-        a float number that represent width of edge. r is reaction id, c is
-        compound id, sometimes r is a tuple of multiple reaction ids.
-    reaction_flux: Dictionary mapping reaction ID to reaction flux. Flux
-        is a float number.
-    method: Command line option, expressed as "self._args.method" in
-        Class. Including 3 choices: 'fpp', 'no-fpp' or a file path.
-    new_id_mapping: A dictionary mapping from reaction id with suffix to
-        real reaction id.
-    args_color: Command line option, expressed as "self._args.color" in
-        Class, in command line, it is followed by a file path.
-    args_detail: Command line option, expressed as "self._args.detail" in
-        Class, in command line, it is followed by one or multiple string
-        that represents compound or reaction properties, such as formula,
-        equation, genes. """
+        mm: class 'psamm.metabolicmodel.MetabolicModel'.
+        model: class 'psamm.datasource.native.NativeModel'.
+        cpair_dict: Dictionary mapping compound pair(c1,c2) to another
+            dictionary that mapping from direction to a list of reaction IDs.
+        split_map: Command line argument. True or False.
+        element: Chemical symbol of an element, such as C(carbon),
+            S(sulfur), N(nitrogen).
+        subset: A set of reaction IDs.
+        edge_values: Dictionary mapping an edge (a tuple, (r, c) or (c, r)) to
+            a float number that represent width of edge. r is reaction id, c is
+            compound id, sometimes r is a tuple of multiple reaction ids.
+        reaction_flux: Dictionary mapping from reaction ID to reaction flux.
+            Flux is a float number.
+        method: Command line argument, including 3 choices: 'fpp', 'no-fpp'
+            and a file path.
+        new_id_mapping: A dictionary mapping from reaction id with suffix to
+            real reaction id.
+        args_color: Command line argument, a file comprised by two columns
+            (tab-separated), the first column is reaction id or
+            compound_id[compartment], the second columns is hex color code.
+        args_detail: Command line argument, including text_type of reaction
+            or compound properties which are defined in model, e.g. formula,
+            equation, genes."""
 
     g = graph.Graph()
 
