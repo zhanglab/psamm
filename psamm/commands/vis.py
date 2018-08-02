@@ -615,8 +615,6 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, edge_values,
         min_edge_value = 1
         max_edge_value = 1
 
-    print(max_edge_value)
-
     def pen_width(value):
         """calculate final edges width"""
         if max_edge_value - min_edge_value == 0:
@@ -788,6 +786,4 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, edge_values,
                 if c in B:
                     g.add_edge(graph.Edge(node_bio, compound_nodes[c],
                                           final_props(dir, edge)))
-    for (a, b), v in iteritems(edge_values):
-        print(str(a), str(b), v)
     return g
