@@ -262,8 +262,11 @@ def rxns_properties(reaction, detail, reaction_flux):
         for prop in detail[0]:
             if prop in reaction_set:
                 rxn_detail.append(str(prop))
-        label = '\n'.join(_encode_value(reaction.properties[value])
-                          for value in rxn_detail)
+        if len(rxn_detail) == 0:
+            label = reaction.id
+        else:
+            label = '\n'.join(_encode_value(reaction.properties[value])
+                              for value in rxn_detail)
         if len(reaction_flux) > 0:
             if reaction.id in iterkeys(reaction_flux):
                 label = '{}\n{}'.format(label, reaction_flux[reaction.id])
