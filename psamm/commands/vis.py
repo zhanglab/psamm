@@ -309,6 +309,7 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
             and file path.
         """
     edge_values = {}
+    edge_values_combined = {}
     if len(reaction_flux) > 0:
         for reaction in reaction_flux:
             rx = mm.get_reaction(reaction)
@@ -329,18 +330,21 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
         if split_map is not True and method != 'no-fpp':
             for (c1, c2), rxns in iteritems(cpair_dict):
                 for dir, rlist in iteritems(rxns):
-                    if len(rlist) > 1 :
-                        if any(new_id_mapping[r] in reaction_flux for r
-                               in rlist):
-                            x_comb_c1, x_comb_c2 = 0, 0
-                            for r in rlist:
-                                real_r = new_id_mapping[r]
-                                if real_r in reaction_flux:
-                                    x_comb_c1 += edge_values[(c1, real_r)]
-                                    x_comb_c2 += edge_values[(c2, real_r)]
-                            edge_values[(c1, tuple(rlist))] = x_comb_c1
-                            edge_values[(c2, tuple(rlist))] = x_comb_c2
-    return edge_values
+                    rlist_string = str(','.join(new_id_mapping[r] for r in rlist))
+                    if any(new_id_mapping[r] in reaction_flux for r
+                           in rlist):
+                        x_comb_c1, x_comb_c2 = 0, 0
+                        for r in rlist:
+                            real_r = new_id_mapping[r]
+                            if real_r in reaction_flux:
+                                x_comb_c1 += edge_values[(c1, real_r)]
+                                x_comb_c2 += edge_values[(c2, real_r)]
+                        edge_values_combined[(c1, rlist_string)] = x_comb_c1
+                        edge_values_combined[(c2, rlist_string)] = x_comb_c2
+    if split_map or method == 'no-fpp':
+        return edge_values
+    else:
+        return edge_values_combined
 
 
 def make_filter_dict(model, mm, method, element, cpd_formula,
@@ -712,12 +716,8 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, edge_values,
                         'fillcolor': final_rxn_color(args_color, i)})
                     g.add_node(node)
 
-                    if len(i) == 1:
-                        reac = new_id_mapping[i[0]]  # a single, real rxn id
-                        test = i[0]
-                    else:
-                        reac = tuple(i)  # a list of rxn id
-                        test = i
+                    reac = str(','.join(new_id_mapping[r] for r in i))
+                    test = i
 
                     edge1 = c1, reac
                     edge_test_1 = c1, test
