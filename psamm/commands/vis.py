@@ -222,8 +222,9 @@ def cpds_properties(cpd, compound, detail):
     Args:
     cpd: class 'psamm.reaction.Compound'.
     compound: class 'psamm.datasource.entry.DictCompoundEntry'.
-    detail: A list of reaction or compound properties name included
-            in the model. e.g. [id, name, formula].
+    detail: A list that contains only one element, this element is a list of
+        reaction or compound properties name included in the model.
+        e.g. detrail = [['id', 'name', 'formula']].
     """
     compound_set = set()
     compound_set.update(compound.properties)
@@ -231,13 +232,13 @@ def cpds_properties(cpd, compound, detail):
         cpd_detail = []
         for prop in detail[0]:
             if prop in compound_set:
-                cpd_detail.append(str(prop))
+                cpd_detail.append(prop)
         pre_label = '\n'.join(_encode_value(compound.properties[value])
                               for value in cpd_detail if value != 'id')
         if 'id' in detail:
             label = '{}\n{}'.format(str(cpd), pre_label)
         else:
-            if all(prop not in cpd_detail for prop in detail):
+            if all(prop not in compound_set for prop in detail[0]):
                 label = str(cpd)
             else:
                 label = pre_label
