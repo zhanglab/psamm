@@ -235,7 +235,7 @@ def cpds_properties(cpd, compound, detail):
                 cpd_detail.append(prop)
         pre_label = '\n'.join(_encode_value(compound.properties[value])
                               for value in cpd_detail if value != 'id')
-        if 'id' in detail:
+        if 'id' in detail[0]:
             label = '{}\n{}'.format(str(cpd), pre_label)
         else:
             if all(prop not in compound_set for prop in detail[0]):
