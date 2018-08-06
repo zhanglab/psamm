@@ -184,11 +184,41 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
             self._args.split_map, cpair_dict, new_id_mapping,
             self._args.method)
 
-        g = create_bipartite_graph(self._mm, self._model, cpair_dict,
-                                   self._args.split_map, edge_values,
-                                   subset_reactions,reaction_flux,
-                                   self._args.method, new_id_mapping,
-                                   self._args.color,self._args.detail)
+        # create rxns/cpds recolor dict
+        recolor_dict = {}
+        if self._args.color is not None:
+            for f in self._args.color:
+                for row in csv.reader(f, delimiter=str(u'\t')):
+                    recolor_dict[row[0]] = row[1]
+
+        model_compoundEntries, model_reactionEntries = {}, {}
+        for c in self._model.compounds:
+            model_compoundEntries[c.id] = c
+        for r in self._model.reactions:
+            model_reactionEntries[r.id] = r
+
+        # g = create_bipartite_graph(self._mm, self._model, cpair_dict,
+        #                            self._args.split_map, edge_values,
+        #                            subset_reactions,reaction_flux,
+        #                            self._args.method, new_id_mapping,
+        #                            self._args.color,self._args.detail)
+        g = graph.Graph()
+        g = add_graph_nodes(g, cpair_dict, self._args.method,
+                            new_id_mapping, split=self._args.split_map)
+        g = add_node_color(g, recolor_dict)
+        g = add_edges(g, cpair_dict, self._args.method, split = self._args.split_map)
+
+        if self._model.biomass_reaction in subset_reactions:
+            biomass_rxn = self._mm.get_reaction(self._model.biomass_reaction)
+            g = add_biomass_rxns(g, biomass_rxn, self._model.biomass_reaction)
+
+        for reaction in self._mm.reactions:
+            if self._mm.is_exchange(reaction):
+                exchange_rxn = self._mm.get_reaction(reaction)
+                g = add_Exchange_rxns(g, reaction, exchange_rxn)
+        g = add_node_label(g, self._args.detail, model_compoundEntries,
+                           model_reactionEntries, reaction_flux)
+        g = set_edge_props_withfba(g, edge_values)
 
         if self._args.method == 'no-fpp' and self._args.split_map is True:
             logger.warning('--split-map is not compatible with no-fpp option')
@@ -216,71 +246,71 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
                 #     logger.warning('the graph is too large to create')
 
 
-def cpds_properties(cpd, compound, detail):
-    """define compound nodes label.
-
-    Args:
-    cpd: class 'psamm.reaction.Compound'.
-    compound: class 'psamm.datasource.entry.DictCompoundEntry'.
-    detail: A list that contains only one element, this element is a list of
-        reaction or compound properties name included in the model.
-        e.g. detrail = [['id', 'name', 'formula']].
-    """
-    compound_set = set()
-    compound_set.update(compound.properties)
-    if detail is not None:
-        cpd_detail = []
-        for prop in detail[0]:
-            if prop in compound_set:
-                cpd_detail.append(prop)
-        pre_label = '\n'.join(_encode_value(compound.properties[value])
-                              for value in cpd_detail if value != 'id')
-        if 'id' in detail[0]:
-            label = '{}\n{}'.format(str(cpd), pre_label)
-        else:
-            if all(prop not in compound_set for prop in detail[0]):
-                label = str(cpd)
-            else:
-                label = pre_label
-    else:
-        label = str(cpd)
-    return label
-
-
-def rxns_properties(reaction, detail, reaction_flux):
-    """define reaction nodes label.
-
-    Args:
-        reaction: class 'psamm.datasource.entry.DictReactionEntry'.
-        detail: A list of reaction or compound properties name included
-            in the model. e.g. [id, genes, equation].
-        reaction_flux: Dictionary of reaction ID and flux value.
-    """
-    reaction_set = set()
-    reaction_set.update(reaction.properties)
-    if detail is not None:
-        rxn_detail = []
-        for prop in detail[0]:
-            if prop in reaction_set:
-                rxn_detail.append(str(prop))
-        if len(rxn_detail) == 0:
-            label = reaction.id
-        else:
-            label = '\n'.join(_encode_value(reaction.properties[value])
-                              for value in rxn_detail)
-        if len(reaction_flux) > 0:
-            if reaction.id in iterkeys(reaction_flux):
-                label = '{}\n{}'.format(label, reaction_flux[reaction.id])
-    else:
-        if len(reaction_flux) > 0:
-            if reaction.id in reaction_flux:
-                label ='{}\n{}'.format(reaction.id,reaction_flux[reaction.id])
-            else:
-                label = reaction.id
-        else:
-            label = reaction.id
-
-    return label
+# def cpds_properties(cpd, compound, detail):
+#     """define compound nodes label.
+#
+#     Args:
+#     cpd: class 'psamm.reaction.Compound'.
+#     compound: class 'psamm.datasource.entry.DictCompoundEntry'.
+#     detail: A list that contains only one element, this element is a list of
+#         reaction or compound properties name included in the model.
+#         e.g. detrail = [['id', 'name', 'formula']].
+#     """
+#     compound_set = set()
+#     compound_set.update(compound.properties)
+#     if detail is not None:
+#         cpd_detail = []
+#         for prop in detail[0]:
+#             if prop in compound_set:
+#                 cpd_detail.append(prop)
+#         pre_label = '\n'.join(_encode_value(compound.properties[value])
+#                               for value in cpd_detail if value != 'id')
+#         if 'id' in detail[0]:
+#             label = '{}\n{}'.format(str(cpd), pre_label)
+#         else:
+#             if all(prop not in compound_set for prop in detail[0]):
+#                 label = str(cpd)
+#             else:
+#                 label = pre_label
+#     else:
+#         label = str(cpd)
+#     return label
+#
+#
+# def rxns_properties(reaction, detail, reaction_flux):
+#     """define reaction nodes label.
+#
+#     Args:
+#         reaction: class 'psamm.datasource.entry.DictReactionEntry'.
+#         detail: A list of reaction or compound properties name included
+#             in the model. e.g. [id, genes, equation].
+#         reaction_flux: Dictionary of reaction ID and flux value.
+#     """
+#     reaction_set = set()
+#     reaction_set.update(reaction.properties)
+#     if detail is not None:
+#         rxn_detail = []
+#         for prop in detail[0]:
+#             if prop in reaction_set:
+#                 rxn_detail.append(str(prop))
+#         if len(rxn_detail) == 0:
+#             label = reaction.id
+#         else:
+#             label = '\n'.join(_encode_value(reaction.properties[value])
+#                               for value in rxn_detail)
+#         if len(reaction_flux) > 0:
+#             if reaction.id in iterkeys(reaction_flux):
+#                 label = '{}\n{}'.format(label, reaction_flux[reaction.id])
+#     else:
+#         if len(reaction_flux) > 0:
+#             if reaction.id in reaction_flux:
+#                 label ='{}\n{}'.format(reaction.id,reaction_flux[reaction.id])
+#             else:
+#                 label = reaction.id
+#         else:
+#             label = reaction.id
+#
+#     return label
 
 
 def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
@@ -323,24 +353,30 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
                 else:
                     if compound.name in compound_formula:
                         if Atom(element) in compound_formula[compound.name]:
-                            edge_values[compound, reaction] = abs(flux * float(value))
+                            edge_values[compound, reaction] = \
+                                abs(flux * float(value))
                     else:
                         edge_values[compound, reaction] = abs(flux * float(value))
+        rxn_set = set()
+        for (c1, c2), rxns in iteritems(cpair_dict):
+            for dir, rlist in iteritems(rxns):
+                rlist_string = str(','.join(new_id_mapping[r] for r in rlist))
+                if any(new_id_mapping[r] in reaction_flux for r
+                       in rlist):
+                    x_comb_c1, x_comb_c2 = 0, 0
+                    for r in rlist:
+                        real_r = new_id_mapping[r]
+                        rxn_set.add(real_r)
+                        if real_r in reaction_flux:
+                            x_comb_c1 += edge_values[(c1, real_r)]
+                            x_comb_c2 += edge_values[(c2, real_r)]
+                    edge_values_combined[(c1, rlist_string)] = x_comb_c1
+                    edge_values_combined[(c2, rlist_string)] = x_comb_c2
+        for r in reaction_flux:
+            if r not in rxn_set:
+                for (_, r) in edge_values:
+                    edge_values_combined[(_,r)] = edge_values[(_,r)]
 
-        if split_map is not True and method != 'no-fpp':
-            for (c1, c2), rxns in iteritems(cpair_dict):
-                for dir, rlist in iteritems(rxns):
-                    rlist_string = str(','.join(new_id_mapping[r] for r in rlist))
-                    if any(new_id_mapping[r] in reaction_flux for r
-                           in rlist):
-                        x_comb_c1, x_comb_c2 = 0, 0
-                        for r in rlist:
-                            real_r = new_id_mapping[r]
-                            if real_r in reaction_flux:
-                                x_comb_c1 += edge_values[(c1, real_r)]
-                                x_comb_c2 += edge_values[(c2, real_r)]
-                        edge_values_combined[(c1, rlist_string)] = x_comb_c1
-                        edge_values_combined[(c2, rlist_string)] = x_comb_c2
     if split_map or method == 'no-fpp':
         return edge_values
     else:
@@ -540,89 +576,507 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
 
     return cpair_dict, new_id_mapping
 
+#
+# def create_bipartite_graph(mm, model, cpair_dict, split_map, edge_values,
+#                            subset, reaction_flux, method, new_id_mapping,
+#                            args_color, args_detail):
+#     """create bipartite graph of given metabolic network
+#
+#     Start from a dictionary comprises compound pairs and related reaction ids,
+#     Returns a Graph object that contains a set of nodes and a dictionary of
+#     edges, node and edge properties(such as node color, shape and edge
+#     direction) are included.
+#
+#     Args:
+#         mm: class 'psamm.metabolicmodel.MetabolicModel'.
+#         model: class 'psamm.datasource.native.NativeModel'.
+#         cpair_dict: Dictionary mapping compound pair(c1,c2) to another
+#             dictionary that mapping from direction to a list of reaction IDs.
+#         split_map: Command line argument. True or False.
+#         element: Chemical symbol of an element, such as C(carbon),
+#             S(sulfur), N(nitrogen).
+#         subset: A set of reaction IDs.
+#         edge_values: Dictionary mapping an edge (a tuple, (r, c) or (c, r)) to
+#             a float number that represent width of edge. r is reaction id, c is
+#             compound id, sometimes r is a tuple of multiple reaction ids.
+#         reaction_flux: Dictionary mapping from reaction ID to reaction flux.
+#             Flux is a float number.
+#         method: Command line argument, including 3 choices: 'fpp', 'no-fpp'
+#             and a file path.
+#         new_id_mapping: A dictionary mapping from reaction id with suffix to
+#             real reaction id.
+#         args_color: Command line argument, a file comprised by two columns
+#             (tab-separated), the first column is reaction id or
+#             compound_id[compartment], the second columns is hex color code.
+#         args_detail: Command line argument, including text_type of reaction
+#             or compound properties which are defined in model, e.g. formula,
+#             equation, genes."""
+#
+#     g = graph.Graph()
+#
+#     # Mapping from compound id to DictCompoundEntry object
+#     cpd_entry = {}
+#     for cpd in model.compounds:
+#         cpd_entry[cpd.id] = cpd
+#
+#     # Mapping from reaction id to DictReactionEntry object
+#     rxn_entry = {}
+#     for rxn in model.reactions:
+#         rxn_entry[rxn.id] = rxn
+#
+#     # setting node color
+#     recolor_dict = {}
+#     if args_color is not None:
+#         for f in args_color:
+#             for row in csv.reader(f, delimiter=str(u'\t')):
+#                 recolor_dict[row[0]] = row[1]
+#     color = {}
+#     for c in mm.compounds:
+#         if str(c) in recolor_dict:
+#             color[c] = recolor_dict[str(c)]
+#         else:
+#             color[c] = COMPOUND_COLOR
+#     for r in mm.reactions:
+#         if r in recolor_dict:
+#             color[r] = recolor_dict[r]
+#         else:
+#             color[r] = REACTION_COLOR
+#
+#     # define reaction node color for rxns-combined graph
+#     def final_rxn_color(color_args, rlist):
+#         if color_args is not None:
+#             if len(rlist) == 1:
+#                 return color[new_id_mapping[rlist[0]]]
+#             else:
+#                 if any(new_id_mapping[r] in recolor_dict for r in rlist):
+#                     return RXN_COMBINED_COLOR
+#                 else:
+#                     return REACTION_COLOR
+#         else:
+#             return REACTION_COLOR
+#
+#     # preparing for scaling width of edges
+#     if len(edge_values) > 0:
+#         value_list = sorted(edge_values.values())
+#         ninty_percentile = value_list[int(len(value_list)*0.9)+1]
+#         min_edge_value = min(itervalues(edge_values))
+#         max_edge_value = ninty_percentile
+#     else:
+#         min_edge_value = 1
+#         max_edge_value = 1
+#
+#     def pen_width(value):
+#         """calculate final edges width"""
+#         if max_edge_value - min_edge_value == 0:
+#             return 1
+#         else:
+#             if value > max_edge_value:
+#                 value = max_edge_value
+#             alpha = value / max_edge_value
+#
+#             return 10 * alpha
+#
+#     def dir_value(direction):
+#         """assign value to different reaction directions"""
+#         if direction == Direction.Forward:
+#             return 'forward'
+#         elif direction == Direction.Reverse:
+#             return 'back'
+#         else:
+#             return 'both'
+#
+#     def condensed_rxn_props(detail, r_list, reaction_flux):
+#         if len(r_list) == 1:
+#             r = new_id_mapping[r_list[0]]
+#             label_comb = rxns_properties(rxn_entry[r], detail, reaction_flux)
+#         else:
+#             if len(reaction_flux) > 0:
+#                 sum_flux = 0
+#                 for r in r_list:
+#                     if new_id_mapping[r] in reaction_flux:
+#                         sum_flux += abs(reaction_flux[new_id_mapping[r]])
+#                 label_comb = '\n'.join(new_id_mapping[r] for r in r_list)
+#                 if sum_flux != 0:
+#                     label_comb = '{}\n{}'.format(label_comb, sum_flux)
+#             else:
+#                 label_comb = '\n'.join(new_id_mapping[r] for r in r_list)
+#         return label_comb
+#
+#     def final_props(dir, edge):
+#         if len(edge_values) > 0:
+#             p = {}
+#             if edge in edge_values:
+#                 p['penwidth'] = pen_width(abs(edge_values[edge]))
+#             else:
+#                 p['style'] = 'dotted'
+#             p['dir'] = dir
+#             return p
+#         else:
+#             return {'dir': dir}
+#
+#     # create compound nodes and add nodes to Graph object
+#     compound_set = set()
+#     for (c1, c2), rxns in iteritems(cpair_dict):
+#         compound_set.add(c1)
+#         compound_set.add(c2)
+#
+#     compound_nodes = {}
+#     for cpd in compound_set:  # cpd=cpd object,cpd.name=cpd id,no compartment
+#         node = graph.Node({
+#             'id': text_type(cpd),
+#             'label': cpds_properties(cpd, cpd_entry[cpd.name], args_detail),
+#             'shape': 'ellipse',
+#             'style': 'filled',
+#             'fillcolor': color[cpd]})
+#         compound_nodes[cpd] = node
+#         g.add_node(node)
+#
+#     # create and add reaction nodes, add edges
+#     edge_list = []
+#     for (c1, c2), rxns in iteritems(cpair_dict):
+#         for dir, r_list in iteritems(rxns):
+#             if len(r_list) > 0:
+#                 r_node = []
+#                 if split_map is True or method == 'no-fpp':
+#                     for r in r_list:
+#                         r_node.append([r])
+#                 else:
+#                     r_node.append(r_list)
+#                 for i in r_node:
+#                     node = graph.Node({
+#                         'id': i,
+#                         'label': condensed_rxn_props(args_detail, i,
+#                                                      reaction_flux),
+#                         'shape': 'box',
+#                         'style': 'filled',
+#                         'fillcolor': final_rxn_color(args_color, i)})
+#                     g.add_node(node)
+#
+#                     reac = str(','.join(new_id_mapping[r] for r in i))
+#                     test = i
+#
+#                     edge1 = c1, reac
+#                     edge_test_1 = c1, test
+#                     edge_test_2 = test, c1
+#                     if edge_test_1 and edge_test_2 not in edge_list:
+#                         edge_list.append(edge_test_1)
+#                         edge_list.append(edge_test_2)
+#                         g.add_edge(graph.Edge(compound_nodes[c1], node,
+#                                               final_props(dir, edge1)))
+#                     edge2 = c2, reac
+#                     edge_test_1 = test, c2
+#                     edge_test_2 = c2, test
+#                     if edge_test_1 and edge_test_2 not in edge_list:
+#                         edge_list.append(edge_test_1)
+#                         edge_list.append(edge_test_2)
+#                         g.add_edge(graph.Edge(node, compound_nodes[c2],
+#                                           final_props(dir, edge2)))
+#     # add exchange reaction nodes
+#     rxn_set = set()
+#     for reaction in mm.reactions:
+#         if mm.is_exchange(reaction):
+#             raw_exchange_rxn = mm.get_reaction(reaction)
+#             for c, _ in raw_exchange_rxn.compounds:
+#                 if c in compound_nodes:
+#                     rxn_set.add(reaction)
+#     for r in rxn_set:
+#         exchange_rxn = mm.get_reaction(r)
+#         label = r
+#         if len(edge_values) > 0:
+#             if r in iterkeys(edge_values):
+#                 label = '{}\n{}'.format(r, edge_values[r])
+#         node_ex = graph.Node({
+#             'id': r,
+#             'label': label,
+#             'shape': 'box',
+#             'style': 'filled',
+#             'fillcolor': ACTIVE_COLOR})
+#         g.add_node(node_ex)
+#
+#         dir = dir_value(exchange_rxn.direction)
+#         for c1, _ in exchange_rxn.left:
+#             edge1 = c1, r
+#             g.add_edge(graph.Edge(
+#                 compound_nodes[c1], node_ex, final_props(dir, edge1)))
+#         for c2, _ in exchange_rxn.right:
+#             edge2 = c2, r
+#             g.add_edge(graph.Edge(
+#                     node_ex, compound_nodes[c2], final_props(dir, edge2)))
+#
+#     # add biomass reaction nodes
+#     bio_pair = Counter()
+#     if model.biomass_reaction in subset:
+#         biomass_rxn = mm.get_reaction(model.biomass_reaction)
+#         dir = dir_value(biomass_rxn.direction)
+#         A, B = [], []
+#         for c, _ in biomass_rxn.left:
+#             A.append(c)
+#         for c, _ in biomass_rxn.right:
+#             B.append(c)
+#         for c, _ in biomass_rxn.compounds:
+#             if c in compound_nodes:
+#                 bio_pair[model.biomass_reaction] += 1
+#                 node_bio = graph.Node({
+#                     'id': '{}_{}'.format(model.biomass_reaction,
+#                                          bio_pair[model.biomass_reaction]),
+#                     'label': model.biomass_reaction,
+#                     'shape': 'box',
+#                     'style': 'filled',
+#                     'fillcolor': ALT_COLOR})
+#                 g.add_node(node_bio)
+#
+#                 edge = c, model.biomass_reaction
+#                 if c in A:
+#                     g.add_edge(graph.Edge(compound_nodes[c], node_bio,
+#                                           final_props(dir, edge)))
+#                 if c in B:
+#                     g.add_edge(graph.Edge(node_bio, compound_nodes[c],
+#                                           final_props(dir, edge)))
+#     return g
 
-def create_bipartite_graph(mm, model, cpair_dict, split_map, edge_values,
-                           subset, reaction_flux, method, new_id_mapping,
-                           args_color, args_detail):
-    """create bipartite graph of given metabolic network
+### dveide create_bipartite_graph() function into several small functions
 
-    Start from a dictionary comprises compound pairs and related reaction ids,
-    Returns a Graph object that contains a set of nodes and a dictionary of
-    edges, node and edge properties(such as node color, shape and edge
-    direction) are included.
+
+def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split): # by default, split = False
+    compound_nodes = {}
+    reaction_nodes = {}
+    for cpair, reactions in iteritems(cpairs_dict):
+        for c in cpair:
+            node = graph.Node({
+                'id': text_type(c),
+                'shape': 'ellipse',
+                'style': 'filled',
+                'type': 'cpd',
+                'original_id': c})
+            g.add_node(node)
+            compound_nodes[c] = node
+        for dir, rlist in iteritems(reactions):
+            rlist_str = str(','.join(rlist))
+            if split or method == 'no-fpp':
+                for sub_rxn in rlist:
+                    rnode = graph.Node({
+                        'id': text_type(sub_rxn),
+                        'shape': 'box',
+                        'style': 'filled',
+                        'type': 'rxn',
+                        'original_id': [new_id_mapping[sub_rxn]]})
+                    g.add_node(rnode)
+                    reaction_nodes[sub_rxn] = rnode
+            else:
+                real_rxns = [new_id_mapping[r] for r in rlist]
+                rnode = graph.Node({
+                    'id': text_type(rlist),
+                    'shape': 'box',
+                    'style': 'filled',
+                    'type': 'rxn',
+                    'original_id': real_rxns})
+                g.add_node(rnode)
+                reaction_nodes[rlist_str] = rnode
+    return g
+
+
+def add_node_color(g, recolor_dict):
+    for node in g.nodes:
+        color = recolor_dict.get(node.props['id'])
+        if color is not None:
+            node.props['fillcolor'] = color
+        else:
+            if node.props['type'] == 'rxn':
+                node.props['fillcolor'] = REACTION_COLOR
+            elif node.props['type'] == 'cpd':
+                node.props['fillcolor'] = COMPOUND_COLOR
+    return g
+
+
+def add_edges(g, cpairs_dict, method, split):
+
+    node_dict = {}
+    for node in g.nodes:
+        node_dict[node.props['id']] = node
+    edge_list = []
+    for (c1, c2), value in iteritems(cpairs_dict):
+        for dir, rlist in iteritems(value):
+            if split or method == 'no-fpp':
+                for sub_rxn in rlist:
+                    test1 = c1, sub_rxn
+                    # test2 = sub_rxn, c1
+                    if test1 not in edge_list:
+                        edge_list.append(test1)
+                        # edge_list.append(test2)
+                        g.add_edge(graph.Edge(
+                            node_dict[text_type(c1)],
+                            node_dict[text_type(sub_rxn)], {'dir': dir}))
+
+                    # test1 = sub_rxn, c2
+                    test2 = c2, sub_rxn
+                    if test2 not in edge_list:
+                        # edge_list.append(test1)
+                        edge_list.append(test2)
+                        g.add_edge(graph.Edge(
+                            node_dict[text_type(sub_rxn)],
+                            node_dict[text_type(c2)], {'dir': dir}))
+            else:
+                g.add_edge(graph.Edge(
+                    node_dict[text_type(c1)], node_dict[text_type(rlist)],
+                    {'dir': dir}))
+                g.add_edge(graph.Edge(node_dict[text_type(rlist)],
+                                      node_dict[text_type(c2)], {'dir': dir}))
+    return g
+
+
+def dir_value(direction):
+    """assign value to different reaction directions"""
+    if direction == Direction.Forward:
+        return 'forward'
+    elif direction == Direction.Reverse:
+        return 'back'
+    else:
+        return 'both'
+
+
+def add_biomass_rxns(g, bio_reaction, biomass_rxn_id):
+    dir = dir_value(bio_reaction.direction)
+    A, B = [], []
+    for c, _ in bio_reaction.left:
+        A.append(c)
+    for c, _ in bio_reaction.right:
+        B.append(c)
+    cpd_nodes = {}
+    for node in g.nodes:
+        if node.props['type'] == 'cpd':
+            cpd_nodes[node.props['original_id']] = node
+    bio_pair = Counter()
+    for c, _ in bio_reaction.compounds:
+        if c in cpd_nodes:
+            bio_pair[biomass_rxn_id] += 1
+            node_bio = graph.Node({
+                'id': '{}_{}'.format(biomass_rxn_id,
+                                     bio_pair[biomass_rxn_id]),
+                'label':text_type(biomass_rxn_id),
+                'shape': 'box',
+                'style': 'filled',
+                'fillcolor': ALT_COLOR,
+                'original_id': [biomass_rxn_id],
+                'type': 'bio_rxn'})
+            g.add_node(node_bio)
+
+            if c in A:
+                g.add_edge(graph.Edge(cpd_nodes[c], node_bio,
+                                      {'dir': dir}))
+            if c in B:
+                g.add_edge(graph.Edge(node_bio, cpd_nodes[c],
+                                      {'dir': dir}))
+    return g
+
+
+def add_Exchange_rxns(g, rxn_id, reaction):
+    """add exchange reaction nodes and edges to graph object.
 
     Args:
-        mm: class 'psamm.metabolicmodel.MetabolicModel'.
-        model: class 'psamm.datasource.native.NativeModel'.
-        cpair_dict: Dictionary mapping compound pair(c1,c2) to another
-            dictionary that mapping from direction to a list of reaction IDs.
-        split_map: Command line argument. True or False.
-        element: Chemical symbol of an element, such as C(carbon),
-            S(sulfur), N(nitrogen).
-        subset: A set of reaction IDs.
-        edge_values: Dictionary mapping an edge (a tuple, (r, c) or (c, r)) to
-            a float number that represent width of edge. r is reaction id, c is
-            compound id, sometimes r is a tuple of multiple reaction ids.
-        reaction_flux: Dictionary mapping from reaction ID to reaction flux.
-            Flux is a float number.
-        method: Command line argument, including 3 choices: 'fpp', 'no-fpp'
-            and a file path.
-        new_id_mapping: A dictionary mapping from reaction id with suffix to
-            real reaction id.
-        args_color: Command line argument, a file comprised by two columns
-            (tab-separated), the first column is reaction id or
-            compound_id[compartment], the second columns is hex color code.
-        args_detail: Command line argument, including text_type of reaction
-            or compound properties which are defined in model, e.g. formula,
-            equation, genes."""
+        g: a graph object that contains a set of nodes and some edges.
+        rxn_id: Exchange reaction id,
+        reaction: Exchange reaction object(metabolic model reaction).
+    """
+    cpd_nodes = {}
+    for node in g.nodes:
+        if node.props['type'] == 'cpd':
+            cpd_nodes[node.props['original_id']] = node
 
-    g = graph.Graph()
+    for c, _ in reaction.compounds:
+        if c in cpd_nodes:
+            node_ex = graph.Node({
+                'id': text_type(rxn_id),
+                'shape': 'box',
+                'style': 'filled',
+                'fillcolor': ACTIVE_COLOR,
+                'original_id': [rxn_id],
+                'type': 'Ex_rxn'})
+            g.add_node(node_ex)
 
-    # Mapping from compound id to DictCompoundEntry object
-    cpd_entry = {}
-    for cpd in model.compounds:
-        cpd_entry[cpd.id] = cpd
+            dir = dir_value(reaction.direction)
+            for c1, _ in reaction.left:
+                g.add_edge(graph.Edge(
+                    cpd_nodes[c1], node_ex, {'dir': dir}))
+            for c2, _ in reaction.right:
+                g.add_edge(graph.Edge(
+                    node_ex, cpd_nodes[c2], {'dir': dir}))
+    return g
 
-    # Mapping from reaction id to DictReactionEntry object
-    rxn_entry = {}
-    for rxn in model.reactions:
-        rxn_entry[rxn.id] = rxn
 
-    # setting node color
-    recolor_dict = {}
-    if args_color is not None:
-        for f in args_color:
-            for row in csv.reader(f, delimiter=str(u'\t')):
-                recolor_dict[row[0]] = row[1]
-    color = {}
-    for c in mm.compounds:
-        if str(c) in recolor_dict:
-            color[c] = recolor_dict[str(c)]
-        else:
-            color[c] = COMPOUND_COLOR
-    for r in mm.reactions:
-        if r in recolor_dict:
-            color[r] = recolor_dict[r]
-        else:
-            color[r] = REACTION_COLOR
+def add_node_label(graph, detail, model_compoundEntries, model_reactionEntries, reaction_flux):
+    """ set label of nodes in graph object,
 
-    # define reaction node color for rxns-combined graph
-    def final_rxn_color(color_args, rlist):
-        if color_args is not None:
-            if len(rlist) == 1:
-                return color[new_id_mapping[rlist[0]]]
-            else:
-                if any(new_id_mapping[r] in recolor_dict for r in rlist):
-                    return RXN_COMBINED_COLOR
+    Args:
+        graph: A graph object, contain a set of nodes.
+        detail: Command line option, a list that contains only one element,
+            this element is a list of reaction or compound properties name
+            defined in the model. e.g. detail = [['id', 'name', 'formula']].
+        model_compoundEntries = dict of cpd_id:compound_entries
+    """
+
+    for node in graph.nodes:
+        if node.props['type'] == 'cpd':
+            if detail is not None:
+                props =model_compoundEntries[node.props['id'].name].properties
+                cpd_detail = [i for i in detail if i in props]
+                pre_label = '\n'.join(_encode_value(props[value])
+                                  for value in cpd_detail if value != 'id')
+                if 'id' in detail[0]:
+                    label = '{}\n{}'.format(str(node.props['id']), pre_label)
                 else:
-                    return REACTION_COLOR
-        else:
-            return REACTION_COLOR
+                    if all(prop not in props for prop in detail[0]):
+                        label = str(node.props['id'])
+                    else:
+                        label = pre_label
+            else:
+                label = str(node.props['id'])
+            node.props['label'] = label
 
-    # preparing for scaling width of edges
+        elif node.props['type'] == 'rxn':
+            if len(node.props['original_id']) == 1:
+                rxn_id = node.props['original_id'][0]
+                if detail is not None:
+                    props = model_reactionEntries[rxn_id].properties
+                    rxn_detail = [i for i in detail if i in props]
+                    if len(rxn_detail) == 0:
+                        label = rxn_id
+                    else:
+                        label = '\n'.join(_encode_value(props[value])
+                                              for value in rxn_detail)
+                else:
+                    label = rxn_id
+
+                if len(reaction_flux) > 0:
+                    if rxn_id in reaction_flux:
+                        label = '{}\n{}'.format(label, reaction_flux[rxn_id])
+            else:
+                if len(reaction_flux) > 0:
+                    sum_flux = 0
+                    for r in node.props['original_id']:
+                        if r in reaction_flux:
+                            sum_flux += abs(reaction_flux[r])
+                    label = '\n'.join(r for r in node.props['original_id'])
+                    if sum_flux != 0:
+                        label = '{}\n{}'.format(label, sum_flux)
+                else:
+                    label = '\n'.join(r for r in node.props['original_id'])
+            node.props['label'] = label
+        elif node.props['type'] == 'Ex_rxn':
+            label = node.props['original_id'][0]
+            if len(reaction_flux) > 0:
+                if node.props['original_id'][0] in reaction_flux:
+                    label = '{}\n{}'.format(
+                        label, reaction_flux[node.props['original_id'][0]])
+            node.props['label'] = label
+    return graph
+
+
+def set_edge_props_withfba(g, edge_values):
+    """set edge values, including direction, width, style."""
+
     if len(edge_values) > 0:
         value_list = sorted(edge_values.values())
-        ninty_percentile = value_list[int(len(value_list)*0.9)+1]
+        ninty_percentile = value_list[int(len(value_list) * 0.9) + 1]
         min_edge_value = min(itervalues(edge_values))
         max_edge_value = ninty_percentile
     else:
@@ -639,161 +1093,20 @@ def create_bipartite_graph(mm, model, cpair_dict, split_map, edge_values,
             alpha = value / max_edge_value
 
             return 10 * alpha
+    if len(edge_values) > 0:
+        for edge in g.edges:
+            if edge.source.props['type'] == 'cpd':
+                rxn_string = ','.join(edge.dest.props['original_id'])
+                edge_test = edge.source.props['original_id'], rxn_string
+            elif edge.dest.props['type'] == 'cpd':
+                rxn_string = ','.join(edge.source.props['original_id'])
+                edge_test = edge.dest.props['original_id'], rxn_string
 
-    def dir_value(direction):
-        """assign value to different reaction directions"""
-        if direction == Direction.Forward:
-            return 'forward'
-        elif direction == Direction.Reverse:
-            return 'back'
-        else:
-            return 'both'
-
-    def condensed_rxn_props(detail, r_list, reaction_flux):
-        if len(r_list) == 1:
-            r = new_id_mapping[r_list[0]]
-            label_comb = rxns_properties(rxn_entry[r], detail, reaction_flux)
-        else:
-            if len(reaction_flux) > 0:
-                sum_flux = 0
-                for r in r_list:
-                    if new_id_mapping[r] in reaction_flux:
-                        sum_flux += abs(reaction_flux[new_id_mapping[r]])
-                label_comb = '\n'.join(new_id_mapping[r] for r in r_list)
-                if sum_flux != 0:
-                    label_comb = '{}\n{}'.format(label_comb, sum_flux)
+            if edge_test in edge_values:
+                edge.props['penwidth'] = pen_width(abs(edge_values[edge_test]))
             else:
-                label_comb = '\n'.join(new_id_mapping[r] for r in r_list)
-        return label_comb
-
-    def final_props(dir, edge):
-        if len(edge_values) > 0:
-            p = {}
-            if edge in edge_values:
-                p['penwidth'] = pen_width(abs(edge_values[edge]))
-            else:
-                p['style'] = 'dotted'
-            p['dir'] = dir
-            return p
-        else:
-            return {'dir': dir}
-
-    # create compound nodes and add nodes to Graph object
-    compound_set = set()
-    for (c1, c2), rxns in iteritems(cpair_dict):
-        compound_set.add(c1)
-        compound_set.add(c2)
-
-    compound_nodes = {}
-    for cpd in compound_set:  # cpd=cpd object,cpd.name=cpd id,no compartment
-        node = graph.Node({
-            'id': text_type(cpd),
-            'label': cpds_properties(cpd, cpd_entry[cpd.name], args_detail),
-            'shape': 'ellipse',
-            'style': 'filled',
-            'fillcolor': color[cpd]})
-        compound_nodes[cpd] = node
-        g.add_node(node)
-
-    # create and add reaction nodes, add edges
-    edge_list = []
-    for (c1, c2), rxns in iteritems(cpair_dict):
-        for dir, r_list in iteritems(rxns):
-            if len(r_list) > 0:
-                r_node = []
-                if split_map is True or method == 'no-fpp':
-                    for r in r_list:
-                        r_node.append([r])
-                else:
-                    r_node.append(r_list)
-                for i in r_node:
-                    node = graph.Node({
-                        'id': i,
-                        'label': condensed_rxn_props(args_detail, i,
-                                                     reaction_flux),
-                        'shape': 'box',
-                        'style': 'filled',
-                        'fillcolor': final_rxn_color(args_color, i)})
-                    g.add_node(node)
-
-                    reac = str(','.join(new_id_mapping[r] for r in i))
-                    test = i
-
-                    edge1 = c1, reac
-                    edge_test_1 = c1, test
-                    edge_test_2 = test, c1
-                    if edge_test_1 and edge_test_2 not in edge_list:
-                        edge_list.append(edge_test_1)
-                        edge_list.append(edge_test_2)
-                        g.add_edge(graph.Edge(compound_nodes[c1], node,
-                                              final_props(dir, edge1)))
-                    edge2 = c2, reac
-                    edge_test_1 = test, c2
-                    edge_test_2 = c2, test
-                    if edge_test_1 and edge_test_2 not in edge_list:
-                        edge_list.append(edge_test_1)
-                        edge_list.append(edge_test_2)
-                        g.add_edge(graph.Edge(node, compound_nodes[c2],
-                                          final_props(dir, edge2)))
-    # add exchange reaction nodes
-    rxn_set = set()
-    for reaction in mm.reactions:
-        if mm.is_exchange(reaction):
-            raw_exchange_rxn = mm.get_reaction(reaction)
-            for c, _ in raw_exchange_rxn.compounds:
-                if c in compound_nodes:
-                    rxn_set.add(reaction)
-    for r in rxn_set:
-        exchange_rxn = mm.get_reaction(r)
-        label = r
-        if len(edge_values) > 0:
-            if r in iterkeys(edge_values):
-                label = '{}\n{}'.format(r, edge_values[r])
-        node_ex = graph.Node({
-            'id': r,
-            'label': label,
-            'shape': 'box',
-            'style': 'filled',
-            'fillcolor': ACTIVE_COLOR})
-        g.add_node(node_ex)
-
-        dir = dir_value(exchange_rxn.direction)
-        for c1, _ in exchange_rxn.left:
-            edge1 = c1, r
-            g.add_edge(graph.Edge(
-                compound_nodes[c1], node_ex, final_props(dir, edge1)))
-        for c2, _ in exchange_rxn.right:
-            edge2 = c2, r
-            g.add_edge(graph.Edge(
-                    node_ex, compound_nodes[c2], final_props(dir, edge2)))
-
-    # add biomass reaction nodes
-    bio_pair = Counter()
-    if model.biomass_reaction in subset:
-        biomass_rxn = mm.get_reaction(model.biomass_reaction)
-        dir = dir_value(biomass_rxn.direction)
-        A, B = [], []
-        for c, _ in biomass_rxn.left:
-            A.append(c)
-        for c, _ in biomass_rxn.right:
-            B.append(c)
-        for c, _ in biomass_rxn.compounds:
-            if c in compound_nodes:
-                bio_pair[model.biomass_reaction] += 1
-                node_bio = graph.Node({
-                    'id': '{}_{}'.format(model.biomass_reaction,
-                                         bio_pair[model.biomass_reaction]),
-                    'label': model.biomass_reaction,
-                    'shape': 'box',
-                    'style': 'filled',
-                    'fillcolor': ALT_COLOR})
-                g.add_node(node_bio)
-
-                edge = c, model.biomass_reaction
-                if c in A:
-                    g.add_edge(graph.Edge(compound_nodes[c], node_bio,
-                                          final_props(dir, edge)))
-                if c in B:
-                    g.add_edge(graph.Edge(node_bio, compound_nodes[c],
-                                          final_props(dir, edge)))
+                edge.props['style'] = 'dotted'
     return g
+
+
+
