@@ -892,7 +892,6 @@ def add_node_color(g, recolor_dict):
                     color = REACTION_COLOR
         if color is not None:
             node.props['fillcolor'] = color
-            print(node)
         else:
             if node.props['type'] == 'rxn':
                 node.props['fillcolor'] = REACTION_COLOR
@@ -1030,8 +1029,8 @@ def add_node_label(graph, detail, model_compoundEntries, model_reactionEntries, 
     for node in graph.nodes:
         if node.props['type'] == 'cpd':
             if detail is not None:
-                props =model_compoundEntries[node.props['id'].name].properties
-                cpd_detail = [i for i in detail if i in props]
+                props =model_compoundEntries[node.props['original_id'].name].properties
+                cpd_detail = [i for i in detail[0] if i in props]
                 pre_label = '\n'.join(_encode_value(props[value])
                                   for value in cpd_detail if value != 'id')
                 if 'id' in detail[0]:
@@ -1050,7 +1049,7 @@ def add_node_label(graph, detail, model_compoundEntries, model_reactionEntries, 
                 rxn_id = node.props['original_id'][0]
                 if detail is not None:
                     props = model_reactionEntries[rxn_id].properties
-                    rxn_detail = [i for i in detail if i in props]
+                    rxn_detail = list(i for i in detail[0] if i in props)
                     if len(rxn_detail) == 0:
                         label = rxn_id
                     else:
