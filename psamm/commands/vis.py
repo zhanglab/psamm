@@ -190,6 +190,7 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
             for f in self._args.color:
                 for row in csv.reader(f, delimiter=str(u'\t')):
                     recolor_dict[row[0]] = row[1]
+        print(recolor_dict)
 
         model_compoundEntries, model_reactionEntries = {}, {}
         for c in self._model.compounds:
@@ -877,9 +878,21 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split): # by default
 
 def add_node_color(g, recolor_dict):
     for node in g.nodes:
-        color = recolor_dict.get(node.props['id'])
+        if node.props['type'] == 'cpd':
+            id = str(node.props['original_id'])
+            color = recolor_dict.get(id)
+        else:
+            if len(node.props['original_id']) == 1:
+                id = node.props['original_id'][0]
+                color = recolor_dict.get(id)
+            else:
+                if any (i in recolor_dict for i in node.props['original_id']):
+                    color = RXN_COMBINED_COLOR
+                else:
+                    color = REACTION_COLOR
         if color is not None:
             node.props['fillcolor'] = color
+            print(node)
         else:
             if node.props['type'] == 'rxn':
                 node.props['fillcolor'] = REACTION_COLOR
