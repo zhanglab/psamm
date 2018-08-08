@@ -915,14 +915,15 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split): # by default
     reaction_nodes = {}
     for cpair, reactions in iteritems(cpairs_dict):
         for c in cpair:
-            node = graph.Node({
-                'id': text_type(c),
-                'shape': 'ellipse',
-                'style': 'filled',
-                'type': 'cpd',
-                'original_id': c})
-            g.add_node(node)
-            compound_nodes[c] = node
+            if c not in compound_nodes:
+                node = graph.Node({
+                    'id': text_type(c),
+                    'shape': 'ellipse',
+                    'style': 'filled',
+                    'type': 'cpd',
+                    'original_id': c})
+                g.add_node(node)
+                compound_nodes[c] = node
         for dir, rlist in iteritems(reactions):
             rlist_str = str(','.join(rlist))
             if split or method == 'no-fpp':
