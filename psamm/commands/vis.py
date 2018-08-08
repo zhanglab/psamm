@@ -72,9 +72,13 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
             help='Primary element flow, followed by chemical element, '
                  'such as C, N, O,S.')
         parser.add_argument(
-            '--detail', type=text_type, default=None, action='append',
-            nargs='+', help='Reaction and compound properties showed '
-                            'on nodes label(e.g. formula, equation, genes')
+            '--cpd-detail', type=text_type, default=None, action='append',
+            nargs='+', help='determine compound properties showed on nodes '
+                            'label, e.g. formula, name, charge)')
+        parser.add_argument(
+            '--rxn-detail', type=text_type, default=None, action='append',
+            nargs='+', help='determine reaction properties showed on nodes '
+                            'label, e.g. genes, EC, equation)')
         parser.add_argument(
             '--subset', type=argparse.FileType('rU'), default=None,
             help='Reactions designated to visualize')
@@ -198,11 +202,11 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
         for r in self._model.reactions:
             model_reactionEntries[r.id] = r
 
-        # g = create_bipartite_graph(self._mm, self._model, cpair_dict,
-        #                            self._args.split_map, edge_values,
-        #                            subset_reactions,reaction_flux,
-        #                            self._args.method, new_id_mapping,
-        #                            self._args.color,self._args.detail)
+        # g = create_bipartite_graph(
+        #     self._mm, self._model, cpair_dict,self._args.split_map,
+        #     edge_values,subset_reactions,reaction_flux,self._args.method,
+        #     new_id_mapping,self._args.color,self._args.cpd_detail,
+        #     self._args.rxn_detail)
         g = graph.Graph()
         g = add_graph_nodes(g, cpair_dict, self._args.method,
                             new_id_mapping, split=self._args.split_map)
@@ -217,8 +221,9 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
             if self._mm.is_exchange(reaction):
                 exchange_rxn = self._mm.get_reaction(reaction)
                 g = add_Exchange_rxns(g, reaction, exchange_rxn)
-        g = add_node_label(g, self._args.detail, model_compoundEntries,
-                           model_reactionEntries, reaction_flux)
+        g = add_node_label(g, self._args.cpd_detail, self._args.rxn_detail,
+                           model_compoundEntries,model_reactionEntries,
+                           reaction_flux)
         g = set_edge_props_withfba(g, edge_values)
 
         if self._args.method == 'no-fpp' and self._args.split_map is True:
@@ -247,29 +252,28 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
                 #     logger.warning('the graph is too large to create')
 
 
-# def cpds_properties(cpd, compound, detail):
+# def cpds_properties(cpd, compound, cpd_detail):
 #     """define compound nodes label.
 #
 #     Args:
 #     cpd: class 'psamm.reaction.Compound'.
 #     compound: class 'psamm.datasource.entry.DictCompoundEntry'.
-#     detail: A list that contains only one element, this element is a list of
-#         reaction or compound properties name included in the model.
-#         e.g. detrail = [['id', 'name', 'formula']].
+#     cpd_detail: A list that contains only one element, this element is a list of
+#         compound properties name. e.g. cpd_detail = [['id', 'name', 'formula']].
 #     """
 #     compound_set = set()
 #     compound_set.update(compound.properties)
-#     if detail is not None:
-#         cpd_detail = []
-#         for prop in detail[0]:
+#     if cpd_detail is not None:
+#         cpd_detail_list = []
+#         for prop in cpd_detail[0]:
 #             if prop in compound_set:
-#                 cpd_detail.append(prop)
-#         pre_label = '\n'.join(_encode_value(compound.properties[value])
-#                               for value in cpd_detail if value != 'id')
-#         if 'id' in detail[0]:
+#                 cpd_detail_list.append(prop)
+#         pre_label = '\n'.join(_encode_value(compound.properties[value]) for
+#                               value in cpd_detail_list if value != 'id')
+#         if 'id' in cpd_detail[0]:
 #             label = '{}\n{}'.format(str(cpd), pre_label)
 #         else:
-#             if all(prop not in compound_set for prop in detail[0]):
+#             if all(prop not in compound_set for prop in cpd_detail[0]):
 #                 label = str(cpd)
 #             else:
 #                 label = pre_label
@@ -278,27 +282,27 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
 #     return label
 #
 #
-# def rxns_properties(reaction, detail, reaction_flux):
+# def rxns_properties(reaction, rxn_detail, reaction_flux):
 #     """define reaction nodes label.
 #
 #     Args:
 #         reaction: class 'psamm.datasource.entry.DictReactionEntry'.
-#         detail: A list of reaction or compound properties name included
-#             in the model. e.g. [id, genes, equation].
+#         rxn_detail: A list that contains only one element, this element is
+#               a list of reaction properties name.e.g.[[genes, equation]].
 #         reaction_flux: Dictionary of reaction ID and flux value.
 #     """
 #     reaction_set = set()
 #     reaction_set.update(reaction.properties)
-#     if detail is not None:
-#         rxn_detail = []
-#         for prop in detail[0]:
+#     if rxn_detail is not None:
+#         rxn_detail_list = []
+#         for prop in rxn_detail[0]:
 #             if prop in reaction_set:
-#                 rxn_detail.append(str(prop))
-#         if len(rxn_detail) == 0:
+#                 rxn_detail_list.append(str(prop))
+#         if len(rxn_detail_list) == 0:
 #             label = reaction.id
 #         else:
 #             label = '\n'.join(_encode_value(reaction.properties[value])
-#                               for value in rxn_detail)
+#                               for value in rxn_detail_list)
 #         if len(reaction_flux) > 0:
 #             if reaction.id in iterkeys(reaction_flux):
 #                 label = '{}\n{}'.format(label, reaction_flux[reaction.id])
@@ -646,7 +650,7 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
 
 # def create_bipartite_graph(mm, model, cpair_dict, split_map, edge_values,
 #                            subset, reaction_flux, method, new_id_mapping,
-#                            args_color, args_detail):
+#                            args_color, cpd_detail, rxn_detail):
 #     """create bipartite graph of given metabolic network
 #
 #     Start from a dictionary comprises compound pairs and related reaction ids,
@@ -675,9 +679,11 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
 #         args_color: Command line argument, a file comprised by two columns
 #             (tab-separated), the first column is reaction id or
 #             compound_id[compartment], the second columns is hex color code.
-#         args_detail: Command line argument, including text_type of reaction
-#             or compound properties which are defined in model, e.g. formula,
-#             equation, genes."""
+#         cpd_detail: Command line argument, including text_type of compound
+#             property names which are defined in model, e.g. formula,charge
+#         rxn_detail: Command line argument, including name of reaction
+#             properties defined in model, e.g. genes, equation.
+#       """
 #
 #     g = graph.Graph()
 #
@@ -752,10 +758,10 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
 #         else:
 #             return 'both'
 #
-#     def condensed_rxn_props(detail, r_list, reaction_flux):
+#     def condensed_rxn_props(rxn_detail, r_list, reaction_flux):
 #         if len(r_list) == 1:
 #             r = new_id_mapping[r_list[0]]
-#             label_comb = rxns_properties(rxn_entry[r], detail, reaction_flux)
+#             label_comb = rxns_properties(rxn_entry[r], rxn_detail, reaction_flux)
 #         else:
 #             if len(reaction_flux) > 0:
 #                 sum_flux = 0
@@ -791,7 +797,7 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
 #     for cpd in compound_set:  # cpd=cpd object,cpd.name=cpd id,no compartment
 #         node = graph.Node({
 #             'id': text_type(cpd),
-#             'label': cpds_properties(cpd, cpd_entry[cpd.name], args_detail),
+#             'label': cpds_properties(cpd, cpd_entry[cpd.name], cpd_detail),
 #             'shape': 'ellipse',
 #             'style': 'filled',
 #             'fillcolor': color[cpd]})
@@ -812,7 +818,7 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
 #                 for i in r_node:
 #                     node = graph.Node({
 #                         'id': i,
-#                         'label': condensed_rxn_props(args_detail, i,
+#                         'label': condensed_rxn_props(rxn_detail, i,
 #                                                      reaction_flux),
 #                         'shape': 'box',
 #                         'style': 'filled',
@@ -1080,31 +1086,32 @@ def add_Exchange_rxns(g, rxn_id, reaction):
     return g
 
 
-def add_node_label(graph, detail, model_compoundEntries, model_reactionEntries, reaction_flux):
+def add_node_label(graph, cpd_detail, rxn_detail, model_compoundEntries,
+                   model_reactionEntries, reaction_flux):
     """ set label of nodes in graph object,
 
     Args:
         graph: A graph object, contain a set of nodes.
-        detail: Command line option, a list that contains only one element,
-            this element is a list of reaction or compound properties name
-            defined in the model. e.g. detail = [['id', 'name', 'formula']].
+        cpd_detail: Command line argument, a list that contains only one element,
+            this element is a compound properties name list,
+            e.g. detail = [['id', 'name', 'formula']].
+        rxn_detail: Command line argument, a list that contains only one element,
+            this element is a reaction properties name list,
+            e.g. detail = [['id', genes', 'equation']].
         model_compoundEntries = dict of cpd_id:compound_entries
     """
 
     for node in graph.nodes:
         if node.props['type'] == 'cpd':
-            if detail is not None:
+            if cpd_detail is not None:
                 props =model_compoundEntries[node.props['original_id'].name].properties
-                cpd_detail = [i for i in detail[0] if i in props]
+                cpd_detail_list = [i for i in cpd_detail[0] if i in props]
                 pre_label = '\n'.join(_encode_value(props[value])
-                                  for value in cpd_detail if value != 'id')
-                if 'id' in detail[0]:
+                                  for value in cpd_detail_list if value != 'id')
+                if 'id' in cpd_detail[0]:
                     label = '{}\n{}'.format(str(node.props['id']), pre_label)
                 else:
-                    if all(prop not in props for prop in detail[0]):
-                        label = str(node.props['id'])
-                    else:
-                        label = pre_label
+                    label = pre_label
             else:
                 label = str(node.props['id'])
             node.props['label'] = label
@@ -1112,14 +1119,11 @@ def add_node_label(graph, detail, model_compoundEntries, model_reactionEntries, 
         elif node.props['type'] == 'rxn':
             if len(node.props['original_id']) == 1:
                 rxn_id = node.props['original_id'][0]
-                if detail is not None:
+                if rxn_detail is not None:
                     props = model_reactionEntries[rxn_id].properties
-                    rxn_detail = list(i for i in detail[0] if i in props)
-                    if len(rxn_detail) == 0:
-                        label = rxn_id
-                    else:
-                        label = '\n'.join(_encode_value(props[value])
-                                              for value in rxn_detail)
+                    rxn_detail_list = [i for i in rxn_detail[0] if i in props]
+                    label = '\n'.join(_encode_value(props[value])
+                                      for value in rxn_detail_list)
                 else:
                     label = rxn_id
 
