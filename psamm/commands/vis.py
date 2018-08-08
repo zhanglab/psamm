@@ -544,109 +544,24 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
                     rxn_count[r] += 1
                     r_id = str('{}_{}'.format(r, rxn_count[r]))
                     new_id_mapping[r_id] = r
-                a = tuple(sorted((c1, c2))) == (c1, c2)
+
                 if rx.direction == Direction.Forward:
-                    if a:
-                        cpair_dict[(c1, c2)]['forward'].append(r_id)
-                    else:
-                        cpair_dict[(c2, c1)]['back'].append(r_id)
+                    cpair_dict[(c1, c2)]['forward'].append(r_id)
                 elif rx.direction == Direction.Reverse:
-                    if a:
-                        cpair_dict[(c1, c2)]['back'].append(r_id)
-                    else:
-                        cpair_dict[(c2, c1)]['forward'].append(r_id)
+                    cpair_dict[(c1, c2)]['back'].append(r_id)
                 else:
                     if len(reaction_flux) > 0:
                         if r in reaction_flux:
                             if reaction_flux[r] > 0:
-                                if a:
-                                    cpair_dict[(c1, c2)]['forward']. \
-                                        append(r_id)
-                                else:
-                                    cpair_dict[(c2, c1)]['back'].append(
-                                        r_id)
+                                cpair_dict[(c1, c2)]['forward'].append(r_id)
                             else:
-                                if a:
-                                    cpair_dict[(c1, c2)]['back'].append(
-                                        r_id)
-                                else:
-                                    cpair_dict[(c2, c1)]['forward']. \
-                                        append(r_id)
+                                cpair_dict[(c1, c2)]['back'].append(r_id)
                         else:
-                            cpair_dict[tuple(sorted((c1, c2)))]['both']. \
-                                append(r_id)
+                            cpair_dict[(c1, c2)]['both'].append(r_id)
                     else:
-                        cpair_dict[tuple(sorted((c1, c2)))]['both']. \
-                            append(r_id)
+                        cpair_dict[(c1, c2)]['both'].append(r_id)
 
-    # new_cpair_dict = {}
-    # for (c1, c2), rxns in iteritems(cpair_dict):
-    #     new_rxns = {}
-    #     if len(rxns['forward']) == 0:
-    #         # new_rxns = defaultdict(list)
-    #         if len(rxns['back']) != 0:
-    #             new_rxns['forward'] = rxns['back']
-    #             new_rxns['back'] = []
-    #             new_rxns['both'] = rxns['both']
-    #         else:
-    #             new_rxns['forward'] = []
-    #             new_rxns['back'] = []
-    #             new_rxns['both'] = rxns['both']
-    #         new_cpair_dict[(c2, c1)]=new_rxns
-    #     else:
-    #         new_rxns['forward'] = rxns['forward']
-    #         new_rxns['back'] = rxns['back']
-    #         new_rxns['both'] = rxns['both']
-    #         new_cpair_dict[(c1, c2)] = new_rxns   # Note: all use normal dict didn't works
-
-    # new_cpair_dict = defaultdict(lambda: defaultdict(list))
-    # for (c1, c2), rxns in iteritems(cpair_dict):
-    #     if len(rxns['forward']) == 0:
-    #         if len(rxns['back']) != 0:
-    #             new_cpair_dict[(c2, c1)]['forward'] = rxns['back']
-    #             if len(rxns['both']) != 0:
-    #                 new_cpair_dict[(c2, c1)]['both'] = rxns['both']
-    #         else:
-    #             new_cpair_dict[(c2, c1)]['both'] = rxns['both']
-    #     else:
-    #         new_cpair_dict[(c1, c2)] = rxns  # Note: all defaultdict, sometimes works, sometimes seems not
-    # print(new_cpair_dict)
-
-    new_cpair_dict = {}
-    for (c1, c2), rxns in iteritems(cpair_dict):
-        if len(rxns['forward']) == 0:
-            new_rxns = defaultdict(list)
-            if len(rxns['back']) != 0:
-                new_rxns['forward'] = rxns['back']
-                if len(rxns['both']) != 0:
-                    new_rxns['both'] = rxns['both']
-            else:
-                new_rxns['both'] = rxns['both']
-            new_cpair_dict[(c2, c1)]=new_rxns
-        else:
-            new_cpair_dict[(c1, c2)] = rxns
-
-    # new_cpair_dict = {}
-    # for (c1, c2), rxns in iteritems(cpair_dict):
-    #     if len(rxns['forward']) == 0:
-    #         new_rxns = {}
-    #         if len(rxns['back']) != 0:
-    #             new_rxns['forward'] = rxns['back']
-    #             new_rxns['back'] = []
-    #             new_rxns['both'] = rxns['both']
-    #         else:
-    #             new_rxns['forward'] = []
-    #             new_rxns['back'] = []
-    #             new_rxns['both'] = rxns['both']
-    #         new_cpair_dict[(c2, c1)]=new_rxns
-    #     else:
-    #         new_cpair_dict[(c1, c2)] = rxns     # Note: part normal dict, part defaultdict, seems works better
-
-    # print(new_cpair_dict)
-    # for (c1, c2), rxns in iteritems(new_cpair_dict):
-    #     print(str(c1), str(c2), rxns['forward'], rxns['back'], rxns['both'])
-
-    return new_cpair_dict, new_id_mapping
+    return cpair_dict, new_id_mapping
 
 # def create_bipartite_graph(mm, model, cpair_dict, split_map, edge_values,
 #                            subset, reaction_flux, method, new_id_mapping,
@@ -907,7 +822,7 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
 #                                           final_props(dir, edge)))
 #     return g
 
-### dveide create_bipartite_graph() function into several small functions
+# divide create_bipartite_graph() function into several small functions
 
 
 def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split): # by default, split = False
@@ -1183,6 +1098,8 @@ def set_edge_props_withfba(g, edge_values):
             elif edge.dest.props['type'] == 'cpd':
                 rxn_string = ','.join(edge.source.props['original_id'])
                 edge_test = edge.dest.props['original_id'], rxn_string
+            else:
+                edge_test = None
 
             if edge_test in edge_values:
                 edge.props['penwidth'] = pen_width(abs(edge_values[edge_test]))
