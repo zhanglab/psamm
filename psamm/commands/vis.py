@@ -575,9 +575,75 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
                         cpair_dict[tuple(sorted((c1, c2)))]['both']. \
                             append(r_id)
 
-    return cpair_dict, new_id_mapping
+    # new_cpair_dict = {}
+    # for (c1, c2), rxns in iteritems(cpair_dict):
+    #     new_rxns = {}
+    #     if len(rxns['forward']) == 0:
+    #         # new_rxns = defaultdict(list)
+    #         if len(rxns['back']) != 0:
+    #             new_rxns['forward'] = rxns['back']
+    #             new_rxns['back'] = []
+    #             new_rxns['both'] = rxns['both']
+    #         else:
+    #             new_rxns['forward'] = []
+    #             new_rxns['back'] = []
+    #             new_rxns['both'] = rxns['both']
+    #         new_cpair_dict[(c2, c1)]=new_rxns
+    #     else:
+    #         new_rxns['forward'] = rxns['forward']
+    #         new_rxns['back'] = rxns['back']
+    #         new_rxns['both'] = rxns['both']
+    #         new_cpair_dict[(c1, c2)] = new_rxns   # Note: all use normal dict didn't works
 
-#
+    # new_cpair_dict = defaultdict(lambda: defaultdict(list))
+    # for (c1, c2), rxns in iteritems(cpair_dict):
+    #     if len(rxns['forward']) == 0:
+    #         if len(rxns['back']) != 0:
+    #             new_cpair_dict[(c2, c1)]['forward'] = rxns['back']
+    #             if len(rxns['both']) != 0:
+    #                 new_cpair_dict[(c2, c1)]['both'] = rxns['both']
+    #         else:
+    #             new_cpair_dict[(c2, c1)]['both'] = rxns['both']
+    #     else:
+    #         new_cpair_dict[(c1, c2)] = rxns  # Note: all defaultdict, sometimes works, sometimes seems not
+    # print(new_cpair_dict)
+
+    new_cpair_dict = {}
+    for (c1, c2), rxns in iteritems(cpair_dict):
+        if len(rxns['forward']) == 0:
+            new_rxns = defaultdict(list)
+            if len(rxns['back']) != 0:
+                new_rxns['forward'] = rxns['back']
+                if len(rxns['both']) != 0:
+                    new_rxns['both'] = rxns['both']
+            else:
+                new_rxns['both'] = rxns['both']
+            new_cpair_dict[(c2, c1)]=new_rxns
+        else:
+            new_cpair_dict[(c1, c2)] = rxns
+
+    # new_cpair_dict = {}
+    # for (c1, c2), rxns in iteritems(cpair_dict):
+    #     if len(rxns['forward']) == 0:
+    #         new_rxns = {}
+    #         if len(rxns['back']) != 0:
+    #             new_rxns['forward'] = rxns['back']
+    #             new_rxns['back'] = []
+    #             new_rxns['both'] = rxns['both']
+    #         else:
+    #             new_rxns['forward'] = []
+    #             new_rxns['back'] = []
+    #             new_rxns['both'] = rxns['both']
+    #         new_cpair_dict[(c2, c1)]=new_rxns
+    #     else:
+    #         new_cpair_dict[(c1, c2)] = rxns     # Note: part normal dict, part defaultdict, seems works better
+
+    # print(new_cpair_dict)
+    # for (c1, c2), rxns in iteritems(new_cpair_dict):
+    #     print(str(c1), str(c2), rxns['forward'], rxns['back'], rxns['both'])
+
+    return new_cpair_dict, new_id_mapping
+
 # def create_bipartite_graph(mm, model, cpair_dict, split_map, edge_values,
 #                            subset, reaction_flux, method, new_id_mapping,
 #                            args_color, args_detail):
@@ -901,7 +967,6 @@ def add_node_color(g, recolor_dict):
 
 
 def add_edges(g, cpairs_dict, method, split):
-
     node_dict = {}
     for node in g.nodes:
         node_dict[node.props['id']] = node
