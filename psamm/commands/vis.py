@@ -514,10 +514,9 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
                 filter_dict = defaultdict(list)
                 for r, cpair in zip(rxn_list, cpair_list):
                     filter_dict[r].append(cpair)
-        except:
-            if IOError:
-                logger.error('Invalid file path, no such file or directory '
-                             ': {}' .format(method))
+        except IOError:
+            logger.error('Invalid file path, no such file or directory '
+                         ': {}' .format(method))
             quit()
 
     return filter_dict, fpp_rxns
@@ -541,24 +540,97 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
                     rxn_count[r] += 1
                     r_id = str('{}_{}'.format(r, rxn_count[r]))
                     new_id_mapping[r_id] = r
-
                 if rx.direction == Direction.Forward:
                     cpair_dict[(c1, c2)]['forward'].append(r_id)
                 elif rx.direction == Direction.Reverse:
                     cpair_dict[(c1, c2)]['back'].append(r_id)
                 else:
-                    if len(reaction_flux) > 0:
-                        if r in reaction_flux:
-                            if reaction_flux[r] > 0:
-                                cpair_dict[(c1, c2)]['forward'].append(r_id)
-                            else:
-                                cpair_dict[(c1, c2)]['back'].append(r_id)
+                    if r in reaction_flux:
+                        if reaction_flux[r] > 0:
+                            cpair_dict[(c1, c2)]['forward'].append(r_id)
                         else:
-                            cpair_dict[(c1, c2)]['both'].append(r_id)
+                            cpair_dict[(c1, c2)]['back'].append(r_id)
                     else:
                         cpair_dict[(c1, c2)]['both'].append(r_id)
 
-    return cpair_dict, new_id_mapping
+    new_cpair_dict = {}
+    cpair_list = []
+    for (c1, c2), rxns in iteritems(cpair_dict):
+        if (c1, c2) not in cpair_list:
+            new_rxns = rxns
+            if (c2, c1) in cpair_dict:
+                if len(cpair_dict[(c2, c1)]['forward']) > 0:
+                    for r in cpair_dict[(c2, c1)]['forward']:
+                        new_rxns['back'].append(r)
+                if len(cpair_dict[(c2, c1)]['back']) > 0:
+                    for r in cpair_dict[(c2, c1)]['back']:
+                        new_rxns['forward'].append(r)
+                if len(cpair_dict[(c2, c1)]['both']) > 0:
+                    for r in cpair_dict[(c2, c1)]['both']:
+                        new_rxns['both'].append(r)
+                new_cpair_dict[(c1, c2)] = new_rxns
+                cpair_list.append((c1, c2))
+                cpair_list.append((c2, c1))
+            else:
+                new_cpair_dict[(c1, c2)] = new_rxns
+                cpair_list.append((c1, c2))
+
+    # for r, cpairs in iteritems(filter_dict):
+    #     if r in subset:
+    #         rx = mm.get_reaction(r)
+    #         for (c1, c2) in cpairs:
+    #             if args_method == 'no-fpp':
+    #                 r_id = r
+    #                 new_id_mapping[r_id] = r
+    #             else:
+    #                 rxn_count[r] += 1
+    #                 r_id = str('{}_{}'.format(r, rxn_count[r]))
+    #                 new_id_mapping[r_id] = r
+    #
+    #             a = tuple(sorted((c1, c2))) == (c1, c2)
+    #             if rx.direction == Direction.Forward:
+    #                 if a:
+    #                     cpair_dict[(c1, c2)]['forward'].append(r_id)
+    #                 else:
+    #                     cpair_dict[(c2, c1)]['back'].append(r_id)
+    #             elif rx.direction == Direction.Reverse:
+    #                 if a:
+    #                     cpair_dict[(c1, c2)]['back'].append(r_id)
+    #                 else:
+    #                     cpair_dict[(c2, c1)]['forward'].append(r_id)
+    #             else:
+    #                 if r in reaction_flux:
+    #                     if reaction_flux[r] > 0:
+    #                         if a:
+    #                             cpair_dict[(c1, c2)]['forward'].append(r_id)
+    #                         else:
+    #                             cpair_dict[(c2, c1)]['back'].append(r_id)
+    #                     else:
+    #                         if a:
+    #                             cpair_dict[(c1, c2)]['back'].append(r_id)
+    #                         else:
+    #                             cpair_dict[(c2, c1)]['forward'].append(r_id)
+    #                 else:
+    #                     cpair_dict[tuple(sorted((c1, c2)))]['both'].append(r_id)
+    #
+    # new_cpair_dict = {}     # reorder the cpds in cpair according to rxns group
+    # for (c1, c2), rxns in iteritems(cpair_dict):
+    #     if len(rxns['forward']) == 0:
+    #         new_rxns = defaultdict(list)
+    #         if len(rxns['back']) != 0:
+    #             new_rxns['forward'] = rxns['back']
+    #             if len(rxns['both']) != 0:
+    #                 new_rxns['both'] = rxns['both']
+    #             new_cpair_dict[(c2, c1)] = new_rxns
+    #         else:
+    #             new_rxns['both'] = rxns['both']
+    #             new_cpair_dict[(c2, c1)] = new_rxns
+    #     else:
+    #         new_cpair_dict[(c1, c2)] = rxns
+    # for (c1, c2), rxns in iteritems(new_cpair_dict):
+    #     print(c1, c2, rxns)
+
+    return new_cpair_dict, new_id_mapping
 
 # def create_bipartite_graph(mm, model, cpair_dict, split_map, edge_values,
 #                            subset, reaction_flux, method, new_id_mapping,
@@ -913,6 +985,64 @@ def add_edges(g, cpairs_dict, method, split):
         method: command line argument, options=['fpp', 'no-fpp', file_path].
         split: command line argument, True or False. By default split = False.
     """
+    # def new_dir(dir):
+    #     """define direction when change the order of (c1, c2) to (c2, c1)
+    #     when add edges."""
+    #     if dir == 'forward':
+    #         return {'dir': 'back'}
+    #     elif dir == 'back':
+    #         return {'dir': 'forward'}
+    #     else:
+    #         return {'dir': 'both'}
+    #
+    # node_dict = {}
+    # for node in g.nodes:
+    #     node_dict[node.props['id']] = node
+    # edge_list = []
+    # node_set = set()
+    # for (c1, c2), value in iteritems(cpairs_dict):
+    #     for dir, rlist in iteritems(value):
+    #         if split or method == 'no-fpp':
+    #             for sub_rxn in rlist:
+    #                 test1 = c1, sub_rxn
+    #                 # test2 = sub_rxn, c1
+    #                 if test1 not in edge_list:
+    #                     edge_list.append(test1)
+    #                     # edge_list.append(test2)
+    #                     if c1 not in node_set and sub_rxn in node_set:
+    #                         g.add_edge(graph.Edge(
+    #                             node_dict[text_type(sub_rxn)],
+    #                             node_dict[text_type(c1)], new_dir(dir)))
+    #                     else:
+    #                         g.add_edge(graph.Edge(
+    #                             node_dict[text_type(c1)],
+    #                             node_dict[text_type(sub_rxn)], {'dir': dir}))
+    #                     node_set.add(c1)
+    #                     node_set.add(sub_rxn)
+    #
+    #                 # test1 = sub_rxn, c2
+    #                 test2 = c2, sub_rxn
+    #                 if test2 not in edge_list:
+    #                     # edge_list.append(test1)
+    #                     edge_list.append(test2)
+    #                     g.add_edge(graph.Edge(
+    #                         node_dict[text_type(sub_rxn)],
+    #                         node_dict[text_type(c2)], {'dir': dir}))
+    #                     node_set.add(c2)
+    #         else:
+    #             if c1 not in node_set and text_type(rlist) in node_set:
+    #                 g.add_edge(graph.Edge(node_dict[text_type(rlist)],
+    #                                       node_dict[text_type(c1)], new_dir(dir)))
+    #             else:
+    #                 g.add_edge(graph.Edge(node_dict[text_type(c1)],
+    #                                       node_dict[text_type(rlist)],
+    #                                       {'dir': dir}))
+    #             node_set.add(c1)
+    #             node_set.add(text_type(rlist))
+    #             g.add_edge(graph.Edge(node_dict[text_type(rlist)],
+    #                                   node_dict[text_type(c2)], {'dir': dir}))
+    #             node_set.add(c2)
+
     node_dict = {}
     for node in g.nodes:
         node_dict[node.props['id']] = node
