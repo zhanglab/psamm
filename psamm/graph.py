@@ -20,6 +20,8 @@ from itertools import count
 
 from six import iteritems, text_type
 
+from collections import defaultdict
+
 
 def _graphviz_prop_string(d):
      return ','.join('{}="{}"'.format(k, v) for k, v in iteritems(d))
@@ -123,6 +125,62 @@ class Graph(Entity):
 
             f.write(' "{}"[{}]\n'.format(
                 node.props['id'], _graphviz_prop_string(node.props)))
+
+        for edge in self.edges:
+            f.write(' "{}" -> "{}"[{}]\n'.format(
+                edge.source.props['id'], edge.dest.props['id'],
+                _graphviz_prop_string(edge.props)))
+
+        f.write('}\n')
+
+    def write_graphviz_compartmentalized(self, f, compartment_tree, extracellular):
+        '''Function to write compartmentalized version of dot file for graph'''
+        f.write('digraph {\n')
+
+        if len(self._default_node_props) > 0:
+            f.write(' node[{}];\n'.format(
+                _graphviz_prop_string(self._default_node_props)))
+
+        if len(self._default_edge_props) > 0:
+            f.write(' edge[{}];\n'.format(
+                _graphviz_prop_string(self._default_edge_props)))
+
+        for k, v in iteritems(self.props):
+            f.write(' {}="{}";\n'.format(k, v))
+
+        next_id = count(0)
+        node_dicts = defaultdict(list)
+
+        for node in self.nodes:
+            node_dicts[node.props['compartment']].append(node)
+
+        def edit_labels(string):
+            return string.replace('-', '_')
+
+        def write_node_props(f, node_list):
+            for node in node_list:
+                if 'id' not in node.props:
+                    node.props['id'] = 'n{}'.format(next(next_id))
+                f.write('  "{}"[{}]\n'.format(
+                    node.props['id'], _graphviz_prop_string(node.props)))
+
+        def dfs_recursive(graph, vertex, node_dict, extracellular, f, path=[]):
+            path.append(vertex)
+            if vertex == extracellular:
+                f.write(''.join([' subgraph cluster_{} '.format(edit_labels(vertex)), '{\n  style=dashed;\n  color=black;\n  penwidth=4;\n  fontsize=35;\n', '  label = "Compartment: {}"\n'.format(edit_labels(vertex))]))
+                for x in node_dict[vertex]:
+                    f.write(' "{}"[{}]\n'.format(x.props['id'], _graphviz_prop_string(x.props)))
+            elif vertex != extracellular:
+                f.write(''.join([' subgraph cluster_{} '.format(edit_labels(vertex)), '{\n  style=dashed;\n  color=black;\n  penwidth=4;\n  fontsize=35;\n', '  label = "Compartment: {}"\n'.format(edit_labels(vertex))]))
+                for x in node_dict[vertex]:
+                    f.write(' "{}"[{}]\n'.format(x.props['id'], _graphviz_prop_string(x.props)))
+            for neighbor in graph[vertex]:
+                if neighbor not in path:
+                    path = dfs_recursive(graph, neighbor, node_dict, path, f)
+            f.write('}')
+            return path
+
+        dfs_recursive(compartment_tree, extracellular, node_dicts, extracellular, f)
 
         for edge in self.edges:
             f.write(' "{}" -> "{}"[{}]\n'.format(
