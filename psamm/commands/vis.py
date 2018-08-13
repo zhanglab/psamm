@@ -529,6 +529,7 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
     new_id_mapping = {}
     rxn_count = Counter()
     cpair_dict = defaultdict(lambda: defaultdict(list))
+
     for r, cpairs in iteritems(filter_dict):
         if r in subset:
             rx = mm.get_reaction(r)
@@ -555,7 +556,7 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
 
     new_cpair_dict = {}
     cpair_list = []
-    for (c1, c2), rxns in iteritems(cpair_dict):
+    for (c1, c2), rxns in sorted(iteritems(cpair_dict)):
         if (c1, c2) not in cpair_list:
             new_rxns = rxns
             if (c2, c1) in cpair_dict:
@@ -628,7 +629,7 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
     #     else:
     #         new_cpair_dict[(c1, c2)] = rxns
     # for (c1, c2), rxns in iteritems(new_cpair_dict):
-    #     print(c1, c2, rxns)
+    #     print(str(c1), str(c2))
 
     return new_cpair_dict, new_id_mapping
 
