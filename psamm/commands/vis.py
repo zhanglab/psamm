@@ -95,6 +95,9 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
             '--split-map', action='store_true',
             help='Create reactions-splitted metabolic network, one node '
                  'only represent one reaction')
+        parser.add_argument(
+            '--compartment', action='store_true',
+            help='Generate visualization of the network with compartments shown.')
         super(VisualizationCommand, cls).init_parser(parser)
 
     def run(self):
@@ -234,6 +237,11 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
             g.write_cytoscape_nodes(f)
         with open('reactions.edges.tsv', 'w') as f:
             g.write_cytoscape_edges(f)
+        if self._args.compartment:
+            boundaries, extracellular = get_cpt_boundaries(self._model)
+            boundary_tree, extracellular = make_cpt_tree(boundaries, extracellular)
+            with open('reactions_compartmentalized.dot', 'w') as f:
+                g.write_graphviz_compartmentalized(f, boundary_tree, extracellular)
 
         if self._args.Image is not None:
             if render is None:
@@ -917,7 +925,8 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
                     'shape': 'ellipse',
                     'style': 'filled',
                     'type': 'cpd',
-                    'original_id': c})
+                    'original_id': c,
+                    'compartment': c.compartment})
                 g.add_node(node)
                 compound_nodes[c] = node
         for dir, rlist in iteritems(reactions):
@@ -929,7 +938,8 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
                         'shape': 'box',
                         'style': 'filled',
                         'type': 'rxn',
-                        'original_id': [new_id_mapping[sub_rxn]]})
+                        'original_id': [new_id_mapping[sub_rxn]],
+                        'compartment': c.compartment})
                     g.add_node(rnode)
                     reaction_nodes[sub_rxn] = rnode
             else:
@@ -939,7 +949,8 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
                     'shape': 'box',
                     'style': 'filled',
                     'type': 'rxn',
-                    'original_id': real_rxns})
+                    'original_id': real_rxns,
+                    'compartment': c.compartment})
                 g.add_node(rnode)
                 reaction_nodes[rlist_str] = rnode
     return g
@@ -1111,7 +1122,8 @@ def add_biomass_rxns(g, bio_reaction, biomass_rxn_id):
                 'style': 'filled',
                 'fillcolor': ALT_COLOR,
                 'original_id': [biomass_rxn_id],
-                'type': 'bio_rxn'})
+                'type': 'bio_rxn',
+                'compartment': c.compartment})
             g.add_node(node_bio)
 
             if c in A:
@@ -1144,7 +1156,8 @@ def add_exchange_rxns(g, rxn_id, reaction):
                 'style': 'filled',
                 'fillcolor': ACTIVE_COLOR,
                 'original_id': [rxn_id],
-                'type': 'Ex_rxn'})
+                'type': 'Ex_rxn',
+                'compartment': c.compartment})
             g.add_node(node_ex)
 
             dir = dir_value(reaction.direction)
@@ -1273,4 +1286,67 @@ def set_edge_props_withfba(g, edge_values):
     return g
 
 
+def make_cpt_tree(boundaries, extracellular):
+    """ This function will create a tree-like dictionary that can be used to determine compartment location.
 
+        This function will take a list of compartment boundary tuples (eg: [(c, e), (c, p)]) and use this
+        data to construct a tree like dictionary of parent compartments to lists of compartments they are
+        adjacent to. An extracellular compartment will also be set to use as a starting point for the
+        'outermost' compartment in the model. If none is explicitly defined then 'e' will be used by default.
+        If an 'e' compartment is not in the model either then a random compartment will be used as a starting
+        point.
+
+        args:
+        boundaries: a list of tuples of adjacent compartment ids.
+        extracellular: the extracelluar compartment in the model.
+    """
+    children = defaultdict(set)
+    compartments = set()
+    for (j, k) in boundaries:
+        compartments.add(j)
+        compartments.add(k)
+    if extracellular not in compartments:
+        etmp = list(compartments)
+        extracellular = etmp[0]
+        logger.warning('No extracellular compartment was defined in the model.yaml file and no "e" compartment in the '
+                       'model. Trying to use {} as the extracellular compartment.'.format(etmp[0]))
+    for cpt in compartments:
+        for (j, k) in boundaries:
+            j = str(j)
+            k = str(k)
+            if j == cpt:
+                # if k not in parents:
+                children[cpt].add(k)
+            elif k == cpt:
+                # if j not in parents:
+                children[cpt].add(j)
+    return children, extracellular
+
+
+def get_cpt_boundaries(model):
+    ''' This function will determine the compartment boundaries in a model
+
+    This function will take a native model object and determine the compartment
+    boundaries either based on the predefined compartments in the model.yaml or
+    based on the reaction equations in the model.
+
+    args:
+    model: a psamm NativeModel object
+    '''
+    if model.extracellular_compartment is not None:
+        extracellular = model.extracellular_compartment
+    else:
+        extracellular = 'e'
+
+    if len(model.compartment_boundaries) != 0:
+        boundaries = model.compartment_boundaries
+    else:
+        boundaries = set()
+        for rxn in model.reactions:
+            cpd_cpt = set()
+            for cpd in rxn.equation.compounds:
+                cpd_cpt.add(cpd[0].compartment)
+            if len(cpd_cpt) > 1:
+                cpd_cpt = list(cpd_cpt)
+                boundaries.add((cpd_cpt[0], cpd_cpt[1]))
+    return boundaries, extracellular
