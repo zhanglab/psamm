@@ -97,7 +97,8 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
                  'only represent one reaction')
         parser.add_argument(
             '--compartment', action='store_true',
-            help='Generate visualization of the network with compartments shown.')
+            help='Generate visualization of the network with compartments '
+                 'shown.')
         super(VisualizationCommand, cls).init_parser(parser)
 
     def run(self):
@@ -213,7 +214,8 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
         g = add_graph_nodes(g, cpair_dict, self._args.method,
                             new_id_mapping, split=self._args.split_map)
         g = add_node_color(g, recolor_dict)
-        g = add_edges(g, cpair_dict, self._args.method, split = self._args.split_map)
+        g = add_edges(g, cpair_dict, self._args.method,
+                      split = self._args.split_map)
 
         if self._model.biomass_reaction in subset_reactions:
             biomass_rxn = self._mm.get_reaction(self._model.biomass_reaction)
@@ -239,9 +241,11 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
             g.write_cytoscape_edges(f)
         if self._args.compartment:
             boundaries, extracellular = get_cpt_boundaries(self._model)
-            boundary_tree, extracellular = make_cpt_tree(boundaries, extracellular)
+            boundary_tree, extracellular = make_cpt_tree(boundaries,
+                                                         extracellular)
             with open('reactions_compartmentalized.dot', 'w') as f:
-                g.write_graphviz_compartmentalized(f, boundary_tree, extracellular)
+                g.write_graphviz_compartmentalized(f, boundary_tree,
+                                                   extracellular)
 
         if self._args.Image is not None:
             if render is None:
@@ -522,9 +526,10 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
                 filter_dict = defaultdict(list)
                 for r, cpair in zip(rxn_list, cpair_list):
                     filter_dict[r].append(cpair)
-        except IOError:
-            logger.error('Invalid file path, no such file or directory '
-                         ': {}' .format(method))
+        except:
+            if IOError:
+                logger.error('Invalid file path, no such file or directory '
+                             ': {}' .format(method))
             quit()
 
     return filter_dict, fpp_rxns
@@ -973,7 +978,8 @@ def add_node_color(g, recolor_dict):
                 id = node.props['original_id'][0]
                 color = recolor_dict.get(id)
             else:
-                if any(i in recolor_dict for i in node.props['original_id']):
+                if any(i in recolor_dict for
+                       i in node.props['original_id']):
                     color = RXN_COMBINED_COLOR
                 else:
                     color = REACTION_COLOR
@@ -1287,14 +1293,17 @@ def set_edge_props_withfba(g, edge_values):
 
 
 def make_cpt_tree(boundaries, extracellular):
-    """ This function will create a tree-like dictionary that can be used to determine compartment location.
+    """ This function will create a tree-like dictionary that can be used to
+    determine compartment location.
 
-        This function will take a list of compartment boundary tuples (eg: [(c, e), (c, p)]) and use this
-        data to construct a tree like dictionary of parent compartments to lists of compartments they are
-        adjacent to. An extracellular compartment will also be set to use as a starting point for the
-        'outermost' compartment in the model. If none is explicitly defined then 'e' will be used by default.
-        If an 'e' compartment is not in the model either then a random compartment will be used as a starting
-        point.
+        This function will take a list of compartment boundary tuples
+        (eg: [(c, e), (c, p)]) and use this data to construct a tree like
+        dictionary of parent compartments to lists of compartments they are
+        adjacent to. An extracellular compartment will also be set to use as
+        a starting point for the 'outermost' compartment in the model. If
+        none is explicitly defined then 'e' will be used by default.
+        If an 'e' compartment is not in the model either then a random
+        compartment will be used as a starting point.
 
         args:
         boundaries: a list of tuples of adjacent compartment ids.
@@ -1308,8 +1317,10 @@ def make_cpt_tree(boundaries, extracellular):
     if extracellular not in compartments:
         etmp = list(compartments)
         extracellular = etmp[0]
-        logger.warning('No extracellular compartment was defined in the model.yaml file and no "e" compartment in the '
-                       'model. Trying to use {} as the extracellular compartment.'.format(etmp[0]))
+        logger.warning('No extracellular compartment was defined in the '
+                       'model.yaml file and no "e" compartment in the model. '
+                       'Trying to use {} as the extracellular compartment.'
+                       .format(etmp[0]))
     for cpt in compartments:
         for (j, k) in boundaries:
             j = str(j)
@@ -1326,9 +1337,9 @@ def make_cpt_tree(boundaries, extracellular):
 def get_cpt_boundaries(model):
     ''' This function will determine the compartment boundaries in a model
 
-    This function will take a native model object and determine the compartment
-    boundaries either based on the predefined compartments in the model.yaml or
-    based on the reaction equations in the model.
+    This function will take a native model object and determine the
+    compartment boundaries either based on the predefined compartments in
+    the model.yaml or based on the reaction equations in the model.
 
     args:
     model: a psamm NativeModel object
