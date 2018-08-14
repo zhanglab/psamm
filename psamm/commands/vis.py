@@ -89,8 +89,8 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
             '--Image', type=text_type, default=None,
             help='generate image file directly')
         parser.add_argument(
-            '--exclude-cpairs', type=argparse.FileType('rU'), default=None,
-            help='Remove edge of given compound pairs from network ')
+            '--hide-edges', type=argparse.FileType('rU'), default=None,
+            help='Remove edges between specific compound pair from network ')
         parser.add_argument(
             '--split-map', action='store_true',
             help='Create reactions-splitted metabolic network, one node '
@@ -154,7 +154,7 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
         # key = rxn id, value = list of compound pairs
         filter_dict, fpp_rxns = make_filter_dict(
             self._model, self._mm, self._args.method, self._args.element,
-            compound_formula, self._args.exclude_cpairs, self._args.exclude)
+            compound_formula, self._args.hide_edges, self._args.exclude)
 
         # run l1min_fba, get reaction fluxes
         reaction_flux = {}
@@ -398,7 +398,7 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
 
 
 def make_filter_dict(model, mm, method, element, cpd_formula,
-                     args_exclude_cpairs, exclude_rxns):
+                     arg_hide_edges, exclude_rxns):
     """create a dictionary of reaction id(key) and a list of related
     compound pairs(value) by 3 different methods.
 
@@ -411,7 +411,7 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
             N(nitrogen), S(sulfer).
         compound_formula: A dictionary that key is compound id (a string) and
             value is class 'psamm.formula.Formula'.
-        args_exclude_cpairs: Command line argument, a file that contains two
+        arg_hide_edges: Command line argument, a file that contains two
             columns(tab-separated) of compounds(in the format of
             compound_id[compartment], such as atp[c], akg[c],each row
             represent two reactant/product pairs((c1, c2)and (c2,c1)).
@@ -425,11 +425,11 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
         cpd_object[str(cpd)] = cpd
 
     # read exclude_compound_pairs from command-line argument
-    exclude_cpairs = []
-    if args_exclude_cpairs is not None:
-        for row in csv.reader(args_exclude_cpairs, delimiter=str('\t')):
-            exclude_cpairs.append((cpd_object[row[0]], cpd_object[row[1]]))
-            exclude_cpairs.append((cpd_object[row[1]], cpd_object[row[0]]))
+    hide_edges = []
+    if arg_hide_edges is not None:
+        for row in csv.reader(arg_hide_edges, delimiter=str('\t')):
+            hide_edges.append((cpd_object[row[0]], cpd_object[row[1]]))
+            hide_edges.append((cpd_object[row[1]], cpd_object[row[0]]))
 
     fpp_rxns, rxns_no_equation, rxns_no_formula = set(), set(), []
     for reaction in model.reactions:
@@ -475,7 +475,7 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
         for rxn_id, fpp_pairs in iteritems(fpp_dict):
             compound_pairs = []
             for cpd_pair, transfer in iteritems(fpp_pairs[0]):
-                if cpd_pair not in exclude_cpairs:
+                if cpd_pair not in hide_edges:
                     if element == 'none':
                         compound_pairs.append(cpd_pair)
                     else:
@@ -491,7 +491,7 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
                 cpairs = []
                 for c1, _ in rx.left:
                     for c2, _ in rx.right:
-                        if (c1, c2) not in exclude_cpairs:
+                        if (c1, c2) not in hide_edges:
                             if element != 'none':
                                 if c1.name in cpd_formula and c2.name in \
                                         cpd_formula:
@@ -511,7 +511,7 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
                 cpair_list, rxn_list = [], []
                 for row in csv.reader(f, delimiter=str(u'\t')):
                     if (cpd_object[row[1]], cpd_object[row[2]]) not in \
-                            exclude_cpairs:
+                            hide_edges:
                         if element == 'none':
                             cpair_list.append((cpd_object[row[1]],
                                                cpd_object[row[2]]))
