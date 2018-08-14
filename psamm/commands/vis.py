@@ -62,8 +62,9 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
         parser.add_argument(
             '--exclude', metavar='reaction', type=text_type, default=[],
             action=FilePrefixAppendAction,
-            help='Reaction to exclude (e.g. biomass reactions or '
-                 'macromolecule synthesis)')
+            help='Reaction(s) to exclude from metabolite pair (e.g. biomass '
+                 'reactions or macromolecule synthesis) prediction and final '
+                 'visualization of the model.')
         parser.add_argument(
             '--fba', action='store_true',
             help='visualize reaction flux')
@@ -486,7 +487,8 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
 
     elif method == 'no-fpp':
         for rxn_id in mm.reactions:
-            if rxn_id != model.biomass_reaction:
+            if rxn_id != model.biomass_reaction and rxn_id not in \
+                    exclude_rxns:
                 rx = mm.get_reaction(rxn_id)
                 cpairs = []
                 for c1, _ in rx.left:
@@ -512,16 +514,17 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
                 for row in csv.reader(f, delimiter=str(u'\t')):
                     if (cpd_object[row[1]], cpd_object[row[2]]) not in \
                             hide_edges:
-                        if element == 'none':
-                            cpair_list.append((cpd_object[row[1]],
-                                               cpd_object[row[2]]))
-                            rxn_list.append(row[0])
-                        else:
-                            if Atom(element) in \
-                                    Formula.parse(row[3]).flattened():
+                        if row[0] not in exclude_rxns:
+                            if element == 'none':
                                 cpair_list.append((cpd_object[row[1]],
                                                    cpd_object[row[2]]))
                                 rxn_list.append(row[0])
+                            else:
+                                if Atom(element) in \
+                                        Formula.parse(row[3]).flattened():
+                                    cpair_list.append((cpd_object[row[1]],
+                                                       cpd_object[row[2]]))
+                                    rxn_list.append(row[0])
 
                 filter_dict = defaultdict(list)
                 for r, cpair in zip(rxn_list, cpair_list):
