@@ -234,12 +234,6 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
         if self._args.method == 'no-fpp' and self._args.split_map is True:
             logger.warning('--split-map is not compatible with no-fpp option')
 
-        with open('reactions.dot', 'w') as f:
-            g.write_graphviz(f)
-        with open('reactions.nodes.tsv', 'w') as f:
-            g.write_cytoscape_nodes(f)
-        with open('reactions.edges.tsv', 'w') as f:
-            g.write_cytoscape_edges(f)
         if self._args.compartment:
             boundaries, extracellular = get_cpt_boundaries(self._model)
             boundary_tree, extracellular = make_cpt_tree(boundaries,
@@ -247,6 +241,13 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
             with open('reactions_compartmentalized.dot', 'w') as f:
                 g.write_graphviz_compartmentalized(f, boundary_tree,
                                                    extracellular)
+        else:
+            with open('reactions.dot', 'w') as f:
+                g.write_graphviz(f)
+        with open('reactions.nodes.tsv', 'w') as f:
+            g.write_cytoscape_nodes(f)
+        with open('reactions.edges.tsv', 'w') as f:
+            g.write_cytoscape_edges(f)
 
         if self._args.Image is not None:
             if render is None:
@@ -259,7 +260,11 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
                         'This graph contains {} reactions, graphs of this '
                         'size may take a long time to create'.format
                         (len(subset_reactions)))
-                render('dot', self._args.Image, 'reactions.dot')
+                if self._args.compartment:
+                    render('dot', self._args.Image, 'reactions_compartmentalized.dot')
+                else:
+                    render('dot', self._args.Image, 'reactions.dot')
+
                 # except subprocess.CalledProcessError:
                 #     logger.warning('the graph is too large to create')
 
