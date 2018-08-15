@@ -24,7 +24,7 @@ from collections import defaultdict
 
 
 def _graphviz_prop_string(d):
-     return ','.join('{}="{}"'.format(k, v) for k, v in iteritems(d))
+    return ','.join('{}="{}"'.format(k, v.encode('utf8')) for k, v in iteritems(d) if k != 'original_id')
 
 
 class Entity(object):
@@ -256,7 +256,7 @@ class Graph(Entity):
         f.write('\t'.join(properties) + '\n')
         for node in self.nodes:
             f.write('\t'.join(
-                text_type(node.props.get(x)) for x in properties) + '\n')
+                text_type(node.props.get(x.encode('utf8')) for x in properties) + '\n'))
 
     def write_cytoscape_edges(self, f):
         properties = set()
@@ -269,7 +269,7 @@ class Graph(Entity):
         for edge in self.edges:
             f.write('{}\t{}\t{}\n'.format(
                 edge.source.props['id'], edge.dest.props['id'],
-                '\t'.join(text_type(edge.props.get(x)) for x in properties)))
+                '\t'.join(text_type(edge.props.get(x.encode('utf8'))) for x in properties)))
 
 
 class Node(Entity):
