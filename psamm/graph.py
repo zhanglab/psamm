@@ -24,7 +24,8 @@ from collections import defaultdict
 
 
 def _graphviz_prop_string(d):
-    return ','.join('{}="{}"'.format(k, v.encode('utf8')) for k, v in iteritems(d) if k != 'original_id')
+    return ','.join('{}="{}"'.format(k, v.encode('utf8')) for k, v in
+                    iteritems(d) if k != 'original_id')
 
 
 class Entity(object):
@@ -133,8 +134,10 @@ class Graph(Entity):
 
         f.write('}\n')
 
-    def write_graphviz_compartmentalized(self, f, compartment_tree, extracellular):
-        '''Function to write compartmentalized version of dot file for graph'''
+    def write_graphviz_compartmentalized(self, f, compartment_tree,
+                                         extracellular):
+        """Function to write compartmentalized version of dot file
+        for graph. """
         f.write('digraph {\n')
 
         if len(self._default_node_props) > 0:
@@ -164,23 +167,34 @@ class Graph(Entity):
                 f.write('  "{}"[{}]\n'.format(
                     node.props['id'], _graphviz_prop_string(node.props)))
 
-        def dfs_recursive(graph, vertex, node_dict, extracellular, f, path=[]):
+        def dfs_recursive(graph,vertex, node_dict, extracellular, f, path=[]):
             path.append(vertex)
             if vertex == extracellular:
-                f.write(''.join([' subgraph cluster_{} '.format(edit_labels(vertex)), '{\n  style=dashed;\n  color=black;\n  penwidth=4;\n  fontsize=35;\n', '  label = "Compartment: {}"\n'.format(edit_labels(vertex))]))
+                f.write(''.join(
+                    [' subgraph cluster_{} '.format(edit_labels(vertex)),
+                     '{\n  style=dashed;\n  color=black;\n  penwidth=4;\n  '
+                     'fontsize=35;\n', '  label = "Compartment: {}"\n'.format
+                     (edit_labels(vertex))]))
                 for x in node_dict[vertex]:
-                    f.write(' "{}"[{}]\n'.format(x.props['id'], _graphviz_prop_string(x.props)))
+                    f.write(' "{}"[{}]\n'.format(
+                        x.props['id'], _graphviz_prop_string(x.props)))
             elif vertex != extracellular:
-                f.write(''.join([' subgraph cluster_{} '.format(edit_labels(vertex)), '{\n  style=dashed;\n  color=black;\n  penwidth=4;\n  fontsize=35;\n', '  label = "Compartment: {}"\n'.format(edit_labels(vertex))]))
+                f.write(''.join(
+                    [' subgraph cluster_{} '.format(edit_labels(vertex)),
+                     '{\n  style=dashed;\n  color=black;\n  penwidth=4;\n  '
+                     'fontsize=35;\n', '  label = "Compartment: {}"\n'.format
+                     (edit_labels(vertex))]))
                 for x in node_dict[vertex]:
-                    f.write(' "{}"[{}]\n'.format(x.props['id'], _graphviz_prop_string(x.props)))
+                    f.write(' "{}"[{}]\n'.format(
+                        x.props['id'], _graphviz_prop_string(x.props)))
             for neighbor in graph[vertex]:
                 if neighbor not in path:
                     path = dfs_recursive(graph, neighbor, node_dict, path, f)
             f.write('}')
             return path
 
-        dfs_recursive(compartment_tree, extracellular, node_dicts, extracellular, f)
+        dfs_recursive(compartment_tree, extracellular, node_dicts,
+                      extracellular, f)
 
         for edge in self.edges:
             f.write(' "{}" -> "{}"[{}]\n'.format(
@@ -256,7 +270,8 @@ class Graph(Entity):
         f.write('\t'.join(properties) + '\n')
         for node in self.nodes:
             f.write('\t'.join(
-                text_type(node.props.get(x.encode('utf8')) for x in properties) + '\n'))
+                text_type(node.props.get(x.encode('utf8'))
+                          for x in properties) + '\n'))
 
     def write_cytoscape_edges(self, f):
         properties = set()
@@ -269,7 +284,8 @@ class Graph(Entity):
         for edge in self.edges:
             f.write('{}\t{}\t{}\n'.format(
                 edge.source.props['id'], edge.dest.props['id'],
-                '\t'.join(text_type(edge.props.get(x.encode('utf8'))) for x in properties)))
+                '\t'.join(text_type(edge.props.get(x.encode('utf8')))
+                          for x in properties)))
 
 
 class Node(Entity):
