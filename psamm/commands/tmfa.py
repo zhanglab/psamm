@@ -150,6 +150,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			dgr_dict = parse_dgr_file(self._args.dgr_file)
 
 
+
 		transport_parameters = parse_tparam_file(self._args.transport_parameters)
 		# Make a basic LP problem containing soitchiometric constraints and basic flux constraints.
 
@@ -359,7 +360,7 @@ def parse_tparam_file(file):
 		rxn, c, h = row
 		t_param[rxn] = (c, h)
 		t_param['{}_forward'.format(rxn)] = (c, h)
-		t_param['{}_reverse'.format(rxn)] = (-float(c), -float(h))
+		t_param['{}_reverse'.format(rxn)] = (-Decimal(c), -Decimal(h))
 	return t_param
 
 def parse_dgf(mm, dgf_file):
@@ -377,8 +378,8 @@ def parse_dgf(mm, dgf_file):
 	for row in csv.reader(dgf_file, delimiter=str('\t')):
 		for cpt in mm.compartments:
 			try:
-				dg = float(row[1])
-				derr = float(row[2])
+				dg = Decimal(row[1])
+				derr = Decimal(row[2])
 				cpd_dgf_dict[Compound(row[0], cpt)] = (dg, derr)
 			except:
 				logger.info('Compound {} has an assigned detltGf value of {}. This is not an number and will be treated\
@@ -416,19 +417,19 @@ def add_conc_constraints(problem, conc_file):
 			if conc_limits[0] > conc_limits[1]:
 				logger.error('lower bound for {} concentration higher than upper bound'.format(conc_limits))
 				quit()
-			if float(conc_limits[0]) == float(conc_limits[1]):
-				problem.prob.add_linear_constraints(var == math.log(float(conc_limits[0])))
+			if Decimal(conc_limits[0]) == Decimal(conc_limits[1]):
+				problem.prob.add_linear_constraints(var == math.log(Decimal(conc_limits[0])))
 				# Constraints to allow the concentration constraints on the problem to be more flexible
-				# problem.prob.add_linear_constraints(var >= math.log(float(conc_limits[0]))-1)
-				# problem.prob.add_linear_constraints(var <= math.log(float(conc_limits[1])+1))
+				# problem.prob.add_linear_constraints(var >= math.log(Decimal(conc_limits[0]))-1)
+				# problem.prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1])+1))
 			else:
-				problem.prob.add_linear_constraints(var >= math.log(float(conc_limits[0])))
-				problem.prob.add_linear_constraints(var <= math.log(float(conc_limits[1])))
+				problem.prob.add_linear_constraints(var >= math.log(Decimal(conc_limits[0])))
+				problem.prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1])))
 				# Constraints to allow the concentration constraints to be more flexible
-				# problem.prob.add_linear_constraints(var >= math.log(float(conc_limits[0]))-1)
-				# problem.prob.add_linear_constraints(var <= math.log(float(conc_limits[1]))+1)
-			lower = math.log(float(conc_limits[0]))
-			upper = math.log(float(conc_limits[1]))
+				# problem.prob.add_linear_constraints(var >= math.log(Decimal(conc_limits[0]))-1)
+				# problem.prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1]))+1)
+			lower = math.log(Decimal(conc_limits[0]))
+			upper = math.log(Decimal(conc_limits[1]))
 			# print('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, upper))
 
 	return problem, cpdid_xij_dict
@@ -447,62 +448,67 @@ def parse_dgr_file(dgr_file):
 		if is_number(dgr):
 
 			if is_number(err):
-				err = float(err)
+				err = Decimal(err)
 			else:
-				err = float(2)
-			dgr_dict[rxn] = (float(dgr), err)
-			dgr_dict['{}_forward'.format(rxn)] = (float(dgr), err)
-			dgr_dict['{}_reverse'.format(rxn)] = (-float(dgr), err)
+				err = Decimal(2)
+			dgr_dict[rxn] = (Decimal(dgr), err)
+			dgr_dict['{}_forward'.format(rxn)] = (Decimal(dgr), err)
+			dgr_dict['{}_reverse'.format(rxn)] = (-Decimal(dgr), err)
 		else:
 			logger.info('Reaction {} was provided with dgr value of {}. Treating as an unknown value.'.format(rxn, dgr))
 	return dgr_dict
 
 
 def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters, ph_difference_rxn, scaled_compounds):
-	F = float(0.02306)
-	dpsi = float(-130)
-	R = float(1.9858775 / 1000)
-	T = float(303.15)
-	dph = float(0.4)
+	F = Decimal(0.02306)
+	dpsi = Decimal(-130)
+	R = Decimal(1.9858775 / 1000)
+	T = Decimal(303.15)
+	dph = Decimal(0.4)
 	t_param = {}
 	# for row in csv.reader(transport_parameters, delimiter=str('\t')):
 	# 	rxn, c, h = row
 	# 	t_param[rxn] = (c, h)
 	# 	t_param['{}_forward'.format(rxn)] = (c, h)
-	# 	t_param['{}_reverse'.format(rxn)] = (-float(c), -float(h))
+	# 	t_param['{}_reverse'.format(rxn)] = (-Decimal(c), -Decimal(h))
 	dgf_scaling = {}
 	if scaled_compounds is not None:
 		for row in csv.reader(scaled_compounds, delimiter=str('\t')):
-			dgf_scaling[row[0]] = float(row[1])
+			dgf_scaling[row[0]] = Decimal(row[1])
 
 	dgr_dict = {}
 	for reaction in mm.reactions:
+		print(excluded_reactions)
 		if reaction not in excluded_reactions:
 			dgr = 0
 			dgerr = 0
 			rxn = mm.get_reaction(reaction)
 			if any(dgf_dict.get(j[0]) is None for j in rxn.compounds):
+				print('Reaction DGR\t{}\t{}'.format(reaction, 'NA'))
 				if reaction not in ph_difference_rxn:
 					logger.error('Reaction {} contains at least 1 compound with an unknown deltaGf value'.format(reaction))
+					# print(rxn.compounds)
 					quit()
 			else:
 				# Make a variable dgf_sum that represents the sum of sij *  (stoichiometry *
 				# deltaGf for reaction j.
 				for cpd in rxn.compounds:
+					print('dgr current', dgr)
 					if str(cpd[0]) in dgf_scaling.keys():
 						dgscale = dgf_scaling[str(cpd[0])]
 					else:
 						dgscale = 1
 					(dg, dge) = dgf_dict[cpd[0]]
-					dgs = dg * (float(cpd[1])*dgscale)
-					# print(cpd, dg, float(cpd[1]), dgs)
+					dgs = Decimal(dg) * (Decimal(cpd[1])*dgscale)
+					print(cpd[0], dg, cpd[1], dgs)
+					# print(cpd, dg, Decimal(cpd[1]), dgs)
 					dgr += dgs
-					dgerr += float(cpd[1]*(dgscale)) * dge
+					dgerr += Decimal(cpd[1])*Decimal(dgscale) * dge
 			# if reaction in t_param.keys():
 			# 	(c, h) = t_param[reaction]
-			# 	dgr += (float(c) * F * dpsi) - (2.3 * float(h) * R * T * dph)
+			# 	dgr += (Decimal(c) * F * dpsi) - (2.3 * Decimal(h) * R * T * dph)
 			dgr_dict[reaction] = (dgr, dgerr)
-			# print('Reaction DGR\t{}\t{}'.format(reaction, dgr))
+			print('Reaction DGR adjusted\t{}\t{}\t{}'.format(reaction, dgr, 0))
 	return dgr_dict
 
 
@@ -605,7 +611,7 @@ def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 				mm_irrev.limits[r2_id].lower = 0
 				for entry in sub_rxn_list:
 					(subrxn, dir) = entry
-					dir = float(dir)
+					dir = int(dir)
 					lumped_rxns.append(subrxn)
 					subreaction = mm.get_reaction(subrxn)
 					sub_r1 = Reaction(Direction.Forward, subreaction.left, subreaction.right)
@@ -643,12 +649,12 @@ def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 
 def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclude_lumps_unknown, dgr_dict,
 							 lump_rxn_list, split_rxns, transport_parameters, testing_list, err_est=False):
-	R = float(1.9858775 / 1000)
-	T = float(303.15)
+	R = Decimal(1.9858775 / 1000)
+	T = Decimal(303.15)
 	k = 1000000
 	epsilon = 1e-6
-	# dpsi = float(-130)
-	F = float(0.02306)
+	# dpsi = Decimal(-130)
+	F = Decimal(0.02306)
 	excluded_cpd_list = ['h2o[e]', 'h2o[c]', 'h[e]', 'h[c]']
 	new_excluded_reactions = []
 	for reaction in mm.reactions:
@@ -691,11 +697,11 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 			if reaction in transport_parameters.keys():
 				(c, h) = transport_parameters[reaction]
 				# dph = -math.log(math.exp(problem.prob.var('h[e]'))) - - math.log(math.exp(problem.prob.var('h[c]')))
-				dph = float(0.4)
-				ddph = -2.3*float(h)*R*T*dph
+				dph = Decimal(0.4)
+				ddph = Decimal(-2.3)*Decimal(h)*R*T*dph
 				# dpsi = (33.33*dph)-143.33
-				dpsi = float(-130)
-				ddpsi = dpsi*float(c)*F
+				dpsi = Decimal(-130)
+				ddpsi = dpsi*Decimal(c)*F
 				dgr_trans = ddph + ddpsi
 			else:
 				dgr_trans = 0
@@ -722,7 +728,7 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 			for (cpd, stoich) in rxn.compounds:
 				if str(cpd) not in excluded_cpd_list:
 					# print('ssxi calc for {} compound {}\t{}'.format(reaction, problem.prob.var(str(cpd)), stoich))
-					ssxi += problem.prob.var(str(cpd)) * float(stoich)
+					ssxi += problem.prob.var(str(cpd)) * Decimal(stoich)
 			problem.prob.add_linear_constraints(dgri == dgr0 + (R * T * (ssxi)) + dgr_err + dgr_trans)
 			# print('Reaction dgri constraint calculation\t{}\t{}={}+({}*{}*({}))'.format(reaction, dgri, dgr0, R, T, ssxi))
 			# print('Reaction dgri raw constraint calculation {}: '.format(reaction), (dgri == dgr0 + (R * T * (ssxi)) + dgr_err))
