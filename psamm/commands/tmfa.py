@@ -141,16 +141,26 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
 
 
-		if self._args.dgr_file is None:
+		if self._args.dgf_file is not None:
 			# Parse the deltaGf values for all metaobolites from a supplied file.
 			dgf_dict = parse_dgf(mm_irreversible, self._args.dgf_file)
 			# Calculate the deltaGr values for all reactions
 			dgr_dict = calculate_dgr(mm_irreversible, dgf_dict, exclude_unkown_list, self._args.transport_parameters, ph_difference_rxn, self._args.scaled_compounds)
-		elif self._args.dgr_file is not None:
-			dgr_dict = parse_dgr_file(self._args.dgr_file)
+			print('using dgf file')
+		if self._args.dgr_file is not None:
+			dgr_dict = parse_dgr_file(self._args.dgr_file, mm_irreversible)
+			print('using dgr file')
+		# print(len(dgr_dict))
+		# print(len(dgr_dict_tmp))
+		# print(cmp(dgr_dict, dgr_dict_tmp))
 
-
-
+		# for key, value in dgr_dict_tmp.iteritems():
+		# 	if value not in dgr_dict.values():
+		# 		print(value)
+		# for key, value in dgr_dict.iteritems():
+		# 	if value not in dgr_dict_tmp.values():
+		# 		print(value)
+		# quit()
 		transport_parameters = parse_tparam_file(self._args.transport_parameters)
 		# Make a basic LP problem containing soitchiometric constraints and basic flux constraints.
 
@@ -433,7 +443,7 @@ def add_conc_constraints(problem, conc_file):
 	return problem, cpdid_xij_dict
 
 
-def parse_dgr_file(dgr_file):
+def parse_dgr_file(dgr_file, mm):
 	def is_number(val):
 		try:
 			float(val)
@@ -449,9 +459,11 @@ def parse_dgr_file(dgr_file):
 				err = Decimal(err)
 			else:
 				err = Decimal(2)
-			dgr_dict[rxn] = (Decimal(dgr), err)
-			dgr_dict['{}_forward'.format(rxn)] = (Decimal(dgr), err)
-			dgr_dict['{}_reverse'.format(rxn)] = (-Decimal(dgr), err)
+			if rxn in mm.reactions:
+				dgr_dict[rxn] = (Decimal(dgr), err)
+			elif '{}_forward'.format(rxn) in mm.reactions:
+				dgr_dict['{}_forward'.format(rxn)] = (Decimal(dgr), err)
+				dgr_dict['{}_reverse'.format(rxn)] = (-Decimal(dgr), err)
 		else:
 			logger.info('Reaction {} was provided with dgr value of {}. Treating as an unknown value.'.format(rxn, dgr))
 	return dgr_dict
@@ -476,13 +488,12 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters, ph_dif
 
 	dgr_dict = {}
 	for reaction in mm.reactions:
-		print(excluded_reactions)
 		if reaction not in excluded_reactions:
 			dgr = 0
 			dgerr = 0
 			rxn = mm.get_reaction(reaction)
 			if any(dgf_dict.get(j[0]) is None for j in rxn.compounds):
-				print('Reaction DGR\t{}\t{}'.format(reaction, 'NA'))
+				# print('Reaction DGR\t{}\t{}'.format(reaction, 'NA'))
 				if reaction not in ph_difference_rxn:
 					logger.error('Reaction {} contains at least 1 compound with an unknown deltaGf value'.format(reaction))
 					# print(rxn.compounds)
@@ -491,14 +502,14 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters, ph_dif
 				# Make a variable dgf_sum that represents the sum of sij *  (stoichiometry *
 				# deltaGf for reaction j.
 				for cpd in rxn.compounds:
-					print('dgr current', dgr)
+					# print('dgr current', dgr)
 					if str(cpd[0]) in dgf_scaling.keys():
 						dgscale = dgf_scaling[str(cpd[0])]
 					else:
 						dgscale = 1
 					(dg, dge) = dgf_dict[cpd[0]]
 					dgs = Decimal(dg) * (Decimal(cpd[1])*dgscale)
-					print(cpd[0], dg, cpd[1], dgs)
+					# print(cpd[0], dg, cpd[1], dgs)
 					# print(cpd, dg, Decimal(cpd[1]), dgs)
 					dgr += dgs
 					dgerr += Decimal(cpd[1])*Decimal(dgscale) * dge
@@ -506,7 +517,9 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters, ph_dif
 			# 	(c, h) = t_param[reaction]
 			# 	dgr += (Decimal(c) * F * dpsi) - (2.3 * Decimal(h) * R * T * dph)
 			dgr_dict[reaction] = (dgr, dgerr)
-			print('Reaction DGR adjusted\t{}\t{}\t{}'.format(reaction, dgr, 0))
+			# dgr_dict['{}_forward'.format(reaction)] = (dgr)#, dgerr)
+			# dgr_dict['{}_reverse'.format(reaction)] = (-dgr)#, dgerr)
+			# print('Reaction DGR adjusted\t{}\t{}\t{}'.format(reaction, dgr, 0))
 	return dgr_dict
 
 
