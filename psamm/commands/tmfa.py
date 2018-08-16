@@ -162,61 +162,59 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# logger.info('TMFA Problem Status: {}'.format(result.get_value(TMFA_Problem.get_flux_var(objective))))
 		#
 		# Add thermodynamic constraints to the model.
-		testing_list = list(mm_irreversible.reactions)
-		# testing_list = ['DHORTS_reverse']
-		TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
-		TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
-		TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
-		                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
-		                                        split_reversible, transport_parameters, testing_list, False)
-		biomax = solve_objective(TMFA_Problem, objective)
-		TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
+		# testing_list = list(mm_irreversible.reactions)
+		# # testing_list = ['DHORTS_reverse']
+		# TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
+		# TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
+		# TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
+		#                                         exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
+		#                                         split_reversible, transport_parameters, testing_list, False)
+		# biomax = solve_objective(TMFA_Problem, objective)
+		# TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
 
-		print(biomax)
-		quit()
-		# biomax = solve_objective(fluxanalysis.FluxBalanceProblem(mm_irreversible, solver), objective)
+		# quit()
+		biomax = solve_objective(fluxanalysis.FluxBalanceProblem(mm_irreversible, solver), objective)
 		# print(biomax)
 		# solve_objective_tmfa(TMFA_Problem, objective, mm_irreversible.compounds)
 		# quit()
 		# # quit()
-		# checked_list = []
-		# bad_constraint_list = []
-		# timeout = []
-		# print(mm_irreversible.reactions)
-		# mm_random = [i for i in mm_irreversible.reactions]
-		# random.shuffle(mm_random)
-		# for reaction in mm_random:
-		# 	print('biomax: {}'.format(biomax))
-		# 	logger.info('TESTING REACTION {}'.format(reaction))
-		# 	testing_list = [reaction] + checked_list
-		# 	TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
-		# 	TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
-		# 	TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
-		# 											exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict, split_reversible, transport_parameters, testing_list, self._args.err)
-		#
-		# 	try:
-		# 		bioflux = timelimit(60, solve_objective, args=(TMFA_Problem, objective))
-		# 		print(bioflux)
-		# 		if bioflux >= 0.9999 * biomax:
-		# 			checked_list.append(reaction)
-		# 			logger.info('{} Reaction Passed Constraint Test'.format(reaction))
-		# 		else:
-		# 			bad_constraint_list.append(reaction)
-		# 			logger.info('{} Reaction Failed Constraint Test'.format(reaction))
-		# 	except TimeLimitExpired:
-		# 		logger.info('{} Reaction timed out'.format(reaction))
-		# 		timeout.append(reaction)
-		# 	bioflux = solve_objective(TMFA_Problem, objective)
+		checked_list = []
+		bad_constraint_list = []
+		timeout = []
+		print(mm_irreversible.reactions)
+		mm_random = [i for i in mm_irreversible.reactions]
+		random.shuffle(mm_random)
+		for reaction in mm_random:
+			print('biomax: {}'.format(biomax))
+			logger.info('TESTING REACTION {}'.format(reaction))
+			testing_list = [reaction] # + checked_list
+			TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
+			TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
+			TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
+													exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict, split_reversible, transport_parameters, testing_list, self._args.err)
+
+			try:
+				bioflux = timelimit(60, solve_objective, args=(TMFA_Problem, objective))
+				print('{} bioflux: {}'.format(reaction, bioflux))
+				if bioflux >= 0.9999 * biomax:
+					checked_list.append(reaction)
+					logger.info('{} Reaction Passed Constraint Test'.format(reaction))
+				else:
+					bad_constraint_list.append(reaction)
+					logger.info('{} Reaction Failed Constraint Test'.format(reaction))
+			except TimeLimitExpired:
+				logger.info('{} Reaction timed out'.format(reaction))
+				timeout.append(reaction)
 		#
 		# #
 		# #
-		# for j in checked_list:
-		# 	print('CheckedConstraint\t{}'.format(j))
-		# for i in bad_constraint_list:
-		# 	print('BadConstraint\t{}'.format(i))
-		# for i in timeout:
-		# 	print('TIMOUT\t{}'.format(i))
-		# quit()
+		for j in checked_list:
+			print('CheckedConstraint\t{}'.format(j))
+		for i in bad_constraint_list:
+			print('BadConstraint\t{}'.format(i))
+		for i in timeout:
+			print('TIMOUT\t{}'.format(i))
+		quit()
 
 
 		# Set the objective function and solve the LP problem.
