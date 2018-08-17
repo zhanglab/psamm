@@ -22,10 +22,15 @@ from six import iteritems, text_type
 
 from collections import defaultdict
 
+import sys
 
 def _graphviz_prop_string(d):
-    return ','.join('{}="{}"'.format(k, v.encode('utf8')) for k, v in
-                    iteritems(d) if k != 'original_id')
+    if sys.version_info[0] < 3:
+        return ','.join('{}="{}"'.format(k, v.encode('utf8')) for k, v in
+                        iteritems(d) if k != 'original_id')
+    else:
+        return ','.join('{}="{}"'.format(k, v) for k, v in
+                        iteritems(d) if k != 'original_id')
 
 
 class Entity(object):
