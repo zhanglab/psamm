@@ -402,7 +402,7 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
                 'add "--method no-fpp --element none" to the command')
             quit()
 
-        reaction_pairs = [(r.id, r.equation) for r in fpp_rxns]
+        reaction_pairs = [(r.id, r.equation) for r in fpp_rxns if r.id != model.biomass_reaction]
         element_weight = findprimarypairs.element_weight
         fpp_dict, _ = findprimarypairs.predict_compound_pairs_iterated(
             reaction_pairs, cpd_formula, element_weight=element_weight)
