@@ -173,15 +173,14 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# logger.info('TMFA Problem Status: {}'.format(result.get_value(TMFA_Problem.get_flux_var(objective))))
 		#
 		# Add thermodynamic constraints to the model.
-		# testing_list = list(mm_irreversible.reactions)
-		# # testing_list = ['ABUTD', 'ALLTAH', 'THRD_L']
-		# TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
-		# TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
-		# TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
-		#                                         exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
-		#                                         split_reversible, transport_parameters, testing_list, self._args.scaled_compounds, self._args.err)
-		# biomax = solve_objective(TMFA_Problem, objective)
-		# print('BIOMAX: {}'.format(biomax))
+		testing_list_tmp = list(mm_irreversible.reactions)
+		TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
+		TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
+		TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
+		                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
+		                                        split_reversible, transport_parameters, testing_list_tmp, self._args.scaled_compounds, self._args.err)
+		biomax = solve_objective(TMFA_Problem, objective)
+		print('BIOMAX: {}'.format(biomax))
 		# TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
 
 		# quit()
@@ -221,6 +220,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 					# print('time out: {}'.format(reaction))
 					# timeout.append(reaction)
 				TMFA_Problem = None
+			quit()
 			#
 			# #
 			# #
@@ -232,14 +232,13 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			# 	print('TIMOUT\t{}'.format(i))
 			# quit()
 
-		quit()
+
 		# Set the objective function and solve the LP problem.
 		# TMFA_Problem.prob.set_objective(TMFA_Problem.get_flux_var(objective))
 		# TMFA_Problem.prob.set_objective_sense(lp.ObjectiveSense.Maximize)
 		# # Print problem Type from CPLEX
 		# quit()
 		print('PROBLEM TYPE:', TMFA_Problem.prob.cplex.problem_type[TMFA_Problem.prob.cplex.get_problem_type()])
-
 
 		index_dict_vars = {}
 		for i, j in TMFA_Problem.prob._variables.iteritems():
@@ -751,7 +750,7 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 				if str(cpd) not in excluded_cpd_list:
 					scale = dgf_scaling.get(str(cpd), 1)
 					# print('ssxi calc for {} compound {}\t{}'.format(reaction, problem.prob.var(str(cpd)), stoich))
-					ssxi += problem.prob.var(str(cpd)) * Decimal(stoich) # * scale
+					ssxi += problem.prob.var(str(cpd)) * Decimal(stoich)# * scale
 			problem.prob.add_linear_constraints(dgri == dgr0 + (R * T * (ssxi)) + dgr_err + dgr_trans)
 			# print('Reaction dgri constraint calculation\t{}\t{}={}+({}*{}*({}))'.format(reaction, dgri, dgr0, R, T, ssxi))
 			# print('Reaction dgri raw constraint calculation {}: '.format(reaction), (dgri == dgr0 + (R * T * (ssxi)) + dgr_err))
