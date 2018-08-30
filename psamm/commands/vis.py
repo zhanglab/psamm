@@ -42,11 +42,10 @@ import subprocess
 
 logger = logging.getLogger(__name__)
 
-REACTION_COLOR = '#ccebc5'
-COMPOUND_COLOR = '#fbb4ae'
-ACTIVE_COLOR = '#b3cde3'    # exchange reaction  color
-ALT_COLOR = '#f4fc55'       # biomass reaction color
-RXN_COMBINED_COLOR = '#fc9a44'
+REACTION_COLOR = '#c9fccd'
+COMPOUND_COLOR = '#ffd8bf'
+ACTIVE_COLOR = '#90f998'    # exchange reaction  color
+ALT_COLOR = '#b3fcb8'       # biomass reaction color
 
 
 class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
@@ -250,19 +249,15 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
                     'create image file requires python binding graphviz '
                     'module ("pip install graphviz")')
             else:
-                if len(subset_reactions) > 500:
+                if len(filter_dict.keys()) > 500:
                     logger.info(
-                        'This graph contains {} reactions, graphs of this '
+                        'This graph contains a large number of reactions, graphs of this '
                         'size may take a long time to create'.format
-                        (len(subset_reactions)))
+                        (len(filter_dict.keys())))
                 if self._args.compartment:
                     render('dot', self._args.Image, 'reactions_compartmentalized.dot')
                 else:
                     render('dot', self._args.Image, 'reactions.dot')
-
-                # except subprocess.CalledProcessError:
-                #     logger.warning('the graph is too large to create')
-
 
 def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
                      cpair_dict, new_id_mapping, method):
@@ -602,7 +597,7 @@ def add_node_color(g, recolor_dict):
             else:
                 if any(i in recolor_dict for
                        i in node.props['original_id']):
-                    color = RXN_COMBINED_COLOR
+                    color = REACTION_COLOR
                 else:
                     color = REACTION_COLOR
         if color is not None:
