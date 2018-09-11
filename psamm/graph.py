@@ -16,6 +16,8 @@
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2018-2018  Ke Zhang <kzhang@my.uri.edu>
 
+from __future__ import unicode_literals
+
 from itertools import count
 
 from six import iteritems, text_type
@@ -290,14 +292,37 @@ class Graph(Entity):
 
 class Node(Entity):
     """Node entity represents a vertex in the graph."""
+    __hash__ = Entity.__hash__
+
     def __init__(self, props={}):
         super(Node, self).__init__(props)
 
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return other._props == self._props
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class Edge(Entity):
     """Edge entity represents a connection between nodes."""
+    __hash__ = Entity.__hash__
+
     def __init__(self, source, dest, props={}):
         super(Edge, self).__init__(props)
         self.source = source
         self.dest = dest
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            a = self._props == other._props
+            b = self.source == other.source
+            c = self.dest == other.dest
+            if all(i is True for i in [a, b, c]):
+                return True
+        else:
+            return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
