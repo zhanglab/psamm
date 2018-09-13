@@ -567,7 +567,7 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
             else:
                 real_rxns = [new_id_mapping[r] for r in rlist]
                 rnode = graph.Node({
-                    'id': text_type(rlist),
+                    'id': text_type(','.join(rlist)),
                     'shape': 'box',
                     'style': 'filled',
                     'type': 'rxn',
@@ -626,6 +626,7 @@ def add_edges(g, cpairs_dict, method, split):
     edge_list = []
     for (c1, c2), value in iteritems(cpairs_dict):
         for dir, rlist in iteritems(value):
+            new_rlist = ','.join(rlist)
             if split or method == 'no-fpp':
                 for sub_rxn in rlist:
                     test1 = c1, sub_rxn
@@ -647,9 +648,9 @@ def add_edges(g, cpairs_dict, method, split):
                             node_dict[text_type(c2)], {'dir': dir}))
             else:
                 g.add_edge(graph.Edge(
-                    node_dict[text_type(c1)], node_dict[text_type(rlist)],
+                    node_dict[text_type(c1)], node_dict[text_type(new_rlist)],
                     {'dir': dir}))
-                g.add_edge(graph.Edge(node_dict[text_type(rlist)],
+                g.add_edge(graph.Edge(node_dict[text_type(new_rlist)],
                                       node_dict[text_type(c2)], {'dir': dir}))
     return g
 
@@ -761,11 +762,11 @@ def add_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
                 pre_label = '\n'.join(_encode_value(props[value]) for value
                                       in cpd_detail_list if value != 'id')
                 if 'id' in cpd_detail[0]:
-                    label = '{}\n{}'.format(str(node.props['id']), pre_label)
+                    label = '{}\n{}'.format(node.props['id'], pre_label)
                 else:
                     label = pre_label
             else:
-                label = str(node.props['id'])
+                label = node.props['id']
             node.props['label'] = label
 
         elif node.props['type'] == 'rxn':
@@ -793,14 +794,14 @@ def add_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
                         label = '{}\n{}'.format(label, sum_flux)
                 else:
                     label = '\n'.join(r for r in node.props['original_id'])
-            node.props['label'] = label
+            node.props['label'] = text_type(label)
         elif node.props['type'] == 'Ex_rxn':
             label = node.props['original_id'][0]
             if len(reaction_flux) > 0:
                 if node.props['original_id'][0] in reaction_flux:
                     label = '{}\n{}'.format(
                         label, reaction_flux[node.props['original_id'][0]])
-            node.props['label'] = label
+            node.props['label'] = text_type(label)
     return g
 
 
