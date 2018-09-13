@@ -759,7 +759,7 @@ def add_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
                 cpd_id = node.props['original_id'].name
                 props = model_compound_entries[cpd_id].properties
                 cpd_detail_list = [i for i in cpd_detail[0] if i in props]
-                pre_label = '\n'.join(_encode_value(props[value]) for value
+                pre_label = '\n'.join(((props[value].encode('ascii', 'backslashreplace')).decode('ascii')) for value
                                       in cpd_detail_list if value != 'id')
                 if 'id' in cpd_detail[0]:
                     label = '{}\n{}'.format(node.props['id'], pre_label)
