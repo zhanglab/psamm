@@ -268,12 +268,15 @@ class Graph(Entity):
             properties.update(node.props)
 
         properties.remove('id')
-        properties = ['id'] + sorted(properties)
+        properties.remove('label')
+        properties.remove('original_id')
+        properties = ['id'] + sorted(properties) + ['label']
         f.write('\t'.join(properties) + '\n')
         for node in self.nodes:
-            f.write('\t'.join(
-                text_type(node.props.get(x.encode('utf8'))
-                          for x in properties) + '\n'))
+            a = '\t'.join(node.props.get(x)
+                          for x in properties if x != 'label')
+            b = node.props['label'].replace('\n', ',')
+            f.write('{}\t{}\n'.format(a, b))
 
     def write_cytoscape_edges(self, f):
         properties = set()
