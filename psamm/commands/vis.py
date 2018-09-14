@@ -845,8 +845,9 @@ def set_edge_props_withfba(g, edge_values):
             if value > max_edge_value:
                 value = max_edge_value
             alpha = value / max_edge_value
+            beta = float("{:.4f}".format(alpha))
 
-            return 10 * alpha
+            return 10 * beta
 
     if len(edge_values) > 0:
         for edge in g.edges:
