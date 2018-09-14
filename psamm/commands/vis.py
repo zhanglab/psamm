@@ -550,11 +550,10 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
         split: command line argument, by default split = False.
     return: a graph object that contains a set of nodes.
     """
-    compound_nodes = {}
-    reaction_nodes = {}
+    graph_nodes = set()
     for cpair, reactions in iteritems(cpairs_dict):
         for c in cpair:
-            if c not in compound_nodes:
+            if c not in graph_nodes:
                 node = graph.Node({
                     'id': text_type(c),
                     'shape': 'ellipse',
@@ -563,9 +562,8 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
                     'original_id': c,
                     'compartment': c.compartment})
                 g.add_node(node)
-                compound_nodes[c] = node
+                graph_nodes.add(c)
         for dir, rlist in iteritems(reactions):
-            rlist_str = ','.join(rlist)
             if split or method == 'no-fpp':
                 for sub_rxn in rlist:
                     rnode = graph.Node({
@@ -576,7 +574,6 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
                         'original_id': [new_id_mapping[sub_rxn]],
                         'compartment': c.compartment})
                     g.add_node(rnode)
-                    reaction_nodes[sub_rxn] = rnode
             else:
                 real_rxns = [new_id_mapping[r] for r in rlist]
                 rnode = graph.Node({
@@ -587,7 +584,6 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
                     'original_id': real_rxns,
                     'compartment': c.compartment})
                 g.add_node(rnode)
-                reaction_nodes[rlist_str] = rnode
     return g
 
 
@@ -633,9 +629,7 @@ def add_edges(g, cpairs_dict, method, split):
         method: command line argument, options=['fpp', 'no-fpp', file_path].
         split: command line argument, True or False. By default split = False.
     """
-    node_dict = {}
-    for node in g.nodes:
-        node_dict[node.props['id']] = node
+
     edge_list = []
     for (c1, c2), value in iteritems(cpairs_dict):
         for dir, rlist in iteritems(value):
@@ -648,8 +642,8 @@ def add_edges(g, cpairs_dict, method, split):
                         edge_list.append(test1)
                         # edge_list.append(test2)
                         g.add_edge(graph.Edge(
-                            node_dict[text_type(c1)],
-                            node_dict[text_type(sub_rxn)], {'dir': dir}))
+                            g.get_node(text_type(c1)),
+                            g.get_node(text_type(sub_rxn)), {'dir': dir}))
 
                     # test1 = sub_rxn, c2
                     test2 = c2, sub_rxn
@@ -657,14 +651,14 @@ def add_edges(g, cpairs_dict, method, split):
                         # edge_list.append(test1)
                         edge_list.append(test2)
                         g.add_edge(graph.Edge(
-                            node_dict[text_type(sub_rxn)],
-                            node_dict[text_type(c2)], {'dir': dir}))
+                            g.get_node(text_type(sub_rxn)),
+                            g.get_node(text_type(c2)), {'dir': dir}))
             else:
                 g.add_edge(graph.Edge(
-                    node_dict[text_type(c1)], node_dict[text_type(new_rlist)],
+                    g.get_node(text_type(c1)), g.get_node(text_type(new_rlist)),
                     {'dir': dir}))
-                g.add_edge(graph.Edge(node_dict[text_type(new_rlist)],
-                                      node_dict[text_type(c2)], {'dir': dir}))
+                g.add_edge(graph.Edge(g.get_node(text_type(new_rlist)),
+                                      g.get_node(text_type(c2)), {'dir': dir}))
     return g
 
 
@@ -685,13 +679,9 @@ def add_biomass_rxns(g, bio_reaction, biomass_rxn_id):
         A.append(c)
     for c, _ in bio_reaction.right:
         B.append(c)
-    cpd_nodes = {}
-    for node in g.nodes:
-        if node.props['type'] == 'cpd':
-            cpd_nodes[node.props['original_id']] = node
     bio_pair = Counter()
     for c, _ in bio_reaction.compounds:
-        if c in cpd_nodes:
+        if text_type(c) in g.nodes_dict():
             bio_pair[biomass_rxn_id] += 1
             node_bio = graph.Node({
                 'id': '{}_{}'.format(biomass_rxn_id,
@@ -706,10 +696,10 @@ def add_biomass_rxns(g, bio_reaction, biomass_rxn_id):
             g.add_node(node_bio)
 
             if c in A:
-                g.add_edge(graph.Edge(cpd_nodes[c], node_bio,
+                g.add_edge(graph.Edge(g.get_node(text_type(c)), node_bio,
                                       {'dir': dir}))
             if c in B:
-                g.add_edge(graph.Edge(node_bio, cpd_nodes[c],
+                g.add_edge(graph.Edge(node_bio, g.get_node(text_type(c)),
                                       {'dir': dir}))
     return g
 
@@ -722,13 +712,8 @@ def add_exchange_rxns(g, rxn_id, reaction):
         rxn_id: Exchange reaction id,
         reaction: Exchange reaction object(metabolic model reaction).
     """
-    cpd_nodes = {}
-    for node in g.nodes:
-        if node.props['type'] == 'cpd':
-            cpd_nodes[node.props['original_id']] = node
-
     for c, _ in reaction.compounds:
-        if c in cpd_nodes:
+        if c in g.nodes_dict():
             node_ex = graph.Node({
                 'id': text_type(rxn_id),
                 'shape': 'box',
@@ -742,10 +727,10 @@ def add_exchange_rxns(g, rxn_id, reaction):
             dir = dir_value(reaction.direction)
             for c1, _ in reaction.left:
                 g.add_edge(graph.Edge(
-                    cpd_nodes[c1], node_ex, {'dir': dir}))
+                    g.get_node(text_type(c1)), node_ex, {'dir': dir}))
             for c2, _ in reaction.right:
                 g.add_edge(graph.Edge(
-                    node_ex, cpd_nodes[c2], {'dir': dir}))
+                    node_ex, g.get_node(text_type(c2)), {'dir': dir}))
     return g
 
 

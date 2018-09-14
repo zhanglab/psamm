@@ -54,12 +54,24 @@ class Graph(Entity):
         self._edge_count = 0
         self._default_node_props = {}
         self._default_edge_props = {}
+        self._nodes_id = {}
 
     def add_node(self, node):
         """add node to a Graph entity.
         node: Node entity.
         """
         self._nodes.add(node)
+        self._nodes_id[node.props['id']] = node
+
+    def get_node(self, id):
+        """get Node object.
+        Args:
+            id: compound object or a list of reaction IDs.
+        """
+        return self._nodes_id[id]
+
+    def nodes_dict(self):
+        return self._nodes_id
 
     def add_edge(self, edge):
         if edge.source not in self._nodes or edge.dest not in self._nodes:
