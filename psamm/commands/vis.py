@@ -259,6 +259,7 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
                 else:
                     render('dot', self._args.Image, 'reactions.dot')
 
+
 def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
                      cpair_dict, new_id_mapping, method):
     """set edge_values according to reaction fluxes
@@ -464,7 +465,11 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
                              ': {}' .format(method))
             quit()
 
-    return filter_dict, fpp_rxns
+    cpairs_ordered_filter_dict = {}
+    for r, cpairs in iteritems(filter_dict):
+        cpairs_ordered_filter_dict[r] = sorted(cpairs)
+
+    return cpairs_ordered_filter_dict, fpp_rxns
 
 
 def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
@@ -499,6 +504,7 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
                     else:
                         cpair_dict[(c1, c2)]['both'].append(r_id)
 
+    # only keep one between (c1, c2) and (c2, c1)
     new_cpair_dict = {}
     cpair_list = []
     for (c1, c2), rxns in sorted(iteritems(cpair_dict)):
@@ -521,7 +527,14 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
                 new_cpair_dict[(c1, c2)] = new_rxns
                 cpair_list.append((c1, c2))
 
-    return new_cpair_dict, new_id_mapping
+    rxns_sorted_cpair_dict = {}   # sort the reaction list, make them in a specific order
+    for (c1, c2), rxns in iteritems(new_cpair_dict):
+        sorted_rxns = defaultdict(dict)
+        for dir, rlist in iteritems(rxns):
+            sorted_rxns[dir] = sorted(rlist)
+        rxns_sorted_cpair_dict[(c1, c2)] = sorted_rxns
+
+    return rxns_sorted_cpair_dict, new_id_mapping
 
 
 # divide create_bipartite_graph() function into several small functions
@@ -759,7 +772,8 @@ def add_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
                 cpd_id = node.props['original_id'].name
                 props = model_compound_entries[cpd_id].properties
                 cpd_detail_list = [i for i in cpd_detail[0] if i in props]
-                pre_label = '\n'.join(((props[value].encode('ascii', 'backslashreplace')).decode('ascii')) for value
+                pre_label = '\n'.join(((props[value].encode(
+                    'ascii', 'backslashreplace')).decode('ascii')) for value
                                       in cpd_detail_list if value != 'id')
                 if 'id' in cpd_detail[0]:
                     label = '{}\n{}'.format(node.props['id'], pre_label)
