@@ -830,7 +830,7 @@ def set_edge_props_withfba(g, edge_values):
 
     if len(edge_values) > 0:
         value_list = sorted(edge_values.values())
-        ninty_percentile = value_list[int(len(value_list) * 0.9) + 1]
+        ninty_percentile = value_list[int(len(value_list) * 0.9)]
         min_edge_value = min(itervalues(edge_values))
         max_edge_value = ninty_percentile
     else:
