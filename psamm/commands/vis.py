@@ -585,38 +585,6 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
     return g
 
 
-def add_node_color(g, recolor_dict):
-    """set node color.
-
-    Args:
-        g: a graph object that contains a set of nodes.
-        recolor_dict: dict of rxn_id/cpd_id_compartment : hex color code.
-    return: a graph object that contains a set of node with defined color.
-    """
-    for node in g.nodes:
-        if node.props['type'] == 'cpd':
-            id = str(node.props['original_id'])
-            color = recolor_dict.get(id)
-        else:
-            if len(node.props['original_id']) == 1:
-                id = node.props['original_id'][0]
-                color = recolor_dict.get(id)
-            else:
-                if any(i in recolor_dict for
-                       i in node.props['original_id']):
-                    color = REACTION_COLOR
-                else:
-                    color = REACTION_COLOR
-        if color is not None:
-            node.props['fillcolor'] = color
-        else:
-            if node.props['type'] == 'rxn':
-                node.props['fillcolor'] = REACTION_COLOR
-            elif node.props['type'] == 'cpd':
-                node.props['fillcolor'] = COMPOUND_COLOR
-    return g
-
-
 def add_edges(g, cpairs_dict, method, split):
     """add edges to the graph object obtained in last step.
 
@@ -729,6 +697,30 @@ def add_exchange_rxns(g, rxn_id, reaction):
             for c2, _ in reaction.right:
                 g.add_edge(graph.Edge(
                     node_ex, g.get_node(text_type(c2)), {'dir': dir}))
+    return g
+
+
+def add_node_color(g, recolor_dict):
+    """set node color.
+
+    Args:
+        g: a graph object that contains a set of nodes.
+        recolor_dict: dict of rxn_id/cpd_id_compartment : hex color code.
+    return: a graph object that contains a set of node with defined color.
+    """
+    for node in g.nodes:
+        if node.props['type'] == 'rxn':
+            node.props['fillcolor'] = REACTION_COLOR
+            id = text_type(','.join(node.props['original_id']))
+        elif node.props['type'] == 'cpd':
+            node.props['fillcolor'] = COMPOUND_COLOR
+            id = node.props['id']
+        elif node.props['type'] == 'bio_rxn' or 'Ex_rxn':
+            id = text_type(','.join(node.props['original_id']))
+
+        if id in recolor_dict:
+            node.props['fillcolor'] = recolor_dict[id]
+
     return g
 
 
