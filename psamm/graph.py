@@ -56,6 +56,9 @@ class Graph(Entity):
         self._default_edge_props = {}
 
     def add_node(self, node):
+        """add node to a Graph entity.
+        node: Node entity.
+        """
         self._nodes.add(node)
 
     def add_edge(self, edge):
@@ -108,6 +111,11 @@ class Graph(Entity):
         return self._default_edge_props
 
     def write_graphviz(self, f):
+        """wirte the nodes and edges infomation into a dot file.
+        Args:
+            self: Graoh entity, including nodes and edges entities.
+            f: An empty DOT file.
+        """
         f.write('digraph {\n')
 
         if len(self._default_node_props) > 0:
@@ -139,7 +147,14 @@ class Graph(Entity):
     def write_graphviz_compartmentalized(self, f, compartment_tree,
                                          extracellular):
         """Function to write compartmentalized version of dot file
-        for graph. """
+        for graph.
+        Args:
+            self: Graph entity.
+            f: An empty DOT file.
+            compartment_tree: a defaultdict of set, each element
+                represents a compartment and its adjacent compartments.
+            extracellular: the extracelluar compartment in the model.
+        """
         f.write('digraph {\n')
 
         if len(self._default_node_props) > 0:
@@ -258,6 +273,12 @@ class Graph(Entity):
         f.write('</svg>\n')
 
     def write_cytoscape_nodes(self, f):
+        """write a table file (.tsv) that contains nodes information.
+        Args:
+            self: Graph entity.
+            f: An empty TSV file.
+        """
+
         next_id = count(0)
         properties = set()
         for node in self.nodes:
@@ -279,6 +300,12 @@ class Graph(Entity):
             f.write('{}\t{}\n'.format(a, b))
 
     def write_cytoscape_edges(self, f):
+        """write a table file (.tsv) that contains edges information,
+        including edge source, edge dest and edge properties.
+        Args:
+            self: Graph entity.
+            f: An empty TSV file.
+        """
         properties = set()
         for edge in self.edges:
             properties.update(edge.props)
