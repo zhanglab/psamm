@@ -527,12 +527,10 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
                 new_cpair_dict[(c1, c2)] = new_rxns
                 cpair_list.append((c1, c2))
 
-    rxns_sorted_cpair_dict = {}   # sort the reaction list, make them in a specific order
+    rxns_sorted_cpair_dict = defaultdict(lambda: defaultdict(list))   # sort the reaction list, make them in a specific order
     for (c1, c2), rxns in iteritems(new_cpair_dict):
-        sorted_rxns = defaultdict(dict)
         for dir, rlist in iteritems(rxns):
-            sorted_rxns[dir] = sorted(rlist)
-        rxns_sorted_cpair_dict[(c1, c2)] = sorted_rxns
+            rxns_sorted_cpair_dict[(c1, c2)][dir] = sorted(rlist)
 
     return rxns_sorted_cpair_dict, new_id_mapping
 
