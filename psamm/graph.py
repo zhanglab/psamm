@@ -70,8 +70,8 @@ class Graph(Entity):
         """
         return self._nodes_id[id]
 
-    def nodes_dict(self):
-        return self._nodes_id
+    # def nodes_id_dict(self):
+    #     return self._nodes_id
 
     def add_edge(self, edge):
         if edge.source not in self._nodes or edge.dest not in self._nodes:
@@ -93,6 +93,10 @@ class Graph(Entity):
     @property
     def node_count(self):
         return len(self._nodes)
+
+    @property
+    def nodes_id_dict(self):
+        return self._nodes_id
 
     @property
     def edges(self):

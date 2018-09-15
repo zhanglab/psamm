@@ -21,6 +21,7 @@ from __future__ import unicode_literals
 import logging
 import csv
 import argparse
+import re
 from collections import defaultdict, Counter
 from six import text_type, iteritems, itervalues, iterkeys
 
@@ -208,7 +209,6 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
         g = graph.Graph()
         g = add_graph_nodes(g, cpair_dict, self._args.method,
                             new_id_mapping, split=self._args.split_map)
-        g = add_node_color(g, recolor_dict)
         g = add_edges(g, cpair_dict, self._args.method,
                       split = self._args.split_map)
 
@@ -220,6 +220,8 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
             if self._mm.is_exchange(reaction):
                 exchange_rxn = self._mm.get_reaction(reaction)
                 g = add_exchange_rxns(g, reaction, exchange_rxn)
+        if len(recolor_dict) > 0:
+            g = update_node_color(g, recolor_dict)
         g = add_node_label(g, self._args.cpd_detail, self._args.rxn_detail,
                            model_compound_entries, model_reaction_entries,
                            reaction_flux)
@@ -557,6 +559,7 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
                     'shape': 'ellipse',
                     'style': 'filled',
                     'type': 'cpd',
+                    'fillcolor': COMPOUND_COLOR,
                     'original_id': c,
                     'compartment': c.compartment})
                 g.add_node(node)
@@ -569,6 +572,7 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
                         'shape': 'box',
                         'style': 'filled',
                         'type': 'rxn',
+                        'fillcolor': REACTION_COLOR,
                         'original_id': [new_id_mapping[sub_rxn]],
                         'compartment': c.compartment})
                     g.add_node(rnode)
@@ -579,6 +583,7 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
                     'shape': 'box',
                     'style': 'filled',
                     'type': 'rxn',
+                    'fillcolor': REACTION_COLOR,
                     'original_id': real_rxns,
                     'compartment': c.compartment})
                 g.add_node(rnode)
@@ -647,7 +652,7 @@ def add_biomass_rxns(g, bio_reaction, biomass_rxn_id):
         B.append(c)
     bio_pair = Counter()
     for c, _ in bio_reaction.compounds:
-        if text_type(c) in g.nodes_dict():
+        if text_type(c) in g.nodes_id_dict:
             bio_pair[biomass_rxn_id] += 1
             node_bio = graph.Node({
                 'id': '{}_{}'.format(biomass_rxn_id,
@@ -679,7 +684,7 @@ def add_exchange_rxns(g, rxn_id, reaction):
         reaction: Exchange reaction object(metabolic model reaction).
     """
     for c, _ in reaction.compounds:
-        if c in g.nodes_dict():
+        if c in g.nodes_id_dict:
             node_ex = graph.Node({
                 'id': text_type(rxn_id),
                 'shape': 'box',
@@ -700,27 +705,20 @@ def add_exchange_rxns(g, rxn_id, reaction):
     return g
 
 
-def add_node_color(g, recolor_dict):
-    """set node color.
+def update_node_color(g, recolor_dict):
+    """ update color of nodes that are customized.
 
     Args:
-        g: a graph object that contains a set of nodes.
+        g: a graph object that contains nodes and edges.
         recolor_dict: dict of rxn_id/cpd_id_compartment : hex color code.
     return: a graph object that contains a set of node with defined color.
     """
-    for node in g.nodes:
-        if node.props['type'] == 'rxn':
-            node.props['fillcolor'] = REACTION_COLOR
-            id = text_type(','.join(node.props['original_id']))
-        elif node.props['type'] == 'cpd':
-            node.props['fillcolor'] = COMPOUND_COLOR
-            id = node.props['id']
-        elif node.props['type'] == 'bio_rxn' or 'Ex_rxn':
-            id = text_type(','.join(node.props['original_id']))
 
-        if id in recolor_dict:
-            node.props['fillcolor'] = recolor_dict[id]
-
+    nodes_dict_no_suffix = {re.sub(r'_\d', "", k) : v for
+                            k, v in iteritems(g.nodes_id_dict)}
+    for id in recolor_dict:
+        if id in nodes_dict_no_suffix:
+            nodes_dict_no_suffix[id].props['fillcolor'] = recolor_dict[id]
     return g
 
 
