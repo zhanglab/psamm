@@ -55,6 +55,7 @@ class Graph(Entity):
         self._default_node_props = {}
         self._default_edge_props = {}
         self._nodes_id = {}
+        self._nodes_original_id = {}
 
     def add_node(self, node):
         """add node to a Graph entity.
@@ -62,6 +63,11 @@ class Graph(Entity):
         """
         self._nodes.add(node)
         self._nodes_id[node.props['id']] = node
+        if node.props['type'] == 'cpd':
+            original_id_string = text_type(node.props['original_id'])
+        else:
+            original_id_string = ','.join(node.props['original_id'])
+        self._nodes_original_id[original_id_string] = node
 
     def get_node(self, id):
         """get Node object.
@@ -69,9 +75,6 @@ class Graph(Entity):
             id: compound object or a list of reaction IDs.
         """
         return self._nodes_id[id]
-
-    # def nodes_id_dict(self):
-    #     return self._nodes_id
 
     def add_edge(self, edge):
         if edge.source not in self._nodes or edge.dest not in self._nodes:
@@ -97,6 +100,10 @@ class Graph(Entity):
     @property
     def nodes_id_dict(self):
         return self._nodes_id
+
+    @property
+    def nodes_original_id_dict(self):
+        return self._nodes_original_id
 
     @property
     def edges(self):

@@ -21,7 +21,6 @@ from __future__ import unicode_literals
 import logging
 import csv
 import argparse
-import re
 from collections import defaultdict, Counter
 from six import text_type, iteritems, itervalues, iterkeys
 
@@ -713,12 +712,9 @@ def update_node_color(g, recolor_dict):
         recolor_dict: dict of rxn_id/cpd_id_compartment : hex color code.
     return: a graph object that contains a set of node with defined color.
     """
-
-    nodes_dict_no_suffix = {re.sub(r'_\d', "", k) : v for
-                            k, v in iteritems(g.nodes_id_dict)}
     for id in recolor_dict:
-        if id in nodes_dict_no_suffix:
-            nodes_dict_no_suffix[id].props['fillcolor'] = recolor_dict[id]
+        if id in g.nodes_original_id_dict:
+            g.nodes_original_id_dict[id].props['fillcolor'] = recolor_dict[id]
     return g
 
 
