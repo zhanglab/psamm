@@ -684,7 +684,7 @@ def add_exchange_rxns(g, rxn_id, reaction):
         reaction: Exchange reaction object(metabolic model reaction).
     """
     for c, _ in reaction.compounds:
-        if c in g.nodes_id_dict:
+        if text_type(c) in g.nodes_id_dict:
             node_ex = graph.Node({
                 'id': text_type(rxn_id),
                 'shape': 'box',
