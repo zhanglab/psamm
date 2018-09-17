@@ -152,7 +152,7 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
 
         # create {rxn_id:[(c1, c2),(c3,c4),...], ...} dictionary,
         # key = rxn id, value = list of compound pairs
-        filter_dict, fpp_rxns = make_filter_dict(
+        filter_dict = make_filter_dict(
             self._model, self._mm, self._args.method, self._args.element,
             compound_formula, self._args.hide_edges, self._args.exclude)
 
@@ -250,7 +250,7 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
                     'create image file requires python binding graphviz '
                     'module ("pip install graphviz")')
             else:
-                if len(filter_dict.keys()) > 500:
+                if len(g.nodes_id_dict) > 1000:
                     logger.info(
                         'This graph contains a large number of reactions, graphs of this '
                         'size may take a long time to create'.format
@@ -470,7 +470,7 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
     for r, cpairs in iteritems(filter_dict):
         cpairs_ordered_filter_dict[r] = sorted(cpairs)
 
-    return cpairs_ordered_filter_dict, fpp_rxns
+    return cpairs_ordered_filter_dict
 
 
 def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
