@@ -365,7 +365,7 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
 
     fpp_rxns, rxns_no_equation, rxns_no_formula = set(), set(), []
     for reaction in model.reactions:
-        if (reaction.id in model.model and
+        if (reaction.id in mm.reactions and
                 reaction.id not in exclude_rxns):
             if reaction.equation is None:
                 rxns_no_equation.add(reaction.id)
