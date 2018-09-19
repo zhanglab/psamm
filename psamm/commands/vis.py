@@ -221,9 +221,10 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
                 g = add_exchange_rxns(g, reaction, exchange_rxn)
         if len(recolor_dict) > 0:
             g = update_node_color(g, recolor_dict)
-        g = add_node_label(g, self._args.cpd_detail, self._args.rxn_detail,
-                           model_compound_entries, model_reaction_entries,
-                           reaction_flux)
+        if self._args.cpd_detail is not None or self._args.rxn_detail is not None:
+            g = update_node_label(g, self._args.cpd_detail, self._args.rxn_detail,
+                               model_compound_entries, model_reaction_entries,
+                               reaction_flux)
         g = set_edge_props_withfba(g, edge_values)
 
         if self._args.method == 'no-fpp' and self._args.split_map is True:
@@ -557,6 +558,7 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
                     'id': text_type(c),
                     'shape': 'ellipse',
                     'style': 'filled',
+                    'label': text_type(c),
                     'type': 'cpd',
                     'fillcolor': COMPOUND_COLOR,
                     'original_id': c,
@@ -570,6 +572,7 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
                         'id': text_type(sub_rxn),
                         'shape': 'box',
                         'style': 'filled',
+                        'label': new_id_mapping[sub_rxn],
                         'type': 'rxn',
                         'fillcolor': REACTION_COLOR,
                         'original_id': [new_id_mapping[sub_rxn]],
@@ -581,6 +584,7 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
                     'id': text_type(','.join(rlist)),
                     'shape': 'box',
                     'style': 'filled',
+                    'label': '\n'.join(real_rxns),
                     'type': 'rxn',
                     'fillcolor': REACTION_COLOR,
                     'original_id': real_rxns,
@@ -656,12 +660,12 @@ def add_biomass_rxns(g, bio_reaction, biomass_rxn_id):
             node_bio = graph.Node({
                 'id': '{}_{}'.format(biomass_rxn_id,
                                      bio_pair[biomass_rxn_id]),
-                'label':text_type(biomass_rxn_id),
                 'shape': 'box',
                 'style': 'filled',
+                'label': biomass_rxn_id,
+                'type': 'bio_rxn',
                 'fillcolor': ALT_COLOR,
                 'original_id': [biomass_rxn_id],
-                'type': 'bio_rxn',
                 'compartment': c.compartment})
             g.add_node(node_bio)
 
@@ -688,9 +692,10 @@ def add_exchange_rxns(g, rxn_id, reaction):
                 'id': text_type(rxn_id),
                 'shape': 'box',
                 'style': 'filled',
+                'label': rxn_id,
+                'type': 'Ex_rxn',
                 'fillcolor': ACTIVE_COLOR,
                 'original_id': [rxn_id],
-                'type': 'Ex_rxn',
                 'compartment': c.compartment})
             g.add_node(node_ex)
 
@@ -718,7 +723,7 @@ def update_node_color(g, recolor_dict):
     return g
 
 
-def add_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
+def update_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
                    model_reaction_entries, reaction_flux):
     """ set label of nodes in graph object,
 
@@ -748,43 +753,32 @@ def add_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
                     label = '{}\n{}'.format(node.props['id'], pre_label)
                 else:
                     label = pre_label
-            else:
-                label = node.props['id']
-            node.props['label'] = label
+                node.props['label'] = label
 
         elif node.props['type'] == 'rxn':
-            if len(node.props['original_id']) == 1:
-                rxn_id = node.props['original_id'][0]
-                if rxn_detail is not None:
+            if rxn_detail is not None:
+                rxn_id = '\n'.join(node.props['original_id'])
+                if len(node.props['original_id']) == 1:
                     props = model_reaction_entries[rxn_id].properties
                     rxn_detail_list = [i for i in rxn_detail[0] if i in props]
-                    label = '\n'.join(_encode_value(props[value])
-                                      for value in rxn_detail_list)
+                    pre_label = '\n'.join(_encode_value(
+                        props[value]) for value in rxn_detail_list if value != 'id')
+                    node.props['label'] = '{}\n{}'.format(rxn_id, pre_label)
                 else:
-                    label = rxn_id
+                    node.props['label'] = rxn_id
+            if len(reaction_flux) > 0:
+                sum_flux = 0
+                for r in node.props['original_id']:
+                    if r in reaction_flux:
+                        sum_flux += abs(reaction_flux[r])
+                if sum_flux != 0:
+                    node.props['label'] = '{}\n{}'.format(node.props['label'], sum_flux)
 
-                if len(reaction_flux) > 0:
-                    if rxn_id in reaction_flux:
-                        label = '{}\n{}'.format(label, reaction_flux[rxn_id])
-            else:
-                if len(reaction_flux) > 0:
-                    sum_flux = 0
-                    for r in node.props['original_id']:
-                        if r in reaction_flux:
-                            sum_flux += abs(reaction_flux[r])
-                    label = '\n'.join(r for r in node.props['original_id'])
-                    if sum_flux != 0:
-                        label = '{}\n{}'.format(label, sum_flux)
-                else:
-                    label = '\n'.join(r for r in node.props['original_id'])
-            node.props['label'] = text_type(label)
         elif node.props['type'] == 'Ex_rxn':
-            label = node.props['original_id'][0]
             if len(reaction_flux) > 0:
                 if node.props['original_id'][0] in reaction_flux:
-                    label = '{}\n{}'.format(
-                        label, reaction_flux[node.props['original_id'][0]])
-            node.props['label'] = text_type(label)
+                    node.props['label'] = '{}\n{}'.format(
+                        node.props['label'], reaction_flux[node.props['original_id'][0]])
     return g
 
 
@@ -903,5 +897,5 @@ def get_cpt_boundaries(model):
                 cpd_cpt.add(cpd[0].compartment)
             if len(cpd_cpt) > 1:
                 cpd_cpt = list(cpd_cpt)
-                boundaries.add((cpd_cpt[0], cpd_cpt[1]))
+                boundaries.add(tuple(sorted((cpd_cpt[0], cpd_cpt[1]))))
     return boundaries, extracellular

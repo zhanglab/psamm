@@ -20,6 +20,7 @@
 from __future__ import unicode_literals
 
 import unittest
+import os
 from psamm.formula import Formula, Atom, Radical
 from psamm.commands import vis
 from psamm.reaction import Compound, Reaction, Direction
@@ -31,7 +32,7 @@ from psamm.datasource import native, context, entry
 from psamm.metabolicmodel import MetabolicModel
 from psamm import graph
 from psamm.datasource.native import NativeModel, ReactionEntry, CompoundEntry
-from six import iteritems
+import tempfile
 
 
 class TestMakeFilterDict(unittest.TestCase):
@@ -67,7 +68,7 @@ class TestMakeCpairDict(unittest.TestCase):      ##### OK.
                             'rxn2': [(Compound('B', 'c'), Compound('D', 'c'))],
                             'rxn3': [(Compound('D', 'c'), Compound('D', 'e'))]}
         self.subset = ['rxn1', 'rxn2', 'rxn3', 'rxn4']
-        self.reaction_flux = []   #no fba
+        self.reaction_flux = []
         self.method = 'fpp'
 
     def test_MakeCpairDict_default(self):
@@ -76,7 +77,6 @@ class TestMakeCpairDict(unittest.TestCase):      ##### OK.
         e1_res = defaultdict(lambda: defaultdict(list))
         e1_res[(Compound('A', 'c'), Compound('C', 'c'))]['both'].append('rxn1_1')
         e1_res[(Compound('B', 'c'), Compound('C', 'c'))]['both'].append('rxn1_2')
-        # e1_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] = ['rxn1_3','rxn2_1']
         e1_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] = ['rxn1_3', 'rxn2_1']
         e1_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'].append('rxn3_1')
 
@@ -127,8 +127,6 @@ class TestMakeCpairDict(unittest.TestCase):      ##### OK.
 
         n4_r = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1', 'rxn1_3': 'rxn1',
                 'rxn2_1': 'rxn2'}
-        print('e4', e4)
-        print('en',e4_r)
         self.assertEqual(e4, e4_r)
         self.assertEqual(n4, n4_r)
 
@@ -274,19 +272,22 @@ class TestAddGraphNodes(unittest.TestCase):
     def test_addnodes_default(self):
         g1 = vis.add_graph_nodes(self.g, self.cpair_dict, self.method,
                                  self.new_id_mapping, self.split)
-        node_a1 = graph.Node({'id': 'A[c]', 'shape': 'ellipse','style': 'filled',
-                             'type': 'cpd', 'original_id': Compound('A', 'c'),
-                             'compartment': 'c', 'fillcolor': '#ffd8bf'})
-        node_c1 = graph.Node({'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled',
-                             'type': 'cpd', 'original_id': Compound('C', 'c'),
-                              'compartment': 'c', 'fillcolor': '#ffd8bf'})
+        node_a1 = graph.Node({
+            'id': 'A[c]', 'shape': 'ellipse','style': 'filled', 'type': 'cpd',
+            'label': 'A[c]', 'original_id': Compound('A', 'c'),
+            'compartment': 'c', 'fillcolor': '#ffd8bf'})
+        node_c1 = graph.Node({
+            'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled', 'type': 'cpd',
+            'label': 'C[c]', 'original_id': Compound('C', 'c'),
+            'compartment': 'c', 'fillcolor': '#ffd8bf'})
         node_ac1_both = graph.Node({
             'id': 'rxn1_1,rxn2_1', 'shape': 'box','style': 'filled',
-            'type': 'rxn', 'original_id': ['rxn1', 'rxn2'], 'compartment': 'c',
-            'fillcolor': '#c9fccd'})
+            'label': 'rxn1\nrxn2', 'type': 'rxn', 'original_id':
+                ['rxn1', 'rxn2'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
         node_ac1_forward = graph.Node({
-            'id': 'rxn3_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn3'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'id': 'rxn3_1', 'shape': 'box', 'style': 'filled',
+            'label': 'rxn3', 'type': 'rxn', 'original_id': ['rxn3'],
+            'compartment': 'c', 'fillcolor': '#c9fccd'})
 
         self.assertTrue(all(i in [node_a1, node_c1, node_ac1_both, node_ac1_forward] for i in g1.nodes))
         self.assertTrue(all(i in g1.nodes for i in [node_a1, node_c1, node_ac1_both, node_ac1_forward]))
@@ -296,22 +297,24 @@ class TestAddGraphNodes(unittest.TestCase):
                                  self.new_id_mapping, True)
         node_a2 = graph.Node({
             'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
-                'cpd', 'original_id': Compound('A', 'c'), 'compartment': 'c',
-            'fillcolor': '#ffd8bf'})
+                'cpd', 'label': 'A[c]', 'original_id': Compound('A', 'c'),
+            'compartment': 'c', 'fillcolor': '#ffd8bf'})
         node_c2 = graph.Node({
             'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
-                'cpd', 'original_id': Compound('C', 'c'), 'compartment': 'c',
-            'fillcolor': '#ffd8bf'})
+                'cpd', 'label': 'C[c]','original_id': Compound('C', 'c'),
+            'compartment': 'c', 'fillcolor': '#ffd8bf'})
         node_rxn1 = graph.Node({
             'id': 'rxn1_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn1'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'label': 'rxn1', 'original_id': ['rxn1'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
         node_rxn2 = graph.Node({
             'id': 'rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn2'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
-
+            'label': 'rxn2', 'original_id': ['rxn2'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
         node_rxn3 = graph.Node({
             'id': 'rxn3_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn3'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'label': 'rxn3', 'original_id': ['rxn3'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
 
         self.assertTrue(all(i in [node_a2, node_c2, node_rxn1, node_rxn2,
                                   node_rxn3] for i in g2.nodes))
@@ -324,22 +327,25 @@ class TestAddGraphNodes(unittest.TestCase):
         node_a3 = graph.Node({
             'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled','type':
                 'cpd', 'original_id': Compound('A', 'c'), 'compartment': 'c',
-            'fillcolor': '#ffd8bf'})
+            'fillcolor': '#ffd8bf', 'label': 'A[c]'})
         node_c3 = graph.Node({
             'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
                 'cpd', 'original_id': Compound('C', 'c'), 'compartment': 'c',
-            'fillcolor': '#ffd8bf'})
+            'fillcolor': '#ffd8bf', 'label': 'C[c]'})
         node_rxn1 = graph.Node({
             'id': 'rxn1_1','shape': 'box','style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn1'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'original_id': ['rxn1'], 'compartment': 'c',
+            'fillcolor': '#c9fccd', 'label': 'rxn1'})
 
         node_rxn2 = graph.Node({
             'id': 'rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn2'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'original_id': ['rxn2'], 'compartment': 'c',
+            'fillcolor': '#c9fccd', 'label': 'rxn2'})
 
         node_rxn3 = graph.Node({
             'id': 'rxn3_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn3'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'original_id': ['rxn3'], 'compartment': 'c',
+            'fillcolor': '#c9fccd', 'label': 'rxn3'})
 
         self.assertTrue(all(i in [node_a3, node_c3, node_rxn1, node_rxn2,
                                   node_rxn3] for i in g3.nodes))
@@ -588,29 +594,32 @@ class TestAddExchangeRxns(unittest.TestCase):
     def setUp(self):
         self.a = graph.Node({
             'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled',
-            'type': 'cpd', 'original_id': Compound('A', 'c'),
+            'type': 'cpd', 'original_id': Compound('A', 'c'), 'label':'A[c]',
             'compartment': 'c', 'fillcolor': '#ffd8bf'})
         self.c = graph.Node({
             'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled',
-            'type': 'cpd', 'original_id': Compound('C', 'c'),
+            'type': 'cpd', 'original_id': Compound('C', 'c'), 'label':'C[c]',
             'compartment': 'c', 'fillcolor': '#ffd8bf'})
         self.a_extracell = graph.Node({
             'id': 'A[a]', 'shape': 'ellipse', 'style': 'filled',
-            'type': 'cpd', 'original_id': Compound('A', 'e'),
+            'type': 'cpd', 'original_id': Compound('A', 'e'), 'label':'A[e]',
             'compartment': 'e', 'fillcolor': '#ffd8bf'})
         self.c_extracell = graph.Node({
             'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled',
-            'type': 'cpd', 'original_id': Compound('C', 'e'),
+            'type': 'cpd', 'original_id': Compound('C', 'e'), 'label':'C[e]',
             'compartment': 'e', 'fillcolor': '#ffd8bf'})
         node_ac = graph.Node({
             'id': 'rxn1_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn1'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'original_id': ['rxn1'], 'compartment': 'c',
+            'fillcolor': '#c9fccd', 'label':'rxn1',})
         node_cc = graph.Node({
             'id': 'rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',  # rxn2: C[c] <=> C[e]
-            'original_id': ['rxn2'], 'compartment': 'e', 'fillcolor': '#c9fccd'})
+            'original_id': ['rxn2'], 'compartment': 'e',
+            'fillcolor': '#c9fccd', 'label':'rxn2',})
         node_aa = graph.Node({
-            'id': 'rxn3_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',  # rxn3: A[e] => A[c]
-            'original_id': ['rxn3'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'id': 'rxn3_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
+            'original_id': ['rxn3'], 'compartment': 'c',
+            'fillcolor': '#c9fccd', 'label':'rxn3',})
         edge_a_r1 = graph.Edge(self.a, node_ac, {'dir': 'forward'})
         # edge_r1_c = graph.Edge(self.c, node_ac, {'dir': 'forward'})   #why both ok?
         edge_r1_c = graph.Edge(node_ac, self.c, {'dir': 'forward'})
@@ -641,7 +650,8 @@ class TestAddExchangeRxns(unittest.TestCase):
         g1 = vis.add_exchange_rxns(self.g1, 'test_Ex_C', self.rxn_C)
         node_Ex = graph.Node({
             'id': 'test_Ex_C', 'shape': 'box', 'style': 'filled', 'type': 'Ex_rxn',  # rxn3: A[e] => A[c]
-            'original_id': ['test_Ex_C'], 'compartment': 'e', 'fillcolor': '#90f998'})
+            'original_id': ['test_Ex_C'], 'compartment': 'e', 'fillcolor': '#90f998',
+            'label': 'test_Ex_C',})
         edge_Ex = graph.Edge(self.c_extracell, node_Ex, {'dir': 'both'})
         self.node_list_c_to_e.append(node_Ex)
         self.edge_list_c_to_e.append(edge_Ex)
@@ -650,10 +660,10 @@ class TestAddExchangeRxns(unittest.TestCase):
 
     def test2_addExrRxn_cpdA(self):
         g2 = vis.add_exchange_rxns(self.g2, 'test_Ex_A', self.rxn_C)
-
         node_Ex = graph.Node({
             'id': 'test_Ex_A', 'shape': 'box', 'style': 'filled', 'type': 'Ex_rxn',  # rxn3: A[e] => A[c]
-            'original_id': ['test_Ex_A'], 'compartment': 'e', 'fillcolor': '#90f998'})
+            'original_id': ['test_Ex_A'], 'compartment': 'e',
+            'fillcolor': '#90f998', 'label':'test_Ex_A',})
         edge_Ex = graph.Edge(self.a_extracell, node_Ex, {'dir': 'both'})
         self.node_list_e_to_c.append(node_Ex)
         self.edge_list_e_to_c.append(edge_Ex)
@@ -661,31 +671,34 @@ class TestAddExchangeRxns(unittest.TestCase):
         self.assertTrue(all(i in self.edge_list_e_to_c for i in g2.edges))
 
 
-# def add_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
+# def update_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
 #                    model_reaction_entries, reaction_flux):
-class TestAddNodeLabel(unittest.TestCase):
+class TestUpdateNodeLabel(unittest.TestCase):
     def setUp(self):
         self.a = graph.Node({
             'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled',
-            'type': 'cpd', 'original_id': Compound('A', 'c'),
+            'label': 'A[c]', 'type': 'cpd', 'original_id': Compound('A', 'c'),
             'compartment': 'c', 'fillcolor': '#ffd8bf'})
         self.c = graph.Node({
             'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled',
-            'type': 'cpd', 'original_id': Compound('C', 'c'),
+            'label': 'C[c]', 'type': 'cpd', 'original_id': Compound('C', 'c'),
             'compartment': 'c', 'fillcolor': '#ffd8bf'})
         self.c_extracell = graph.Node({
             'id': 'C[e]', 'shape': 'ellipse', 'style': 'filled',
-            'type': 'cpd', 'original_id': Compound('C', 'e'),
+            'label': 'C[e]', 'type': 'cpd', 'original_id': Compound('C', 'e'),
             'compartment': 'e', 'fillcolor': '#ffd8bf'})
         self.node_ac = graph.Node({
             'id': 'rxn1_1,rxn3_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn1', 'rxn3'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'label': 'rxn1_1\nrxn3_1', 'original_id': ['rxn1', 'rxn3'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
         self.node_cc = graph.Node({
             'id': 'rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',  # rxn2: C[c] <=> C[e]
-            'original_id': ['rxn2'], 'compartment': 'e', 'fillcolor': '#c9fccd'})
+            'label': 'rxn2_1', 'original_id': ['rxn2'], 'compartment': 'e',
+            'fillcolor': '#c9fccd'})
         self.node_Ex = graph.Node({
             'id': 'test_Ex_C', 'shape': 'box', 'style': 'filled', 'type': 'Ex_rxn',  # rxn3: A[e] => A[c]
-            'original_id': ['test_Ex_C'], 'compartment': 'e', 'fillcolor': '#90f998'})
+            'label': 'test_Ex_C', 'original_id': ['test_Ex_C'], 'compartment': 'e',
+            'fillcolor': '#90f998'})
         self.bio_A = graph.Node({
             'id': 'test_bio_1', 'label': 'test_bio', 'shape': 'box',
             'style': 'filled', 'type': 'bio_rxn', 'original_id': ['test_bio'],
@@ -758,7 +771,7 @@ class TestAddNodeLabel(unittest.TestCase):
                             'test_bio': test_bio}
 
     def test_detail_default(self):
-        g1 = vis.add_node_label(self.g, self.cpd_detail, self.rxn_detail, self.cpd_entries,
+        g1 = vis.update_node_label(self.g, self.cpd_detail, self.rxn_detail, self.cpd_entries,
                                 self.rxn_entries, self.reaction_flux)
         self.a.props['label'] = 'A[c]'
         self.c.props['label'] = 'C[c]'
@@ -771,7 +784,7 @@ class TestAddNodeLabel(unittest.TestCase):
                                   self.node_cc, self.node_Ex, self.bio_A] for i in g1.nodes))
 
     def test_detail_fba(self):
-        g2 = vis.add_node_label(self.g, self.cpd_detail, self.rxn_detail, self.cpd_entries,
+        g2 = vis.update_node_label(self.g, self.cpd_detail, self.rxn_detail, self.cpd_entries,
                                 self.rxn_entries, {'rxn1': 4.86, 'rxn2': 7.2,
                                                    'rxn3': 5.29, 'test_bio': 0.8})
         self.a.props['label'] = 'A[c]'
@@ -786,7 +799,7 @@ class TestAddNodeLabel(unittest.TestCase):
 
 
     def test_detail_id_name(self): # for both reaction and compound
-        g3 = vis.add_node_label(self.g, [['id','name']], [['id','name']], self.cpd_entries,
+        g3 = vis.update_node_label(self.g, [['id','name']], [['id','name']], self.cpd_entries,
                                 self.rxn_entries, self.reaction_flux)
         self.a.props['label'] = 'A[c]\ncompound A'
         self.c.props['label'] = 'C[c]\ncompound C'
@@ -799,7 +812,7 @@ class TestAddNodeLabel(unittest.TestCase):
                                   self.node_cc, self.node_Ex, self.bio_A] for i in g3.nodes))
 
     def test_cpd_detail_id_formula_genes(self):
-        g4 = vis.add_node_label(self.g, [['id','formula','genes']], self.rxn_detail, self.cpd_entries,
+        g4 = vis.update_node_label(self.g, [['id','formula','genes']], self.rxn_detail, self.cpd_entries,
                                 self.rxn_entries, self.reaction_flux)
         self.a.props['label'] = 'A[c]\nC6H11O9P'
         self.c.props['label'] = 'C[c]\nC6H11O9P'
@@ -812,7 +825,7 @@ class TestAddNodeLabel(unittest.TestCase):
                                   self.node_cc, self.node_Ex, self.bio_A] for i in g4.nodes))
 
     def test_rxn_detail_id_formula_genes(self):
-        g5 = vis.add_node_label(self.g, self.cpd_detail, [['id','formula','genes']], self.cpd_entries,
+        g5 = vis.update_node_label(self.g, self.cpd_detail, [['id','formula','genes']], self.cpd_entries,
                                 self.rxn_entries, self.reaction_flux)
         self.a.props['label'] = 'A[c]'
         self.c.props['label'] = 'C[c]'
@@ -982,8 +995,8 @@ class TestMakeCptTree(unittest.TestCase):
         self.assertEqual(c3, c3_res)
         # self.assertEqual(e3, e3_res)
 
-# def make_filter_dict(model, mm, method, element, cpd_formula,
-# arg_hide_edges, exclude_rxns):    SUCDi
+
+# def make_filter_dict(model, mm, method, element, cpd_formula, arg_hide_edges, exclude_rxns)
 class TestFilterDict(unittest.TestCase):
     def setUp(self):
         native_model = NativeModel()
@@ -1013,7 +1026,6 @@ class TestFilterDict(unittest.TestCase):
         e1_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))],
                   'rxn2': [(Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
                            (Compound('succ_c', 'c'), Compound('fum_c', 'c'))]}
-        print('e1-result', e1)
         self.assertEqual(e1, e1_res)
 
     def test2_nofpp(self):
@@ -1070,16 +1082,15 @@ class TestFilterDict(unittest.TestCase):
         self.assertEqual(e6, e6_res)
 
     # def test7_hide_edges(self):
-    #     f = open("remove_edges.tsv", "w+")
-    #     f.write('q8_c[c]'   'q8h2_c[c]')
-    #     f.close()
-    #     hide_edges = f
-    #
-    #     e4 = vis.make_filter_dict(
+    #     path = os.path.join(tempfile.mkdtemp(), 'remove_edges')
+    #     with open(path, 'w') as f:
+    #         f.write('{}\t{}\n{}\t{}'.format('q8_c[c]', 'q8h2_c[c]', 'fum_c[c]', 'mal_L_c[c]'))
+    #     e7 = vis.make_filter_dict(
     #         self.native, self.mm, self.method, self.element, self.cpd_formula,
-    #         hide_edges, self.exclude_rxns)
-    #     e4_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))]}
-    #     self.assertEqual(e4, e4_res)
+    #         path, self.exclude_rxns)
+    #     e7_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))],
+    #               'rxn2': [(Compound('succ_c', 'c'), Compound('fum_c', 'c'))]}
+    #     self.assertEqual(e7, e7_res)
 
 
 class TestGetCptBoundaries(unittest.TestCase):
@@ -1093,24 +1104,24 @@ class TestGetCptBoundaries(unittest.TestCase):
         native_model.compounds.add_entry(CompoundEntry({'id': 'B[p]', 'formula': parse_compound('formula_B', 'p')}))
         self.native = native_model
 
-    # def test_default_setting(self):
-    #     e1_bound,e1_extra = vis.get_cpt_boundaries(self.native)
-    #     e1_bound_res = set()
-    #     e1_bound_res.add(('c', 'e'))
-    #     e1_bound_res.add(('p', 'e'))
-    #     e1_extra_res = 'e'
-    #     self.assertTrue(all(i in e1_bound for i in e1_bound_res))
-    #     self.assertEqual(e1_extra, e1_extra_res)
+    def test_default_setting(self):
+        e1_bound,e1_extra = vis.get_cpt_boundaries(self.native)
+        e1_bound_res = set()
+        e1_bound_res.add(('c', 'e'))
+        e1_bound_res.add(('e', 'p'))
+        e1_extra_res = 'e'
+        self.assertTrue(all(i in e1_bound for i in e1_bound_res))
+        self.assertEqual(e1_extra, e1_extra_res)
 
-    # def test2_with_extra_defined(self):
-    #     self.native._properties['extracellular'] = 'p'
-    #     e2_bound,e2_extra = vis.get_cpt_boundaries(self.native)
-    #     e2_bound_res = set()
-    #     e2_bound_res.add(('c', 'e'))
-    #     e2_bound_res.add(('p', 'e'))
-    #     e2_extra_res = 'p'
-    #     self.assertTrue(all(i in e2_bound for i in e2_bound_res))
-    #     self.assertEqual(e2_extra, e2_extra_res)
+    def test2_with_extra_defined(self):
+        self.native._properties['extracellular'] = 'p'
+        e2_bound,e2_extra = vis.get_cpt_boundaries(self.native)
+        e2_bound_res = set()
+        e2_bound_res.add(('c', 'e'))
+        e2_bound_res.add(('e', 'p'))
+        e2_extra_res = 'p'
+        self.assertTrue(all(i in e2_bound for i in e2_bound_res))
+        self.assertEqual(e2_extra, e2_extra_res)
 
 
 if __name__ == '__main__':
