@@ -719,7 +719,8 @@ def update_node_color(g, recolor_dict):
     """
     for id in recolor_dict:
         if id in g.nodes_original_id_dict:
-            g.nodes_original_id_dict[id].props['fillcolor'] = recolor_dict[id]
+            for node in g.nodes_original_id_dict[id]:
+                node.props['fillcolor'] = recolor_dict[id]
     return g
 
 

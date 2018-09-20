@@ -55,7 +55,7 @@ class Graph(Entity):
         self._default_node_props = {}
         self._default_edge_props = {}
         self._nodes_id = {}
-        self._nodes_original_id = {}
+        self._nodes_original_id = defaultdict(list)
 
     def add_node(self, node):
         """add node to a Graph entity.
@@ -67,7 +67,7 @@ class Graph(Entity):
             original_id_string = text_type(node.props['original_id'])
         else:
             original_id_string = ','.join(node.props['original_id'])
-        self._nodes_original_id[original_id_string] = node
+        self._nodes_original_id[original_id_string].append(node)
 
     def get_node(self, id):
         """get Node object.
