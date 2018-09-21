@@ -853,7 +853,7 @@ def make_cpt_tree(boundaries, extracellular):
         compartments.add(j)
         compartments.add(k)
     if extracellular not in compartments:
-        etmp = list(compartments)
+        etmp = sorted(list(compartments), reverse = True)
         extracellular = etmp[0]
         logger.warning('No extracellular compartment was defined in the '
                        'model.yaml file and no "e" compartment in the model. '

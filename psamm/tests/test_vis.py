@@ -19,17 +19,14 @@
 
 from __future__ import unicode_literals
 
-import csv
 import unittest
 import os
 from psamm.formula import Formula, Atom
 from psamm.commands import vis
 from psamm.reaction import Compound, Reaction, Direction
 from collections import defaultdict
-from psamm.database import DictDatabase
 from psamm.datasource.reaction import parse_reaction, parse_compound
 from psamm.datasource import entry
-from psamm.metabolicmodel import MetabolicModel
 from psamm import graph
 from psamm.datasource.native import NativeModel, ReactionEntry, CompoundEntry
 import tempfile
@@ -260,8 +257,7 @@ class TestMakeCpairDict(unittest.TestCase):
         self.assertEqual(e6, e6_res)
         self.assertEqual(n6, n6_res)
 
-# def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
-#                      cpair_dict, new_id_mapping, method):
+
 class TestMakeEdgeValues(unittest.TestCase):
     def setUp(self):
         native_model = NativeModel()
@@ -575,7 +571,6 @@ class TestUpdateNodeColor(unittest.TestCase):
         self.assertTrue(all(i in g4.nodes for i in self.node_list_comb))
 
 
-### def add_edges(g, cpairs_dict, method, split):
 class TestAddEdges(unittest.TestCase):
     def setUp(self):
         self.node_a = graph.Node({'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled',
@@ -664,7 +659,6 @@ class TestAddEdges(unittest.TestCase):
         self.assertTrue(all(i in g2_nofpp.edges for i in edge_list))
 
 
-# def add_biomass_rxns(g, bio_reaction, biomass_rxn_id):
 class TestAddBiomassRnxs(unittest.TestCase):
     def setUp(self):
         self.node_a = graph.Node({'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled',
@@ -740,7 +734,6 @@ class TestAddExchangeRxns(unittest.TestCase):
             'original_id': ['rxn3'], 'compartment': 'c',
             'fillcolor': '#c9fccd', 'label':'rxn3',})
         edge_a_r1 = graph.Edge(self.a, node_ac, {'dir': 'forward'})
-        # edge_r1_c = graph.Edge(self.c, node_ac, {'dir': 'forward'})   #why both ok?
         edge_r1_c = graph.Edge(node_ac, self.c, {'dir': 'forward'})
         edge_c_r2 = graph.Edge(self.c, node_cc, {'dir': 'both'})
         edge_r2_c = graph.Edge(node_cc, self.c_extracell, {'dir': 'both'})
@@ -790,8 +783,6 @@ class TestAddExchangeRxns(unittest.TestCase):
         self.assertTrue(all(i in self.edge_list_e_to_c for i in g2.edges))
 
 
-# def update_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
-#                    model_reaction_entries, reaction_flux):
 class TestUpdateNodeLabel(unittest.TestCase):
     def setUp(self):
         self.a = graph.Node({
@@ -839,8 +830,6 @@ class TestUpdateNodeLabel(unittest.TestCase):
 
         self.cpd_detail = None
         self.rxn_detail = None
-        # cpd_detail = [['id', 'name', 'charge']]
-        # rxn_detail = [['id', 'equation', 'genes']]
         self.reaction_flux = {}
 
         cpd_A = entry.DictCompoundEntry({
@@ -884,7 +873,7 @@ class TestUpdateNodeLabel(unittest.TestCase):
             'name': 'biomass Reaction',
             'equation': Reaction(Direction.Forward, {Compound('A', 'c'): -1, Compound('D', 'c'): -1,
                                                      Compound('E', 'c'): 1,})
-        }) # A[c] + D[c] => E[c]
+        })
 
         self.rxn_entries = {'rxn1': rxn1, 'rxn2': rxn2, 'rxn3': rxn3, 'test_Ex_C': test_Ex_C,
                             'test_bio': test_bio}
@@ -957,7 +946,6 @@ class TestUpdateNodeLabel(unittest.TestCase):
                                   self.node_cc, self.node_Ex, self.bio_A] for i in g5.nodes))
 
 
-# def set_edge_props_withfba(g, edge_values):
 class TestEdgePropsWithFBA(unittest.TestCase):
     def setUp(self):
         self.fum = graph.Node({
@@ -990,7 +978,6 @@ class TestEdgePropsWithFBA(unittest.TestCase):
             'id': 'CYTBD_1,FRD7_2', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'original_id': ['CYTBD', 'FRD7'], 'compartment': 'c', 'fillcolor': '#c9fccd'})  # NO LABEL
 
-        # split graph nodes:
         self.CYTBD = graph.Node({
             'id': 'CYTBD_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'original_id': ['CYTBD'], 'compartment': 'c', 'fillcolor': '#c9fccd'})  # NO LABEL
@@ -1072,7 +1059,6 @@ class TestEdgePropsWithFBA(unittest.TestCase):
         self.assertTrue(all(i in g3.edges for i in edge_list))
 
 
-# def make_cpt_tree(boundaries, extracellular):
 class TestMakeCptTree(unittest.TestCase):
     def test1_if_e_inthemodel(self):
         boundaries = [('c', 'e'), ('c', 'p'), ('e', 'p')]
@@ -1085,18 +1071,20 @@ class TestMakeCptTree(unittest.TestCase):
         c1_res['p'].add('c')
         c1_res['e'].add('c')
         c1_res['e'].add('p')
-        # e1_res = 'e'
+        e1_res = 'e'
         self.assertEqual(c1, c1_res)
-        # self.assertEqual(e1, e1_res)
+        self.assertEqual(e1, e1_res)
 
     def test2_if_e_not_inthemodel(self):
-        boundaries = [('c', 'p')]
+        boundaries = [('c', 'mi')]
         extra = 'e'
         c2, e2 = vis.make_cpt_tree(boundaries, extra)
         c2_res = defaultdict(set)
-        c2_res['c'].add('p')
-        c2_res['p'].add('c')
+        c2_res['c'].add('mi')
+        c2_res['mi'].add('c')
+        e2_res = 'mi'
         self.assertEqual(c2, c2_res)
+        self.assertEqual(e2, e2_res)
 
     def test3_if_e_not_inthemodel_cpmi(self):
         boundaries = [('c', 'p'), ('c', 'mi')]
@@ -1107,7 +1095,9 @@ class TestMakeCptTree(unittest.TestCase):
         c3_res['c'].add('mi')
         c3_res['mi'].add('c')
         c3_res['p'].add('c')
+        e3_res = 'p'
         self.assertEqual(c3, c3_res)
+        self.assertEqual(e3, e3_res)
 
 
 class TestGetCptBoundaries(unittest.TestCase):
@@ -1139,6 +1129,16 @@ class TestGetCptBoundaries(unittest.TestCase):
         e2_extra_res = 'p'
         self.assertTrue(all(i in e2_bound for i in e2_bound_res))
         self.assertEqual(e2_extra, e2_extra_res)
+
+    def test3_e_notinmodel(self):
+        native_model = NativeModel()
+        native_model.reactions.add_entry(ReactionEntry({'id': 'rxn1', 'equation': parse_reaction('A[c] => A[mi]')}))
+        e3_bound, e3_extra = vis.get_cpt_boundaries(native_model)
+        e3_bound_res = set()
+        e3_bound_res.add(('c', 'mi'))
+        e3_extra_res = 'e'
+        self.assertEqual(e3_bound, e3_bound_res)
+        self.assertEqual(e3_extra, e3_extra_res)
 
 
 if __name__ == '__main__':
