@@ -499,6 +499,29 @@ minimal solution.
 
     $ psamm-model fastgapfill --penalty penalty.tsv
 
+The penalty file provided should be a tab separated table that contains reaction IDs
+and assigned penalty values in two columns:
+
+.. code-block:: shell
+
+    RXN1    10
+    RXN2    15
+    RXN3    20
+    ....
+
+In addition to setting penalty values directly through the ``--penalty`` argument,
+default penalties for all other database reactions can be set through the ``--db-penalty``
+argument. Reactions that do not have penalty values explicitly set through
+the ``--penalty`` argument will be assigned this penalty value. Similarly penalty values can be
+assigned for new exchange reactions and artificial transport reactions through the
+``--ex-penalty`` and ``--tp-penalty`` arguments. An example using all three of these
+arguments can be seen here:
+
+.. code-block:: shell
+
+    $ psamm-model fastgapfill --db-penalty 100 --tp-penalty 1000 --ex-penalty 150
+
+
 Predict primary pairs (``primarypairs``)
 ----------------------------------------------------------------------
 
@@ -517,6 +540,198 @@ The result is reported as a table of four columns. The first column is the
 reactions ID, the second and third columns contain the compound ID of the
 reactant and product. The fourth column contains the predicted transfer of
 elements.
+
+The ``primarypairs`` command will run slowly on models that contain artificial
+reactions such as biomass reactions or condensed biosynthesis reactions. Because
+the reactant/product pair prediciton in these reactions is not as biologically
+meaningful these reactions can be excluded through the ``--exclude`` option. This
+option can be used to either give reaction IDs to exclude or to give an input file
+containing a list of reactions IDs to exclude:
+
+.. code-block:: shell
+
+    $ psamm-model primarypairs --exclude BiomassReaction
+    or
+    $ psamm-model primarypairs --exclude @./exclude.tsv
+
+PSAMM Visualization (``vis``)
+-----------------------------
+
+Models can be visualized through the use of the ``vis`` command in `PSAMM`. This
+command can use the `FindPrimaryPairs` algorithm to help generate images of full models
+or subsets of models. The output of this command will consist of a graph file in the `dot`
+language, ``reactions.dot``, and two files called ``reactions.nodes.tsv`` and
+``reactions.edges.tsv`` that contain the network data in a tsv format.
+
+To run the ``vis`` command the following command can be used:
+
+.. code-block:: shell
+
+    $ psamm-model vis
+
+Basic Graph Generation
+~~~~~~~~~~~~~~~~~~~~~~
+
+By default the vis command uses the `FindPrimaryPairs` algorithm to simplify the graph
+that is produced. This algorithm runs much faster if certain types of artificial reactions
+are not considered when doing the reactant/product pair prediction. These reactions often
+represent Biomass production or condensed biosynthesis processes. To exclude these reactions
+the ``vis`` command can be run with the ``--exlcude`` option to provide an input file that
+contains a list of reaction IDs:
+
+.. code-block:: shell
+
+    $ psamm-model vis --exlcude @{path to file}
+
+The vis command will only produce the files described above by default. Graph image generating
+software can be used to convert these files to actual images. If the program `Graphviz` is
+installed on the computer then that program can be used within `PSAMM` to generate the image file
+directly. This can be done by using the ``--imgae`` argument followed by any `Graphviz` supported
+image format:
+
+.. code-block:: shell
+
+    $ psamm-model vis --image {format (pdf, eps, svg, etc.)}
+
+
+While the ``vis`` function in `PSAMM` uses `FindPrimaryPairs` for graph simplification by
+default, the command is also able to run using no graph simplification (``no-fpp``), or by
+providing an input file containing prediciton results from the ``primarypairs`` command.
+
+This can be done through using the ``--method`` argument:
+
+.. code-block:: shell
+
+    $ psamm-model vis --method no-fpp
+    or
+    $ psamm-model vis --method {path to file}
+
+The resulting graphs can be further simplified to only show element transfers that contain
+a specified element through the ``--element`` argument. When using this option any
+reactant\product pairs that do not transfer the specified element will not be shown on the graph.
+To use this option the following command can be used:
+
+.. code-block:: shell
+
+    $ psamm-model vis --element {Atomic Symbol}
+
+Additionally the final graphs created through the ``vis`` command can be subsetted to only show a
+specified set of reactions from the larger model. This can be done using the ``--subset`` argument
+to provide a file containing a single column list of either reaction IDs or metabolite IDs.
+
+.. code-block:: shell
+
+    $ psamm-model vis --subset {path to file}
+
+And example of this file would be:
+
+.. code-block:: shell
+
+    rxn_1
+    rxn_2
+    rxn_4
+
+Or:
+
+.. code-block:: shell
+
+    cpd_1[c]
+    cpd_1[e]
+    cpd_2[c]
+
+
+Further modification can be done to the graph image to selectively hide certain edges
+in the final graph. This can be use to hide edges between paris of metabolites that
+might have many connections in the final graph images. Typical examples of these
+pairs include ATP and ADP, NAD and NADH, etc. To use this option first a tab separated
+table containing the metabolite pairs to hide must be made:
+
+.. code-block::
+
+    atp[c]  adp[c]
+    h2o[c]  h[c]
+    nad[c]  nadh[c]
+
+This file can then be used with the ``vis`` command through the ``--hide-edges`` argument:
+
+.. code-block:: shell
+
+    $ psamm-model vis --hide-edges {path to edges file}
+
+
+
+
+Graph Image Customization
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default the reaction and metabolite nodes in a graph will only show the reaction or
+metabolite IDs, but the final graphs output by the command can be customized to
+include additional reaction metabolite information that is present in the model.
+This additional information will be shown directly on the reaction or metabolite
+nodes in the graph. This can be done through using the ``--rxn-detail`` and
+``--cpd-detail`` options. These options can be used followed by a space separated list
+of properties to include. For example the following could be run to show additional
+information on both sets of nodes:
+
+.. code-block::
+
+    $ psamm-model vis --cpd-detail id formula charge --rxn-detail id name equation
+
+
+The reaction and metabolite nodes can be further customized by specifying which colors
+they should be filled in with on the final graph image. This can be done by first
+creating a two column file of reaction or metabolite IDs and hex color codes:
+
+.. code-block:: shell
+
+    ACONTa  #c4a0ef
+    succ[c] #10ea88
+    FUM #c4a0ef
+    ....
+
+This file can be used to color the nodes on the graph through the ``--color`` option:
+
+.. code-block:: shell
+
+    $ psamm-model vis --color {path to color table}
+
+
+The default graph images generated through the `vis` command will show condensed reaction nodes
+that contain multiple reactions that all have the same reactant/product pairs. This might be
+seen when multiple reactions that all involve ATP and ADP are present in the model. In these nodes
+only the reaction IDs will be shown and only the default colors can be used. If the user wants to
+split these condensed nodes up into individual reaction nodes the ``--split-map`` option can be used:
+
+.. code-block:: shell
+
+    $ psamm-model vis --split-map
+
+.. note::
+
+    The ``--split-map`` option can not be used with the ``--no-fpp`` option. The ``--no-fpp`` graphs
+    do not contain condensed reaction nodes.
+
+
+
+The ``--fba`` option can be used to run ``fba`` on the model to maximize the biomass reaction and then
+adjust the edge widths in the final graph based on the flux of the reactions in the model.
+When using this option the biomass reaction must be specified in the ``model.yaml``. The final edge
+widths shown on the graph will be scaled relative to each other based on the reaction fluxes, with
+thicker edges representing larger fluxes:
+
+.. code-block:: shell
+
+    $ psamm-model vis --fba
+
+The final graph image can also be modified to show the reactions and metabolites in different compartments
+based on the compartment information provided in the model's reactions. This can be done through using the
+``--compartment`` option:
+
+.. code-block:: shell
+
+    $ psamm-model vis --compartment
+
+
 
 SBML Export (``sbmlexport``)
 ----------------------------
