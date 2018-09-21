@@ -458,13 +458,12 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
                                                        cpd_object[row[2]]))
                                     rxn_list.append(row[0])
 
-                filter_dict = defaultdict(list)
-                for r, cpair in zip(rxn_list, cpair_list):
-                    filter_dict[r].append(cpair)
-        except:
-            if IOError:
-                logger.error('Invalid file path, no such file or directory '
-                             ': {}' .format(method))
+            filter_dict = defaultdict(list)
+            for r, cpair in zip(rxn_list, cpair_list):
+                filter_dict[r].append(cpair)
+        except IOError:
+            logger.error('Invalid file path, no such file or directory '
+                         ': {}' .format(method))
             quit()
 
     cpairs_ordered_filter_dict = {}

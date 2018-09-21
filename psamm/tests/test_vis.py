@@ -19,16 +19,16 @@
 
 from __future__ import unicode_literals
 
+import csv
 import unittest
 import os
-from psamm.formula import Formula, Atom, Radical
+from psamm.formula import Formula, Atom
 from psamm.commands import vis
 from psamm.reaction import Compound, Reaction, Direction
-from psamm.datasource import entry
-from collections import defaultdict, OrderedDict
-from psamm.database import DictDatabase, ChainedDatabase
+from collections import defaultdict
+from psamm.database import DictDatabase
 from psamm.datasource.reaction import parse_reaction, parse_compound
-from psamm.datasource import native, context, entry
+from psamm.datasource import entry
 from psamm.metabolicmodel import MetabolicModel
 from psamm import graph
 from psamm.datasource.native import NativeModel, ReactionEntry, CompoundEntry
@@ -38,29 +38,125 @@ import tempfile
 class TestMakeFilterDict(unittest.TestCase):
     def setUp(self):
         native_model = NativeModel()
-        native_model.reactions.add_entry(ReactionEntry({
-            'id': 'rxn1','equation': parse_reaction('fum_c[c] + h2o_c[c] '
-                                                    '<=> mal_L_c[c]')}))
-        native_model.compounds.add_entry(CompoundEntry({
-            'id': 'fum_c[c]', 'formula': parse_compound('C4H2O4', 'c')}))
-        native_model.compounds.add_entry(CompoundEntry({
-            'id': 'h2o_c[c]', 'formula': parse_compound('H2O', 'c')}))
-        native_model.compounds.add_entry(CompoundEntry({
-            'id': 'mal_L_c[c]', 'formula': parse_compound('C4H4O5', 'c')}))
+        native_model.reactions.add_entry(ReactionEntry({'id': 'rxn1', 'equation': parse_reaction('fum_c[c] + h2o_c[c] <=> mal_L_c[c]')}))
+        native_model.compounds.add_entry(CompoundEntry({'id': 'fum_c[c]', 'formula': parse_compound('C4H2O4', 'c')}))
+        native_model.compounds.add_entry(CompoundEntry({'id': 'h2o_c[c]', 'formula': parse_compound('H2O', 'c')}))
+        native_model.compounds.add_entry(CompoundEntry({'id': 'mal_L_c[c]', 'formula': parse_compound('C4H4O5', 'c')}))
+        native_model.reactions.add_entry(ReactionEntry({'id': 'rxn2', 'equation': parse_reaction('q8_c[c] + succ_c[c] => fum_c[c] + q8h2_c[c]')}))
+        native_model.compounds.add_entry(CompoundEntry({'id': 'q8_c[c]', 'formula': parse_compound('C49H74O4', 'c')}))
+        native_model.compounds.add_entry(CompoundEntry({'id': 'q8h2_c[c]', 'formula': parse_compound('C49H76O4', 'c')}))
+        native_model.compounds.add_entry(CompoundEntry({'id': 'succ_c[c]', 'formula': parse_compound('C4H4O4', 'c')}))
+        self.native = native_model
+        self.mm = native_model.create_metabolic_model()
+
+        self.cpd_formula = {'fum_c': Formula.parse('C4H2O4'), 'h2o_c': Formula.parse('H2O'),
+                            'mal_L_c': Formula.parse('C4H4O5'), 'q8_c': Formula.parse('C49H74O4'),
+                            'q8h2_c': Formula.parse('C49H76O4'), 'succ_c': Formula.parse('C4H4O4')}
+        self.element = 'C'
+        self.method = 'fpp'
+        self.exclude_rxns = []
+        self.hide_edges = None
+
+    def test1_default_setting(self):
+        e1 = vis.make_filter_dict(
+            self.native, self.mm, self.method, self.element, self.cpd_formula,
+            self.hide_edges, self.exclude_rxns)
+        e1_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))],
+                  'rxn2': [(Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
+                           (Compound('succ_c', 'c'), Compound('fum_c', 'c'))]}
+        self.assertEqual(e1, e1_res)
+
+    def test2_nofpp(self):
+        e2 = vis.make_filter_dict(
+            self.native, self.mm, 'no-fpp', self.element, self.cpd_formula,
+            self.hide_edges, self.exclude_rxns)
+        e2_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))],
+                  'rxn2': [(Compound('q8_c', 'c'), Compound('fum_c', 'c')),
+                           (Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
+                           (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
+                           (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
+        self.assertEqual(e2, e2_res)
+
+    def test3_element_hydrogen(self):
+        e3 = vis.make_filter_dict(
+            self.native, self.mm, self.method, 'H', self.cpd_formula,
+            self.hide_edges, self.exclude_rxns)
+        e3_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c')),
+                           (Compound('h2o_c', 'c'), Compound('mal_L_c', 'c'))],
+                  'rxn2': [(Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
+                           (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
+                           (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
+        self.assertEqual(e3, e3_res)
+
+    def test4_exclude_rxn(self):
+        e4 = vis.make_filter_dict(
+            self.native, self.mm, self.method, self.element, self.cpd_formula,
+            self.hide_edges, ['rxn2'])
+        e4_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))]}
+        self.assertEqual(e4, e4_res)
+
+    def test5_if_missing_formula_fpp(self):
+        cpd_formula = {'fum_c': Formula.parse('C4H2O4'), 'h2o_c': Formula.parse('H2O'),
+                       'mal_L_c': Formula.parse('C4H4O5'), 'q8_c': Formula.parse('C49H74O4'),
+                       'q8h2_c': Formula.parse('C49H76O4')}
+        e5 = vis.make_filter_dict(
+            self.native, self.mm, self.method, self.element, cpd_formula,
+            self.hide_edges, self.exclude_rxns)
+        e5_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))]}
+        self.assertEqual(e5, e5_res)
+
+    def test6_if_missing_formula_nofpp(self):
+        cpd_formula = {'fum_c': Formula.parse('C4H2O4'), 'h2o_c': Formula.parse('H2O'),
+                       'mal_L_c': Formula.parse('C4H4O5'), 'q8_c': Formula.parse('C49H74O4'),
+                       'q8h2_c': Formula.parse('C49H76O4')}
+        e6 = vis.make_filter_dict(
+            self.native, self.mm, 'no-fpp', self.element, cpd_formula,
+            self.hide_edges, self.exclude_rxns)
+        e6_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))],
+                  'rxn2': [(Compound('q8_c', 'c'), Compound('fum_c', 'c')),
+                           (Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
+                           (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
+                           (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
+        self.assertEqual(e6, e6_res)
+
+    def test7_hide_edges(self):
+        path = os.path.join(tempfile.mkdtemp(), 'remove_edges')
+        with open(path, 'w') as f:
+            f.write('{}\t{}\n{}\t{}'.format('q8_c[c]', 'q8h2_c[c]', 'fum_c[c]', 'mal_L_c[c]'))
+        e7 = vis.make_filter_dict(
+            self.native, self.mm, self.method, self.element, self.cpd_formula,
+            open(path), self.exclude_rxns)
+        e7_res = {'rxn2': [(Compound('succ_c', 'c'), Compound('fum_c', 'c'))]}
+        self.assertEqual(e7, e7_res)
+
+    def test8_file_path(self):
+        path = os.path.join(tempfile.mkdtemp(), 'primarypairs_prediction')
+        with open(path, 'w') as f:
+            row1 = '{}\t{}\t{}\t{}'.format('rxn2', 'q8_c[c]', 'q8h2_c[c]', 'C49H74O4')
+            row2 = '{}\t{}\t{}\t{}'.format('rxn2', 'succ_c[c]', 'fum_c[c]', 'C4H2O4')
+            row3 = '{}\t{}\t{}\t{}'.format('rxn2', 'succ_c[c]', 'q8h2_c[c]', 'H2')
+            f.write('\n'.join([row1, row2, row3]))
+        e8 = vis.make_filter_dict(
+            self.native, self.mm, path, self.element, self.cpd_formula,
+            self.hide_edges, self.exclude_rxns)
+        e8_res = {'rxn2': [(Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
+                           (Compound('succ_c', 'c'), Compound('fum_c', 'c'))]}
+        self.assertEqual(e8, e8_res)
 
 
-class TestMakeCpairDict(unittest.TestCase):      ##### OK.
+class TestMakeCpairDict(unittest.TestCase):
     def setUp(self):
-        database = DictDatabase()
-        database.set_reaction('rxn1', parse_reaction('A[c] + B[c] <=> C[c] + D[c]'))
-        database.set_reaction('rxn2', parse_reaction('B[c] <=> (2) D[c]'))
-        database.set_reaction('rxn3', parse_reaction('D[c] => D[e]'))
-        database.set_reaction('rxn4', parse_reaction('D[e] <=>'))
-        # database.set_reaction('rxn5', parse_reaction('A[c] + D[c] <=> C[e] + E'))
-        # self.mm.set_reaction('rxn_3', parse_reaction('A => D[e]'))
-        # self.mm.set_reaction('rxn_4', parse_reaction('A + 2 B => C'))
-        # self.mm.set_reaction('rxn_5', parse_reaction('C => 3 D[e]'))
-        self.mm = MetabolicModel.load_model(database)
+        native_model = NativeModel()
+        native_model.reactions.add_entry(
+            ReactionEntry({'id': 'rxn1', 'equation': parse_reaction('A[c] + B[c] <=> C[c] + D[c]')}))
+        native_model.reactions.add_entry(
+            ReactionEntry({'id': 'rxn2', 'equation': parse_reaction('B[c] <=> (2) D[c]')}))
+        native_model.reactions.add_entry(
+            ReactionEntry({'id': 'rxn3', 'equation': parse_reaction('D[c] => D[e]')}))
+        native_model.reactions.add_entry(
+            ReactionEntry({'id': 'rxn4', 'equation': parse_reaction('D[e] <=>')}))
+        self.native = native_model
+        self.mm = native_model.create_metabolic_model()
 
         self.filter_dict = {'rxn1': [(Compound('A', 'c'), Compound('C', 'c')),
                                      (Compound('B', 'c'), Compound('C', 'c')),
@@ -151,17 +247,34 @@ class TestMakeCpairDict(unittest.TestCase):      ##### OK.
         self.assertEqual(e5, e5_res)
         self.assertEqual(n5, n5_res)
 
+    def test_MakeCpairDict_filepath(self):
+        e6, n6 = vis.make_cpair_dict(self.mm, self.filter_dict, self.subset,
+                                  self.reaction_flux, 'file_path')
+        e6_res = defaultdict(lambda: defaultdict(list))
+        e6_res[(Compound('A', 'c'), Compound('C', 'c'))]['both'].append('rxn1_1')
+        e6_res[(Compound('B', 'c'), Compound('C', 'c'))]['both'].append('rxn1_2')
+        e6_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] = ['rxn1_3', 'rxn2_1']
+        e6_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'].append('rxn3_1')
 
-class TestMakeEdgeValues(unittest.TestCase):      ##### OK.
+        n6_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1','rxn1_3': 'rxn1', 'rxn2_1':'rxn2', 'rxn3_1': 'rxn3'}
+        self.assertEqual(e6, e6_res)
+        self.assertEqual(n6, n6_res)
+
+# def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
+#                      cpair_dict, new_id_mapping, method):
+class TestMakeEdgeValues(unittest.TestCase):
     def setUp(self):
-        self.database = DictDatabase()
-        self.database.set_reaction('FUM', parse_reaction('fum_c[c] + h2o_c[c] <=> mal_L_c[c]'))
-        self.database.set_reaction('CYTBD', parse_reaction(
-            '(2) h_c[c] + (0.5) o2_c[c] + q8h2_c[c] => h2o_c[c] + '
-            '(2) h_e[e] + q8_c[c]'))
-        self.database.set_reaction('FRD7', parse_reaction('fum_c[c] + q8h2_c[c] => q8_c[c] + succ_c[c]'))
-        self.mm = MetabolicModel.load_model(
-            self.database, self.database.reactions)
+        native_model = NativeModel()
+        native_model.reactions.add_entry(
+            ReactionEntry({'id': 'FUM', 'equation': parse_reaction('fum_c[c] + h2o_c[c] <=> mal_L_c[c]')}))
+        native_model.reactions.add_entry(
+            ReactionEntry({'id': 'CYTBD', 'equation': parse_reaction(
+                '(2) h_c[c] + (0.5) o2_c[c] + q8h2_c[c] => h2o_c[c] + (2) h_e[e] + q8_c[c]')}))
+        native_model.reactions.add_entry(
+            ReactionEntry({'id': 'FRD7', 'equation': parse_reaction('fum_c[c] + q8h2_c[c] => q8_c[c] + succ_c[c]')}))
+        self.native = native_model
+        self.mm = native_model.create_metabolic_model()
+
         self.reaction_flux = {'FUM': 5.06, 'CYTBD': 43.60}
         self.compound_formula = {
             'h2o_c': Formula({Atom('O'): 1, Atom('H'):2}),
@@ -191,16 +304,20 @@ class TestMakeEdgeValues(unittest.TestCase):      ##### OK.
                                'FUM_2': 'FUM', 'CYTBD_2': 'CYTBD'}
         self.method = 'fpp'
 
-    def test_edge_values_basic(self):
-        e1 = vis.make_edge_values(
+    def test_edge_values_defaultSetting_or_filepath(self):
+        e1_default = vis.make_edge_values(
             self.reaction_flux, self.mm, self.compound_formula, self.element,
             self.split_map,self.cpair_dict, self.new_id_mapping, self.method)
+        e1_filepath = vis.make_edge_values(
+            self.reaction_flux, self.mm, self.compound_formula, self.element,
+            self.split_map, self.cpair_dict, self.new_id_mapping, 'file_path')
         e1_res = {(Compound('q8_c', 'c'), 'CYTBD,FRD7'): 43.60,
               (Compound('mal_L_c', 'c'), 'FUM'): 5.06,
               (Compound('q8h2_c', 'c'), 'CYTBD,FRD7'): 43.60,
               (Compound('fum_c', 'c'), 'FUM'): 5.06
               }
-        self.assertEqual(e1, e1_res)
+        self.assertEqual(e1_default, e1_res)
+        self.assertEqual(e1_filepath, e1_res)
 
     def test_edge_values_split_map(self):
         e2 = vis.make_edge_values(
@@ -256,6 +373,17 @@ class TestMakeEdgeValues(unittest.TestCase):      ##### OK.
                   (Compound('h2o_c', 'c'), 'CYTBD'): 43.60
                   }
         self.assertEqual(e5, e5_res)
+
+    def test_edge_values_nofpp_split(self):
+        e6 = vis.make_edge_values(
+            self.reaction_flux, self.mm, self.compound_formula, self.element,
+            True, self.cpair_dict, self.new_id_mapping, 'no-fpp')
+        e6_res = {(Compound('q8_c', 'c'), 'CYTBD'): 43.60,
+                  (Compound('mal_L_c', 'c'), 'FUM'): 5.06,
+                  (Compound('q8h2_c', 'c'), 'CYTBD'): 43.60,
+                  (Compound('fum_c', 'c'), 'FUM'): 5.06
+                  }
+        self.assertEqual(e6, e6_res)
 
 
 class TestAddGraphNodes(unittest.TestCase):
@@ -362,21 +490,28 @@ class TestUpdateNodeColor(unittest.TestCase):
             'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
                 'cpd', 'original_id': Compound('C', 'c'), 'compartment': 'c',
             'fillcolor': '#ffd8bf'})
+        node_d = graph.Node({
+            'id': 'D[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
+                'cpd', 'original_id': Compound('D', 'c'), 'compartment': 'c',
+            'fillcolor': '#ffd8bf'})
         node_ac = graph.Node({
-            'id': 'rxn1_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',  # 'id'?
+            'id': 'rxn1_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
+            'original_id': ['rxn1'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+        node_ad = graph.Node({
+            'id': 'rxn1_2', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'original_id': ['rxn1'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
 
         node_ac_comb = graph.Node({
-            'id': 'rxn1_1,rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',  # 'id'?
+            'id': 'rxn1_1,rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'original_id': ['rxn1', 'rxn2'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
 
         self.g = graph.Graph()
-        self.node_list = [node_a, node_c, node_ac]
+        self.node_list = [node_a, node_c, node_d, node_ac, node_ad]
         for node in self.node_list:
             self.g.add_node(node)
 
         self.g_comb = graph.Graph()
-        self.node_list_comb = [node_a, node_c, node_ac_comb]
+        self.node_list_comb = [node_a, node_c, node_d, node_ac_comb, node_ad]
         for node in self.node_list_comb:
             self.g_comb.add_node(node)
 
@@ -384,25 +519,10 @@ class TestUpdateNodeColor(unittest.TestCase):
 
     def test1_add_color_emptyrecolordict(self):
         g1 = vis.update_node_color(self.g, {})
-        node_a1 = graph.Node({
-            'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled',
-            'type': 'cpd', 'original_id': Compound('A', 'c'),
-            'compartment': 'c', 'fillcolor': '#ffd8bf'})
-        node_c1 = graph.Node({
-            'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled',
-            'type': 'cpd', 'original_id': Compound('C', 'c'),
-            'compartment': 'c', 'fillcolor': '#ffd8bf'})
-        node_ac1 = graph.Node({
-            'id': 'rxn1_1', 'shape': 'box', 'style': 'filled',
-            'type': 'rxn', 'original_id': ['rxn1'],
-            'compartment': 'c', 'fillcolor': '#c9fccd'})
+        self.assertTrue(all(i in self.node_list for i in g1.nodes))
+        self.assertTrue(all(i in g1.nodes for i in self.node_list))
 
-        self.assertTrue(all(i in [node_a1, node_c1, node_ac1]
-                            for i in g1.nodes))
-        self.assertTrue(all(i in g1.nodes for i in
-                            [node_a1, node_c1, node_ac1]))
-
-    def test2_add_color_recolor(self):
+    def test2_add_color_recolor_splitGraph(self):
         g2 = vis.update_node_color(self.g, self.recolor_dict)
         node_a2 = graph.Node({
             'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled',
@@ -416,9 +536,16 @@ class TestUpdateNodeColor(unittest.TestCase):
             'id': 'rxn1_1', 'shape': 'box', 'style': 'filled',
             'type': 'rxn', 'original_id': ['rxn1'], 'compartment': 'c',
             'fillcolor': '#ef70de'})
-
-        self.assertTrue(all(i in [node_a2, node_c2, node_ac2] for i in g2.nodes))
-        self.assertTrue(all(i in g2.nodes for i in [node_a2, node_c2, node_ac2]))
+        node_d2 = graph.Node({
+            'id': 'D[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
+                'cpd', 'original_id': Compound('D', 'c'), 'compartment': 'c',
+            'fillcolor': '#ffd8bf'})
+        node_ad2 = graph.Node({
+            'id': 'rxn1_2', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
+            'original_id': ['rxn1'], 'compartment': 'c', 'fillcolor':'#ef70de'})
+        node_list = [node_a2, node_c2, node_d2, node_ac2, node_ad2]
+        self.assertTrue(all(i in node_list for i in g2.nodes))
+        self.assertTrue(all(i in g2.nodes for i in node_list))
 
     def test3_update_color_recolorCombinedRxnNode(self):
         g3 = vis.update_node_color(self.g_comb, self.recolor_dict)
@@ -428,12 +555,24 @@ class TestUpdateNodeColor(unittest.TestCase):
         node_c3 = graph.Node({'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled',
                              'type': 'cpd', 'original_id': Compound('C', 'c'),
                              'compartment': 'c', 'fillcolor': '#ffd8bf'})
+        node_d3 = graph.Node({
+            'id': 'D[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
+                'cpd', 'original_id': Compound('D', 'c'), 'compartment': 'c',
+            'fillcolor': '#ffd8bf'})
         node_ac3 = graph.Node({
             'id': 'rxn1_1,rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'original_id': ['rxn1', 'rxn2'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+        node_ad3 = graph.Node({
+            'id': 'rxn1_2', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
+            'original_id': ['rxn1'], 'compartment': 'c', 'fillcolor': '#ef70de'})
+        node_list = [node_a3, node_c3, node_ac3, node_d3, node_ad3]
+        self.assertTrue(all(i in node_list for i in g3.nodes))
+        self.assertTrue(all(i in g3.nodes for i in node_list))
 
-        self.assertTrue(all(i in [node_a3, node_c3, node_ac3] for i in g3.nodes))
-        self.assertTrue(all(i in g3.nodes for i in [node_a3, node_c3, node_ac3]))
+    def test4_add_color_emptyrecolordict_combGraph(self):
+        g4 = vis.update_node_color(self.g_comb, {})
+        self.assertTrue(all(i in self.node_list_comb for i in g4.nodes))
+        self.assertTrue(all(i in g4.nodes for i in self.node_list_comb))
 
 
 ### def add_edges(g, cpairs_dict, method, split):
@@ -472,20 +611,18 @@ class TestAddEdges(unittest.TestCase):
         self.g1 = graph.Graph()
         for node in [self.node_a, self.node_c, self.node_ac_both,
                      self.node_ac_forw, self.node_ac_back]:
-            self.g1.add_node(node)          #graph for default setting
+            self.g1.add_node(node)
 
         self.g2 = graph.Graph()
         for node in [self.node_a, self.node_c, self.node_rxn1,
                      self.node_rxn2, self.node_rxn3, self.node_rxn4]:
-            self.g2.add_node(node)          #graph for split or no-fpp
+            self.g2.add_node(node)
 
         cpair_dict = defaultdict(lambda: defaultdict(list))
         cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['both'] = ['rxn1_1', 'rxn2_1']
         cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['forward'] = ['rxn3_1']
         cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['back'] = ['rxn4_1']
         self.cpair_dict = cpair_dict
-        # self.new_id_mapping = {'rxn1_1': 'rxn1', 'rxn2_1': 'rxn2',
-        #                        'rxn3_1': 'rxn3', 'rxn4_1': 'rxn4'}
         self.split = False
         self.method = 'fpp'
 
@@ -533,18 +670,12 @@ class TestAddBiomassRnxs(unittest.TestCase):
         self.node_a = graph.Node({'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled',
                                   'type': 'cpd', 'original_id': Compound('A', 'c'),
                                   'compartment': 'c', 'fillcolor':'#ffd8bf'})
-        # self.node_b = graph.Node({'id': 'B[b]', 'shape': 'ellipse', 'style': 'filled',
-        #                           'type': 'cpd', 'original_id': Compound('B', 'c'),
-        #                           'compartment': 'c'})
         self.node_c = graph.Node({'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled',
                                   'type': 'cpd', 'original_id': Compound('C', 'c'),
                                   'compartment': 'c', 'fillcolor':'#ffd8bf'})
         self.node_rxn1 = graph.Node({
             'id': 'rxn1_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'original_id': ['rxn1'], 'compartment': 'c', 'fillcolor':'#c9fccd'})
-        # self.node_rxn1_2 = graph.Node({
-        #     'id': 'rxn1_2', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-        #     'original_id': ['rxn1'], 'compartment': 'c'})
         self.edge_A_rxn = graph.Edge(self.node_a, self.node_rxn1, {'dir': 'both'})
         self.edge_C_rxn = graph.Edge(self.node_rxn1, self.node_c, {'dir': 'both'})
         self.g = graph.Graph()
@@ -571,17 +702,6 @@ class TestAddBiomassRnxs(unittest.TestCase):
         edge_bio_A = graph.Edge(bio_A, self.node_a, {'dir': 'forward'})
         edge_bio_C = graph.Edge(self.node_c, bio_C, {'dir': 'forward'})
 
-        # for node in g1.nodes:
-        #     print('vis', node.props)
-        #
-        # for node in [self.node_a, self.node_c, self.node_rxn1,
-        #              bio_A, bio_C]:
-        #     print('test',node.props)
-        # for edge in g1.edges:
-        #     print('vis', edge.source, edge.dest, edge.props)
-        # for edge in [self.edge_A_rxn, self.edge_C_rxn, edge_bio_A, edge_bio_C]:
-        #     print('test',edge.source, edge.dest, edge.props)
-
         self.assertTrue(all(i in [self.node_a, self.node_c, self.node_rxn1,
                                   bio_A, bio_C] for i in g1.nodes))
 
@@ -589,7 +709,6 @@ class TestAddBiomassRnxs(unittest.TestCase):
                                   edge_bio_A, edge_bio_C] for i in g1.edges))
 
 
-# def add_exchange_rxns(g, rxn_id, reaction):
 class TestAddExchangeRxns(unittest.TestCase):
     def setUp(self):
         self.a = graph.Node({
@@ -909,7 +1028,6 @@ class TestEdgePropsWithFBA(unittest.TestCase):
         for i in self.edge_list_2:
             self.g2.add_edge(i)
 
-            # rxn1: 5.0, rxn2: 0, rxn3: 1.7, rxn4: 3.3
         self.edge_values = {(Compound('q8_c', 'c'), 'CYTBD,FRD7'): 43.60,
                             (Compound('mal_L_c', 'c'), 'FUM'): 5.06,
                             (Compound('q8h2_c', 'c'), 'CYTBD,FRD7'): 43.60,
@@ -978,9 +1096,7 @@ class TestMakeCptTree(unittest.TestCase):
         c2_res = defaultdict(set)
         c2_res['c'].add('p')
         c2_res['p'].add('c')
-        # e2_res = 'c'
         self.assertEqual(c2, c2_res)
-        # self.assertEqual(e2, e2_res)
 
     def test3_if_e_not_inthemodel_cpmi(self):
         boundaries = [('c', 'p'), ('c', 'mi')]
@@ -991,106 +1107,7 @@ class TestMakeCptTree(unittest.TestCase):
         c3_res['c'].add('mi')
         c3_res['mi'].add('c')
         c3_res['p'].add('c')
-        # e3_res = 'mi'   failed
         self.assertEqual(c3, c3_res)
-        # self.assertEqual(e3, e3_res)
-
-
-# def make_filter_dict(model, mm, method, element, cpd_formula, arg_hide_edges, exclude_rxns)
-class TestFilterDict(unittest.TestCase):
-    def setUp(self):
-        native_model = NativeModel()
-        native_model.reactions.add_entry(ReactionEntry({'id': 'rxn1', 'equation': parse_reaction('fum_c[c] + h2o_c[c] <=> mal_L_c[c]')}))
-        native_model.compounds.add_entry(CompoundEntry({'id': 'fum_c[c]', 'formula': parse_compound('C4H2O4', 'c')}))
-        native_model.compounds.add_entry(CompoundEntry({'id': 'h2o_c[c]', 'formula': parse_compound('H2O', 'c')}))
-        native_model.compounds.add_entry(CompoundEntry({'id': 'mal_L_c[c]', 'formula': parse_compound('C4H4O5', 'c')}))
-        native_model.reactions.add_entry(ReactionEntry({'id': 'rxn2', 'equation': parse_reaction('q8_c[c] + succ_c[c] => fum_c[c] + q8h2_c[c]')}))
-        native_model.compounds.add_entry(CompoundEntry({'id': 'q8_c[c]', 'formula': parse_compound('C49H74O4', 'c')}))
-        native_model.compounds.add_entry(CompoundEntry({'id': 'q8h2_c[c]', 'formula': parse_compound('C49H76O4', 'c')}))
-        native_model.compounds.add_entry(CompoundEntry({'id': 'succ_c[c]', 'formula': parse_compound('C4H4O4', 'c')}))
-        self.native = native_model
-        self.mm = native_model.create_metabolic_model()
-
-        self.cpd_formula = {'fum_c': Formula.parse('C4H2O4'), 'h2o_c': Formula.parse('H2O'),
-                            'mal_L_c': Formula.parse('C4H4O5'), 'q8_c': Formula.parse('C49H74O4'),
-                            'q8h2_c': Formula.parse('C49H76O4'), 'succ_c': Formula.parse('C4H4O4')}
-        self.element = 'C'
-        self.method = 'fpp'
-        self.exclude_rxns = []
-        self.hide_edges = None
-
-    def test1_default_setting(self):
-        e1 = vis.make_filter_dict(
-            self.native, self.mm, self.method, self.element, self.cpd_formula,
-            self.hide_edges, self.exclude_rxns)
-        e1_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))],
-                  'rxn2': [(Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
-                           (Compound('succ_c', 'c'), Compound('fum_c', 'c'))]}
-        self.assertEqual(e1, e1_res)
-
-    def test2_nofpp(self):
-        e2 = vis.make_filter_dict(
-            self.native, self.mm, 'no-fpp', self.element, self.cpd_formula,
-            self.hide_edges, self.exclude_rxns)
-        e2_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))],
-                  'rxn2': [(Compound('q8_c', 'c'), Compound('fum_c', 'c')),
-                           (Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
-                           (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
-                           (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
-        self.assertEqual(e2, e2_res)
-
-    def test3_element_hydrogen(self):
-        e3 = vis.make_filter_dict(
-            self.native, self.mm, self.method, 'H', self.cpd_formula,
-            self.hide_edges, self.exclude_rxns)
-        e3_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c')),
-                           (Compound('h2o_c', 'c'), Compound('mal_L_c', 'c'))],
-                  'rxn2': [(Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
-                           (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
-                           (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
-        self.assertEqual(e3, e3_res)
-
-    def test4_exclude_rxn(self):
-        e4 = vis.make_filter_dict(
-            self.native, self.mm, self.method, self.element, self.cpd_formula,
-            self.hide_edges, ['rxn2'])
-        e4_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))]}
-        self.assertEqual(e4, e4_res)
-
-    def test5_if_missing_formula_fpp(self):
-        cpd_formula = {'fum_c': Formula.parse('C4H2O4'), 'h2o_c': Formula.parse('H2O'),
-                       'mal_L_c': Formula.parse('C4H4O5'), 'q8_c': Formula.parse('C49H74O4'),
-                       'q8h2_c': Formula.parse('C49H76O4')}
-        e5 = vis.make_filter_dict(
-            self.native, self.mm, self.method, self.element, cpd_formula,
-            self.hide_edges, self.exclude_rxns)
-        e5_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))]}
-        self.assertEqual(e5, e5_res)
-
-    def test6_if_missing_formula_nofpp(self):
-        cpd_formula = {'fum_c': Formula.parse('C4H2O4'), 'h2o_c': Formula.parse('H2O'),
-                       'mal_L_c': Formula.parse('C4H4O5'), 'q8_c': Formula.parse('C49H74O4'),
-                       'q8h2_c': Formula.parse('C49H76O4')}
-        e6 = vis.make_filter_dict(
-            self.native, self.mm, 'no-fpp', self.element, cpd_formula,
-            self.hide_edges, self.exclude_rxns)
-        e6_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))],
-                  'rxn2': [(Compound('q8_c', 'c'), Compound('fum_c', 'c')),
-                           (Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
-                           (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
-                           (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
-        self.assertEqual(e6, e6_res)
-
-    # def test7_hide_edges(self):
-    #     path = os.path.join(tempfile.mkdtemp(), 'remove_edges')
-    #     with open(path, 'w') as f:
-    #         f.write('{}\t{}\n{}\t{}'.format('q8_c[c]', 'q8h2_c[c]', 'fum_c[c]', 'mal_L_c[c]'))
-    #     e7 = vis.make_filter_dict(
-    #         self.native, self.mm, self.method, self.element, self.cpd_formula,
-    #         path, self.exclude_rxns)
-    #     e7_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))],
-    #               'rxn2': [(Compound('succ_c', 'c'), Compound('fum_c', 'c'))]}
-    #     self.assertEqual(e7, e7_res)
 
 
 class TestGetCptBoundaries(unittest.TestCase):
