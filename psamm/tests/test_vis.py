@@ -55,8 +55,6 @@ class TestMakeFilterDict(unittest.TestCase):
             'id': 'succ_c[c]', 'formula': parse_compound('C4H4O4', 'c')}))
         self.native = native_model
         self.mm = native_model.create_metabolic_model()
-        for c in self.mm.compounds:
-            print(c)
 
         self.cpd_formula = {'fum_c': Formula.parse('C4H2O4'),
                             'h2o_c': Formula.parse('H2O'),
@@ -144,8 +142,7 @@ class TestMakeFilterDict(unittest.TestCase):
     def test7_hide_edges(self):
         path = os.path.join(tempfile.mkdtemp(), 'remove_edges')
         with open(path, 'w') as f:
-            f.write('{}\t{}\n{}\t{}'.format('q8_c[c]', 'q8h2_c[c]',
-                                            'fum_c[c]', 'mal_L_c[c]'))
+            f.write('{}\t{}\n{}\t{}'.format('q8_c[c]', 'q8h2_c[c]', 'fum_c[c]', 'mal_L_c[c]'))
         e7 = vis.make_filter_dict(
             self.native, self.mm, self.method, self.element, self.cpd_formula,
             open(path), self.exclude_rxns)
@@ -210,14 +207,14 @@ class TestMakeCpairDict(unittest.TestCase):
         e1_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'].\
             append('rxn3_1')
 
-        n1_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1','rxn1_3': 'rxn1',
+        n1_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1', 'rxn1_3': 'rxn1',
                   'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3'}
         self.assertEqual(e1, e1_res)
         self.assertEqual(n1, n1_res)
 
     def test_MakeCpairDict_nofpp(self):
         e2, n2 = vis.make_cpair_dict(self.mm, self.filter_dict, self.subset,
-                                  self.reaction_flux, 'no-fpp')
+                                     self.reaction_flux, 'no-fpp')
         e2_res = defaultdict(lambda: defaultdict(list))
         e2_res[(Compound('A', 'c'), Compound('C', 'c'))]['both'] = ['rxn1']
         e2_res[(Compound('B', 'c'), Compound('C', 'c'))]['both'] = ['rxn1']
@@ -230,7 +227,7 @@ class TestMakeCpairDict(unittest.TestCase):
         self.assertEqual(n2, n2_res)
 
     def test_MakeCpairDict_fba(self):
-        reaction_flux = {'rxn1': 9.8, 'rxn3': 9.8, 'rxn4':9.8}
+        reaction_flux = {'rxn1': 9.8, 'rxn3': 9.8, 'rxn4': 9.8}
         e3, n3 = vis.make_cpair_dict(self.mm, self.filter_dict, self.subset,
                                      reaction_flux, self.method)
         e3_res = defaultdict(lambda: defaultdict(list))
@@ -273,27 +270,27 @@ class TestMakeCpairDict(unittest.TestCase):
                        'rxn2': [(Compound('B', 'c'), Compound('D', 'c'))],
                        'rxn3': [(Compound('D', 'c'), Compound('D', 'e'))]}
         e5, n5 = vis.make_cpair_dict(self.mm, filter_dict, self.subset,
-                                  self.reaction_flux, self.method)
+                                     self.reaction_flux, self.method)
         e5_res = defaultdict(lambda: defaultdict(list))
         e5_res[(Compound('A', 'c'), Compound('C', 'c'))]['both'].\
             append('rxn1_1')
         e5_res[(Compound('B', 'c'), Compound('C', 'c'))]['both'].\
             append('rxn1_2')
         e5_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] = \
-            ['rxn1_3','rxn2_1']
+            ['rxn1_3', 'rxn2_1']
         e5_res[(Compound('A', 'c'), Compound('D', 'c'))]['both'].\
             append('rxn1_4')
         e5_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'].\
             append('rxn3_1')
 
-        n5_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1','rxn1_3': 'rxn1',
-                  'rxn1_4': 'rxn1', 'rxn2_1':'rxn2', 'rxn3_1': 'rxn3'}
+        n5_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1', 'rxn1_3': 'rxn1',
+                  'rxn1_4': 'rxn1', 'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3'}
         self.assertEqual(e5, e5_res)
         self.assertEqual(n5, n5_res)
 
     def test_MakeCpairDict_filepath(self):
         e6, n6 = vis.make_cpair_dict(self.mm, self.filter_dict, self.subset,
-                                  self.reaction_flux, 'file_path')
+                                     self.reaction_flux, 'file_path')
         e6_res = defaultdict(lambda: defaultdict(list))
         e6_res[(Compound('A', 'c'), Compound('C', 'c'))]['both'].\
             append('rxn1_1')
@@ -328,7 +325,7 @@ class TestMakeEdgeValues(unittest.TestCase):
 
         self.reaction_flux = {'FUM': 5.06, 'CYTBD': 43.60}
         self.compound_formula = {
-            'h2o_c': Formula({Atom('O'): 1, Atom('H'):2}),
+            'h2o_c': Formula({Atom('O'): 1, Atom('H'): 2}),
             'fum_c': Formula({Atom('O'): 4, Atom('C'): 4, Atom('H'): 2}),
             'h_e': Formula({Atom('O'): 1, Atom('H'): 2}),
             'fum_e': Formula({Atom('O'): 4, Atom('C'): 4, Atom('H'): 2}),
@@ -358,15 +355,14 @@ class TestMakeEdgeValues(unittest.TestCase):
     def test_edge_values_defaultSetting_or_filepath(self):
         e1_default = vis.make_edge_values(
             self.reaction_flux, self.mm, self.compound_formula, self.element,
-            self.split_map,self.cpair_dict, self.new_id_mapping, self.method)
+            self.split_map, self.cpair_dict, self.new_id_mapping, self.method)
         e1_filepath = vis.make_edge_values(
             self.reaction_flux, self.mm, self.compound_formula, self.element,
             self.split_map, self.cpair_dict, self.new_id_mapping, 'file_path')
         e1_res = {(Compound('q8_c', 'c'), 'CYTBD,FRD7'): 43.60,
-              (Compound('mal_L_c', 'c'), 'FUM'): 5.06,
-              (Compound('q8h2_c', 'c'), 'CYTBD,FRD7'): 43.60,
-              (Compound('fum_c', 'c'), 'FUM'): 5.06
-              }
+                  (Compound('mal_L_c', 'c'), 'FUM'): 5.06,
+                  (Compound('q8h2_c', 'c'), 'CYTBD,FRD7'): 43.60,
+                  (Compound('fum_c', 'c'), 'FUM'): 5.06}
         self.assertEqual(e1_default, e1_res)
         self.assertEqual(e1_filepath, e1_res)
 
@@ -404,7 +400,7 @@ class TestMakeEdgeValues(unittest.TestCase):
         new_cpair_dict[(Compound('o2_c', 'c'), Compound(
             'h2o_c', 'c'))]['forward'].append('CYTBD_1')
         new_cpair_dict[(Compound('q8h2_c', 'c'), Compound(
-            'q8_c', 'c'))]['forward'] = ['CYTBD_2','FRD7_1']
+            'q8_c', 'c'))]['forward'] = ['CYTBD_2', 'FRD7_1']
         new_cpair_dict[(Compound('fum_c', 'c'), Compound(
             'succ_c', 'c'))]['forward'].append('FRD7_2')
         new_cpair_dict[(Compound('fum_c', 'c'), Compound(
@@ -455,7 +451,7 @@ class TestAddGraphNodes(unittest.TestCase):
         g1 = vis.add_graph_nodes(self.g, self.cpair_dict, self.method,
                                  self.new_id_mapping, self.split)
         node_a1 = graph.Node({
-            'id': 'A[c]', 'shape': 'ellipse','style': 'filled', 'type': 'cpd',
+            'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled', 'type': 'cpd',
             'label': 'A[c]', 'original_id': Compound('A', 'c'),
             'compartment': 'c', 'fillcolor': '#ffd8bf'})
         node_c1 = graph.Node({
@@ -509,7 +505,7 @@ class TestAddGraphNodes(unittest.TestCase):
         g3 = vis.add_graph_nodes(self.g, self.cpair_dict, 'no-fpp',
                                  self.new_id_mapping, self.split)
         node_a3 = graph.Node({
-            'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled','type':
+            'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
                 'cpd', 'original_id': Compound('A', 'c'), 'compartment': 'c',
             'fillcolor': '#ffd8bf', 'label': 'A[c]'})
         node_c3 = graph.Node({
@@ -517,7 +513,7 @@ class TestAddGraphNodes(unittest.TestCase):
                 'cpd', 'original_id': Compound('C', 'c'), 'compartment': 'c',
             'fillcolor': '#ffd8bf', 'label': 'C[c]'})
         node_rxn1 = graph.Node({
-            'id': 'rxn1_1','shape': 'box','style': 'filled', 'type': 'rxn',
+            'id': 'rxn1_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'original_id': ['rxn1'], 'compartment': 'c',
             'fillcolor': '#c9fccd', 'label': 'rxn1'})
 
@@ -653,7 +649,7 @@ class TestAddEdges(unittest.TestCase):
         self.node_rxn1 = graph.Node({
             'id': 'rxn1_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'original_id': ['rxn1'], 'compartment': 'c',
-            'fillcolor':'#c9fccd'})
+            'fillcolor': '#c9fccd'})
         self.node_rxn2 = graph.Node({
             'id': 'rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'original_id': ['rxn2'], 'compartment': 'c',
@@ -850,7 +846,7 @@ class TestAddExchangeRxns(unittest.TestCase):
         node_ex = graph.Node({
             'id': 'test_Ex_C', 'shape': 'box', 'style': 'filled', 'type':
                 'Ex_rxn', 'original_id': ['test_Ex_C'], 'compartment': 'e',
-            'fillcolor': '#90f998','label': 'test_Ex_C'})
+            'fillcolor': '#90f998', 'label': 'test_Ex_C'})
         edge_ex = graph.Edge(self.c_extracell, node_ex, {'dir': 'both'})
         self.node_list_c_to_e.append(node_ex)
         self.edge_list_c_to_e.append(edge_ex)
@@ -1026,9 +1022,9 @@ class TestUpdateNodeLabel(unittest.TestCase):
             self.node_Ex, self.bio_A]))
 
     def test_cpd_detail_id_formula_genes(self):
-        g4 = vis.update_node_label(self.g, [['id','formula','genes']],
+        g4 = vis.update_node_label(self.g, [['id', 'formula', 'genes']],
                                    self.rxn_detail, self.cpd_entries,
-                                self.rxn_entries, self.reaction_flux)
+                                   self.rxn_entries, self.reaction_flux)
         self.a.props['label'] = 'A[c]\nC6H11O9P'
         self.c.props['label'] = 'C[c]\nC6H11O9P'
         self.c_extracell.props['label'] = 'C[e]'

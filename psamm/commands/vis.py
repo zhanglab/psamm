@@ -52,7 +52,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--method',type=text_type, default='fpp',
+            '--method', type=text_type, default='fpp',
             help='Compound pair prediction method,'
                  'choices=[fpp, no-fpp, or file path]')
         parser.add_argument(
@@ -246,7 +246,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                     logger.info(
                         'This graph contains a large number of reactions, '
                         'graphs of this size may take a long time to '
-                        'create'.format (len(filter_dict.keys())))
+                        'create'.format(len(filter_dict.keys())))
                 if self._args.compartment:
                     render('dot', self._args.Image,
                            'reactions_compartmentalized.dot')
@@ -299,7 +299,7 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
                         edge_values[c, reaction] = abs(flux * float(val))
         rxn_set = set()
         for (c1, c2), rxns in iteritems(cpair_dict):
-            for dir, rlist in iteritems(rxns):
+            for direc, rlist in iteritems(rxns):
                 rlist_string = ','.join(new_id_mapping[r] for r in rlist)
                 if any(new_id_mapping[r] in reaction_flux for r in rlist):
                     x_comb_c1, x_comb_c2 = 0, 0
@@ -426,7 +426,7 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
                                             cpd_formula[c2.name]:
                                         cpairs.append((c1, c2))
                                 else:
-                                    cpairs.append((c1,c2))
+                                    cpairs.append((c1, c2))
                             else:
                                 cpairs.append((c1, c2))
                 if len(cpairs) > 0:
@@ -532,8 +532,8 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
 
     rxns_sorted_cpair_dict = defaultdict(lambda: defaultdict(list))
     for (c1, c2), rxns in iteritems(new_cpair_dict):
-        for dir, rlist in iteritems(rxns):
-            rxns_sorted_cpair_dict[(c1, c2)][dir] = sorted(rlist)
+        for direc, rlist in iteritems(rxns):
+            rxns_sorted_cpair_dict[(c1, c2)][direc] = sorted(rlist)
 
     return rxns_sorted_cpair_dict, new_id_mapping
 
@@ -565,7 +565,7 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
                     'compartment': c.compartment})
                 g.add_node(node)
                 graph_nodes.add(c)
-        for dir, rlist in iteritems(reactions):
+        for direc, rlist in iteritems(reactions):
             if split or method == 'no-fpp':
                 for sub_rxn in rlist:
                     rnode = graph.Node({
@@ -606,7 +606,7 @@ def add_edges(g, cpairs_dict, method, split):
 
     edge_list = []
     for (c1, c2), value in iteritems(cpairs_dict):
-        for dir, rlist in iteritems(value):
+        for direc, rlist in iteritems(value):
             new_rlist = ','.join(rlist)
             if split or method == 'no-fpp':
                 for sub_rxn in rlist:
@@ -615,7 +615,7 @@ def add_edges(g, cpairs_dict, method, split):
                         edge_list.append(test1)
                         g.add_edge(graph.Edge(
                             g.get_node(text_type(c1)),
-                            g.get_node(text_type(sub_rxn)), {'dir': dir}))
+                            g.get_node(text_type(sub_rxn)), {'dir': direc}))
 
                     test2 = c2, sub_rxn
                     if test2 not in edge_list:
@@ -644,12 +644,11 @@ def dir_value(direction):
 
 def add_biomass_rxns(g, bio_reaction, biomass_rxn_id):
     direction = dir_value(bio_reaction.direction)
-    A = []
-    B = []
+    reactant_list, product_list = [], []
     for c, _ in bio_reaction.left:
-        A.append(c)
+        reactant_list.append(c)
     for c, _ in bio_reaction.right:
-        B.append(c)
+        product_list.append(c)
     bio_pair = Counter()
     for c, _ in bio_reaction.compounds:
         if text_type(c) in g.nodes_id_dict:
@@ -666,10 +665,10 @@ def add_biomass_rxns(g, bio_reaction, biomass_rxn_id):
                 'compartment': c.compartment})
             g.add_node(node_bio)
 
-            if c in A:
+            if c in reactant_list:
                 g.add_edge(graph.Edge(g.get_node(text_type(c)), node_bio,
                                       {'dir': direction}))
-            if c in B:
+            if c in product_list:
                 g.add_edge(graph.Edge(node_bio, g.get_node(text_type(c)),
                                       {'dir': direction}))
     return g
@@ -679,9 +678,10 @@ def add_exchange_rxns(g, rxn_id, reaction):
     """add exchange reaction nodes and edges to graph object.
 
     Args:
-        g: a graph object that contains a set of nodes and some edges.
+        g: A graph object that contains a set of nodes and some edges.
         rxn_id: Exchange reaction id,
-        reaction: Exchange reaction object(metabolic model reaction).
+        reaction: Exchange reaction object(metabolic model reaction),
+            class 'psamm.reaction.Reaction'.
     """
     for c, _ in reaction.compounds:
         if text_type(c) in g.nodes_id_dict:
@@ -696,13 +696,13 @@ def add_exchange_rxns(g, rxn_id, reaction):
                 'compartment': c.compartment})
             g.add_node(node_ex)
 
-            dir = dir_value(reaction.direction)
+            direc = dir_value(reaction.direction)
             for c1, _ in reaction.left:
                 g.add_edge(graph.Edge(
-                    g.get_node(text_type(c1)), node_ex, {'dir': dir}))
+                    g.get_node(text_type(c1)), node_ex, {'dir': direc}))
             for c2, _ in reaction.right:
                 g.add_edge(graph.Edge(
-                    node_ex, g.get_node(text_type(c2)), {'dir': dir}))
+                    node_ex, g.get_node(text_type(c2)), {'dir': direc}))
     return g
 
 
@@ -714,10 +714,10 @@ def update_node_color(g, recolor_dict):
         recolor_dict: dict of rxn_id/cpd_id_compartment : hex color code.
     return: a graph object that contains a set of node with defined color.
     """
-    for id in recolor_dict:
-        if id in g.nodes_original_id_dict:
-            for node in g.nodes_original_id_dict[id]:
-                node.props['fillcolor'] = recolor_dict[id]
+    for r_id in recolor_dict:
+        if r_id in g.nodes_original_id_dict:
+            for node in g.nodes_original_id_dict[r_id]:
+                node.props['fillcolor'] = recolor_dict[r_id]
     return g
 
 
@@ -872,15 +872,15 @@ def make_cpt_tree(boundaries, extracellular):
 
 
 def get_cpt_boundaries(model):
-    ''' This function will determine the compartment boundaries in a model
+    """This function will determine the compartment boundaries in a model
 
     This function will take a native model object and determine the
     compartment boundaries either based on the predefined compartments in
     the model.yaml or based on the reaction equations in the model.
 
     args:
-    model: a psamm NativeModel object
-    '''
+    model: Native model, class 'psamm.datasource.native.NativeModel'.
+    """
     if model.extracellular_compartment is not None:
         extracellular = model.extracellular_compartment
     else:
