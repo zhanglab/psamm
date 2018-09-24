@@ -211,10 +211,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                 g = add_exchange_rxns(g, reaction, exchange_rxn)
         if len(recolor_dict) > 0:
             g = update_node_color(g, recolor_dict)
-        if self._args.cpd_detail is not None or self._args.rxn_detail is not None:
-            g = update_node_label(g, self._args.cpd_detail, self._args.rxn_detail,
-                                  model_compound_entries, model_reaction_entries,
-                                  reaction_flux)
+        if self._args.cpd_detail is not None or self._args.rxn_detail \
+                is not None:
+            g = update_node_label(
+                g, self._args.cpd_detail, self._args.rxn_detail,
+                model_compound_entries, model_reaction_entries, reaction_flux)
         g = set_edge_props_withfba(g, edge_values)
 
         if self._args.method == 'no-fpp' and self._args.split_map is True:
@@ -243,11 +244,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             else:
                 if len(g.nodes_id_dict) > 1000:
                     logger.info(
-                        'This graph contains a large number of reactions, graphs of this '
-                        'size may take a long time to create'.format
-                        (len(filter_dict.keys())))
+                        'This graph contains a large number of reactions, '
+                        'graphs of this size may take a long time to '
+                        'create'.format (len(filter_dict.keys())))
                 if self._args.compartment:
-                    render('dot', self._args.Image, 'reactions_compartmentalized.dot')
+                    render('dot', self._args.Image,
+                           'reactions_compartmentalized.dot')
                 else:
                     render('dot', self._args.Image, 'reactions.dot')
 
@@ -389,7 +391,8 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
                 'add "--method no-fpp --element none" to the command')
             quit()
 
-        reaction_pairs = [(r.id, r.equation) for r in fpp_rxns if r.id != model.biomass_reaction]
+        reaction_pairs = [(r.id, r.equation) for r in fpp_rxns
+                          if r.id != model.biomass_reaction]
         element_weight = findprimarypairs.element_weight
         fpp_dict, _ = findprimarypairs.predict_compound_pairs_iterated(
             reaction_pairs, cpd_formula, element_weight=element_weight)
@@ -472,9 +475,10 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
             that go through this reaction.
         subset: A list of reaction IDs, including all the reactions that
             will be visualized.
-        reaction_flux: A dictionary mapping from reaction ID to reaction flux value.
-        args_method: Command line argument, a string, including 'fpp', 'no-fpp' and
-            file path.
+        reaction_flux: A dictionary mapping from reaction ID to
+            reaction flux value.
+        args_method: Command line argument, a string, including 'fpp',
+            'no-fpp' and file path.
     """
     new_id_mapping = {}
     rxn_count = Counter()
@@ -767,13 +771,15 @@ def update_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
                     if r in reaction_flux:
                         sum_flux += abs(reaction_flux[r])
                 if sum_flux != 0:
-                    node.props['label'] = '{}\n{}'.format(node.props['label'], sum_flux)
+                    node.props['label'] = '{}\n{}'.format(
+                        node.props['label'], sum_flux)
 
         elif node.props['type'] == 'Ex_rxn':
             if len(reaction_flux) > 0:
                 if node.props['original_id'][0] in reaction_flux:
                     node.props['label'] = '{}\n{}'.format(
-                        node.props['label'], reaction_flux[node.props['original_id'][0]])
+                        node.props['label'], reaction_flux[
+                            node.props['original_id'][0]])
     return g
 
 
