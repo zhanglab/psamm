@@ -276,6 +276,7 @@ def make_subset(mm, arg_subset):
 
     return subset_reactions
 
+
 def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
                      cpair_dict, new_id_mapping, method):
     """set edge_values according to reaction fluxes
