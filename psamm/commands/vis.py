@@ -125,29 +125,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                         msg += '\n{}'.format(e.indicator)
                     logger.warning(msg)
 
-        if self._args.subset is not None:
-            raw_subset, subset_reactions, mm_cpds = [], set(), []
-            for line in self._args.subset.readlines():
-                raw_subset.append(line.rstrip())
-
-            for c in self._mm.compounds:
-                mm_cpds.append(str(c))
-            if set(raw_subset).issubset(set(self._mm.reactions)):
-                subset_reactions = raw_subset
-            elif set(raw_subset).issubset(set(mm_cpds)):
-                for reaction in self._mm.reactions:
-                    rx = self._mm.get_reaction(reaction)
-                    if any(str(c) in raw_subset for (c, _) in rx.compounds):
-                        subset_reactions.add(reaction)
-            else:
-                logger.error(
-                    'Invalid subset file. The file should contains a column '
-                    'of reaction id or a column of compound id with '
-                    'compartment, mix of reactions, compounds and other '
-                    'information in one subset file is not allowed.')
-                quit()
-        else:
-            subset_reactions = set(self._mm.reactions)
+        subset_reactions = make_subset(self._mm, self._args.subset)
 
         filter_dict = make_filter_dict(
             self._model, self._mm, self._args.method, self._args.element,
@@ -263,6 +241,40 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                 else:
                     render('dot', self._args.Image, 'reactions.dot')
 
+
+def make_subset(mm, arg_subset):
+    """create a collection of reaction IDs that need to be visualized.
+
+    Args:
+        mm: Metabolic model, class 'psamm.metabolicmodel.MetabolicModel'.
+        arg_subset: By default it is None, if --subset id given in command
+            line it is a file that contains a column of reaction IDs.
+    """
+    if arg_subset is not None:
+        raw_subset, subset_reactions, mm_cpds = [], set(), []
+        for line in arg_subset.readlines():
+            raw_subset.append(line.rstrip())
+
+        for c in mm.compounds:
+            mm_cpds.append(str(c))
+        if set(raw_subset).issubset(set(mm.reactions)):
+            subset_reactions = raw_subset
+        elif set(raw_subset).issubset(set(mm_cpds)):
+            for reaction in mm.reactions:
+                rx = mm.get_reaction(reaction)
+                if any(str(c) in raw_subset for (c, _) in rx.compounds):
+                    subset_reactions.add(reaction)
+        else:
+            logger.error(
+                'Invalid subset file. The file should contains a column '
+                'of reaction id or a column of compound id with '
+                'compartment, mix of reactions, compounds and other '
+                'information in one subset file is not allowed.')
+            quit()
+    else:
+        subset_reactions = set(mm.reactions)
+
+    return subset_reactions
 
 def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
                      cpair_dict, new_id_mapping, method):
