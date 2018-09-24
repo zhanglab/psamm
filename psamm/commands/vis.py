@@ -22,8 +22,7 @@ import logging
 import csv
 import argparse
 from collections import defaultdict, Counter
-from six import text_type, iteritems, itervalues, iterkeys
-
+from six import text_type, iteritems, itervalues
 from .tableexport import _encode_value
 from .. import findprimarypairs
 from ..command import (LoopRemovalMixin, ObjectiveMixin, SolverCommandMixin,
@@ -38,17 +37,15 @@ try:
 except ImportError:
     render = None
 
-import subprocess
-
 logger = logging.getLogger(__name__)
 
 REACTION_COLOR = '#c9fccd'
 COMPOUND_COLOR = '#ffd8bf'
-ACTIVE_COLOR = '#90f998'    # exchange reaction  color
-ALT_COLOR = '#b3fcb8'       # biomass reaction color
+ACTIVE_COLOR = '#90f998'
+ALT_COLOR = '#b3fcb8'
 
 
-class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
+class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                            Command, LoopRemovalMixin, FilePrefixAppendAction):
     """Run visualization command on the model."""
 
@@ -93,7 +90,7 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
             help='Remove edges between specific compound pair from network ')
         parser.add_argument(
             '--split-map', action='store_true',
-            help='Create reactions-splitted metabolic network, one node '
+            help='Create reactions split metabolic network, one node '
                  'only represent one reaction')
         parser.add_argument(
             '--compartment', action='store_true',
@@ -104,7 +101,6 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
     def run(self):
         """Run visualization command."""
 
-        # Mapping from compound id to formula
         compound_formula = {}
         for compound in self._model.compounds:
             if compound.formula is not None:
@@ -125,7 +121,6 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
                         msg += '\n{}'.format(e.indicator)
                     logger.warning(msg)
 
-        # set of reactions to visualize
         if self._args.subset is not None:
             raw_subset, subset_reactions, mm_cpds = [], set(), []
             for line in self._args.subset.readlines():
@@ -145,18 +140,15 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
                     'Invalid subset file. The file should contains a column '
                     'of reaction id or a column of compound id with '
                     'compartment, mix of reactions, compounds and other '
-                    'infomation in one subset file is not allowed.')
+                    'information in one subset file is not allowed.')
                 quit()
         else:
             subset_reactions = set(self._mm.reactions)
 
-        # create {rxn_id:[(c1, c2),(c3,c4),...], ...} dictionary,
-        # key = rxn id, value = list of compound pairs
         filter_dict = make_filter_dict(
             self._model, self._mm, self._args.method, self._args.element,
             compound_formula, self._args.hide_edges, self._args.exclude)
 
-        # run l1min_fba, get reaction fluxes
         reaction_flux = {}
         if self._args.fba is True:
             solver = self._get_solver()
@@ -168,7 +160,6 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
 
             fluxes = {r: p.get_flux(r) for r in self._mm.reactions}
 
-            # Run flux minimization
             flux_var = p.get_flux_var(self._get_objective())
             p.prob.add_linear_constraints(flux_var == p.get_flux(
                 self._get_objective()))
@@ -192,7 +183,6 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
             self._args.split_map, cpair_dict, new_id_mapping,
             self._args.method)
 
-        # create rxns/cpds recolor dict
         recolor_dict = {}
         if self._args.color is not None:
             for f in self._args.color:
@@ -209,7 +199,7 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
         g = add_graph_nodes(g, cpair_dict, self._args.method,
                             new_id_mapping, split=self._args.split_map)
         g = add_edges(g, cpair_dict, self._args.method,
-                      split = self._args.split_map)
+                      split=self._args.split_map)
 
         if self._model.biomass_reaction in subset_reactions:
             biomass_rxn = self._mm.get_reaction(self._model.biomass_reaction)
@@ -223,8 +213,8 @@ class VisualizationCommand(MetabolicMixin,ObjectiveMixin,SolverCommandMixin,
             g = update_node_color(g, recolor_dict)
         if self._args.cpd_detail is not None or self._args.rxn_detail is not None:
             g = update_node_label(g, self._args.cpd_detail, self._args.rxn_detail,
-                               model_compound_entries, model_reaction_entries,
-                               reaction_flux)
+                                  model_compound_entries, model_reaction_entries,
+                                  reaction_flux)
         g = set_edge_props_withfba(g, edge_values)
 
         if self._args.method == 'no-fpp' and self._args.split_map is True:
@@ -271,18 +261,18 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
     between the compound and reaction
 
     Args:
-        reactions_flux: Dictionary of reaction id and flux value.
-        mm: class 'psamm.metabolicmodel.MetabolicModel'.
-        compound_formula: Dictionary of compound id and
+        reaction_flux: dictionary of reaction id and flux value.
+        mm: Metabolic model, class 'psamm.metabolicmodel.MetabolicModel'.
+        compound_formula: A dictionary of compound id and
             class 'psamm.formula.Formula'.
         element: Chemical symbol of an element, such as C(carbon),
-            N(nitrogen), S(sulfer).
-        slit_map: True or False, determine which kind of gragh to create(
+            N(nitrogen), S(sulfur).
+        split_map: True or False, determine which kind of graph to create(
             combine multiple reactions in one node or not).
-        cpair_dict: Defauldict of compound pair and another defaultdict of
+        cpair_dict: defaultdict of compound pair and another defaultdict of
             list(in the latter defaultdict, key is direction(forward, back or
             both), value is reaction list),{(c1, c2): {'forward':[rxns],...}}.
-        new_id_mapping: Dictionary of reaction is with suffix(number) and
+        new_id_mapping: dictionary of reaction ID with suffix(number) and
             real reaction id, e.g.{r_1:r, r_2: r,...}.
         method: Command line argument, including 3 options:'fpp', 'no-fpp'
             and file path.
@@ -322,7 +312,7 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
         for r in reaction_flux:
             if r not in rxn_set:
                 for (_, r) in edge_values:
-                    edge_values_combined[(_,r)] = edge_values[(_,r)]
+                    edge_values_combined[(_, r)] = edge_values[(_, r)]
 
     if split_map or method == 'no-fpp':
         return edge_values
@@ -336,13 +326,13 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
     compound pairs(value) by 3 different methods.
 
     Args:
-        model: class 'psamm.datasource.native.NativeModel'.
-        mm: class 'psamm.metabolicmodel.MetabolicModel'.
+        model: Native model, class 'psamm.datasource.native.NativeModel'.
+        mm: Metabolic model, class 'psamm.metabolicmodel.MetabolicModel'.
         method: Command line argument, including 'fpp', 'no-fpp' and
             file path.
         element: Chemical symbol of an element, such as C(carbon),
-            N(nitrogen), S(sulfer).
-        compound_formula: A dictionary that key is compound id (a string) and
+            N(nitrogen), S(sulfur).
+        cpd_formula: A dictionary that key is compound id (a string) and
             value is class 'psamm.formula.Formula'.
         arg_hide_edges: Command line argument, a file that contains two
             columns(tab-separated) of compounds(in the format of
@@ -350,14 +340,13 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
             represent two reactant/product pairs((c1, c2)and (c2,c1)).
         exclude_rxns: Command line argument, a file that contains one column
             of reaction IDs, these reaction will be removed for visualization
-            when method is fpp."""
+            when method is fpp.
+    """
 
-    # Mapping from cpd_id+compartment(eg: pyr_c[c]) to Compound object
     cpd_object = {}
     for cpd in mm.compounds:
         cpd_object[str(cpd)] = cpd
 
-    # read exclude_compound_pairs from command-line argument
     hide_edges = []
     if arg_hide_edges is not None:
         for row in csv.reader(arg_hide_edges, delimiter=str('\t')):
@@ -474,8 +463,18 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
 
 
 def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
-    """create a new cpair_dict: mapping from cpair to a
-    defaultdict(key is direction, value is rxns list).
+    """create a new cpair_dict: mapping from compound pair to a
+    defaultdict (key is direction, value is a list of reaction IDs).
+
+    Args:
+        mm: Metabolic model, class 'psamm.metabolicmodel.MetabolicModel'.
+        filter_dict: A dictionary mapping form reaction ID to compound pairs
+            that go through this reaction.
+        subset: A list of reaction IDs, including all the reactions that
+            will be visualized.
+        reaction_flux: A dictionary mapping from reaction ID to reaction flux value.
+        args_method: Command line argument, a string, including 'fpp', 'no-fpp' and
+            file path.
     """
     new_id_mapping = {}
     rxn_count = Counter()
@@ -505,7 +504,6 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
                     else:
                         cpair_dict[(c1, c2)]['both'].append(r_id)
 
-    # only keep one between (c1, c2) and (c2, c1)
     new_cpair_dict = {}
     cpair_list = []
     for (c1, c2), rxns in sorted(iteritems(cpair_dict)):
@@ -528,7 +526,7 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
                 new_cpair_dict[(c1, c2)] = new_rxns
                 cpair_list.append((c1, c2))
 
-    rxns_sorted_cpair_dict = defaultdict(lambda: defaultdict(list))   # sort the reaction list, make them in a specific order
+    rxns_sorted_cpair_dict = defaultdict(lambda: defaultdict(list))
     for (c1, c2), rxns in iteritems(new_cpair_dict):
         for dir, rlist in iteritems(rxns):
             rxns_sorted_cpair_dict[(c1, c2)][dir] = sorted(rlist)
@@ -536,18 +534,17 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
     return rxns_sorted_cpair_dict, new_id_mapping
 
 
-# divide create_bipartite_graph() function into several small functions
 def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
     """create compound and reaction nodes, adding them to empty graph object.
 
     Args:
-        g: an empty graph object.
+        g: An empty graph object.
         cpairs_dict: defaultdict of compound_pair: defaultdict of direction:
             reaction list. e.g. {(c1, c2): {'forward":[rx1], 'both':[rx2}}.
-        method: command line argument, options=['fpp', 'no-fpp', file_path].
-        new_id_mapping: dict of rxn_id_suffix: rxn_id.
-        split: command line argument, by default split = False.
-    return: a graph object that contains a set of nodes.
+        method: Command line argument, options=['fpp', 'no-fpp', file_path].
+        new_id_mapping: dictionary of rxn_id_suffix: rxn_id.
+        split: Command line argument, by default split = False.
+    return: A graph object that contains a set of nodes.
     """
     graph_nodes = set()
     for cpair, reactions in iteritems(cpairs_dict):
@@ -596,11 +593,11 @@ def add_edges(g, cpairs_dict, method, split):
     """add edges to the graph object obtained in last step.
 
     Args:
-        g: graph object contains a set of nodes.
+        g: A graph object contains a set of nodes.
         cpairs_dict: defaultdict of compound_pair: defaultdict of direction:
             reaction list. e.g. {(c1, c2): {'forward":[rx1], 'both':[rx2}}.
-        method: command line argument, options=['fpp', 'no-fpp', file_path].
-        split: command line argument, True or False. By default split = False.
+        method: Command line argument, options=['fpp', 'no-fpp', file_path].
+        split: Command line argument, True or False. By default split = False.
     """
 
     edge_list = []
@@ -610,18 +607,14 @@ def add_edges(g, cpairs_dict, method, split):
             if split or method == 'no-fpp':
                 for sub_rxn in rlist:
                     test1 = c1, sub_rxn
-                    # test2 = sub_rxn, c1
                     if test1 not in edge_list:
                         edge_list.append(test1)
-                        # edge_list.append(test2)
                         g.add_edge(graph.Edge(
                             g.get_node(text_type(c1)),
                             g.get_node(text_type(sub_rxn)), {'dir': dir}))
 
-                    # test1 = sub_rxn, c2
                     test2 = c2, sub_rxn
                     if test2 not in edge_list:
-                        # edge_list.append(test1)
                         edge_list.append(test2)
                         g.add_edge(graph.Edge(
                             g.get_node(text_type(sub_rxn)),
@@ -646,8 +639,9 @@ def dir_value(direction):
 
 
 def add_biomass_rxns(g, bio_reaction, biomass_rxn_id):
-    dir = dir_value(bio_reaction.direction)
-    A, B = [], []
+    direction = dir_value(bio_reaction.direction)
+    A = []
+    B = []
     for c, _ in bio_reaction.left:
         A.append(c)
     for c, _ in bio_reaction.right:
@@ -670,10 +664,10 @@ def add_biomass_rxns(g, bio_reaction, biomass_rxn_id):
 
             if c in A:
                 g.add_edge(graph.Edge(g.get_node(text_type(c)), node_bio,
-                                      {'dir': dir}))
+                                      {'dir': direction}))
             if c in B:
                 g.add_edge(graph.Edge(node_bio, g.get_node(text_type(c)),
-                                      {'dir': dir}))
+                                      {'dir': direction}))
     return g
 
 
@@ -724,7 +718,7 @@ def update_node_color(g, recolor_dict):
 
 
 def update_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
-                   model_reaction_entries, reaction_flux):
+                      model_reaction_entries, reaction_flux):
     """ set label of nodes in graph object,
 
     Args:
@@ -762,7 +756,8 @@ def update_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
                     props = model_reaction_entries[rxn_id].properties
                     rxn_detail_list = [i for i in rxn_detail[0] if i in props]
                     pre_label = '\n'.join(_encode_value(
-                        props[value]) for value in rxn_detail_list if value != 'id')
+                        props[value]) for value in rxn_detail_list
+                                          if value != 'id')
                     node.props['label'] = '{}\n{}'.format(rxn_id, pre_label)
                 else:
                     node.props['label'] = rxn_id
@@ -786,16 +781,16 @@ def set_edge_props_withfba(g, edge_values):
     """set edge values, including direction, width, style.
 
     Args:
-        g: graph object created by add_node_label().
-        edge_values: dict of (cpd, rxn): flux value.
+        g: A graph object contains nodes and edges.
+        edge_values: dictionary of (cpd, rxn): flux value.
     return: a complete graph object.
     """
 
     if len(edge_values) > 0:
         value_list = sorted(edge_values.values())
-        ninty_percentile = value_list[int(len(value_list) * 0.9)]
+        ninety_percentile = value_list[int(len(value_list) * 0.9)]
         min_edge_value = min(itervalues(edge_values))
-        max_edge_value = ninty_percentile
+        max_edge_value = ninety_percentile
     else:
         min_edge_value = 1
         max_edge_value = 1
@@ -853,7 +848,7 @@ def make_cpt_tree(boundaries, extracellular):
         compartments.add(j)
         compartments.add(k)
     if extracellular not in compartments:
-        etmp = sorted(list(compartments), reverse = True)
+        etmp = sorted(list(compartments), reverse=True)
         extracellular = etmp[0]
         logger.warning('No extracellular compartment was defined in the '
                        'model.yaml file and no "e" compartment in the model. '
@@ -864,10 +859,8 @@ def make_cpt_tree(boundaries, extracellular):
             j = str(j)
             k = str(k)
             if j == cpt:
-                # if k not in parents:
                 children[cpt].add(k)
             elif k == cpt:
-                # if j not in parents:
                 children[cpt].add(j)
     return children, extracellular
 
