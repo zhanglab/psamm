@@ -35,22 +35,35 @@ import tempfile
 class TestMakeFilterDict(unittest.TestCase):
     def setUp(self):
         native_model = NativeModel()
-        native_model.reactions.add_entry(ReactionEntry({'id': 'rxn1', 'equation': parse_reaction(
-            'fum_c[c] + h2o_c[c] <=> mal_L_c[c]')}))
-        native_model.compounds.add_entry(CompoundEntry({'id': 'fum_c[c]', 'formula': parse_compound('C4H2O4', 'c')}))
-        native_model.compounds.add_entry(CompoundEntry({'id': 'h2o_c[c]', 'formula': parse_compound('H2O', 'c')}))
-        native_model.compounds.add_entry(CompoundEntry({'id': 'mal_L_c[c]', 'formula': parse_compound('C4H4O5', 'c')}))
-        native_model.reactions.add_entry(ReactionEntry({'id': 'rxn2', 'equation': parse_reaction(
-            'q8_c[c] + succ_c[c] => fum_c[c] + q8h2_c[c]')}))
-        native_model.compounds.add_entry(CompoundEntry({'id': 'q8_c[c]', 'formula': parse_compound('C49H74O4', 'c')}))
-        native_model.compounds.add_entry(CompoundEntry({'id': 'q8h2_c[c]', 'formula': parse_compound('C49H76O4', 'c')}))
-        native_model.compounds.add_entry(CompoundEntry({'id': 'succ_c[c]', 'formula': parse_compound('C4H4O4', 'c')}))
+        native_model.reactions.add_entry(ReactionEntry({
+            'id': 'rxn1', 'equation': parse_reaction(
+                'fum_c[c] + h2o_c[c] <=> mal_L_c[c]')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'fum_c[c]', 'formula': parse_compound('C4H2O4', 'c')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'h2o_c[c]', 'formula': parse_compound('H2O', 'c')}))
+        native_model.compounds.add_entry(CompoundEntry(
+            {'id': 'mal_L_c[c]', 'formula': parse_compound('C4H4O5', 'c')}))
+        native_model.reactions.add_entry(ReactionEntry({
+            'id': 'rxn2', 'equation': parse_reaction(
+                'q8_c[c] + succ_c[c] => fum_c[c] + q8h2_c[c]')}))
+        native_model.compounds.add_entry(CompoundEntry(
+            {'id': 'q8_c[c]', 'formula': parse_compound('C49H74O4', 'c')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'q8h2_c[c]', 'formula': parse_compound('C49H76O4', 'c')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'succ_c[c]', 'formula': parse_compound('C4H4O4', 'c')}))
         self.native = native_model
         self.mm = native_model.create_metabolic_model()
+        for c in self.mm.compounds:
+            print(c)
 
-        self.cpd_formula = {'fum_c': Formula.parse('C4H2O4'), 'h2o_c': Formula.parse('H2O'),
-                            'mal_L_c': Formula.parse('C4H4O5'), 'q8_c': Formula.parse('C49H74O4'),
-                            'q8h2_c': Formula.parse('C49H76O4'), 'succ_c': Formula.parse('C4H4O4')}
+        self.cpd_formula = {'fum_c': Formula.parse('C4H2O4'),
+                            'h2o_c': Formula.parse('H2O'),
+                            'mal_L_c': Formula.parse('C4H4O5'),
+                            'q8_c': Formula.parse('C49H74O4'),
+                            'q8h2_c': Formula.parse('C49H76O4'),
+                            'succ_c': Formula.parse('C4H4O4')}
         self.element = 'C'
         self.method = 'fpp'
         self.exclude_rxns = []
@@ -69,59 +82,70 @@ class TestMakeFilterDict(unittest.TestCase):
         e2 = vis.make_filter_dict(
             self.native, self.mm, 'no-fpp', self.element, self.cpd_formula,
             self.hide_edges, self.exclude_rxns)
-        e2_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))],
-                  'rxn2': [(Compound('q8_c', 'c'), Compound('fum_c', 'c')),
-                           (Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
-                           (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
-                           (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
+        e2_res = {'rxn1': [
+            (Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))],
+            'rxn2': [
+                (Compound('q8_c', 'c'), Compound('fum_c', 'c')),
+                (Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
+                (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
+                (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
         self.assertEqual(e2, e2_res)
 
     def test3_element_hydrogen(self):
         e3 = vis.make_filter_dict(
             self.native, self.mm, self.method, 'H', self.cpd_formula,
             self.hide_edges, self.exclude_rxns)
-        e3_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c')),
-                           (Compound('h2o_c', 'c'), Compound('mal_L_c', 'c'))],
-                  'rxn2': [(Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
-                           (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
-                           (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
+        e3_res = {'rxn1': [
+            (Compound('fum_c', 'c'), Compound('mal_L_c', 'c')),
+            (Compound('h2o_c', 'c'), Compound('mal_L_c', 'c'))],
+            'rxn2': [(Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
+                     (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
+                     (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
         self.assertEqual(e3, e3_res)
 
     def test4_exclude_rxn(self):
         e4 = vis.make_filter_dict(
             self.native, self.mm, self.method, self.element, self.cpd_formula,
             self.hide_edges, ['rxn2'])
-        e4_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))]}
+        e4_res = {'rxn1': [(Compound('fum_c', 'c'),
+                            Compound('mal_L_c', 'c'))]}
         self.assertEqual(e4, e4_res)
 
     def test5_if_missing_formula_fpp(self):
-        cpd_formula = {'fum_c': Formula.parse('C4H2O4'), 'h2o_c': Formula.parse('H2O'),
-                       'mal_L_c': Formula.parse('C4H4O5'), 'q8_c': Formula.parse('C49H74O4'),
+        cpd_formula = {'fum_c': Formula.parse('C4H2O4'),
+                       'h2o_c': Formula.parse('H2O'),
+                       'mal_L_c': Formula.parse('C4H4O5'),
+                       'q8_c': Formula.parse('C49H74O4'),
                        'q8h2_c': Formula.parse('C49H76O4')}
         e5 = vis.make_filter_dict(
             self.native, self.mm, self.method, self.element, cpd_formula,
             self.hide_edges, self.exclude_rxns)
-        e5_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))]}
+        e5_res = {'rxn1': [(Compound('fum_c', 'c'),
+                            Compound('mal_L_c', 'c'))]}
         self.assertEqual(e5, e5_res)
 
     def test6_if_missing_formula_nofpp(self):
-        cpd_formula = {'fum_c': Formula.parse('C4H2O4'), 'h2o_c': Formula.parse('H2O'),
-                       'mal_L_c': Formula.parse('C4H4O5'), 'q8_c': Formula.parse('C49H74O4'),
+        cpd_formula = {'fum_c': Formula.parse('C4H2O4'),
+                       'h2o_c': Formula.parse('H2O'),
+                       'mal_L_c': Formula.parse('C4H4O5'),
+                       'q8_c': Formula.parse('C49H74O4'),
                        'q8h2_c': Formula.parse('C49H76O4')}
         e6 = vis.make_filter_dict(
             self.native, self.mm, 'no-fpp', self.element, cpd_formula,
             self.hide_edges, self.exclude_rxns)
-        e6_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))],
-                  'rxn2': [(Compound('q8_c', 'c'), Compound('fum_c', 'c')),
-                           (Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
-                           (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
-                           (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
+        e6_res = {'rxn1': [
+            (Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))],
+            'rxn2': [(Compound('q8_c', 'c'), Compound('fum_c', 'c')),
+                     (Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
+                     (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
+                     (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
         self.assertEqual(e6, e6_res)
 
     def test7_hide_edges(self):
         path = os.path.join(tempfile.mkdtemp(), 'remove_edges')
         with open(path, 'w') as f:
-            f.write('{}\t{}\n{}\t{}'.format('q8_c[c]', 'q8h2_c[c]', 'fum_c[c]', 'mal_L_c[c]'))
+            f.write('{}\t{}\n{}\t{}'.format('q8_c[c]', 'q8h2_c[c]',
+                                            'fum_c[c]', 'mal_L_c[c]'))
         e7 = vis.make_filter_dict(
             self.native, self.mm, self.method, self.element, self.cpd_formula,
             open(path), self.exclude_rxns)
@@ -131,9 +155,12 @@ class TestMakeFilterDict(unittest.TestCase):
     def test8_file_path(self):
         path = os.path.join(tempfile.mkdtemp(), 'primarypairs_prediction')
         with open(path, 'w') as f:
-            row1 = '{}\t{}\t{}\t{}'.format('rxn2', 'q8_c[c]', 'q8h2_c[c]', 'C49H74O4')
-            row2 = '{}\t{}\t{}\t{}'.format('rxn2', 'succ_c[c]', 'fum_c[c]', 'C4H2O4')
-            row3 = '{}\t{}\t{}\t{}'.format('rxn2', 'succ_c[c]', 'q8h2_c[c]', 'H2')
+            row1 = '{}\t{}\t{}\t{}'.format('rxn2', 'q8_c[c]',
+                                           'q8h2_c[c]', 'C49H74O4')
+            row2 = '{}\t{}\t{}\t{}'.format('rxn2', 'succ_c[c]',
+                                           'fum_c[c]', 'C4H2O4')
+            row3 = '{}\t{}\t{}\t{}'.format('rxn2', 'succ_c[c]',
+                                           'q8h2_c[c]', 'H2')
             f.write('\n'.join([row1, row2, row3]))
         e8 = vis.make_filter_dict(
             self.native, self.mm, path, self.element, self.cpd_formula,
@@ -147,13 +174,17 @@ class TestMakeCpairDict(unittest.TestCase):
     def setUp(self):
         native_model = NativeModel()
         native_model.reactions.add_entry(
-            ReactionEntry({'id': 'rxn1', 'equation': parse_reaction('A[c] + B[c] <=> C[c] + D[c]')}))
+            ReactionEntry({'id': 'rxn1', 'equation': parse_reaction(
+                'A[c] + B[c] <=> C[c] + D[c]')}))
         native_model.reactions.add_entry(
-            ReactionEntry({'id': 'rxn2', 'equation': parse_reaction('B[c] <=> (2) D[c]')}))
+            ReactionEntry({'id': 'rxn2', 'equation': parse_reaction(
+                'B[c] <=> (2) D[c]')}))
         native_model.reactions.add_entry(
-            ReactionEntry({'id': 'rxn3', 'equation': parse_reaction('D[c] => D[e]')}))
+            ReactionEntry({'id': 'rxn3', 'equation': parse_reaction(
+                'D[c] => D[e]')}))
         native_model.reactions.add_entry(
-            ReactionEntry({'id': 'rxn4', 'equation': parse_reaction('D[e] <=>')}))
+            ReactionEntry({'id': 'rxn4', 'equation': parse_reaction(
+                'D[e] <=>')}))
         self.native = native_model
         self.mm = native_model.create_metabolic_model()
 
@@ -168,14 +199,19 @@ class TestMakeCpairDict(unittest.TestCase):
 
     def test_MakeCpairDict_default(self):
         e1, n1 = vis.make_cpair_dict(self.mm, self.filter_dict, self.subset,
-                                  self.reaction_flux, self.method)
+                                     self.reaction_flux, self.method)
         e1_res = defaultdict(lambda: defaultdict(list))
-        e1_res[(Compound('A', 'c'), Compound('C', 'c'))]['both'].append('rxn1_1')
-        e1_res[(Compound('B', 'c'), Compound('C', 'c'))]['both'].append('rxn1_2')
-        e1_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] = ['rxn1_3', 'rxn2_1']
-        e1_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'].append('rxn3_1')
+        e1_res[(Compound('A', 'c'), Compound('C', 'c'))]['both'].\
+            append('rxn1_1')
+        e1_res[(Compound('B', 'c'), Compound('C', 'c'))]['both'].\
+            append('rxn1_2')
+        e1_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] \
+            = ['rxn1_3', 'rxn2_1']
+        e1_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'].\
+            append('rxn3_1')
 
-        n1_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1','rxn1_3': 'rxn1', 'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3'}
+        n1_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1','rxn1_3': 'rxn1',
+                  'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3'}
         self.assertEqual(e1, e1_res)
         self.assertEqual(n1, n1_res)
 
@@ -198,11 +234,15 @@ class TestMakeCpairDict(unittest.TestCase):
         e3, n3 = vis.make_cpair_dict(self.mm, self.filter_dict, self.subset,
                                      reaction_flux, self.method)
         e3_res = defaultdict(lambda: defaultdict(list))
-        e3_res[(Compound('A', 'c'), Compound('C', 'c'))]['forward'].append('rxn1_1')
-        e3_res[(Compound('B', 'c'), Compound('C', 'c'))]['forward'].append('rxn1_2')
-        e3_res[(Compound('B', 'c'), Compound('D', 'c'))]['forward'] = ['rxn1_3']
+        e3_res[(Compound('A', 'c'), Compound('C', 'c'))]['forward'].\
+            append('rxn1_1')
+        e3_res[(Compound('B', 'c'), Compound('C', 'c'))]['forward'].\
+            append('rxn1_2')
+        e3_res[(Compound('B', 'c'), Compound('D', 'c'))]['forward'] \
+            = ['rxn1_3']
         e3_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] = ['rxn2_1']
-        e3_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'].append('rxn3_1')
+        e3_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'].\
+            append('rxn3_1')
 
         n3_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1', 'rxn1_3': 'rxn1',
                   'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3'}
@@ -210,12 +250,12 @@ class TestMakeCpairDict(unittest.TestCase):
         self.assertEqual(n3, n3_res)
 
     def test_MakeCpairDict_subset_fba(self):
-        reaction_flux = {'rxn1': 9.8, 'rxn3': 9.8, 'rxn4':9.8}
+        reaction_flux = {'rxn1': 9.8, 'rxn3': 9.8, 'rxn4': 9.8}
         subset = ['rxn1', 'rxn2', 'rxn4']
         e4, n4 = vis.make_cpair_dict(self.mm, self.filter_dict, subset,
                                      reaction_flux, self.method)
         e4_r = defaultdict(lambda: defaultdict(list))
-        e4_r[(Compound('A', 'c'), Compound('C', 'c'))]['forward'] = [str('rxn1_1')]
+        e4_r[(Compound('A', 'c'), Compound('C', 'c'))]['forward'] = ['rxn1_1']
         e4_r[(Compound('B', 'c'), Compound('C', 'c'))]['forward'] = ['rxn1_2']
         e4_r[(Compound('B', 'c'), Compound('D', 'c'))]['forward'] = ['rxn1_3']
         e4_r[(Compound('B', 'c'), Compound('D', 'c'))]['both'] = ['rxn2_1']
@@ -229,17 +269,22 @@ class TestMakeCpairDict(unittest.TestCase):
         filter_dict = {'rxn1': [(Compound('A', 'c'), Compound('C', 'c')),
                                 (Compound('B', 'c'), Compound('C', 'c')),
                                 (Compound('B', 'c'), Compound('D', 'c')),
-                                (Compound('A', 'c'), Compound('D', 'c')),],
+                                (Compound('A', 'c'), Compound('D', 'c'))],
                        'rxn2': [(Compound('B', 'c'), Compound('D', 'c'))],
                        'rxn3': [(Compound('D', 'c'), Compound('D', 'e'))]}
         e5, n5 = vis.make_cpair_dict(self.mm, filter_dict, self.subset,
                                   self.reaction_flux, self.method)
         e5_res = defaultdict(lambda: defaultdict(list))
-        e5_res[(Compound('A', 'c'), Compound('C', 'c'))]['both'].append('rxn1_1')
-        e5_res[(Compound('B', 'c'), Compound('C', 'c'))]['both'].append('rxn1_2')
-        e5_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] = ['rxn1_3','rxn2_1']
-        e5_res[(Compound('A', 'c'), Compound('D', 'c'))]['both'].append('rxn1_4')
-        e5_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'].append('rxn3_1')
+        e5_res[(Compound('A', 'c'), Compound('C', 'c'))]['both'].\
+            append('rxn1_1')
+        e5_res[(Compound('B', 'c'), Compound('C', 'c'))]['both'].\
+            append('rxn1_2')
+        e5_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] = \
+            ['rxn1_3','rxn2_1']
+        e5_res[(Compound('A', 'c'), Compound('D', 'c'))]['both'].\
+            append('rxn1_4')
+        e5_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'].\
+            append('rxn3_1')
 
         n5_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1','rxn1_3': 'rxn1',
                   'rxn1_4': 'rxn1', 'rxn2_1':'rxn2', 'rxn3_1': 'rxn3'}
@@ -250,12 +295,17 @@ class TestMakeCpairDict(unittest.TestCase):
         e6, n6 = vis.make_cpair_dict(self.mm, self.filter_dict, self.subset,
                                   self.reaction_flux, 'file_path')
         e6_res = defaultdict(lambda: defaultdict(list))
-        e6_res[(Compound('A', 'c'), Compound('C', 'c'))]['both'].append('rxn1_1')
-        e6_res[(Compound('B', 'c'), Compound('C', 'c'))]['both'].append('rxn1_2')
-        e6_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] = ['rxn1_3', 'rxn2_1']
-        e6_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'].append('rxn3_1')
+        e6_res[(Compound('A', 'c'), Compound('C', 'c'))]['both'].\
+            append('rxn1_1')
+        e6_res[(Compound('B', 'c'), Compound('C', 'c'))]['both'].\
+            append('rxn1_2')
+        e6_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] \
+            = ['rxn1_3', 'rxn2_1']
+        e6_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'].\
+            append('rxn3_1')
 
-        n6_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1', 'rxn1_3': 'rxn1', 'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3'}
+        n6_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1', 'rxn1_3': 'rxn1',
+                  'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3'}
         self.assertEqual(e6, e6_res)
         self.assertEqual(n6, n6_res)
 
@@ -264,12 +314,15 @@ class TestMakeEdgeValues(unittest.TestCase):
     def setUp(self):
         native_model = NativeModel()
         native_model.reactions.add_entry(
-            ReactionEntry({'id': 'FUM', 'equation': parse_reaction('fum_c[c] + h2o_c[c] <=> mal_L_c[c]')}))
+            ReactionEntry({'id': 'FUM', 'equation': parse_reaction(
+                'fum_c[c] + h2o_c[c] <=> mal_L_c[c]')}))
         native_model.reactions.add_entry(
             ReactionEntry({'id': 'CYTBD', 'equation': parse_reaction(
-                '(2) h_c[c] + (0.5) o2_c[c] + q8h2_c[c] => h2o_c[c] + (2) h_e[e] + q8_c[c]')}))
+                '(2) h_c[c] + (0.5) o2_c[c] + q8h2_c[c] => '
+                'h2o_c[c] + (2) h_e[e] + q8_c[c]')}))
         native_model.reactions.add_entry(
-            ReactionEntry({'id': 'FRD7', 'equation': parse_reaction('fum_c[c] + q8h2_c[c] => q8_c[c] + succ_c[c]')}))
+            ReactionEntry({'id': 'FRD7', 'equation': parse_reaction(
+                'fum_c[c] + q8h2_c[c] => q8_c[c] + succ_c[c]')}))
         self.native = native_model
         self.mm = native_model.create_metabolic_model()
 
@@ -387,10 +440,13 @@ class TestMakeEdgeValues(unittest.TestCase):
 class TestAddGraphNodes(unittest.TestCase):
     def setUp(self):
         cpair_dict = defaultdict(lambda: defaultdict(list))
-        cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['both'] = ['rxn1_1','rxn2_1']
-        cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['forward'] = ['rxn3_1']
+        cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['both'] = \
+            ['rxn1_1', 'rxn2_1']
+        cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['forward'] \
+            = ['rxn3_1']
         self.cpair_dict = cpair_dict
-        self.new_id_mapping = {'rxn1_1': 'rxn1', 'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3'}
+        self.new_id_mapping = {'rxn1_1': 'rxn1', 'rxn2_1': 'rxn2',
+                               'rxn3_1': 'rxn3'}
         self.method = 'fpp'
         self.split = False
         self.g = graph.Graph()
@@ -403,11 +459,11 @@ class TestAddGraphNodes(unittest.TestCase):
             'label': 'A[c]', 'original_id': Compound('A', 'c'),
             'compartment': 'c', 'fillcolor': '#ffd8bf'})
         node_c1 = graph.Node({
-            'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled', 'type': 'cpd',
-            'label': 'C[c]', 'original_id': Compound('C', 'c'),
+            'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
+                'cpd', 'label': 'C[c]', 'original_id': Compound('C', 'c'),
             'compartment': 'c', 'fillcolor': '#ffd8bf'})
         node_ac1_both = graph.Node({
-            'id': 'rxn1_1,rxn2_1', 'shape': 'box','style': 'filled',
+            'id': 'rxn1_1,rxn2_1', 'shape': 'box', 'style': 'filled',
             'label': 'rxn1\nrxn2', 'type': 'rxn', 'original_id':
                 ['rxn1', 'rxn2'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
         node_ac1_forward = graph.Node({
@@ -415,8 +471,10 @@ class TestAddGraphNodes(unittest.TestCase):
             'label': 'rxn3', 'type': 'rxn', 'original_id': ['rxn3'],
             'compartment': 'c', 'fillcolor': '#c9fccd'})
 
-        self.assertTrue(all(i in [node_a1, node_c1, node_ac1_both, node_ac1_forward] for i in g1.nodes))
-        self.assertTrue(all(i in g1.nodes for i in [node_a1, node_c1, node_ac1_both, node_ac1_forward]))
+        self.assertTrue(all(i in [node_a1, node_c1, node_ac1_both,
+                                  node_ac1_forward] for i in g1.nodes))
+        self.assertTrue(all(i in g1.nodes for i in [
+            node_a1, node_c1, node_ac1_both, node_ac1_forward]))
 
     def test_addnodes_split(self):
         g2 = vis.add_graph_nodes(self.g, self.cpair_dict, self.method,
@@ -427,7 +485,7 @@ class TestAddGraphNodes(unittest.TestCase):
             'compartment': 'c', 'fillcolor': '#ffd8bf'})
         node_c2 = graph.Node({
             'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
-                'cpd', 'label': 'C[c]','original_id': Compound('C', 'c'),
+                'cpd', 'label': 'C[c]', 'original_id': Compound('C', 'c'),
             'compartment': 'c', 'fillcolor': '#ffd8bf'})
         node_rxn1 = graph.Node({
             'id': 'rxn1_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
@@ -481,9 +539,10 @@ class TestAddGraphNodes(unittest.TestCase):
 
 class TestUpdateNodeColor(unittest.TestCase):
     def setUp(self):
-        node_a = graph.Node({'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled',
-                             'type': 'cpd', 'original_id': Compound('A', 'c'),
-                             'compartment': 'c', 'fillcolor': '#ffd8bf'})
+        node_a = graph.Node({
+            'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
+                'cpd', 'original_id': Compound('A', 'c'), 'compartment': 'c',
+            'fillcolor': '#ffd8bf'})
         node_c = graph.Node({
             'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
                 'cpd', 'original_id': Compound('C', 'c'), 'compartment': 'c',
@@ -494,14 +553,17 @@ class TestUpdateNodeColor(unittest.TestCase):
             'fillcolor': '#ffd8bf'})
         node_ac = graph.Node({
             'id': 'rxn1_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn1'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'original_id': ['rxn1'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
         node_ad = graph.Node({
             'id': 'rxn1_2', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn1'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'original_id': ['rxn1'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
 
         node_ac_comb = graph.Node({
-            'id': 'rxn1_1,rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn1', 'rxn2'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'id': 'rxn1_1,rxn2_1', 'shape': 'box', 'style': 'filled',
+            'type': 'rxn', 'original_id': ['rxn1', 'rxn2'],
+            'compartment': 'c', 'fillcolor': '#c9fccd'})
 
         self.g = graph.Graph()
         self.node_list = [node_a, node_c, node_d, node_ac, node_ad]
@@ -540,29 +602,34 @@ class TestUpdateNodeColor(unittest.TestCase):
             'fillcolor': '#ffd8bf'})
         node_ad2 = graph.Node({
             'id': 'rxn1_2', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn1'], 'compartment': 'c', 'fillcolor': '#ef70de'})
+            'original_id': ['rxn1'], 'compartment': 'c',
+            'fillcolor': '#ef70de'})
         node_list = [node_a2, node_c2, node_d2, node_ac2, node_ad2]
         self.assertTrue(all(i in node_list for i in g2.nodes))
         self.assertTrue(all(i in g2.nodes for i in node_list))
 
     def test3_update_color_recolorCombinedRxnNode(self):
         g3 = vis.update_node_color(self.g_comb, self.recolor_dict)
-        node_a3 = graph.Node({'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled',
-                             'type': 'cpd', 'original_id': Compound('A', 'c'),
-                              'compartment': 'c', 'fillcolor': '#f4fc55'})
-        node_c3 = graph.Node({'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled',
-                             'type': 'cpd', 'original_id': Compound('C', 'c'),
-                              'compartment': 'c', 'fillcolor': '#ffd8bf'})
+        node_a3 = graph.Node({
+            'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
+                'cpd', 'original_id': Compound('A', 'c'), 'compartment': 'c',
+            'fillcolor': '#f4fc55'})
+        node_c3 = graph.Node({
+            'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
+                'cpd', 'original_id': Compound('C', 'c'), 'compartment': 'c',
+            'fillcolor': '#ffd8bf'})
         node_d3 = graph.Node({
             'id': 'D[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
                 'cpd', 'original_id': Compound('D', 'c'), 'compartment': 'c',
             'fillcolor': '#ffd8bf'})
         node_ac3 = graph.Node({
-            'id': 'rxn1_1,rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn1', 'rxn2'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'id': 'rxn1_1,rxn2_1', 'shape': 'box', 'style': 'filled',
+            'type': 'rxn', 'original_id': ['rxn1', 'rxn2'],
+            'compartment': 'c', 'fillcolor': '#c9fccd'})
         node_ad3 = graph.Node({
             'id': 'rxn1_2', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn1'], 'compartment': 'c', 'fillcolor': '#ef70de'})
+            'original_id': ['rxn1'], 'compartment': 'c',
+            'fillcolor': '#ef70de'})
         node_list = [node_a3, node_c3, node_ac3, node_d3, node_ad3]
         self.assertTrue(all(i in node_list for i in g3.nodes))
         self.assertTrue(all(i in g3.nodes for i in node_list))
@@ -575,35 +642,43 @@ class TestUpdateNodeColor(unittest.TestCase):
 
 class TestAddEdges(unittest.TestCase):
     def setUp(self):
-        self.node_a = graph.Node({'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled',
-                                  'type': 'cpd', 'original_id': Compound('A', 'c'),
-                                  'compartment': 'c', 'fillcolor': '#ffd8bf'})
-        self.node_c = graph.Node({'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled',
-                                  'type': 'cpd', 'original_id': Compound('C', 'c'),
-                                  'compartment': 'c', 'fillcolor': '#ffd8bf'})
+        self.node_a = graph.Node({
+            'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
+                'cpd', 'original_id': Compound('A', 'c'), 'compartment': 'c',
+            'fillcolor': '#ffd8bf'})
+        self.node_c = graph.Node({
+            'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
+                'cpd', 'original_id': Compound('C', 'c'), 'compartment': 'c',
+            'fillcolor': '#ffd8bf'})
         self.node_rxn1 = graph.Node({
             'id': 'rxn1_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn1'], 'compartment': 'c', 'fillcolor':'#c9fccd'})
+            'original_id': ['rxn1'], 'compartment': 'c',
+            'fillcolor':'#c9fccd'})
         self.node_rxn2 = graph.Node({
             'id': 'rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn2'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'original_id': ['rxn2'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
         self.node_rxn3 = graph.Node({
             'id': 'rxn3_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn3'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'original_id': ['rxn3'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
         self.node_rxn4 = graph.Node({
             'id': 'rxn4_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn4'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'original_id': ['rxn4'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
 
         self.node_ac_both = graph.Node({
             'id': 'rxn1_1,rxn2_1', 'shape': 'box', 'style': 'filled',
-            'type': 'rxn', 'original_id': ['rxn1', 'rxn2'], 'compartment': 'c',
-            'fillcolor': '#c9fccd'})
+            'type': 'rxn', 'original_id': ['rxn1', 'rxn2'],
+            'compartment': 'c', 'fillcolor': '#c9fccd'})
         self.node_ac_forw = graph.Node({
             'id': 'rxn3_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn3'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'original_id': ['rxn3'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
         self.node_ac_back = graph.Node({
             'id': 'rxn4_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn4'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'original_id': ['rxn4'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
 
         self.g1 = graph.Graph()
         for node in [self.node_a, self.node_c, self.node_ac_both,
@@ -616,16 +691,19 @@ class TestAddEdges(unittest.TestCase):
             self.g2.add_node(node)
 
         cpair_dict = defaultdict(lambda: defaultdict(list))
-        cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['both'] = ['rxn1_1', 'rxn2_1']
-        cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['forward'] = ['rxn3_1']
-        cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['back'] = ['rxn4_1']
+        cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['both'] \
+            = ['rxn1_1', 'rxn2_1']
+        cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['forward'] \
+            = ['rxn3_1']
+        cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['back'] \
+            = ['rxn4_1']
         self.cpair_dict = cpair_dict
         self.split = False
         self.method = 'fpp'
 
     def test1_addedges_default_or_filepath(self):
-        g1_default = vis.add_edges(self.g1, self.cpair_dict, self.method, self.split)
-        g1_filepath = vis.add_edges(self.g1, self.cpair_dict, 'file_path', self.split)
+        g1_default = vis.add_edges(self.g1, self.cpair_dict, 'fpp', False)
+        g1_file = vis.add_edges(self.g1, self.cpair_dict, 'file_path', False)
         edge1 = graph.Edge(self.node_a, self.node_ac_both, {'dir': 'both'})
         edge2 = graph.Edge(self.node_ac_both, self.node_c, {'dir': 'both'})
         edge3 = graph.Edge(self.node_a, self.node_ac_forw, {'dir': 'forward'})
@@ -636,13 +714,14 @@ class TestAddEdges(unittest.TestCase):
         self.assertTrue(all(i in edge_list for i in g1_default.edges))
         self.assertTrue(all(i in g1_default.edges for i in edge_list))
 
-        self.assertTrue(all(i in edge_list for i in g1_filepath.edges))
-        self.assertTrue(all(i in g1_filepath.edges for i in edge_list))
+        self.assertTrue(all(i in edge_list for i in g1_file.edges))
+        self.assertTrue(all(i in g1_file.edges for i in edge_list))
 
     def test2_addedges_split_or_nofpp(self):
         g2_split = vis.add_edges(self.g2, self.cpair_dict, self.method, True)
 
-        g2_nofpp = vis.add_edges(self.g2, self.cpair_dict, 'no-fpp', self.split)
+        g2_nofpp = vis.add_edges(self.g2, self.cpair_dict, 'no-fpp',
+                                 self.split)
 
         edge1 = graph.Edge(self.node_a, self.node_rxn1, {'dir': 'both'})
         edge2 = graph.Edge(self.node_rxn1, self.node_c, {'dir': 'both'})
@@ -663,17 +742,22 @@ class TestAddEdges(unittest.TestCase):
 
 class TestAddBiomassRnxs(unittest.TestCase):
     def setUp(self):
-        self.node_a = graph.Node({'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled',
-                                  'type': 'cpd', 'original_id': Compound('A', 'c'),
-                                  'compartment': 'c', 'fillcolor': '#ffd8bf'})
-        self.node_c = graph.Node({'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled',
-                                  'type': 'cpd', 'original_id': Compound('C', 'c'),
-                                  'compartment': 'c', 'fillcolor': '#ffd8bf'})
+        self.node_a = graph.Node({
+            'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
+                'cpd', 'original_id': Compound('A', 'c'), 'compartment': 'c',
+            'fillcolor': '#ffd8bf'})
+        self.node_c = graph.Node({
+            'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
+                'cpd', 'original_id': Compound('C', 'c'), 'compartment': 'c',
+            'fillcolor': '#ffd8bf'})
         self.node_rxn1 = graph.Node({
             'id': 'rxn1_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['rxn1'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
-        self.edge_A_rxn = graph.Edge(self.node_a, self.node_rxn1, {'dir': 'both'})
-        self.edge_C_rxn = graph.Edge(self.node_rxn1, self.node_c, {'dir': 'both'})
+            'original_id': ['rxn1'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
+        self.edge_A_rxn = graph.Edge(self.node_a, self.node_rxn1,
+                                     {'dir': 'both'})
+        self.edge_C_rxn = graph.Edge(self.node_rxn1, self.node_c,
+                                     {'dir': 'both'})
         self.g = graph.Graph()
         for node in [self.node_a, self.node_c, self.node_rxn1]:
             self.g.add_node(node)
@@ -682,7 +766,8 @@ class TestAddBiomassRnxs(unittest.TestCase):
 
         self.biomass_id = 'test_bio'
         self.biomass_rxn = Reaction(
-            Direction.Forward, [(Compound('C', 'c'), 1), (Compound('D', 'c'), 2)],
+            Direction.Forward, [
+                (Compound('C', 'c'), 1), (Compound('D', 'c'), 2)],
             [(Compound('A', 'c'), 1), (Compound('E', 'c'), 1)])
 
     def test1_addBiorxn_default(self):
@@ -707,11 +792,11 @@ class TestAddBiomassRnxs(unittest.TestCase):
 
 class TestAddExchangeRxns(unittest.TestCase):
     def setUp(self):
-        self.a = graph.Node({
+        a = graph.Node({
             'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled',
             'type': 'cpd', 'original_id': Compound('A', 'c'), 'label': 'A[c]',
             'compartment': 'c', 'fillcolor': '#ffd8bf'})
-        self.c = graph.Node({
+        c = graph.Node({
             'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled',
             'type': 'cpd', 'original_id': Compound('C', 'c'), 'label': 'C[c]',
             'compartment': 'c', 'fillcolor': '#ffd8bf'})
@@ -735,16 +820,16 @@ class TestAddExchangeRxns(unittest.TestCase):
             'id': 'rxn3_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'original_id': ['rxn3'], 'compartment': 'c',
             'fillcolor': '#c9fccd', 'label': 'rxn3'})
-        edge_a_r1 = graph.Edge(self.a, node_ac, {'dir': 'forward'})
-        edge_r1_c = graph.Edge(node_ac, self.c, {'dir': 'forward'})
-        edge_c_r2 = graph.Edge(self.c, node_cc, {'dir': 'both'})
+        edge_a_r1 = graph.Edge(a, node_ac, {'dir': 'forward'})
+        edge_r1_c = graph.Edge(node_ac, c, {'dir': 'forward'})
+        edge_c_r2 = graph.Edge(c, node_cc, {'dir': 'both'})
         edge_r2_c = graph.Edge(node_cc, self.c_extracell, {'dir': 'both'})
         edge_a_r3 = graph.Edge(self.a_extracell, node_aa, {'dir': 'forward'})
-        edge_r3_a = graph.Edge(node_aa, self.a, {'dir': 'forward'})
+        edge_r3_a = graph.Edge(node_aa, a, {'dir': 'forward'})
 
         self.g1 = graph.Graph()
         self.edge_list_c_to_e = [edge_a_r1, edge_r1_c, edge_c_r2, edge_r2_c]
-        self.node_list_c_to_e = [self.a, self.c, self.c_extracell, node_ac, node_cc]
+        self.node_list_c_to_e = [a, c, self.c_extracell, node_ac, node_cc]
         for node in self.node_list_c_to_e:
             self.g1.add_node(node)
         for edge in self.edge_list_c_to_e:
@@ -754,7 +839,7 @@ class TestAddExchangeRxns(unittest.TestCase):
 
         self.g2 = graph.Graph()
         self.edge_list_e_to_c = [edge_a_r1, edge_r1_c, edge_a_r3, edge_r3_a]
-        self.node_list_e_to_c = [self.a, self.a_extracell, self.c, node_aa, node_ac]
+        self.node_list_e_to_c = [a, self.a_extracell, c, node_aa, node_ac]
         for node in self.node_list_e_to_c:
             self.g2.add_node(node)
         for edge in self.edge_list_e_to_c:
@@ -763,21 +848,21 @@ class TestAddExchangeRxns(unittest.TestCase):
     def test1_addExrRxn_cpdC(self):
         g1 = vis.add_exchange_rxns(self.g1, 'test_Ex_C', self.rxn_C)
         node_ex = graph.Node({
-            'id': 'test_Ex_C', 'shape': 'box', 'style': 'filled', 'type': 'Ex_rxn',
-            'original_id': ['test_Ex_C'], 'compartment': 'e', 'fillcolor': '#90f998',
-            'label': 'test_Ex_C'})
-        edge_Ex = graph.Edge(self.c_extracell, node_ex, {'dir': 'both'})
+            'id': 'test_Ex_C', 'shape': 'box', 'style': 'filled', 'type':
+                'Ex_rxn', 'original_id': ['test_Ex_C'], 'compartment': 'e',
+            'fillcolor': '#90f998','label': 'test_Ex_C'})
+        edge_ex = graph.Edge(self.c_extracell, node_ex, {'dir': 'both'})
         self.node_list_c_to_e.append(node_ex)
-        self.edge_list_c_to_e.append(edge_Ex)
+        self.edge_list_c_to_e.append(edge_ex)
         self.assertTrue(all(i in self.node_list_c_to_e for i in g1.nodes))
         self.assertTrue(all(i in self.edge_list_c_to_e for i in g1.edges))
 
     def test2_addExrRxn_cpdA(self):
         g2 = vis.add_exchange_rxns(self.g2, 'test_Ex_A', self.rxn_C)
         node_ex = graph.Node({
-            'id': 'test_Ex_A', 'shape': 'box', 'style': 'filled', 'type': 'Ex_rxn',
-            'original_id': ['test_Ex_A'], 'compartment': 'e',
-            'fillcolor': '#90f998', 'label': 'test_Ex_A'})
+            'id': 'test_Ex_A', 'shape': 'box', 'style': 'filled',
+            'type': 'Ex_rxn', 'original_id': ['test_Ex_A'], 'compartment':
+                'e', 'fillcolor': '#90f998', 'label': 'test_Ex_A'})
         edge_ex = graph.Edge(self.a_extracell, node_ex, {'dir': 'both'})
         self.node_list_e_to_c.append(node_ex)
         self.edge_list_e_to_c.append(edge_ex)
@@ -800,17 +885,17 @@ class TestUpdateNodeLabel(unittest.TestCase):
             'label': 'C[e]', 'type': 'cpd', 'original_id': Compound('C', 'e'),
             'compartment': 'e', 'fillcolor': '#ffd8bf'})
         self.node_ac = graph.Node({
-            'id': 'rxn1_1,rxn3_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'label': 'rxn1_1\nrxn3_1', 'original_id': ['rxn1', 'rxn3'], 'compartment': 'c',
-            'fillcolor': '#c9fccd'})
+            'id': 'rxn1_1,rxn3_1', 'shape': 'box', 'style': 'filled',
+            'type': 'rxn', 'label': 'rxn1_1\nrxn3_1', 'original_id':
+                ['rxn1', 'rxn3'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
         self.node_cc = graph.Node({
             'id': 'rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'label': 'rxn2_1', 'original_id': ['rxn2'], 'compartment': 'e',
             'fillcolor': '#c9fccd'})
         self.node_Ex = graph.Node({
-            'id': 'test_Ex_C', 'shape': 'box', 'style': 'filled', 'type': 'Ex_rxn',
-            'label': 'test_Ex_C', 'original_id': ['test_Ex_C'], 'compartment': 'e',
-            'fillcolor': '#90f998'})
+            'id': 'test_Ex_C', 'shape': 'box', 'style': 'filled',
+            'type': 'Ex_rxn', 'label': 'test_Ex_C', 'original_id':
+                ['test_Ex_C'], 'compartment': 'e', 'fillcolor': '#90f998'})
         self.bio_A = graph.Node({
             'id': 'test_bio_1', 'label': 'test_bio', 'shape': 'box',
             'style': 'filled', 'type': 'bio_rxn', 'original_id': ['test_bio'],
@@ -819,15 +904,18 @@ class TestUpdateNodeLabel(unittest.TestCase):
         edge_a_r13 = graph.Edge(self.a, self.node_ac, {'dir': 'both'})
         edge_r13_c = graph.Edge(self.node_ac, self.c, {'dir': 'both'})
         edge_c_r2 = graph.Edge(self.c, self.node_cc, {'dir': 'both'})
-        edge_r2_c = graph.Edge(self.node_cc, self.c_extracell, {'dir': 'both'})
+        edge_r2_c = graph.Edge(self.node_cc, self.c_extracell,
+                               {'dir': 'both'})
         edge_ex = graph.Edge(self.c_extracell, self.node_Ex, {'dir': 'both'})
         edge_bio_a = graph.Edge(self.bio_A, self.a, {'dir': 'forward'})
 
-        self.node_list = [self.a, self.c, self.c_extracell, self.node_ac, self.node_cc, self.node_Ex, self.bio_A]
+        self.node_list = [self.a, self.c, self.c_extracell, self.node_ac,
+                          self.node_cc, self.node_Ex, self.bio_A]
         self.g = graph.Graph()
         for node in self.node_list:
             self.g.add_node(node)
-        for edge in [edge_a_r13, edge_r13_c, edge_c_r2, edge_r2_c, edge_ex, edge_bio_a]:
+        for edge in [edge_a_r13, edge_r13_c, edge_c_r2, edge_r2_c, edge_ex,
+                     edge_bio_a]:
             self.g.add_edge(edge)
 
         self.cpd_detail = None
@@ -849,7 +937,8 @@ class TestUpdateNodeLabel(unittest.TestCase):
         rxn1 = entry.DictReactionEntry({
             'id': 'rxn1',
             'name': 'Reaction 1',
-            'equation': Reaction(Direction.Both, {Compound('A', 'c'): -1, Compound('C', 'c'): 1}),
+            'equation': Reaction(Direction.Both, {Compound('A', 'c'): -1,
+                                                  Compound('C', 'c'): 1}),
             'genes': 'gene1 and gene2'
         }),
         rxn2 = entry.DictReactionEntry({
@@ -861,7 +950,8 @@ class TestUpdateNodeLabel(unittest.TestCase):
         rxn3 = entry.DictReactionEntry({
             'id': 'rxn3',
             'name': 'Reaction 3',
-            'equation': Reaction(Direction.Both, {Compound('A', 'c'): -1, Compound('C', 'c'): 1}),
+            'equation': Reaction(Direction.Both, {Compound('A', 'c'): -1,
+                                                  Compound('C', 'c'): 1}),
         })
         test_ex_c = entry.DictReactionEntry({
             'id': 'test_Ex_C',
@@ -873,16 +963,17 @@ class TestUpdateNodeLabel(unittest.TestCase):
         test_bio = entry.DictReactionEntry({
             'id': 'test_bio',
             'name': 'biomass Reaction',
-            'equation': Reaction(Direction.Forward, {Compound('A', 'c'): -1, Compound('D', 'c'): -1,
-                                                     Compound('E', 'c'): 1})
-        })
+            'equation': Reaction(Direction.Forward, {
+                Compound('A', 'c'): -1, Compound('D', 'c'): -1,
+                Compound('E', 'c'): 1})})
 
-        self.rxn_entries = {'rxn1': rxn1, 'rxn2': rxn2, 'rxn3': rxn3, 'test_Ex_C': test_ex_c,
-                            'test_bio': test_bio}
+        self.rxn_entries = {'rxn1': rxn1, 'rxn2': rxn2, 'rxn3': rxn3,
+                            'test_Ex_C': test_ex_c, 'test_bio': test_bio}
 
     def test_detail_default(self):
-        g1 = vis.update_node_label(self.g, self.cpd_detail, self.rxn_detail, self.cpd_entries,
-                                   self.rxn_entries, self.reaction_flux)
+        g1 = vis.update_node_label(
+            self.g, self.cpd_detail, self.rxn_detail, self.cpd_entries,
+            self.rxn_entries, self.reaction_flux)
         self.a.props['label'] = 'A[c]'
         self.c.props['label'] = 'C[c]'
         self.c_extracell.props['label'] = 'C[e]'
@@ -890,13 +981,18 @@ class TestUpdateNodeLabel(unittest.TestCase):
         self.node_cc.props['label'] = 'rxn2'
         self.node_Ex.props['label'] = 'test_Ex_C'
         self.bio_A.props['label'] = 'test_bio'
-        self.assertTrue(all(i in [self.a, self.c, self.c_extracell, self.node_ac,
-                                  self.node_cc, self.node_Ex, self.bio_A] for i in g1.nodes))
+        self.assertTrue(all(
+            i in [self.a, self.c, self.c_extracell, self.node_ac,
+                  self.node_cc, self.node_Ex, self.bio_A] for i in g1.nodes))
+        self.assertTrue(all(i in g1.nodes for i in [
+            self.a, self.c, self.c_extracell, self.node_ac, self.node_cc,
+            self.node_Ex, self.bio_A]))
 
     def test_detail_fba(self):
-        g2 = vis.update_node_label(self.g, self.cpd_detail, self.rxn_detail, self.cpd_entries,
-                                   self.rxn_entries, {'rxn1': 4.86, 'rxn2': 7.2,
-                                                   'rxn3': 5.29, 'test_bio': 0.8})
+        g2 = vis.update_node_label(
+            self.g, self.cpd_detail, self.rxn_detail, self.cpd_entries,
+            self.rxn_entries, {'rxn1': 4.86, 'rxn2': 7.2, 'rxn3': 5.29,
+                               'test_bio': 0.8})
         self.a.props['label'] = 'A[c]'
         self.c.props['label'] = 'C[c]'
         self.c_extracell.props['label'] = 'C[e]'
@@ -904,13 +1000,17 @@ class TestUpdateNodeLabel(unittest.TestCase):
         self.node_cc.props['label'] = 'rxn2\n7.2'
         self.node_Ex.props['label'] = 'test_Ex_C'
         self.bio_A.props['label'] = 'test_bio'
-        self.assertTrue(all(i in [self.a, self.c, self.c_extracell, self.node_ac,
-                                  self.node_cc, self.node_Ex, self.bio_A] for i in g2.nodes))\
-
+        self.assertTrue(all(
+            i in [self.a, self.c, self.c_extracell, self.node_ac,
+                  self.node_cc, self.node_Ex, self.bio_A] for i in g2.nodes))
+        self.assertTrue(all(i in g2.nodes for i in [
+            self.a, self.c, self.c_extracell, self.node_ac, self.node_cc,
+            self.node_Ex, self.bio_A]))
 
     def test_detail_id_name(self):
-        g3 = vis.update_node_label(self.g, [['id','name']], [['id','name']], self.cpd_entries,
-                                self.rxn_entries, self.reaction_flux)
+        g3 = vis.update_node_label(self.g, [['id', 'name']], [['id', 'name']],
+                                   self.cpd_entries, self.rxn_entries,
+                                   self.reaction_flux)
         self.a.props['label'] = 'A[c]\ncompound A'
         self.c.props['label'] = 'C[c]\ncompound C'
         self.c_extracell.props['label'] = 'C[e]\ncompound C'
@@ -918,11 +1018,16 @@ class TestUpdateNodeLabel(unittest.TestCase):
         self.node_cc.props['label'] = 'rxn2\nReaction 2'
         self.node_Ex.props['label'] = 'test_Ex_C\nExchange Reaction'
         self.bio_A.props['label'] = 'test_bio\nbiomass Reaction'
-        self.assertTrue(all(i in [self.a, self.c, self.c_extracell, self.node_ac,
-                                  self.node_cc, self.node_Ex, self.bio_A] for i in g3.nodes))
+        self.assertTrue(all(
+            i in [self.a, self.c, self.c_extracell, self.node_ac,
+                  self.node_cc, self.node_Ex, self.bio_A] for i in g3.nodes))
+        self.assertTrue(all(i in g3.nodes for i in [
+            self.a, self.c, self.c_extracell, self.node_ac, self.node_cc,
+            self.node_Ex, self.bio_A]))
 
     def test_cpd_detail_id_formula_genes(self):
-        g4 = vis.update_node_label(self.g, [['id','formula','genes']], self.rxn_detail, self.cpd_entries,
+        g4 = vis.update_node_label(self.g, [['id','formula','genes']],
+                                   self.rxn_detail, self.cpd_entries,
                                 self.rxn_entries, self.reaction_flux)
         self.a.props['label'] = 'A[c]\nC6H11O9P'
         self.c.props['label'] = 'C[c]\nC6H11O9P'
@@ -931,8 +1036,12 @@ class TestUpdateNodeLabel(unittest.TestCase):
         self.node_cc.props['label'] = 'rxn2'
         self.node_Ex.props['label'] = 'test_Ex_C'
         self.bio_A.props['label'] = 'test_bio'
-        self.assertTrue(all(i in [self.a, self.c, self.c_extracell, self.node_ac,
-                                  self.node_cc, self.node_Ex, self.bio_A] for i in g4.nodes))
+        self.assertTrue(all(
+            i in [self.a, self.c, self.c_extracell, self.node_ac,
+                  self.node_cc, self.node_Ex, self.bio_A] for i in g4.nodes))
+        self.assertTrue(all(i in g4.nodes for i in [
+            self.a, self.c, self.c_extracell, self.node_ac, self.node_cc,
+            self.node_Ex, self.bio_A]))
 
     def test_rxn_detail_id_formula_genes(self):
         g5 = vis.update_node_label(
@@ -945,8 +1054,12 @@ class TestUpdateNodeLabel(unittest.TestCase):
         self.node_cc.props['label'] = 'rxn2\gene3'
         self.node_Ex.props['label'] = 'test_Ex_C\ngene_ex'
         self.bio_A.props['label'] = 'test_bio'
-        self.assertTrue(all(i in [self.a, self.c, self.c_extracell, self.node_ac,
-                                  self.node_cc, self.node_Ex, self.bio_A] for i in g5.nodes))
+        self.assertTrue(all(
+            i in [self.a, self.c, self.c_extracell, self.node_ac,
+                  self.node_cc, self.node_Ex, self.bio_A] for i in g5.nodes))
+        self.assertTrue(all(i in g5.nodes for i in [
+            self.a, self.c, self.c_extracell, self.node_ac, self.node_cc,
+            self.node_Ex, self.bio_A]))
 
 
 class TestEdgePropsWithFBA(unittest.TestCase):
@@ -973,19 +1086,24 @@ class TestEdgePropsWithFBA(unittest.TestCase):
             'compartment': 'c', 'fillcolor': '#ffd8bf'})
         self.rxn_FUM = graph.Node({
             'id': 'FUM_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['FUM'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'original_id': ['FUM'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
         self.FRD7 = graph.Node({
             'id': 'FRD7_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['FRD7'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'original_id': ['FRD7'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
         self.CYTBD_FRD7 = graph.Node({
-            'id': 'CYTBD_1,FRD7_2', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['CYTBD', 'FRD7'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'id': 'CYTBD_1,FRD7_2', 'shape': 'box', 'style': 'filled',
+            'type': 'rxn', 'original_id': ['CYTBD', 'FRD7'],
+            'compartment': 'c', 'fillcolor': '#c9fccd'})
         self.CYTBD = graph.Node({
             'id': 'CYTBD_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['CYTBD'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'original_id': ['CYTBD'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
         self.FRD7_2 = graph.Node({
             'id': 'FRD7_2', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['FRD7'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+            'original_id': ['FRD7'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
 
         self.edge1 = graph.Edge(self.fum, self.rxn_FUM, {'dir': 'both'})
         self.edge2 = graph.Edge(self.rxn_FUM, self.mal, {'dir': 'both'})
@@ -999,7 +1117,8 @@ class TestEdgePropsWithFBA(unittest.TestCase):
         self.edge9 = graph.Edge(self.q8, self.FRD7_2, {'dir': 'back'})
         self.edge10 = graph.Edge(self.FRD7_2, self.q8h2, {'dir': 'back'})
 
-        self.edge_list = [self.edge1, self.edge2, self.edge3, self.edge4, self.edge5, self.edge6]
+        self.edge_list = [self.edge1, self.edge2, self.edge3, self.edge4,
+                          self.edge5, self.edge6]
         self.edge_list_2 = [self.edge1, self.edge2, self.edge3, self.edge4,
                             self.edge7, self.edge8, self.edge9, self.edge10]
 
@@ -1030,12 +1149,18 @@ class TestEdgePropsWithFBA(unittest.TestCase):
 
     def test2_with_fba(self):
         g2 = vis.set_edge_props_withfba(self.g1, self.edge_values)
-        edge1 = graph.Edge(self.fum, self.rxn_FUM, {'dir': 'both', 'penwidth': 1.161})
-        edge2 = graph.Edge(self.rxn_FUM, self.mal, {'dir': 'both', 'penwidth': 1.161})
-        edge3 = graph.Edge(self.fum, self.FRD7, {'dir': 'forward', 'style': 'dotted'})
-        edge4 = graph.Edge(self.FRD7, self.succ, {'dir': 'forward', 'style': 'dotted'})
-        edge5 = graph.Edge(self.q8, self.CYTBD_FRD7, {'dir': 'back', 'penwidth': 10})
-        edge6 = graph.Edge(self.CYTBD_FRD7, self.q8h2, {'dir': 'back', 'penwidth': 10})
+        edge1 = graph.Edge(self.fum, self.rxn_FUM,
+                           {'dir': 'both', 'penwidth': 1.161})
+        edge2 = graph.Edge(self.rxn_FUM, self.mal,
+                           {'dir': 'both', 'penwidth': 1.161})
+        edge3 = graph.Edge(self.fum, self.FRD7,
+                           {'dir': 'forward', 'style': 'dotted'})
+        edge4 = graph.Edge(self.FRD7, self.succ,
+                           {'dir': 'forward', 'style': 'dotted'})
+        edge5 = graph.Edge(self.q8, self.CYTBD_FRD7,
+                           {'dir': 'back', 'penwidth': 10})
+        edge6 = graph.Edge(self.CYTBD_FRD7, self.q8h2,
+                           {'dir': 'back', 'penwidth': 10})
         edge_list = [edge1, edge2, edge3, edge4, edge5, edge6]
         self.assertTrue(all(i in edge_list for i in g2.edges))
         self.assertTrue(all(i in g2.edges for i in edge_list))
@@ -1047,14 +1172,22 @@ class TestEdgePropsWithFBA(unittest.TestCase):
             (Compound('q8h2_c', 'c'), 'CYTBD'): 43.60,
             (Compound('fum_c', 'c'), 'FUM'): 5.06}
         g3 = vis.set_edge_props_withfba(self.g2, edge_values)
-        edge1 = graph.Edge(self.fum, self.rxn_FUM, {'dir': 'both', 'penwidth': 1.161})
-        edge2 = graph.Edge(self.rxn_FUM, self.mal, {'dir': 'both', 'penwidth': 1.161})
-        edge3 = graph.Edge(self.fum, self.FRD7, {'dir': 'forward', 'style': 'dotted'})
-        edge4 = graph.Edge(self.FRD7, self.succ, {'dir': 'forward', 'style': 'dotted'})
-        edge5 = graph.Edge(self.q8, self.CYTBD, {'dir': 'back', 'penwidth': 10})
-        edge6 = graph.Edge(self.CYTBD, self.q8h2, {'dir': 'back', 'penwidth': 10})
-        edge7 = graph.Edge(self.q8, self.FRD7_2, {'dir': 'back', 'style': 'dotted'})
-        edge8 = graph.Edge(self.FRD7_2, self.q8h2, {'dir': 'back', 'style': 'dotted'})
+        edge1 = graph.Edge(self.fum, self.rxn_FUM,
+                           {'dir': 'both', 'penwidth': 1.161})
+        edge2 = graph.Edge(self.rxn_FUM, self.mal,
+                           {'dir': 'both', 'penwidth': 1.161})
+        edge3 = graph.Edge(self.fum, self.FRD7,
+                           {'dir': 'forward', 'style': 'dotted'})
+        edge4 = graph.Edge(self.FRD7, self.succ,
+                           {'dir': 'forward', 'style': 'dotted'})
+        edge5 = graph.Edge(self.q8, self.CYTBD,
+                           {'dir': 'back', 'penwidth': 10})
+        edge6 = graph.Edge(self.CYTBD, self.q8h2,
+                           {'dir': 'back', 'penwidth': 10})
+        edge7 = graph.Edge(self.q8, self.FRD7_2,
+                           {'dir': 'back', 'style': 'dotted'})
+        edge8 = graph.Edge(self.FRD7_2, self.q8h2,
+                           {'dir': 'back', 'style': 'dotted'})
         edge_list = [edge1, edge2, edge3, edge4, edge5, edge6, edge7, edge8]
 
         self.assertTrue(all(i in edge_list for i in g3.edges))
