@@ -96,6 +96,10 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             '--compartment', action='store_true',
             help='Generate visualization of the network with compartments '
                  'shown.')
+        parser.add_argument(
+            '--image-size', type=text_type, default=None, action='append',
+            nargs='+', help='determine the height of final metabolic map, '
+                            'unit is inch')
         super(VisualizationCommand, cls).init_parser(parser)
 
     def run(self):
@@ -212,7 +216,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         if len(recolor_dict) > 0:
             g = update_node_color(g, recolor_dict)
         if self._args.cpd_detail is not None or self._args.rxn_detail \
-                is not None:
+                is not None or self._args.fba is True:
             g = update_node_label(
                 g, self._args.cpd_detail, self._args.rxn_detail,
                 model_compound_entries, model_reaction_entries, reaction_flux)
@@ -221,16 +225,22 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         if self._args.method == 'no-fpp' and self._args.split_map is True:
             logger.warning('--split-map is not compatible with no-fpp option')
 
+        width = None
+        height = None
+        if self._args.image_size is not None:
+            width = self._args.image_size[0][0]
+            height = self._args.image_size[0][1]
+
         if self._args.compartment:
             boundaries, extracellular = get_cpt_boundaries(self._model)
             boundary_tree, extracellular = make_cpt_tree(boundaries,
                                                          extracellular)
             with open('reactions_compartmentalized.dot', 'w') as f:
-                g.write_graphviz_compartmentalized(f, boundary_tree,
-                                                   extracellular)
+                g.write_graphviz_compartmentalized(
+                    f, boundary_tree, extracellular, width, height)
         else:
             with open('reactions.dot', 'w') as f:
-                g.write_graphviz(f)
+                g.write_graphviz(f, width, height)
         with open('reactions.nodes.tsv', 'w') as f:
             g.write_cytoscape_nodes(f)
         with open('reactions.edges.tsv', 'w') as f:
@@ -297,9 +307,10 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
                             edge_values[c, reaction] = abs(flux * float(val))
                     else:
                         edge_values[c, reaction] = abs(flux * float(val))
+
         rxn_set = set()
         for (c1, c2), rxns in iteritems(cpair_dict):
-            for direc, rlist in iteritems(rxns):
+            for direction, rlist in iteritems(rxns):
                 rlist_string = ','.join(new_id_mapping[r] for r in rlist)
                 if any(new_id_mapping[r] in reaction_flux for r in rlist):
                     x_comb_c1, x_comb_c2 = 0, 0
@@ -311,10 +322,13 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
                             x_comb_c2 += edge_values[(c2, real_r)]
                     edge_values_combined[(c1, rlist_string)] = x_comb_c1
                     edge_values_combined[(c2, rlist_string)] = x_comb_c2
+
         for r in reaction_flux:
             if r not in rxn_set:
-                for (_, r) in edge_values:
-                    edge_values_combined[(_, r)] = edge_values[(_, r)]
+                for (cpd, rxn) in edge_values:
+                    if rxn == r:
+                        edge_values_combined[(cpd, r)] = \
+                            edge_values[(cpd, rxn)]
 
     if split_map or method == 'no-fpp':
         return edge_values
@@ -532,8 +546,8 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
 
     rxns_sorted_cpair_dict = defaultdict(lambda: defaultdict(list))
     for (c1, c2), rxns in iteritems(new_cpair_dict):
-        for direc, rlist in iteritems(rxns):
-            rxns_sorted_cpair_dict[(c1, c2)][direc] = sorted(rlist)
+        for direction, rlist in iteritems(rxns):
+            rxns_sorted_cpair_dict[(c1, c2)][direction] = sorted(rlist)
 
     return rxns_sorted_cpair_dict, new_id_mapping
 
@@ -565,7 +579,7 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
                     'compartment': c.compartment})
                 g.add_node(node)
                 graph_nodes.add(c)
-        for direc, rlist in iteritems(reactions):
+        for direction, rlist in iteritems(reactions):
             if split or method == 'no-fpp':
                 for sub_rxn in rlist:
                     rnode = graph.Node({
@@ -606,7 +620,7 @@ def add_edges(g, cpairs_dict, method, split):
 
     edge_list = []
     for (c1, c2), value in iteritems(cpairs_dict):
-        for direc, rlist in iteritems(value):
+        for direction, rlist in iteritems(value):
             new_rlist = ','.join(rlist)
             if split or method == 'no-fpp':
                 for sub_rxn in rlist:
@@ -615,20 +629,21 @@ def add_edges(g, cpairs_dict, method, split):
                         edge_list.append(test1)
                         g.add_edge(graph.Edge(
                             g.get_node(text_type(c1)),
-                            g.get_node(text_type(sub_rxn)), {'dir': direc}))
+                            g.get_node(text_type(sub_rxn)), {'dir': direction}))
 
                     test2 = c2, sub_rxn
                     if test2 not in edge_list:
                         edge_list.append(test2)
                         g.add_edge(graph.Edge(
                             g.get_node(text_type(sub_rxn)),
-                            g.get_node(text_type(c2)), {'dir': dir}))
+                            g.get_node(text_type(c2)), {'dir': direction}))
             else:
                 g.add_edge(graph.Edge(
-                    g.get_node(text_type(c1)), g.get_node(text_type(new_rlist)),
-                    {'dir': dir}))
-                g.add_edge(graph.Edge(g.get_node(text_type(new_rlist)),
-                                      g.get_node(text_type(c2)), {'dir': dir}))
+                    g.get_node(text_type(c1)),
+                    g.get_node(text_type(new_rlist)), {'dir': direction}))
+                g.add_edge(graph.Edge(
+                    g.get_node(text_type(new_rlist)),
+                    g.get_node(text_type(c2)), {'dir': direction}))
     return g
 
 
@@ -696,13 +711,13 @@ def add_exchange_rxns(g, rxn_id, reaction):
                 'compartment': c.compartment})
             g.add_node(node_ex)
 
-            direc = dir_value(reaction.direction)
+            direction = dir_value(reaction.direction)
             for c1, _ in reaction.left:
                 g.add_edge(graph.Edge(
-                    g.get_node(text_type(c1)), node_ex, {'dir': direc}))
+                    g.get_node(text_type(c1)), node_ex, {'dir': direction}))
             for c2, _ in reaction.right:
                 g.add_edge(graph.Edge(
-                    node_ex, g.get_node(text_type(c2)), {'dir': direc}))
+                    node_ex, g.get_node(text_type(c2)), {'dir': direction}))
     return g
 
 

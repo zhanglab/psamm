@@ -69,12 +69,13 @@ class Graph(Entity):
             original_id_string = ','.join(node.props['original_id'])
         self._nodes_original_id[original_id_string].append(node)
 
-    def get_node(self, id):
+    def get_node(self, node_id):
         """get Node object.
         Args:
-            id: compound object or a list of reaction IDs.
+            node_id: text_type(compound object) or text_type(a string that
+                contains single or multiple reaction IDs).
         """
-        return self._nodes_id[id]
+        return self._nodes_id[node_id]
 
     def add_edge(self, edge):
         if edge.source not in self._nodes or edge.dest not in self._nodes:
@@ -133,13 +134,21 @@ class Graph(Entity):
     def default_edge_props(self):
         return self._default_edge_props
 
-    def write_graphviz(self, f):
-        """wirte the nodes and edges infomation into a dot file.
+    def write_graphviz(self, f, width, height):
+        """write the nodes and edges information into a dot file.
         Args:
-            self: Graoh entity, including nodes and edges entities.
+            self: Graph entity, including nodes and edges entities.
             f: An empty DOT file.
+            width: Width of final metabolic map.
+            height: Height of final metabolic map.
         """
         f.write('digraph {\n')
+        if width is not None and height is not None:
+            f.write('size = "{}, {}"; ratio = fill; node[fontname=Arail, '
+                    'fontsize=12]\n'.format(width, height))
+        else:
+            f.write('node[fontname=Arail, fontsize=12]\n'.
+                    format(width, height))
 
         if len(self._default_node_props) > 0:
             f.write(' node[{}];\n'.format(
@@ -168,7 +177,7 @@ class Graph(Entity):
         f.write('}\n')
 
     def write_graphviz_compartmentalized(self, f, compartment_tree,
-                                         extracellular):
+                                         extracellular, width, height):
         """Function to write compartmentalized version of dot file
         for graph.
         Args:
@@ -176,9 +185,16 @@ class Graph(Entity):
             f: An empty DOT file.
             compartment_tree: a defaultdict of set, each element
                 represents a compartment and its adjacent compartments.
-            extracellular: the extracelluar compartment in the model.
+            extracellular: the extracelluar compartment in the model
+            width: Width of final metabolic map.
+            height: Height of final metabolic map..
         """
         f.write('digraph {\n')
+        if width is not None and height is not None:
+            f.write('size="{},{}"; ratio = fill; node[fontname=Arail, '
+                    'fontsize=12]\n'.format(width, height))
+        else:
+            f.write('node[fontname=Arail, fontsize=12]\n'.format(width, height))
 
         if len(self._default_node_props) > 0:
             f.write(' node[{}];\n'.format(
@@ -207,7 +223,7 @@ class Graph(Entity):
                 f.write('  "{}"[{}]\n'.format(
                     node.props['id'], _graphviz_prop_string(node.props)))
 
-        def dfs_recursive(graph,vertex, node_dict, extracellular, f, path=[]):
+        def dfs_recursive(graph, vertex, node_dict, extracellular, f, path=[]):
             path.append(vertex)
             if vertex == extracellular:
                 f.write(''.join(
