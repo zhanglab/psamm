@@ -336,13 +336,13 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
             N(nitrogen), S(sulfur).
         cpd_formula: A dictionary that key is compound id (a string) and
             value is class 'psamm.formula.Formula'.
-        arg_hide_edges: Command line argument, a file that contains two
-            columns(tab-separated) of compounds(in the format of
-            compound_id[compartment], such as atp[c], akg[c],each row
+        arg_hide_edges: Command line argument, by default it is "None",
+            if this argument is given in command line, then it will be a file
+            that contains two columns(tab-separated) of compounds(in format
+            of compound_id[compartment], such as atp[c], akg[c], each row
             represent two reactant/product pairs((c1, c2)and (c2,c1)).
-        exclude_rxns: Command line argument, a file that contains one column
-            of reaction IDs, these reaction will be removed for visualization
-            when method is fpp.
+        exclude_rxns: A list of reaction IDs, these reaction will be removed
+            when visualize the network.
     """
 
     cpd_object = {}
