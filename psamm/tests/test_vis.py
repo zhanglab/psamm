@@ -142,7 +142,8 @@ class TestMakeFilterDict(unittest.TestCase):
     def test7_hide_edges(self):
         path = os.path.join(tempfile.mkdtemp(), 'remove_edges')
         with open(path, 'w') as f:
-            f.write('{}\t{}\n{}\t{}'.format('q8_c[c]', 'q8h2_c[c]', 'fum_c[c]', 'mal_L_c[c]'))
+            f.write('{}\t{}\n{}\t{}'.format(
+                'q8_c[c]', 'q8h2_c[c]', 'fum_c[c]', 'mal_L_c[c]'))
         e7 = vis.make_filter_dict(
             self.native, self.mm, self.method, self.element, self.cpd_formula,
             open(path), self.exclude_rxns)
