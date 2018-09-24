@@ -726,7 +726,7 @@ class TestAddExchangeRxns(unittest.TestCase):
             'original_id': ['rxn1'], 'compartment': 'c',
             'fillcolor': '#c9fccd', 'label':'rxn1',})
         node_cc = graph.Node({
-            'id': 'rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',  # rxn2: C[c] <=> C[e]
+            'id': 'rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'original_id': ['rxn2'], 'compartment': 'e',
             'fillcolor': '#c9fccd', 'label':'rxn2',})
         node_aa = graph.Node({
@@ -761,7 +761,7 @@ class TestAddExchangeRxns(unittest.TestCase):
     def test1_addExrRxn_cpdC(self):
         g1 = vis.add_exchange_rxns(self.g1, 'test_Ex_C', self.rxn_C)
         node_Ex = graph.Node({
-            'id': 'test_Ex_C', 'shape': 'box', 'style': 'filled', 'type': 'Ex_rxn',  # rxn3: A[e] => A[c]
+            'id': 'test_Ex_C', 'shape': 'box', 'style': 'filled', 'type': 'Ex_rxn',
             'original_id': ['test_Ex_C'], 'compartment': 'e', 'fillcolor': '#90f998',
             'label': 'test_Ex_C',})
         edge_Ex = graph.Edge(self.c_extracell, node_Ex, {'dir': 'both'})
@@ -773,7 +773,7 @@ class TestAddExchangeRxns(unittest.TestCase):
     def test2_addExrRxn_cpdA(self):
         g2 = vis.add_exchange_rxns(self.g2, 'test_Ex_A', self.rxn_C)
         node_Ex = graph.Node({
-            'id': 'test_Ex_A', 'shape': 'box', 'style': 'filled', 'type': 'Ex_rxn',  # rxn3: A[e] => A[c]
+            'id': 'test_Ex_A', 'shape': 'box', 'style': 'filled', 'type': 'Ex_rxn',
             'original_id': ['test_Ex_A'], 'compartment': 'e',
             'fillcolor': '#90f998', 'label':'test_Ex_A',})
         edge_Ex = graph.Edge(self.a_extracell, node_Ex, {'dir': 'both'})
@@ -802,11 +802,11 @@ class TestUpdateNodeLabel(unittest.TestCase):
             'label': 'rxn1_1\nrxn3_1', 'original_id': ['rxn1', 'rxn3'], 'compartment': 'c',
             'fillcolor': '#c9fccd'})
         self.node_cc = graph.Node({
-            'id': 'rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',  # rxn2: C[c] <=> C[e]
+            'id': 'rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'label': 'rxn2_1', 'original_id': ['rxn2'], 'compartment': 'e',
             'fillcolor': '#c9fccd'})
         self.node_Ex = graph.Node({
-            'id': 'test_Ex_C', 'shape': 'box', 'style': 'filled', 'type': 'Ex_rxn',  # rxn3: A[e] => A[c]
+            'id': 'test_Ex_C', 'shape': 'box', 'style': 'filled', 'type': 'Ex_rxn',
             'label': 'test_Ex_C', 'original_id': ['test_Ex_C'], 'compartment': 'e',
             'fillcolor': '#90f998'})
         self.bio_A = graph.Node({
@@ -814,7 +814,7 @@ class TestUpdateNodeLabel(unittest.TestCase):
             'style': 'filled', 'type': 'bio_rxn', 'original_id': ['test_bio'],
             'compartment': 'c', 'fillcolor': '#b3fcb8'})
 
-        edge_a_r13 = graph.Edge(self.a, self.node_ac, {'dir': 'both'})    # in E_coli_core, it is both
+        edge_a_r13 = graph.Edge(self.a, self.node_ac, {'dir': 'both'})
         edge_r13_c = graph.Edge(self.node_ac, self.c, {'dir': 'both'})
         edge_c_r2 = graph.Edge(self.c, self.node_cc, {'dir': 'both'})
         edge_r2_c = graph.Edge(self.node_cc, self.c_extracell, {'dir': 'both'})
@@ -906,7 +906,7 @@ class TestUpdateNodeLabel(unittest.TestCase):
                                   self.node_cc, self.node_Ex, self.bio_A] for i in g2.nodes))\
 
 
-    def test_detail_id_name(self): # for both reaction and compound
+    def test_detail_id_name(self):
         g3 = vis.update_node_label(self.g, [['id','name']], [['id','name']], self.cpd_entries,
                                 self.rxn_entries, self.reaction_flux)
         self.a.props['label'] = 'A[c]\ncompound A'
@@ -976,16 +976,15 @@ class TestEdgePropsWithFBA(unittest.TestCase):
             'original_id': ['FRD7'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
         self.CYTBD_FRD7 = graph.Node({
             'id': 'CYTBD_1,FRD7_2', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['CYTBD', 'FRD7'], 'compartment': 'c', 'fillcolor': '#c9fccd'})  # NO LABEL
-
+            'original_id': ['CYTBD', 'FRD7'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
         self.CYTBD = graph.Node({
             'id': 'CYTBD_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['CYTBD'], 'compartment': 'c', 'fillcolor': '#c9fccd'})  # NO LABEL
+            'original_id': ['CYTBD'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
         self.FRD7_2 = graph.Node({
             'id': 'FRD7_2', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
-            'original_id': ['FRD7'], 'compartment': 'c', 'fillcolor': '#c9fccd'})  # NO LABEL
+            'original_id': ['FRD7'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
 
-        self.edge1 = graph.Edge(self.fum, self.rxn_FUM, {'dir': 'both'})  # in E_coli_core, it is both
+        self.edge1 = graph.Edge(self.fum, self.rxn_FUM, {'dir': 'both'})
         self.edge2 = graph.Edge(self.rxn_FUM, self.mal, {'dir': 'both'})
         self.edge3 = graph.Edge(self.fum, self.FRD7, {'dir': 'forward'})
         self.edge4 = graph.Edge(self.FRD7, self.succ, {'dir': 'forward'})
@@ -1028,7 +1027,7 @@ class TestEdgePropsWithFBA(unittest.TestCase):
 
     def test2_with_fba(self):
         g2 = vis.set_edge_props_withfba(self.g1, self.edge_values)
-        edge1 = graph.Edge(self.fum, self.rxn_FUM, {'dir': 'both', 'penwidth': 1.161})  # in E_coli_core, it is bo
+        edge1 = graph.Edge(self.fum, self.rxn_FUM, {'dir': 'both', 'penwidth': 1.161})
         edge2 = graph.Edge(self.rxn_FUM, self.mal, {'dir': 'both', 'penwidth': 1.161})
         edge3 = graph.Edge(self.fum, self.FRD7, {'dir': 'forward', 'style': 'dotted'})
         edge4 = graph.Edge(self.FRD7, self.succ, {'dir': 'forward', 'style': 'dotted'})
