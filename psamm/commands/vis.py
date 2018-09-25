@@ -15,6 +15,7 @@
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2018-2018  Ke Zhang <kzhang@my.uri.edu>
+# Copyright 2015-2018  Keith Dufault-Thompson <keitht547@uri.edu>
 
 from __future__ import unicode_literals
 
@@ -242,7 +243,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                     render('dot', self._args.Image, 'reactions.dot')
 
 
-def make_subset(mm, arg_subset):
+def make_subset(mm, subset_file):
     """create a collection of reaction IDs that need to be visualized.
 
     Args:
@@ -250,29 +251,27 @@ def make_subset(mm, arg_subset):
         arg_subset: By default it is None, if --subset id given in command
             line it is a file that contains a column of reaction IDs.
     """
-    if arg_subset is not None:
-        raw_subset, subset_reactions, mm_cpds = [], set(), []
-        for line in arg_subset.readlines():
-            raw_subset.append(line.rstrip())
-
-        for c in mm.compounds:
-            mm_cpds.append(str(c))
-        if set(raw_subset).issubset(set(mm.reactions)):
-            subset_reactions = raw_subset
-        elif set(raw_subset).issubset(set(mm_cpds)):
-            for reaction in mm.reactions:
-                rx = mm.get_reaction(reaction)
-                if any(str(c) in raw_subset for (c, _) in rx.compounds):
-                    subset_reactions.add(reaction)
-        else:
-            logger.error(
-                'Invalid subset file. The file should contains a column '
-                'of reaction id or a column of compound id with '
-                'compartment, mix of reactions, compounds and other '
-                'information in one subset file is not allowed.')
-            quit()
+    if subset_file is None:
+        return set(mm.reactions)
     else:
-        subset_reactions = set(mm.reactions)
+        cpd_set = set()
+        rxn_set = set()
+        for l in subset_file.readlines():
+            id = l.rstrip()
+            if mm.has_compound(id):
+                cpd_set.add(id)
+            elif mm.has_reaction(id):
+                rxn_set.add(id)
+            else:
+                raise ValueError('{} was in subset file but is not a compound or reaction id'.format(id))
+        if all(i > 0 for i in [len(cpd_set), len(rxn_set)]):
+            raise ValueError('Subset file contains a mix of reactions and compounds.')
+        if len(cpd_set) > 0:
+            for rx in mm.reactions:
+                rxn = mm.get_reaction(rx)
+                if any(str(c) in cpd_set for (c, _) in rxn.compounds):
+                    rxn_set.add(rx)
+        return rxn_set
 
     return subset_reactions
 
