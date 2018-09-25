@@ -145,7 +145,7 @@ class Graph(Entity):
         """write the nodes and edges information into a dot file.
         Args:
             self: Graph entity, including nodes and edges entities.
-            f: An empty DOT file.
+            f: An empty file.
             width: Width of final metabolic map.
             height: Height of final metabolic map.
         """
@@ -169,14 +169,14 @@ class Graph(Entity):
             f.write(' {}="{}";\n'.format(k, v))
 
         next_id = count(0)
-        for node in self.nodes:
+        for node in sorted(self.nodes, key=lambda k: k.props['id']):
             if 'id' not in node.props:
                 node.props['id'] = 'n{}'.format(next(next_id))
 
             f.write(' "{}"[{}]\n'.format(
                 node.props['id'], _graphviz_prop_string(node.props)))
 
-        for edge in self.edges:
+        for edge in sorted(self.edges, key=lambda k: (k.source.props['id'], k.dest.props['id'])):
             f.write(' "{}" -> "{}"[{}]\n'.format(
                 edge.source.props['id'], edge.dest.props['id'],
                 _graphviz_prop_string(edge.props)))
@@ -189,10 +189,10 @@ class Graph(Entity):
         for graph.
         Args:
             self: Graph entity.
-            f: An empty DOT file.
+            f: An empty file.
             compartment_tree: a defaultdict of set, each element
                 represents a compartment and its adjacent compartments.
-            extracellular: the extracelluar compartment in the model
+            extracellular: the extracellular compartment in the model
             width: Width of final metabolic map.
             height: Height of final metabolic map..
         """
@@ -238,7 +238,7 @@ class Graph(Entity):
                      '{\n  style=dashed;\n  color=black;\n  penwidth=4;\n  '
                      'fontsize=35;\n', '  label = "Compartment: {}"\n'.format
                      (edit_labels(vertex))]))
-                for x in node_dict[vertex]:
+                for x in sorted(node_dict[vertex], key=lambda k: k.props['id']):
                     f.write(' "{}"[{}]\n'.format(
                         x.props['id'], _graphviz_prop_string(x.props)))
             elif vertex != extracellular:
@@ -247,7 +247,7 @@ class Graph(Entity):
                      '{\n  style=dashed;\n  color=black;\n  penwidth=4;\n  '
                      'fontsize=35;\n', '  label = "Compartment: {}"\n'.format
                      (edit_labels(vertex))]))
-                for x in node_dict[vertex]:
+                for x in sorted(node_dict[vertex], key=lambda k: k.props['id']):
                     f.write(' "{}"[{}]\n'.format(
                         x.props['id'], _graphviz_prop_string(x.props)))
             for neighbor in graph[vertex]:
@@ -259,70 +259,18 @@ class Graph(Entity):
         dfs_recursive(compartment_tree, extracellular, node_dicts,
                       extracellular, f)
 
-        for edge in self.edges:
+        for edge in sorted(self.edges,  key=lambda k: (k.source.props['id'], k.dest.props['id'])):
             f.write(' "{}" -> "{}"[{}]\n'.format(
                 edge.source.props['id'], edge.dest.props['id'],
                 _graphviz_prop_string(edge.props)))
 
         f.write('}\n')
 
-    def write_svg(self, f):
-        min_x = max_x = min_y = max_y = None
-        for node in self.nodes:
-            x = node.props.get('x', 0)
-            y = node.props.get('y', 0)
-            if min_x is None or x < min_x:
-                min_x = x
-            if max_x is None or x > max_x:
-                max_x = x
-            if min_y is None or y < min_y:
-                min_y = y
-            if max_y is None or y > max_y:
-                max_y = y
-
-        width = max_x - min_x + 1
-        height = max_y - min_y + 1
-
-        f.write('\n'.join([
-            '<?xml version="1.0"?>',
-            '<svg xmlns="http://www.w3.org/2000/svg"',
-            ' viewBox="{} {} {} {}"'.format(min_x, min_y, width, height),
-            ' width="{}cm" height="{}cm">'.format(width, height),
-            '']))
-
-        for edge in self.edges:
-            x1 = edge.source.props.get('x', 0) + 0.5
-            y1 = edge.source.props.get('y', 0) + 0.5
-            x2 = edge.dest.props.get('x', 0) + 0.5
-            y2 = edge.dest.props.get('y', 0) + 0.5
-            f.write('\n'.join([
-                '<g>',
-                '<title>{}</title>'.format(edge.props.get('id', '')),
-                '<path d="M{} {}L{} {}"'.format(x1, y1, x2, y2),
-                ' stroke="black" stroke-width="0.1"/>',
-                '</g>',
-                ''
-            ]))
-
-        for node in self.nodes:
-            x = node.props.get('x', 0) + 0.25
-            y = node.props.get('y', 0) + 0.25
-            f.write('\n'.join([
-                '<g>',
-                '<title>{}</title>'.format(node.props.get('id', '')),
-                '<rect x="{}" y="{}"'.format(x, y),
-                ' width="0.5" height="0.5" fill="white" stroke="black"',
-                ' stroke-width="0.1"/>',
-                '</g>',
-                '']))
-
-        f.write('</svg>\n')
-
     def write_cytoscape_nodes(self, f):
         """write a table file (.tsv) that contains nodes information.
         Args:
             self: Graph entity.
-            f: An empty TSV file.
+            f: An empty file.
         """
 
         next_id = count(0)
@@ -346,8 +294,8 @@ class Graph(Entity):
             f.write('{}\t{}\n'.format(a, b))
 
     def write_cytoscape_edges(self, f):
-        """write a table file (.tsv) that contains edges information,
-        including edge source, edge dest and edge properties.
+        """ Write a tab separated table that contains edges information,
+        including edge source, edge dest, and edge properties.
         Args:
             self: Graph entity.
             f: An empty TSV file.
