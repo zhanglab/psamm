@@ -15,6 +15,7 @@
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2018-2018  Ke Zhang <kzhang@my.uri.edu>
+# Copyright 2015-2018  Keith Dufault-Thompson <keitht547@uri.edu>
 
 from __future__ import unicode_literals
 
@@ -63,6 +64,12 @@ class Graph(Entity):
         """
         self._nodes.add(node)
         self._nodes_id[node.props['id']] = node
+        if 'type' in node.props:
+            self.set_original_id(node)
+        else:
+            self._nodes_original_id[node.props['id']].append(node)
+
+    def set_original_id(self, node):
         if node.props['type'] == 'cpd':
             original_id_string = text_type(node.props['original_id'])
         else:
@@ -369,6 +376,8 @@ class Node(Entity):
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             return other._props == self._props
+        else:
+            return False
 
     def __ne__(self, other):
         return not self.__eq__(other)
