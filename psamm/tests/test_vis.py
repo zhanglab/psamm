@@ -16,6 +16,7 @@
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2018-2018  Ke Zhang <kzhang@my.uri.edu>
+# Copyright 2015-2018  Keith Dufault-Thompson <keitht547@uri.edu>
 
 from __future__ import unicode_literals
 
@@ -1278,6 +1279,79 @@ class TestGetCptBoundaries(unittest.TestCase):
         e3_extra_res = 'e'
         self.assertEqual(e3_bound, e3_bound_res)
         self.assertEqual(e3_extra, e3_extra_res)
+
+
+class TestMakeSubset(unittest.TestCase):
+    def setUp(self):
+        native_model = NativeModel()
+        native_model.reactions.add_entry(ReactionEntry({
+            'id': 'rxn1', 'equation': parse_reaction(
+                'fum_c[c] + h2o_c[c] <=> mal_L_c[c]')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'fum_c[c]', 'formula': parse_compound('C4H2O4', 'c')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'h2o_c[c]', 'formula': parse_compound('H2O', 'c')}))
+        native_model.compounds.add_entry(CompoundEntry(
+            {'id': 'mal_L_c[c]', 'formula': parse_compound('C4H4O5', 'c')}))
+        native_model.reactions.add_entry(ReactionEntry({
+            'id': 'rxn2', 'equation': parse_reaction(
+                'q8_c[c] + succ_c[c] => fum_c[c] + q8h2_c[c]')}))
+        native_model.compounds.add_entry(CompoundEntry(
+            {'id': 'q8_c[c]', 'formula': parse_compound('C49H74O4', 'c')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'q8h2_c[c]', 'formula': parse_compound('C49H76O4', 'c')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'succ_c[c]', 'formula': parse_compound('C4H4O4', 'c')}))
+        self.native = native_model
+        self.mm = native_model.create_metabolic_model()
+
+    def test_subset_reactions(self):
+        path = os.path.join(tempfile.mkdtemp(), 'subset')
+        with open(path, 'w') as f:
+            f.write('{}\n{}'.format('rxn1', 'rxn2'))
+        sub_file = open(path, 'r')
+        subset = vis.make_subset(self.mm, sub_file)
+        sub_file.close()
+        self.assertEqual(subset, {'rxn1', 'rxn2'})
+
+    def test_subset_one_compound(self):
+        path = os.path.join(tempfile.mkdtemp(), 'subset')
+        with open(path, 'w') as f:
+            f.write('{}'.format('mal_L_c[c]'))
+        sub_file = open(path, 'r')
+        subset = vis.make_subset(self.mm, sub_file)
+        sub_file.close()
+        self.assertEqual(subset, {'rxn1'})
+
+    def test_subset_compounds(self):
+        path = os.path.join(tempfile.mkdtemp(), 'subset')
+        with open(path, 'w') as f:
+            f.write('{}\n{}'.format('h2o_c[c]', 'succ_c[c]'))
+        sub_file = open(path, 'r')
+        subset = vis.make_subset(self.mm, sub_file)
+        sub_file.close()
+        self.assertEqual(subset, {'rxn1', 'rxn2'})
+
+    def test_mixed_subset(self):
+        path = os.path.join(tempfile.mkdtemp(), 'subset')
+        with open(path, 'w') as f:
+            f.write('{}\n{}'.format('h2o_c[c]', 'rxn1'))
+        sub_file = open(path, 'r')
+        with self.assertRaises(ValueError):
+            subset = vis.make_subset(self.mm, sub_file)
+
+    def test_not_in_model(self):
+        path = os.path.join(tempfile.mkdtemp(), 'subset')
+        with open(path, 'w') as f:
+            f.write('{}\n{}'.format('h3o_c[c]', 'rxn44'))
+        sub_file = open(path, 'r')
+        with self.assertRaises(ValueError):
+            subset = vis.make_subset(self.mm, sub_file)
+
+    def test_no_subset(self):
+        path = None
+        subset = vis.make_subset(self.mm, path)
+        self.assertEqual(subset, {'rxn1', 'rxn2'})
 
 
 if __name__ == '__main__':
