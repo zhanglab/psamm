@@ -55,20 +55,19 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         parser.add_argument(
             '--method', type=text_type, default='fpp',
             help='Compound pair prediction method,'
-                 'choices=[fpp, no-fpp, or file path]')
+                 'choices=[fpp, no-fpp, or {file path}]')
         parser.add_argument(
             '--exclude', metavar='reaction', type=text_type, default=[],
             action=FilePrefixAppendAction,
-            help='Reaction(s) to exclude from metabolite pair (e.g. biomass '
-                 'reactions or macromolecule synthesis) prediction and final '
-                 'visualization of the model.')
+            help='Reaction(s) to exclude from metabolite pair '
+                 'prediction and final visualization of the model'
+                 '. (e.g. biomass reactions or biosynthesis reactions)')
         parser.add_argument(
             '--fba', action='store_true',
-            help='visualize reaction flux')
+            help='Run and visualize l1min FBA simulation on network image')
         parser.add_argument(
             '--element', type=text_type, default='C',
-            help='Primary element flow, followed by chemical element, '
-                 'such as C, N, O,S.')
+            help='Element transfer to show on the graph (C, N, O, S).')
         parser.add_argument(
             '--cpd-detail', type=text_type, default=None, action='append',
             nargs='+', help='determine compound properties showed on nodes '
@@ -79,28 +78,29 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                             'label, e.g. genes, EC, equation)')
         parser.add_argument(
             '--subset', type=argparse.FileType('rU'), default=None,
-            help='Reactions designated to visualize')
+            help='Subset of reactions to include in graph '
+                 '(default=All reactions)')
         parser.add_argument(
             '--color', type=argparse.FileType('rU'), default=None, nargs='+',
-            help='Customize color of reaction and compound nodes ')
+            help='Designate non-default colors for nodes in the graph')
         parser.add_argument(
             '--Image', type=text_type, default=None,
-            help='generate image file directly')
+            help='Generate image file in designated format '
+                 '(e.g. pdf, png, eps)')
         parser.add_argument(
             '--hide-edges', type=argparse.FileType('rU'), default=None,
             help='Remove edges between specific compound pair from network ')
         parser.add_argument(
             '--split-map', action='store_true',
-            help='Create reactions split metabolic network, one node '
-                 'only represent one reaction')
+            help='Split combined reaction nodes into separate nodes.')
         parser.add_argument(
             '--compartment', action='store_true',
             help='Generate visualization of the network with compartments '
                  'shown.')
         parser.add_argument(
-            '--image-size', type=text_type, default=None, action='append',
-            nargs='+', help='determine the height of final metabolic map, '
-                            'unit is inch')
+            '--image-size', type=text_type, default=None,
+            help='Set width and height of the graph image. '
+                 '(width,height)(inches)')
         super(VisualizationCommand, cls).init_parser(parser)
 
     def run(self):
@@ -155,7 +155,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                     count += 1
                 if abs(flux) > 1e-6:
                     reaction_flux[r_id] = flux
-            logger.info('Minimized reactions: {}'.format(count))
 
         cpair_dict, new_id_mapping = make_cpair_dict(
             self._mm, filter_dict, subset_reactions, reaction_flux,
@@ -165,12 +164,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             reaction_flux, self._mm, compound_formula, self._args.element,
             self._args.split_map, cpair_dict, new_id_mapping,
             self._args.method)
-
-        recolor_dict = {}
-        if self._args.color is not None:
-            for f in self._args.color:
-                for row in csv.reader(f, delimiter=str(u'\t')):
-                    recolor_dict[row[0]] = row[1]
 
         model_compound_entries, model_reaction_entries = {}, {}
         for c in self._model.compounds:
@@ -192,6 +185,13 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             if self._mm.is_exchange(reaction):
                 exchange_rxn = self._mm.get_reaction(reaction)
                 g = add_exchange_rxns(g, reaction, exchange_rxn)
+
+        recolor_dict = {}
+        if self._args.color is not None:
+            for f in self._args.color:
+                for row in csv.reader(f, delimiter=str(u'\t')):
+                    recolor_dict[row[0]] = row[1]
+
         if len(recolor_dict) > 0:
             g = update_node_color(g, recolor_dict)
         if self._args.cpd_detail is not None or self._args.rxn_detail \
@@ -207,8 +207,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         width = None
         height = None
         if self._args.image_size is not None:
-            width = self._args.image_size[0][0]
-            height = self._args.image_size[0][1]
+            hw = self._args.image_size.split(',')
+            width = hw[0]
+            height = hw[1]
 
         if self._args.compartment:
             boundaries, extracellular = get_cpt_boundaries(self._model)
@@ -228,8 +229,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         if self._args.Image is not None:
             if render is None:
                 self.fail(
-                    'create image file requires python binding graphviz '
-                    'module ("pip install graphviz")')
+                    'Making an image directly requires the '
+                    'graphviz python bindings and the graphviz program '
+                    'to be installed ("pip install graphviz")')
             else:
                 if len(g.nodes_id_dict) > 1000:
                     logger.info(
@@ -248,8 +250,8 @@ def make_subset(mm, subset_file):
 
     Args:
         mm: Metabolic model, class 'psamm.metabolicmodel.MetabolicModel'.
-        arg_subset: By default it is None, if --subset id given in command
-            line it is a file that contains a column of reaction IDs.
+        subset_file: None or an open file containing a list of reactions
+                     or compound ids.
     """
     if subset_file is None:
         return set(mm.reactions)
@@ -263,9 +265,11 @@ def make_subset(mm, subset_file):
             elif mm.has_reaction(id):
                 rxn_set.add(id)
             else:
-                raise ValueError('{} was in subset file but is not a compound or reaction id'.format(id))
+                raise ValueError('{} was in subset file but is '
+                                 'not a compound or reaction id'.format(id))
         if all(i > 0 for i in [len(cpd_set), len(rxn_set)]):
-            raise ValueError('Subset file contains a mix of reactions and compounds.')
+            raise ValueError('Subset file contains a mix of reactions and '
+                             'compounds.')
         if len(cpd_set) > 0:
             for rx in mm.reactions:
                 rxn = mm.get_reaction(rx)
@@ -273,16 +277,14 @@ def make_subset(mm, subset_file):
                     rxn_set.add(rx)
         return rxn_set
 
-    return subset_reactions
-
 
 def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
                      cpair_dict, new_id_mapping, method):
     """set edge_values according to reaction fluxes
 
     Start from reaction equation and reaction flux to create a dictionary
-    that key is an edge(a tuple of (c, r) or (r, c)) and vlaue is flux
-    between the compound and reaction
+    where the key is an edge(a tuple of (c, r) or (r, c)) and the value is
+    a flux between the compound and reaction
 
     Args:
         reaction_flux: dictionary of reaction id and flux value.
@@ -293,13 +295,13 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
             N(nitrogen), S(sulfur).
         split_map: True or False, determine which kind of graph to create(
             combine multiple reactions in one node or not).
-        cpair_dict: defaultdict of compound pair and another defaultdict of
+        cpair_dict: A defaultdict of compound pair and another defaultdict of
             list(in the latter defaultdict, key is direction(forward, back or
             both), value is reaction list),{(c1, c2): {'forward':[rxns],...}}.
         new_id_mapping: dictionary of reaction ID with suffix(number) and
             real reaction id, e.g.{r_1:r, r_2: r,...}.
         method: Command line argument, including 3 options:'fpp', 'no-fpp'
-            and file path.
+            or a file path.
         """
     edge_values = {}
     edge_values_combined = {}
@@ -492,11 +494,11 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
 
 
 def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
-    """create a new cpair_dict: mapping from compound pair to a
-    defaultdict (key is direction, value is a list of reaction IDs).
+    """Create a mapping from compound pair to a defaultdict containing
+    lists of reactions for the forward, reverse, and both directions.
 
     Args:
-        mm: Metabolic model, class 'psamm.metabolicmodel.MetabolicModel'.
+        mm: Class 'psamm.metabolicmodel.MetabolicModel'.
         filter_dict: A dictionary mapping form reaction ID to compound pairs
             that go through this reaction.
         subset: A list of reaction IDs, including all the reactions that
@@ -564,11 +566,11 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
     return rxns_sorted_cpair_dict, new_id_mapping
 
 
-def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
+def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split=False):
     """create compound and reaction nodes, adding them to empty graph object.
 
     Args:
-        g: An empty graph object.
+        g: An empty Graph object.
         cpairs_dict: defaultdict of compound_pair: defaultdict of direction:
             reaction list. e.g. {(c1, c2): {'forward":[rx1], 'both':[rx2}}.
         method: Command line argument, options=['fpp', 'no-fpp', file_path].
@@ -619,12 +621,12 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split):
     return g
 
 
-def add_edges(g, cpairs_dict, method, split):
+def add_edges(g, cpairs_dict, method, split=False):
     """add edges to the graph object obtained in last step.
 
     Args:
         g: A graph object contains a set of nodes.
-        cpairs_dict: defaultdict of compound_pair: defaultdict of direction:
+        cpairs_dict: A defaultdict of compound_pair: defaultdict of direction:
             reaction list. e.g. {(c1, c2): {'forward":[rx1], 'both':[rx2}}.
         method: Command line argument, options=['fpp', 'no-fpp', file_path].
         split: Command line argument, True or False. By default split = False.
@@ -670,6 +672,13 @@ def dir_value(direction):
 
 
 def add_biomass_rxns(g, bio_reaction, biomass_rxn_id):
+    '''Adds biomass reaction nodes and edges to a graph object.
+
+    Args:
+        g: Graph object
+        bio_reaction: Biomass reaction ReactionEntry
+        biomass_rxn_id: Biomass reaction ID
+    '''
     direction = dir_value(bio_reaction.direction)
     reactant_list, product_list = [], []
     for c, _ in bio_reaction.left:
@@ -702,7 +711,7 @@ def add_biomass_rxns(g, bio_reaction, biomass_rxn_id):
 
 
 def add_exchange_rxns(g, rxn_id, reaction):
-    """add exchange reaction nodes and edges to graph object.
+    """Add exchange reaction nodes and edges to graph object.
 
     Args:
         g: A graph object that contains a set of nodes and some edges.
@@ -734,11 +743,11 @@ def add_exchange_rxns(g, rxn_id, reaction):
 
 
 def update_node_color(g, recolor_dict):
-    """ update color of nodes that are customized.
+    """ Update node color in Graph object based on a mapping dictionary
 
     Args:
-        g: a graph object that contains nodes and edges.
-        recolor_dict: dict of rxn_id/cpd_id_compartment : hex color code.
+        g: A Graph object that contains nodes and edges.
+        recolor_dict: dict of rxn_id/cpd_id[compartment] : hex color code.
     return: a graph object that contains a set of node with defined color.
     """
     for r_id in recolor_dict:
@@ -873,7 +882,7 @@ def make_cpt_tree(boundaries, extracellular):
 
         args:
         boundaries: a list of tuples of adjacent compartment ids.
-        extracellular: the extracelluar compartment in the model.
+        extracellular: the extracellular compartment in the model.
     """
     children = defaultdict(set)
     compartments = set()
