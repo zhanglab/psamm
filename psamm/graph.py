@@ -176,7 +176,7 @@ class Graph(Entity):
             f.write(' "{}"[{}]\n'.format(
                 node.props['id'], _graphviz_prop_string(node.props)))
 
-        for edge in sorted(self.edges, key=lambda k: (k.source.props['id'], k.dest.props['id'])):
+        for edge in sorted(self.edges, key=lambda k: (k.source.props['id'], k.dest.props['id'], k.props.get('dir'))):
             f.write(' "{}" -> "{}"[{}]\n'.format(
                 edge.source.props['id'], edge.dest.props['id'],
                 _graphviz_prop_string(edge.props)))
@@ -259,7 +259,7 @@ class Graph(Entity):
         dfs_recursive(compartment_tree, extracellular, node_dicts,
                       extracellular, f)
 
-        for edge in sorted(self.edges,  key=lambda k: (k.source.props['id'], k.dest.props['id'])):
+        for edge in sorted(self.edges,  key=lambda k: (k.source.props['id'], k.dest.props['id'], k.props.get('dir'))):
             f.write(' "{}" -> "{}"[{}]\n'.format(
                 edge.source.props['id'], edge.dest.props['id'],
                 _graphviz_prop_string(edge.props)))
