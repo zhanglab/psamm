@@ -415,7 +415,7 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
     filter_dict = {}
     if method == 'fpp':
         if len(fpp_rxns) == 0:
-            logger.error(
+            raise ValueError(
                 'All the reactions have compounds with undefined formula or '
                 'have no reaction equation, fix them or '
                 'add "--method no-fpp --element none" to the command')
@@ -484,8 +484,8 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
             for r, cpair in zip(rxn_list, cpair_list):
                 filter_dict[r].append(cpair)
         except IOError:
-            logger.error('Invalid file path, no such file or directory '
-                         ': {}' .format(method))
+            raise IOError('Invalid file path, no such file or '
+                              'directory: {}' .format(method))
             quit()
 
     cpairs_ordered_filter_dict = {}

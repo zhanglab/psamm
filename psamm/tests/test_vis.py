@@ -81,13 +81,12 @@ class TestMakeFilterDict(unittest.TestCase):
         e2 = vis.make_filter_dict(
             self.native, self.mm, 'no-fpp', self.element, self.cpd_formula,
             self.hide_edges, self.exclude_rxns)
-        e2_res = {'rxn1': [
-            (Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))],
-            'rxn2': [
-                (Compound('q8_c', 'c'), Compound('fum_c', 'c')),
-                (Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
-                (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
-                (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
+        e2_res = {
+            'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))],
+            'rxn2': [(Compound('q8_c', 'c'), Compound('fum_c', 'c')),
+                     (Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
+                     (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
+                     (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
         self.assertEqual(e2, e2_res)
 
     def test3_element_hydrogen(self):
@@ -145,11 +144,21 @@ class TestMakeFilterDict(unittest.TestCase):
         with open(path, 'w') as f:
             f.write('{}\t{}\n{}\t{}'.format(
                 'q8_c[c]', 'q8h2_c[c]', 'fum_c[c]', 'mal_L_c[c]'))
-        e7 = vis.make_filter_dict(
+        e7_fpp = vis.make_filter_dict(
             self.native, self.mm, self.method, self.element, self.cpd_formula,
             open(path), self.exclude_rxns)
-        e7_res = {'rxn2': [(Compound('succ_c', 'c'), Compound('fum_c', 'c'))]}
-        self.assertEqual(e7, e7_res)
+        e7_nofpp = vis.make_filter_dict(
+            self.native, self.mm, 'no-fpp', self.element, self.cpd_formula,
+            open(path), self.exclude_rxns)
+        e7_fpp_res = {'rxn2': [(Compound('succ_c', 'c'),
+                                Compound('fum_c', 'c'))]}
+        e7_nofpp_res = {
+            'rxn2': [(Compound('q8_c', 'c'), Compound('fum_c', 'c')),
+                     (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
+                     (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
+
+        self.assertEqual(e7_fpp, e7_fpp_res)
+        self.assertEqual(e7_nofpp, e7_nofpp_res)
 
     def test8_file_path(self):
         path = os.path.join(tempfile.mkdtemp(), 'primarypairs_prediction')
@@ -167,6 +176,66 @@ class TestMakeFilterDict(unittest.TestCase):
         e8_res = {'rxn2': [(Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
                            (Compound('succ_c', 'c'), Compound('fum_c', 'c'))]}
         self.assertEqual(e8, e8_res)
+
+    def test9_no_fpprxns(self):
+        exclude_rxns = ['rxn1', 'rxn2']
+        with self.assertRaises(ValueError):
+            filter_dict = vis.make_filter_dict(
+                self.native, self.mm, self.method, self.element,
+                self.cpd_formula, self.hide_edges, exclude_rxns)
+
+    def test10_fpp_element_none(self):
+        e10 = vis.make_filter_dict(
+            self.native, self.mm, self.method, 'none', self.cpd_formula,
+            self.hide_edges, self.exclude_rxns)
+        e10_res = {
+            'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c')),
+                     (Compound('h2o_c', 'c'), Compound('mal_L_c', 'c'))],
+            'rxn2': [(Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
+                     (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
+                     (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
+        self.assertEqual(e10, e10_res)
+
+    def test11_nofpp_element_none(self):
+        e11 = vis.make_filter_dict(
+            self.native, self.mm, 'no-fpp', 'none', self.cpd_formula,
+            self.hide_edges, self.exclude_rxns)
+        e11_res = {
+            'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c')),
+                     (Compound('h2o_c', 'c'), Compound('mal_L_c', 'c'))],
+            'rxn2': [(Compound('q8_c', 'c'), Compound('fum_c', 'c')),
+                     (Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
+                     (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
+                     (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
+        self.assertEqual(e11, e11_res)
+
+    def test12_filepath_element_none(self):
+        path = os.path.join(tempfile.mkdtemp(), 'primarypairs_prediction')
+        with open(path, 'w') as f:
+            row1 = '{}\t{}\t{}\t{}'.format('rxn2', 'q8_c[c]',
+                                           'q8h2_c[c]', 'C49H74O4')
+            row2 = '{}\t{}\t{}\t{}'.format('rxn2', 'succ_c[c]',
+                                           'fum_c[c]', 'C4H2O4')
+            row3 = '{}\t{}\t{}\t{}'.format('rxn2', 'succ_c[c]',
+                                           'q8h2_c[c]', 'H2')
+            row4 = '{}\t{}\t{}\t{}'.format('rxn1', 'h2o_c[c]',
+                                           'mal_L_c[c]', 'H2O')
+            f.write('\n'.join([row1, row2, row3, row4]))
+        e12 = vis.make_filter_dict(
+            self.native, self.mm, path, 'none', self.cpd_formula,
+            self.hide_edges, self.exclude_rxns)
+        e12_res = {
+            'rxn1': [(Compound('h2o_c', 'c'), Compound('mal_L_c', 'c'))],
+            'rxn2': [(Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
+                     (Compound('succ_c', 'c'), Compound('fum_c', 'c')),
+                     (Compound('succ_c', 'c'), Compound('q8h2_c', 'c'))]}
+        self.assertEqual(e12, e12_res)
+
+    def test13_no_valid_file(self):
+        with self.assertRaises(IOError):
+            filter_dict = vis.make_filter_dict(
+                self.native, self.mm, 'path', 'none', self.cpd_formula,
+                self.hide_edges, self.exclude_rxns)
 
 
 class TestMakeCpairDict(unittest.TestCase):
@@ -187,11 +256,12 @@ class TestMakeCpairDict(unittest.TestCase):
         self.native = native_model
         self.mm = native_model.create_metabolic_model()
 
-        self.filter_dict = {'rxn1': [(Compound('A', 'c'), Compound('C', 'c')),
-                                     (Compound('B', 'c'), Compound('C', 'c')),
-                                     (Compound('B', 'c'), Compound('D', 'c'))],
-                            'rxn2': [(Compound('B', 'c'), Compound('D', 'c'))],
-                            'rxn3': [(Compound('D', 'c'), Compound('D', 'e'))]}
+        self.filter_dict = {
+            'rxn1': [(Compound('A', 'c'), Compound('C', 'c')),
+                     (Compound('B', 'c'), Compound('C', 'c')),
+                     (Compound('B', 'c'), Compound('D', 'c'))],
+            'rxn2': [(Compound('B', 'c'), Compound('D', 'c'))],
+            'rxn3': [(Compound('D', 'c'), Compound('D', 'e'))]}
         self.subset = ['rxn1', 'rxn2', 'rxn3', 'rxn4']
         self.reaction_flux = []
         self.method = 'fpp'
