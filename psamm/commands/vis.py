@@ -672,13 +672,13 @@ def dir_value(direction):
 
 
 def add_biomass_rxns(g, bio_reaction, biomass_rxn_id):
-    '''Adds biomass reaction nodes and edges to a graph object.
+    """Adds biomass reaction nodes and edges to a graph object.
 
     Args:
-        g: Graph object
-        bio_reaction: Biomass reaction ReactionEntry
-        biomass_rxn_id: Biomass reaction ID
-    '''
+        g: Graph object.
+        bio_reaction: Biomass reaction ReactionEntry.
+        biomass_rxn_id: Biomass reaction ID.
+    """
     direction = dir_value(bio_reaction.direction)
     reactant_list, product_list = [], []
     for c, _ in bio_reaction.left:
