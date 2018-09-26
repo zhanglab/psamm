@@ -485,7 +485,7 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
                 filter_dict[r].append(cpair)
         except IOError:
             raise IOError('Invalid file path, no such file or '
-                              'directory: {}' .format(method))
+                          'directory: {}' .format(method))
             quit()
 
     cpairs_ordered_filter_dict = {}

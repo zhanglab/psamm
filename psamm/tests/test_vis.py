@@ -943,11 +943,11 @@ class TestAddExchangeRxns(unittest.TestCase):
             'type': 'cpd', 'original_id': Compound('C', 'c'), 'label': 'C[c]',
             'compartment': 'c', 'fillcolor': '#ffd8bf'})
         self.a_extracell = graph.Node({
-            'id': 'A[a]', 'shape': 'ellipse', 'style': 'filled',
+            'id': 'A[e]', 'shape': 'ellipse', 'style': 'filled',
             'type': 'cpd', 'original_id': Compound('A', 'e'), 'label': 'A[e]',
             'compartment': 'e', 'fillcolor': '#ffd8bf'})
         self.c_extracell = graph.Node({
-            'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled',
+            'id': 'C[e]', 'shape': 'ellipse', 'style': 'filled',
             'type': 'cpd', 'original_id': Compound('C', 'e'), 'label': 'C[e]',
             'compartment': 'e', 'fillcolor': '#ffd8bf'})
         node_ac = graph.Node({
@@ -996,11 +996,15 @@ class TestAddExchangeRxns(unittest.TestCase):
         edge_ex = graph.Edge(self.c_extracell, node_ex, {'dir': 'both'})
         self.node_list_c_to_e.append(node_ex)
         self.edge_list_c_to_e.append(edge_ex)
+
         self.assertTrue(all(i in self.node_list_c_to_e for i in g1.nodes))
+        self.assertTrue(all(i in g1.nodes for i in self.node_list_c_to_e))
+
         self.assertTrue(all(i in self.edge_list_c_to_e for i in g1.edges))
+        self.assertTrue(all(i in g1.edges for i in self.edge_list_c_to_e))
 
     def test2_addExrRxn_cpdA(self):
-        g2 = vis.add_exchange_rxns(self.g2, 'test_Ex_A', self.rxn_C)
+        g2 = vis.add_exchange_rxns(self.g2, 'test_Ex_A', self.rxn_A)
         node_ex = graph.Node({
             'id': 'test_Ex_A', 'shape': 'box', 'style': 'filled',
             'type': 'Ex_rxn', 'original_id': ['test_Ex_A'], 'compartment':
@@ -1008,8 +1012,12 @@ class TestAddExchangeRxns(unittest.TestCase):
         edge_ex = graph.Edge(self.a_extracell, node_ex, {'dir': 'both'})
         self.node_list_e_to_c.append(node_ex)
         self.edge_list_e_to_c.append(edge_ex)
+
         self.assertTrue(all(i in self.node_list_e_to_c for i in g2.nodes))
+        self.assertTrue(all(i in g2.nodes for i in self.node_list_e_to_c))
+
         self.assertTrue(all(i in self.edge_list_e_to_c for i in g2.edges))
+        self.assertTrue(all(i in g2.edges for i in self.edge_list_e_to_c))
 
 
 class TestUpdateNodeLabel(unittest.TestCase):
