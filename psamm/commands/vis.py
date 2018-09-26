@@ -326,12 +326,14 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, split_map,
         for (c1, c2), rxns in iteritems(cpair_dict):
             for direction, rlist in iteritems(rxns):
                 rlist_string = ','.join(new_id_mapping[r] for r in rlist)
-                if any(new_id_mapping[r] in reaction_flux for r in rlist):
+                if any(new_id_mapping[r] in reaction_flux and abs(
+                        reaction_flux[new_id_mapping[r]]) > 1e-9 for
+                       r in rlist):
                     x_comb_c1, x_comb_c2 = 0, 0
                     for r in rlist:
                         real_r = new_id_mapping[r]
                         rxn_set.add(real_r)
-                        if real_r in reaction_flux:
+                        if real_r in reaction_flux and abs(reaction_flux[real_r]) > 1e-9:
                             x_comb_c1 += edge_values[(c1, real_r)]
                             x_comb_c2 += edge_values[(c2, real_r)]
                     edge_values_combined[(c1, rlist_string)] = x_comb_c1

@@ -434,6 +434,80 @@ class TestMakeEdgeValues(unittest.TestCase):
                   }
         self.assertEqual(e6, e6_res)
 
+    def test_edge_values_very_small_flux(self):
+        reaction_flux = {'FUM': 3.03e-13, 'CYTBD': 43.60}
+        e7 = vis.make_edge_values(
+            reaction_flux, self.mm, self.compound_formula, self.element,
+            self.split_map, self.cpair_dict, self.new_id_mapping, self.method)
+        e7_res = {(Compound('q8_c', 'c'), 'CYTBD,FRD7'): 43.60,
+                  (Compound('q8h2_c', 'c'), 'CYTBD,FRD7'): 43.60}
+        self.assertEqual(e7, e7_res)
+
+    def test_edge_values_element_none(self):
+        e8 = vis.make_edge_values(
+            self.reaction_flux, self.mm, self.compound_formula, 'none',
+            self.split_map, self.cpair_dict, self.new_id_mapping, self.method)
+        e8_res = {(Compound('q8_c', 'c'), 'CYTBD,FRD7'): 43.60,
+                  (Compound('mal_L_c', 'c'), 'FUM'): 5.06,
+                  (Compound('q8h2_c', 'c'), 'CYTBD,FRD7'): 43.60,
+                  (Compound('fum_c', 'c'), 'FUM'): 5.06}
+        self.assertEqual(e8, e8_res)
+
+    def test_edge_values_element_none_nofpp_or_split(self):
+        e9_nofpp = vis.make_edge_values(
+            self.reaction_flux, self.mm, self.compound_formula, 'none',
+            self.split_map, self.cpair_dict, self.new_id_mapping, 'no-fpp')
+        e9_split = vis.make_edge_values(
+            self.reaction_flux, self.mm, self.compound_formula, 'none',
+            True, self.cpair_dict, self.new_id_mapping, 'no-fpp')
+        e9_res = {(Compound('q8_c', 'c'), 'CYTBD'): 43.60,
+                  (Compound('h_c', 'c'), 'CYTBD'): 87.20,
+                  (Compound('o2_c', 'c'), 'CYTBD'): 21.80,
+                  (Compound('q8_c', 'c'), 'CYTBD'): 43.60,
+                  (Compound('h_e', 'e'), 'CYTBD'): 87.20,
+                  (Compound('h2o_c', 'c'), 'CYTBD'): 43.60,
+                  (Compound('mal_L_c', 'c'), 'FUM'): 5.06,
+                  (Compound('q8h2_c', 'c'), 'CYTBD'): 43.60,
+                  (Compound('fum_c', 'c'), 'FUM'): 5.06,
+                  (Compound('h2o_c', 'c'), 'FUM'): 5.06,
+                  (Compound('mal_L_c', 'c'), 'FUM'): 5.06}
+        self.assertEqual(e9_nofpp, e9_res)
+        self.assertEqual(e9_split, e9_res)
+
+    def test_cpdhasnoformula_splitornofpp(self):
+        del self.compound_formula['o2_c']
+        e10_split = vis.make_edge_values(
+            self.reaction_flux, self.mm, self.compound_formula, self.element,
+            True, self.cpair_dict, self.new_id_mapping, self.method)
+        e10_nofpp = vis.make_edge_values(
+            self.reaction_flux, self.mm, self.compound_formula, self.element,
+            self.split_map, self.cpair_dict, self.new_id_mapping, 'no-fpp')
+        e10_res = {(Compound('q8_c', 'c'), 'CYTBD'): 43.60,
+                   (Compound('o2_c', 'c'), 'CYTBD'): 21.80,
+                   (Compound('mal_L_c', 'c'), 'FUM'): 5.06,
+                   (Compound('q8h2_c', 'c'), 'CYTBD'): 43.60,
+                   (Compound('fum_c', 'c'), 'FUM'): 5.06}
+        self.assertEqual(e10_split, e10_res)
+        self.assertEqual(e10_nofpp, e10_res)
+
+    def test_biomass_or_exchange_rxnflux(self):
+        self.native.reactions.add_entry(
+            ReactionEntry({'id': 'test', 'equation': parse_reaction(
+                'A[c] + (0.5) B[c] => (2) C[c]')}))
+        mm = self.native.create_metabolic_model()
+        reaction_flux = {'FUM': 5.06, 'CYTBD': 43.60, 'test': 12.0}
+        e11 = vis.make_edge_values(
+            reaction_flux, mm, self.compound_formula, self.element,
+            self.split_map, self.cpair_dict, self.new_id_mapping, self.method)
+        e11_res = {(Compound('q8_c', 'c'), 'CYTBD,FRD7'): 43.60,
+                   (Compound('A', 'c'), 'test'): 12.0,
+                   (Compound('B', 'c'), 'test'): 6.0,
+                   (Compound('C', 'c'), 'test'): 24.0,
+                   (Compound('mal_L_c', 'c'), 'FUM'): 5.06,
+                   (Compound('q8h2_c', 'c'), 'CYTBD,FRD7'): 43.60,
+                   (Compound('fum_c', 'c'), 'FUM'): 5.06}
+        self.assertEqual(e11, e11_res)
+
 
 class TestAddGraphNodes(unittest.TestCase):
     def setUp(self):
