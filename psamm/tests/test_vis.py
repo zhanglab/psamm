@@ -1211,6 +1211,24 @@ class TestUpdateNodeLabel(unittest.TestCase):
             self.a, self.c, self.c_extracell, self.node_ac, self.node_cc,
             self.node_Ex, self.bio_A]))
 
+    def test_detail_noID(self):
+        g5 = vis.update_node_label(
+            self.g, [['name']], [['name', 'equation']], self.cpd_entries,
+            self.rxn_entries, self.reaction_flux)
+        self.a.props['label'] = 'Compound A'
+        self.c.props['label'] = 'Compound C'
+        self.c_extracell.props['label'] = 'Compound C'
+        self.node_ac.props['label'] = 'rxn1\nrxn3'
+        self.node_cc.props['label'] = 'rxn2\nC[c] => C[e]'
+        self.node_Ex.props['label'] = 'test_Ex_C\nC[e] <=>'
+        self.bio_A.props['label'] = 'test_bio\nA[c] + D[c] <=> E[c]'
+        self.assertTrue(all(
+            i in [self.a, self.c, self.c_extracell, self.node_ac,
+                  self.node_cc, self.node_Ex, self.bio_A] for i in g5.nodes))
+        self.assertTrue(all(i in g5.nodes for i in [
+            self.a, self.c, self.c_extracell, self.node_ac, self.node_cc,
+            self.node_Ex, self.bio_A]))
+
 
 class TestEdgePropsWithFBA(unittest.TestCase):
     def setUp(self):

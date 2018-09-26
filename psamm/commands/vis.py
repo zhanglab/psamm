@@ -800,9 +800,12 @@ def update_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
                     pre_label = '\n'.join(_encode_value(
                         props[value]) for value in rxn_detail_list
                                           if value != 'id')
-                    node.props['label'] = '{}\n{}'.format(rxn_id, pre_label)
-                else:
-                    node.props['label'] = rxn_id
+                    if 'id' in rxn_detail[0]:
+                        label = '{}\n{}'.format(rxn_id, pre_label)
+                    else:
+                        label = pre_label
+                    node.props['label'] = label
+
             if len(reaction_flux) > 0:
                 sum_flux = 0
                 for r in node.props['original_id']:
