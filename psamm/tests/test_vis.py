@@ -959,6 +959,29 @@ class TestAddBiomassRnxs(unittest.TestCase):
         self.assertTrue(all(i in [self.edge_A_rxn, self.edge_C_rxn,
                                   edge_bio_a, edge_bio_c] for i in g1.edges))
 
+    def test2_reverse_biorxn(self):
+        biomass_rxn = Reaction(
+            Direction.Reverse, [
+                (Compound('C', 'c'), 1), (Compound('D', 'c'), 2)],
+            [(Compound('A', 'c'), 1), (Compound('E', 'c'), 1)])
+        g2 = vis.add_biomass_rxns(self.g, biomass_rxn, self.biomass_id)
+        bio_a = graph.Node({
+            'id': 'test_bio_2', 'label': 'test_bio', 'shape': 'box',
+            'style': 'filled', 'type': 'bio_rxn', 'original_id': ['test_bio'],
+            'compartment': 'c', 'fillcolor': '#b3fcb8'})
+        bio_c = graph.Node({
+            'id': 'test_bio_1', 'label': 'test_bio', 'shape': 'box',
+            'style': 'filled', 'type': 'bio_rxn', 'original_id': ['test_bio'],
+            'compartment': 'c', 'fillcolor': '#b3fcb8'})
+        edge_bio_a = graph.Edge(bio_a, self.node_a, {'dir': 'back'})
+        edge_bio_c = graph.Edge(self.node_c, bio_c, {'dir': 'back'})
+
+        self.assertTrue(all(i in [self.node_a, self.node_c, self.node_rxn1,
+                                  bio_a, bio_c] for i in g2.nodes))
+
+        self.assertTrue(all(i in [self.edge_A_rxn, self.edge_C_rxn,
+                                  edge_bio_a, edge_bio_c] for i in g2.edges))
+
 
 class TestAddExchangeRxns(unittest.TestCase):
     def setUp(self):
