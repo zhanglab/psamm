@@ -299,15 +299,15 @@ class TestMakeCpairDict(unittest.TestCase):
         self.assertEqual(n2, n2_res)
 
     def test_MakeCpairDict_fba(self):
-        reaction_flux = {'rxn1': 9.8, 'rxn3': 9.8, 'rxn4': 9.8}
+        reaction_flux = {'rxn1': -9.8, 'rxn3': 9.8, 'rxn4': 9.8}
         e3, n3 = vis.make_cpair_dict(self.mm, self.filter_dict, self.subset,
                                      reaction_flux, self.method)
         e3_res = defaultdict(lambda: defaultdict(list))
-        e3_res[(Compound('A', 'c'), Compound('C', 'c'))]['forward'].\
+        e3_res[(Compound('A', 'c'), Compound('C', 'c'))]['back'].\
             append('rxn1_1')
-        e3_res[(Compound('B', 'c'), Compound('C', 'c'))]['forward'].\
+        e3_res[(Compound('B', 'c'), Compound('C', 'c'))]['back'].\
             append('rxn1_2')
-        e3_res[(Compound('B', 'c'), Compound('D', 'c'))]['forward'] \
+        e3_res[(Compound('B', 'c'), Compound('D', 'c'))]['back'] \
             = ['rxn1_3']
         e3_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] = ['rxn2_1']
         e3_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'].\
@@ -383,15 +383,9 @@ class TestMakeCpairDict(unittest.TestCase):
             ReactionEntry({'id': 'test_c2c1', 'equation': parse_reaction(
                 '(0.5) C[c] => A[c]')}))
         mm = self.native.create_metabolic_model()
-        filter_dict = {
-            'rxn1': [(Compound('A', 'c'), Compound('C', 'c')),
-                     (Compound('B', 'c'), Compound('C', 'c')),
-                     (Compound('B', 'c'), Compound('D', 'c'))],
-            'rxn2': [(Compound('B', 'c'), Compound('D', 'c'))],
-            'rxn3': [(Compound('D', 'c'), Compound('D', 'e'))],
-            'test_c2c1': [(Compound('C', 'c'), Compound('A', 'c'))]}
+        self.filter_dict['test_c2c1'] = [(Compound('C', 'c'), Compound('A', 'c'))]
         subset = ['rxn1', 'rxn2', 'rxn3', 'rxn4', 'test_c2c1']
-        e7, n7 = vis.make_cpair_dict(mm, filter_dict, subset,
+        e7, n7 = vis.make_cpair_dict(mm, self.filter_dict, subset,
                                      self.reaction_flux, self.method)
         e7_res = defaultdict(lambda: defaultdict(list))
         e7_res[(Compound('A', 'c'), Compound('C', 'c'))]['both']. \
@@ -408,6 +402,7 @@ class TestMakeCpairDict(unittest.TestCase):
         n7_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1', 'rxn1_3': 'rxn1',
                   'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3',
                   'test_c2c1_1': 'test_c2c1'}
+
         self.assertEqual(e7, e7_res)
         self.assertEqual(n7, n7_res)
 
