@@ -527,8 +527,6 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
                     new_id_mapping[r_id] = r
                 if rx.direction == Direction.Forward:
                     cpair_dict[(c1, c2)]['forward'].append(r_id)
-                elif rx.direction == Direction.Reverse:
-                    cpair_dict[(c1, c2)]['back'].append(r_id)
                 else:
                     if r in reaction_flux:
                         if reaction_flux[r] > 0:

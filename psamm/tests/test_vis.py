@@ -378,6 +378,39 @@ class TestMakeCpairDict(unittest.TestCase):
         self.assertEqual(e6, e6_res)
         self.assertEqual(n6, n6_res)
 
+    def test_reverse_rxn(self):
+        self.native.reactions.add_entry(
+            ReactionEntry({'id': 'test_c2c1', 'equation': parse_reaction(
+                '(0.5) C[c] => A[c]')}))
+        mm = self.native.create_metabolic_model()
+        filter_dict = {
+            'rxn1': [(Compound('A', 'c'), Compound('C', 'c')),
+                     (Compound('B', 'c'), Compound('C', 'c')),
+                     (Compound('B', 'c'), Compound('D', 'c'))],
+            'rxn2': [(Compound('B', 'c'), Compound('D', 'c'))],
+            'rxn3': [(Compound('D', 'c'), Compound('D', 'e'))],
+            'test_c2c1': [(Compound('C', 'c'), Compound('A', 'c'))]}
+        subset = ['rxn1', 'rxn2', 'rxn3', 'rxn4', 'test_c2c1']
+        e7, n7 = vis.make_cpair_dict(mm, filter_dict, subset,
+                                     self.reaction_flux, self.method)
+        e7_res = defaultdict(lambda: defaultdict(list))
+        e7_res[(Compound('A', 'c'), Compound('C', 'c'))]['both']. \
+            append('rxn1_1')
+        e7_res[(Compound('A', 'c'), Compound('C', 'c'))]['back']. \
+            append('test_c2c1_1')
+        e7_res[(Compound('B', 'c'), Compound('C', 'c'))]['both']. \
+            append('rxn1_2')
+        e7_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] \
+            = ['rxn1_3', 'rxn2_1']
+        e7_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward']. \
+            append('rxn3_1')
+
+        n7_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1', 'rxn1_3': 'rxn1',
+                  'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3',
+                  'test_c2c1_1': 'test_c2c1'}
+        self.assertEqual(e7, e7_res)
+        self.assertEqual(n7, n7_res)
+
 
 class TestMakeEdgeValues(unittest.TestCase):
     def setUp(self):
@@ -1401,9 +1434,6 @@ class TestEdgePropsWithFBA(unittest.TestCase):
                            {'dir': 'back', 'penwidth': 10.0})
         edge6 = graph.Edge(self.CYTBD_FRD7, self.q8h2,
                            {'dir': 'back', 'penwidth': 10.0})
-
-        for i in g5.edges:
-            print(i.source, i.dest, i.props)
         edge_list = [edge1, edge2, edge3, edge4, edge5, edge6]
         self.assertTrue(all(i in edge_list for i in g5.edges))
         self.assertTrue(all(i in g5.edges for i in edge_list))
