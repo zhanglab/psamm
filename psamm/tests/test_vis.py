@@ -378,30 +378,51 @@ class TestMakeCpairDict(unittest.TestCase):
         self.assertEqual(e6, e6_res)
         self.assertEqual(n6, n6_res)
 
-    def test_reverse_rxn(self):
+    def test_c2c1_fba(self):
         self.native.reactions.add_entry(
-            ReactionEntry({'id': 'test_c2c1', 'equation': parse_reaction(
-                '(0.5) C[c] => A[c]')}))
+            ReactionEntry({'id': 'c2c1_forward',
+                           'equation': parse_reaction('(0.5) C[c] => A[c]')}))
+        self.native.reactions.add_entry(
+            ReactionEntry({'id': 'c2c1_both', 'equation': parse_reaction(
+                '(0.5) C[c] <=> A[c]')}))
+        self.native.reactions.add_entry(
+            ReactionEntry({'id': 'c2c1_back', 'equation': parse_reaction(
+                ' C[c] <=> B[c]')}))
         mm = self.native.create_metabolic_model()
-        self.filter_dict['test_c2c1'] = [(Compound('C', 'c'), Compound('A', 'c'))]
-        subset = ['rxn1', 'rxn2', 'rxn3', 'rxn4', 'test_c2c1']
-        e7, n7 = vis.make_cpair_dict(mm, self.filter_dict, subset,
-                                     self.reaction_flux, self.method)
+
+        self.filter_dict['c2c1_forward'] = \
+            [(Compound('C', 'c'), Compound('A', 'c'))]
+        self.filter_dict['c2c1_both'] = \
+            [(Compound('C', 'c'), Compound('A', 'c'))]
+        self.filter_dict['c2c1_back'] = \
+            [(Compound('C', 'c'), Compound('B', 'c'))]
+
+        subset = ['rxn1', 'rxn2', 'rxn3', 'rxn4', 'c2c1_forward',
+                  'c2c1_both', 'c2c1_back']
+
+        reaction_flux = {'rxn2': 9.8, 'rxn4': 9.8, 'c2c1_back': -3.7}
+        e7, n7 = vis.make_cpair_dict(
+            mm, self.filter_dict, subset, reaction_flux, self.method)
         e7_res = defaultdict(lambda: defaultdict(list))
-        e7_res[(Compound('A', 'c'), Compound('C', 'c'))]['both']. \
-            append('rxn1_1')
+        e7_res[(Compound('A', 'c'), Compound('C', 'c'))]['both'] \
+            = ['c2c1_both_1', 'rxn1_1']
         e7_res[(Compound('A', 'c'), Compound('C', 'c'))]['back']. \
-            append('test_c2c1_1')
+            append('c2c1_forward_1')
         e7_res[(Compound('B', 'c'), Compound('C', 'c'))]['both']. \
             append('rxn1_2')
+        e7_res[(Compound('B', 'c'), Compound('C', 'c'))]['forward']. \
+            append('c2c1_back_1')
+        e7_res[(Compound('B', 'c'), Compound('D', 'c'))]['forward'] \
+            = ['rxn2_1']
         e7_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] \
-            = ['rxn1_3', 'rxn2_1']
+            = ['rxn1_3']
         e7_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward']. \
             append('rxn3_1')
 
         n7_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1', 'rxn1_3': 'rxn1',
                   'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3',
-                  'test_c2c1_1': 'test_c2c1'}
+                  'c2c1_forward_1': 'c2c1_forward',
+                  'c2c1_both_1': 'c2c1_both', 'c2c1_back_1': 'c2c1_back'}
 
         self.assertEqual(e7, e7_res)
         self.assertEqual(n7, n7_res)
