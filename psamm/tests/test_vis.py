@@ -1142,13 +1142,13 @@ class TestUpdateNodeLabel(unittest.TestCase):
         g2 = vis.update_node_label(
             self.g, self.cpd_detail, self.rxn_detail, self.cpd_entries,
             self.rxn_entries, {'rxn1': 4.86, 'rxn2': 7.2, 'rxn3': 5.29,
-                               'test_bio': 0.8})
+                               'test_bio': 0.8, 'test_Ex_C': 9.63})
         self.a.props['label'] = 'A[c]'
         self.c.props['label'] = 'C[c]'
         self.c_extracell.props['label'] = 'C[e]'
         self.node_ac.props['label'] = 'rxn1\nrxn3\n10.15'
         self.node_cc.props['label'] = 'rxn2\n7.2'
-        self.node_Ex.props['label'] = 'test_Ex_C'
+        self.node_Ex.props['label'] = 'test_Ex_C\n9.63'
         self.bio_A.props['label'] = 'test_bio'
         self.assertTrue(all(
             i in [self.a, self.c, self.c_extracell, self.node_ac,
@@ -1361,6 +1361,53 @@ class TestEdgePropsWithFBA(unittest.TestCase):
         self.assertTrue(all(i in edge_list for i in g3.edges))
         self.assertTrue(all(i in g3.edges for i in edge_list))
 
+    def test4_with_fba_sameflux(self):
+        edge_values = {(Compound('q8_c', 'c'), 'CYTBD,FRD7'): 3.0,
+                       (Compound('mal_L_c', 'c'), 'FUM'): 3.0,
+                       (Compound('q8h2_c', 'c'), 'CYTBD,FRD7'): 3.0,
+                       (Compound('fum_c', 'c'), 'FUM'): 3.0}
+        g4 = vis.set_edge_props_withfba(self.g1, edge_values)
+        edge1 = graph.Edge(self.fum, self.rxn_FUM,
+                           {'dir': 'both', 'penwidth': 1.0})
+        edge2 = graph.Edge(self.rxn_FUM, self.mal,
+                           {'dir': 'both', 'penwidth': 1.0})
+        edge3 = graph.Edge(self.fum, self.FRD7,
+                           {'dir': 'forward', 'style': 'dotted'})
+        edge4 = graph.Edge(self.FRD7, self.succ,
+                           {'dir': 'forward', 'style': 'dotted'})
+        edge5 = graph.Edge(self.q8, self.CYTBD_FRD7,
+                           {'dir': 'back', 'penwidth': 1.0})
+        edge6 = graph.Edge(self.CYTBD_FRD7, self.q8h2,
+                           {'dir': 'back', 'penwidth': 1.0})
+        edge_list = [edge1, edge2, edge3, edge4, edge5, edge6]
+        self.assertTrue(all(i in edge_list for i in g4.edges))
+        self.assertTrue(all(i in g4.edges for i in edge_list))
+
+    def test5_flux_larger_tahn_maxEdgeValues(self):
+        edge_values = {(Compound('q8_c', 'c'), 'CYTBD,FRD7'): 21.8,
+                       (Compound('mal_L_c', 'c'), 'FUM'): 5.6,
+                       (Compound('q8h2_c', 'c'), 'CYTBD,FRD7'): 43.6,
+                       (Compound('fum_c', 'c'), 'FUM'): 3.0}
+        g5 = vis.set_edge_props_withfba(self.g1, edge_values)
+        edge1 = graph.Edge(self.fum, self.rxn_FUM,
+                           {'dir': 'both', 'penwidth': 1.376})
+        edge2 = graph.Edge(self.rxn_FUM, self.mal,
+                           {'dir': 'both', 'penwidth': 2.569})
+        edge3 = graph.Edge(self.fum, self.FRD7,
+                           {'dir': 'forward', 'style': 'dotted'})
+        edge4 = graph.Edge(self.FRD7, self.succ,
+                           {'dir': 'forward', 'style': 'dotted'})
+        edge5 = graph.Edge(self.q8, self.CYTBD_FRD7,
+                           {'dir': 'back', 'penwidth': 10.0})
+        edge6 = graph.Edge(self.CYTBD_FRD7, self.q8h2,
+                           {'dir': 'back', 'penwidth': 10.0})
+
+        for i in g5.edges:
+            print(i.source, i.dest, i.props)
+        edge_list = [edge1, edge2, edge3, edge4, edge5, edge6]
+        self.assertTrue(all(i in edge_list for i in g5.edges))
+        self.assertTrue(all(i in g5.edges for i in edge_list))
+
 
 class TestMakeCptTree(unittest.TestCase):
     def test1_if_e_inthemodel(self):
@@ -1420,7 +1467,7 @@ class TestGetCptBoundaries(unittest.TestCase):
             'id': 'B[p]', 'formula': parse_compound('formula_B', 'p')}))
         self.native = native_model
 
-    def test_default_setting(self):
+    def test1_default_setting(self):
         e1_bound, e1_extra = vis.get_cpt_boundaries(self.native)
         e1_bound_res = set()
         e1_bound_res.add(('c', 'e'))
@@ -1449,6 +1496,19 @@ class TestGetCptBoundaries(unittest.TestCase):
         e3_extra_res = 'e'
         self.assertEqual(e3_bound, e3_bound_res)
         self.assertEqual(e3_extra, e3_extra_res)
+
+    def test4_cpt_boundaries_defined_in_model(self):
+        self.native.compartment_boundaries.add(('c', 'e'))
+        self.native.compartment_boundaries.add(('e', 'p'))
+        self.native.compartment_boundaries.add(('c', 'mi'))
+        e4_bound, e4_extra = vis.get_cpt_boundaries(self.native)
+        e4_bound_res = set()
+        e4_bound_res.add(('c', 'e'))
+        e4_bound_res.add(('e', 'p'))
+        e4_bound_res.add(('c', 'mi'))
+        e4_extra_res = 'e'
+        self.assertTrue(all(i in e4_bound for i in e4_bound_res))
+        self.assertEqual(e4_extra, e4_extra_res)
 
 
 class TestMakeSubset(unittest.TestCase):

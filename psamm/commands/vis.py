@@ -835,7 +835,7 @@ def set_edge_props_withfba(g, edge_values):
 
     if len(edge_values) > 0:
         value_list = sorted(edge_values.values())
-        ninety_percentile = value_list[int(len(value_list) * 0.9)]
+        ninety_percentile = value_list[int(len(value_list) * 0.9) - 1]
         min_edge_value = min(itervalues(edge_values))
         max_edge_value = ninety_percentile
     else:
@@ -862,8 +862,6 @@ def set_edge_props_withfba(g, edge_values):
             elif edge.dest.props['type'] == 'cpd':
                 rxn_string = ','.join(edge.source.props['original_id'])
                 edge_test = edge.dest.props['original_id'], rxn_string
-            else:
-                edge_test = None
 
             if edge_test in edge_values:
                 edge.props['penwidth'] = pen_width(edge_values[edge_test])
