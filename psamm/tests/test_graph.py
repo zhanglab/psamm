@@ -23,16 +23,7 @@ from psamm import graph
 import os
 import tempfile
 import unittest
-from psamm.datasource.native import NativeModel
-from psamm.datasource.reaction import parse_reaction, parse_compound
-from psamm import formula
-
-from psamm.datasource.native import NativeModel
-from psamm.datasource.native import ReactionEntry
-from psamm.datasource.native import CompoundEntry
-from psamm.datasource.reaction import parse_reaction, parse_compound
-from psamm.formula import Formula, Atom, Radical
-
+from collections import defaultdict
 
 class TestGraph(unittest.TestCase):
 	def setUp(self):
@@ -127,8 +118,41 @@ class TestGraph(unittest.TestCase):
 		self.g.add_node(self.node2)
 		self.assertEqual(self.g.nodes_id_dict, {'A': self.node1, 'B': self.node2})
 
-	def test_write_cytoscap_nodes(self):
+	def test_node_original_id_dict(self):
+		self.g.add_node(self.node4)
+		self.g.add_node(self.node5)
+		d = defaultdict(list)
+		d['A,B'].append(self.node4)
+		d['cpd_E'].append(self.node5)
+		self.assertEqual(self.g.nodes_original_id_dict, d)
+
+	def test_default_edge_props(self):
+		self.g._default_edge_props['style'] = 'dashed'
+		d = {'style': 'dashed'}
+		self.assertEqual(d, self.g.default_edge_props)
+
+	def test_default_node_props(self):
+		self.g._default_node_props['shape'] = 'box'
+		d = {'shape': 'box'}
+		self.assertEqual(d, self.g.default_node_props)
+
+	def test_write_cytoscape_nodes(self):
 		self.g.add_node(self.node2)
+		self.g.add_node(self.node3)
+		self.g.add_edge(self.edge2_3)
+		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_node')
+		with open(path, mode='w') as f:
+			self.g.write_cytoscape_nodes(f)
+		read_file = []
+		f = open(path, 'r')
+		for i in f.readlines():
+			read_file.append(i)
+		f.close()
+		self.assertEqual(read_file, ['id\tcolor\tlabel\n', 'B\tblue\tB\n', 'C\tred\tC\n'])
+
+	def test_write_cytoscape_nodes_with_original_id(self):
+		self.g.add_node(self.node2)
+		self.node3.props['original_id'] = 'A_1'
 		self.g.add_node(self.node3)
 		self.g.add_edge(self.edge2_3)
 		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_node')
@@ -167,7 +191,70 @@ class TestGraph(unittest.TestCase):
 		for i in f.readlines():
 			read_file.append(i)
 		f.close()
-		self.assertEqual(read_file, ['digraph {\n', 'size = "2, 2"; ratio = fill; node[fontname=Arail, fontsize=12]\n', ' "B"[color="blue",id="B"]\n', ' "C"[color="red",id="C"]\n', ' "B" -> "C"[id="2_3"]\n', '}\n'])
+		self.assertEqual(['digraph {\n', 'size = "2, 2"; ratio = fill;\n', ' "B"[color="blue",id="B"]\n', ' "C"[color="red",id="C"]\n', ' "B" -> "C"[id="2_3"]\n', '}\n'], read_file)
+
+	def test_write_graphviz_graph_props(self):
+		self.g.add_node(self.node2)
+		self.g.add_node(self.node3)
+		self.g.add_edge(self.edge2_3)
+		self.g.props['fontsize'] = 12
+		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+		with open(path, mode='w') as f:
+			self.g.write_graphviz(f, 2, 2)
+		read_file = []
+		f = open(path, 'r')
+		for i in f.readlines():
+			read_file.append(i)
+		f.close()
+		self.assertEqual(['digraph {\n', 'size = "2, 2"; ratio = fill;\n', ' fontsize="12";\n', ' "B"[color="blue",id="B"]\n', ' "C"[color="red",id="C"]\n', ' "B" -> "C"[id="2_3"]\n', '}\n'], read_file)
+
+	def test_write_graphviz_default_node_props(self):
+		self.g.add_node(self.node2)
+		self.g.add_node(self.node3)
+		self.g.add_edge(self.edge2_3)
+		self.g._default_node_props['fontname'] = 'Arial'
+		self.g._default_node_props['fontsize'] = 12
+		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+		with open(path, mode='w') as f:
+			self.g.write_graphviz(f, 2, 2)
+		read_file = []
+		f = open(path, 'r')
+		for i in f.readlines():
+			read_file.append(i)
+		f.close()
+		self.assertEqual(['digraph {\n', 'size = "2, 2"; ratio = fill;\n', ' node[fontname="Arial",fontsize="12"];\n', ' "B"[color="blue",id="B"]\n', ' "C"[color="red",id="C"]\n', ' "B" -> "C"[id="2_3"]\n', '}\n'], read_file)
+
+	def test_write_graphvizdefault_edge_props(self):
+		self.g.add_node(self.node2)
+		self.g.add_node(self.node3)
+		self.g.add_edge(self.edge2_3)
+		self.g._default_edge_props['style'] = 'dashed'
+		self.g._default_edge_props['width'] = 12
+		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+		with open(path, mode='w') as f:
+			self.g.write_graphviz(f, 2, 2)
+		read_file = []
+		f = open(path, 'r')
+		for i in f.readlines():
+			read_file.append(i)
+		f.close()
+		self.assertEqual(['digraph {\n', 'size = "2, 2"; ratio = fill;\n', ' edge[style="dashed",width="12"];\n', ' "B"[color="blue",id="B"]\n', ' "C"[color="red",id="C"]\n', ' "B" -> "C"[id="2_3"]\n', '}\n'], read_file)
+
+	def test_write_graphviz_default_size(self):
+		self.g.add_node(self.node2)
+		self.g.add_node(self.node3)
+		self.g.add_edge(self.edge2_3)
+		self.g._default_node_props['fontname'] = 'Arial'
+		self.g._default_node_props['fontsize'] = 12
+		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+		with open(path, mode='w') as f:
+			self.g.write_graphviz(f, None, None)
+		read_file = []
+		f = open(path, 'r')
+		for i in f.readlines():
+			read_file.append(i)
+		f.close()
+		self.assertEqual(read_file, ['digraph {\n', ' node[fontname="Arial",fontsize="12"];\n', ' "B"[color="blue",id="B"]\n', ' "C"[color="red",id="C"]\n', ' "B" -> "C"[id="2_3"]\n', '}\n'])
 
 	def test_write_graphviz_compartmentalize(self):
 		self.node2.props['compartment'] = 'c'
@@ -184,7 +271,80 @@ class TestGraph(unittest.TestCase):
 		for i in f.readlines():
 			read_file.append(i)
 		f.close()
-		self.assertEqual(read_file, ['digraph {\n', 'size="2,2"; ratio = fill; node[fontname=Arail, fontsize=12]\n', ' subgraph cluster_e {\n', '  style=solid;\n', '  color=black;\n', '  penwidth=4;\n', '  fontsize=35;\n', '  label = "Compartment: e"\n', ' "C"[color="red",compartment="e",id="C"]\n', ' subgraph cluster_c {\n', '  style=dashed;\n', '  color=black;\n', '  penwidth=4;\n', '  fontsize=35;\n', '  label = "Compartment: c"\n', ' "B"[color="blue",compartment="c",id="B"]\n', '}} "B" -> "C"[compartment="e",id="2_3"]\n', '}\n'])
+		self.assertEqual(read_file, ['digraph {\n', 'size="2,2"; ratio = fill;\n', ' subgraph cluster_e {\n', '  style=solid;\n', '  color=black;\n', '  penwidth=4;\n', '  fontsize=35;\n', '  label = "Compartment: e"\n', ' "C"[color="red",compartment="e",id="C"]\n', ' subgraph cluster_c {\n', '  style=dashed;\n', '  color=black;\n', '  penwidth=4;\n', '  fontsize=35;\n', '  label = "Compartment: c"\n', ' "B"[color="blue",compartment="c",id="B"]\n', '}} "B" -> "C"[compartment="e",id="2_3"]\n', '}\n'])
+
+	def test_write_graphviz_compartmentalize_default_size(self):
+		self.node2.props['compartment'] = 'c'
+		self.node3.props['compartment'] = 'e'
+		self.edge2_3.props['compartment'] = 'e'
+		self.g.add_node(self.node2)
+		self.g.add_node(self.node3)
+		self.g.add_edge(self.edge2_3)
+		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+		with open(path, mode='w') as f:
+			self.g.write_graphviz_compartmentalized(f, {'e': {'c'}, 'c': set()}, 'e', None, None)
+		read_file = []
+		f = open(path, 'r')
+		for i in f.readlines():
+			read_file.append(i)
+		f.close()
+		self.assertEqual(read_file, ['digraph {\n', ' subgraph cluster_e {\n', '  style=solid;\n', '  color=black;\n', '  penwidth=4;\n', '  fontsize=35;\n', '  label = "Compartment: e"\n', ' "C"[color="red",compartment="e",id="C"]\n', ' subgraph cluster_c {\n', '  style=dashed;\n', '  color=black;\n', '  penwidth=4;\n', '  fontsize=35;\n', '  label = "Compartment: c"\n', ' "B"[color="blue",compartment="c",id="B"]\n', '}} "B" -> "C"[compartment="e",id="2_3"]\n', '}\n'])
+
+	def test_write_graphviz_compartmentalize_default_node_props(self):
+		self.node2.props['compartment'] = 'c'
+		self.node3.props['compartment'] = 'e'
+		self.edge2_3.props['compartment'] = 'e'
+		self.g.add_node(self.node2)
+		self.g.add_node(self.node3)
+		self.g.add_edge(self.edge2_3)
+		self.g._default_node_props['fontname'] = 'Arial'
+		self.g._default_node_props['fontsize'] = 12
+		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+		with open(path, mode='w') as f:
+			self.g.write_graphviz_compartmentalized(f, {'e': {'c'}, 'c': set()}, 'e', None, None)
+		read_file = []
+		f = open(path, 'r')
+		for i in f.readlines():
+			read_file.append(i)
+		f.close()
+		self.assertEqual(read_file, ['digraph {\n', ' node[fontname="Arial",fontsize="12"];\n', ' subgraph cluster_e {\n', '  style=solid;\n', '  color=black;\n', '  penwidth=4;\n', '  fontsize=35;\n', '  label = "Compartment: e"\n', ' "C"[color="red",compartment="e",id="C"]\n', ' subgraph cluster_c {\n', '  style=dashed;\n', '  color=black;\n', '  penwidth=4;\n', '  fontsize=35;\n', '  label = "Compartment: c"\n', ' "B"[color="blue",compartment="c",id="B"]\n', '}} "B" -> "C"[compartment="e",id="2_3"]\n', '}\n'])
+
+	def test_write_graphviz_compartmentalize_default_edge_props(self):
+		self.node2.props['compartment'] = 'c'
+		self.node3.props['compartment'] = 'e'
+		self.edge2_3.props['compartment'] = 'e'
+		self.g.add_node(self.node2)
+		self.g.add_node(self.node3)
+		self.g.add_edge(self.edge2_3)
+		self.g._default_edge_props['style'] = 'dashed'
+		self.g._default_edge_props['width'] = 12
+		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+		with open(path, mode='w') as f:
+			self.g.write_graphviz_compartmentalized(f, {'e': {'c'}, 'c': set()}, 'e', None, None)
+		read_file = []
+		f = open(path, 'r')
+		for i in f.readlines():
+			read_file.append(i)
+		f.close()
+		self.assertEqual(read_file, ['digraph {\n', ' edge[style="dashed",width="12"];\n', ' subgraph cluster_e {\n', '  style=solid;\n', '  color=black;\n', '  penwidth=4;\n', '  fontsize=35;\n', '  label = "Compartment: e"\n', ' "C"[color="red",compartment="e",id="C"]\n', ' subgraph cluster_c {\n', '  style=dashed;\n', '  color=black;\n', '  penwidth=4;\n', '  fontsize=35;\n', '  label = "Compartment: c"\n', ' "B"[color="blue",compartment="c",id="B"]\n', '}} "B" -> "C"[compartment="e",id="2_3"]\n', '}\n'])
+
+	def test_write_graphviz_compartmentalize_default_graph_props(self):
+		self.node2.props['compartment'] = 'c'
+		self.node3.props['compartment'] = 'e'
+		self.edge2_3.props['compartment'] = 'e'
+		self.g.add_node(self.node2)
+		self.g.add_node(self.node3)
+		self.g.add_edge(self.edge2_3)
+		self.g.props['fontsize'] = 12
+		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+		with open(path, mode='w') as f:
+			self.g.write_graphviz_compartmentalized(f, {'e': {'c'}, 'c': set()}, 'e', None, None)
+		read_file = []
+		f = open(path, 'r')
+		for i in f.readlines():
+			read_file.append(i)
+		f.close()
+		self.assertEqual(read_file, ['digraph {\n', ' fontsize="12";\n', ' subgraph cluster_e {\n', '  style=solid;\n', '  color=black;\n', '  penwidth=4;\n', '  fontsize=35;\n', '  label = "Compartment: e"\n', ' "C"[color="red",compartment="e",id="C"]\n', ' subgraph cluster_c {\n', '  style=dashed;\n', '  color=black;\n', '  penwidth=4;\n', '  fontsize=35;\n', '  label = "Compartment: c"\n', ' "B"[color="blue",compartment="c",id="B"]\n', '}} "B" -> "C"[compartment="e",id="2_3"]\n', '}\n'])
 
 
 class TestNodes(unittest.TestCase):
@@ -205,6 +365,10 @@ class TestNodes(unittest.TestCase):
 	def test_neq_node_edge(self):
 		self.assertFalse(self.node1 == self.edge1_2)
 
+	def test_node_repr(self):
+		rep = self.node1.__repr__()
+		self.assertEqual(rep, '<Node id=A>')
+
 
 class TestEdges(unittest.TestCase):
 	def setUp(self):
@@ -215,9 +379,10 @@ class TestEdges(unittest.TestCase):
 		self.node4 = graph.Node({'id': 'A'})
 		self.edge1_2 = graph.Edge(self.node1, self.node2)
 		self.edge2_3 = graph.Edge(self.node2, self.node3)
+		self.edge12_21 = graph.Edge(self.node1, self.node2)
 
 	def test_eq_edges(self):
-		self.assertTrue(self.node1 == self.node4)
+		self.assertTrue(self.edge1_2 == self.edge12_21)
 
 	def test_neq_edges(self):
 		self.assertTrue(self.edge1_2 != self.edge2_3)
