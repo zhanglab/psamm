@@ -172,6 +172,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             model_reaction_entries[r.id] = r
 
         g = graph.Graph()
+        g._default_node_props['fontname'] = 'Arial'
+        g._default_node_props['fontsize'] = 12
         g = add_graph_nodes(g, cpair_dict, self._args.method,
                             new_id_mapping, split=self._args.split_map)
         g = add_edges(g, cpair_dict, self._args.method,
