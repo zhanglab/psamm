@@ -1049,7 +1049,7 @@ class TestAddExchangeRxns(unittest.TestCase):
         for edge in self.edge_list_c_to_e:
             self.g1.add_edge(edge)
         self.rxn_C = Reaction(Direction.Both, {Compound('C', 'e'): -1})
-        self.rxn_A = Reaction(Direction.Both, {Compound('A', 'e'): -1})
+        self.rxn_A = Reaction(Direction.Both, {Compound('A', 'e'): 1})
 
         self.g2 = graph.Graph()
         self.edge_list_e_to_c = [edge_a_r1, edge_r1_c, edge_a_r3, edge_r3_a]
@@ -1081,7 +1081,7 @@ class TestAddExchangeRxns(unittest.TestCase):
             'id': 'test_Ex_A', 'shape': 'box', 'style': 'filled',
             'type': 'Ex_rxn', 'original_id': ['test_Ex_A'], 'compartment':
                 'e', 'fillcolor': '#90f998', 'label': 'test_Ex_A'})
-        edge_ex = graph.Edge(self.a_extracell, node_ex, {'dir': 'both'})
+        edge_ex = graph.Edge(node_ex, self.a_extracell, {'dir': 'both'})
         self.node_list_e_to_c.append(node_ex)
         self.edge_list_e_to_c.append(edge_ex)
 

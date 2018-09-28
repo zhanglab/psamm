@@ -228,7 +228,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
 
         if self._args.Image is not None:
             if render is None:
-                self.fail(
+                raise ImportError(
                     'Making an image directly requires the '
                     'graphviz python bindings and the graphviz program '
                     'to be installed ("pip install graphviz")')
@@ -419,7 +419,6 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
                 'All the reactions have compounds with undefined formula or '
                 'have no reaction equation, fix them or '
                 'add "--method no-fpp --element none" to the command')
-            quit()
 
         reaction_pairs = [(r.id, r.equation) for r in fpp_rxns
                           if r.id != model.biomass_reaction]
@@ -486,7 +485,6 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
         except IOError:
             raise IOError('Invalid file path, no such file or '
                           'directory: {}' .format(method))
-            quit()
 
     cpairs_ordered_filter_dict = {}
     for r, cpairs in iteritems(filter_dict):
