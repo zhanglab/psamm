@@ -162,7 +162,8 @@ class Graph(Entity):
             f.write(' "{}"[{}]\n'.format(
                 node.props['id'], _graphviz_prop_string(node.props)))
 
-        for edge in sorted(self.edges, key=lambda k: (k.source.props['id'], k.dest.props['id'], k.props.get('dir'))):
+        for edge in sorted(self.edges, key=lambda k: (k.source.props['id'],
+                                    k.dest.props['id'], k.props.get('dir'))):
             f.write(' "{}" -> "{}"[{}]\n'.format(
                 edge.source.props['id'], edge.dest.props['id'],
                 _graphviz_prop_string(edge.props)))
@@ -213,7 +214,8 @@ class Graph(Entity):
                 f.write('  "{}"[{}]\n'.format(
                     node.props['id'], _graphviz_prop_string(node.props)))
 
-        def dfs_recursive(graph, vertex, node_dict, extracellular, f, path=[]):
+        def dfs_recursive(graph, vertex, node_dict,
+                          extracellular, f, path=[]):
             path.append(vertex)
             if vertex == extracellular:
                 f.write(''.join(
@@ -242,7 +244,8 @@ class Graph(Entity):
         dfs_recursive(compartment_tree, extracellular, node_dicts,
                       extracellular, f)
 
-        for edge in sorted(self.edges,  key=lambda k: (k.source.props['id'], k.dest.props['id'], k.props.get('dir'))):
+        for edge in sorted(self.edges,  key=lambda k: (k.source.props['id'],
+                                    k.dest.props['id'], k.props.get('dir'))):
             f.write(' "{}" -> "{}"[{}]\n'.format(
                 edge.source.props['id'], edge.dest.props['id'],
                 _graphviz_prop_string(edge.props)))
@@ -291,10 +294,12 @@ class Graph(Entity):
         properties = sorted(properties)
         header = ['source', 'target'] + properties
         f.write('\t'.join(header) + '\n')
-        for edge in sorted(self.edges, key=lambda k: (edge.source.props['id'], edge.dest.props['id'], edge.props.get('dir'))):
+        for edge in sorted(self.edges, key=lambda k: (edge.source.props['id'],
+                                edge.dest.props['id'], edge.props.get('dir'))):
             f.write('{}\t{}\t{}\n'.format(
                 edge.source.props['id'], edge.dest.props['id'],
-                '\t'.join(text_type(edge.props.get(x.encode('ascii').decode('ascii')))
+                '\t'.join(text_type(edge.props.get(
+                    x.encode('ascii').decode('ascii')))
                           for x in properties)))
 
 
