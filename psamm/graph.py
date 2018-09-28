@@ -144,11 +144,7 @@ class Graph(Entity):
         """
         f.write('digraph {\n')
         if width is not None and height is not None:
-            f.write('size = "{}, {}"; ratio = fill; node[fontname=Arail, '
-                    'fontsize=12]\n'.format(width, height))
-        else:
-            f.write('node[fontname=Arail, fontsize=12]\n'.
-                    format(width, height))
+            f.write('size = "{}, {}"; ratio = fill;\n'.format(width, height))
 
         if len(self._default_node_props) > 0:
             f.write(' node[{}];\n'.format(
@@ -161,10 +157,7 @@ class Graph(Entity):
         for k, v in iteritems(self.props):
             f.write(' {}="{}";\n'.format(k, v))
 
-        next_id = count(0)
         for node in sorted(self.nodes, key=lambda k: k.props['id']):
-            if 'id' not in node.props:
-                node.props['id'] = 'n{}'.format(next(next_id))
 
             f.write(' "{}"[{}]\n'.format(
                 node.props['id'], _graphviz_prop_string(node.props)))
@@ -191,10 +184,7 @@ class Graph(Entity):
         """
         f.write('digraph {\n')
         if width is not None and height is not None:
-            f.write('size="{},{}"; ratio = fill; node[fontname=Arail, '
-                    'fontsize=12]\n'.format(width, height))
-        else:
-            f.write('node[fontname=Arail, fontsize=12]\n'.format(width, height))
+            f.write('size="{},{}"; ratio = fill;\n'.format(width, height))
 
         if len(self._default_node_props) > 0:
             f.write(' node[{}];\n'.format(
@@ -269,8 +259,6 @@ class Graph(Entity):
         next_id = count(0)
         properties = set()
         for node in self.nodes:
-            if 'id' not in node.props:
-                node.props['id'] = 'n{}'.format(next(next_id))
             if 'label' not in node.props:
                 node.props['label'] = node.props['id']
             properties.update(node.props)
@@ -284,7 +272,7 @@ class Graph(Entity):
         f.write('\t'.join(properties) + '\n')
 
         for node in sorted(self.nodes, key=lambda k: k.props['id']):
-            a = '\t'.join(node.props.get(x)
+            a = '\t'.join(text_type(node.props.get(x))
                           for x in properties if x != 'label')
             b = node.props['label'].replace('\n', ',')
             f.write('{}\t{}\n'.format(a, b))
