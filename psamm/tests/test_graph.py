@@ -19,8 +19,10 @@
 
 from __future__ import unicode_literals
 
-import unittest
 from psamm import graph
+import os
+import tempfile
+import unittest
 from psamm.datasource.native import NativeModel
 from psamm.datasource.reaction import parse_reaction, parse_compound
 from psamm import formula
@@ -32,53 +34,28 @@ from psamm.datasource.reaction import parse_reaction, parse_compound
 from psamm.formula import Formula, Atom, Radical
 
 
-class TestFilterDict(unittest.TestCase):
-	def setUp(self):
-		native_model = NativeModel()
-		native_model.reactions.add_entry(ReactionEntry({'id': 'rxn1',
-				                                                'equation': parse_reaction('fum_c[c] + h2o_c[c] <=> mal_L_c[c]')}))
-		native_model.compounds.add_entry(CompoundEntry({'id': 'fum_c[c]', 'formula': parse_compound('C4H2O4', 'c')}))
-		native_model.compounds.add_entry(CompoundEntry({'id': 'h2o_c[c]', 'formula': parse_compound('H2O', 'c')}))
-		native_model.compounds.add_entry(CompoundEntry({'id': 'mal_L_c[c]', 'formula': parse_compound('C4H4O5', 'c')}))
-		self.native = native_model
-		self.mm = native_model.create_metabolic_model()
-
-		self.compounds_dict = {'fum_c' : Formula.parse('C4H2O4'), 'h2o_c' : Formula.parse('H2O'), 'mal_L_c': Formula.parse('C4H4O5')}
-		self.element = 'C'
-		self.method = 'fpp'
-
-	def test(self):
-		print(self.compounds_dict)
-		# vis.make_filter_dict(self.native, self.mm, self.method, self.element, self.compounds_dict, None, [])
-
-		self.assertEqual('A', 'A')
-
-
-class TestMakeModelExample(unittest.TestCase):
-	def setUp(self):
-		native_model = NativeModel()
-		native_model.reactions.add_entry(ReactionEntry({'id': 'rxn1',
-		                                                'equation': parse_reaction('A[c] + B[c] => C[c] + D[c]')}))
-		self._native = native_model
-		self._mm = native_model.create_metabolic_model()
-
-	def test_nm_test(self):
-		print(self._native)
-		self.assertEqual('A', 'A')
-
-
 class TestGraph(unittest.TestCase):
 	def setUp(self):
 		self.g = graph.Graph()
 		self.node1 = graph.Node({'id': 'A'})
-		self.node2 = graph.Node({'id': 'B'})
-		self.node3 = graph.Node({'id': 'C'})
+		self.node2 = graph.Node({'id': 'B', 'color': 'blue'})
+		self.node3 = graph.Node({'id': 'C', 'color': 'red'})
+		self.node4 = graph.Node({'id': 'D', 'original_id': ['A', 'B'], 'type': 'rxn'})
+		self.node5 = graph.Node({'id': 'E', 'original_id': 'cpd_E', 'type': 'cpd'})
 		self.edge1_2 = graph.Edge(self.node1, self.node2)
 		self.edge2_3 = graph.Edge(self.node2, self.node3, props={'id': '2_3'})
 
 	def test_add_node(self):
 		self.g.add_node(self.node1)
 		self.assertTrue(self.node1 in self.g.nodes)
+
+	def test_add_node_with_type_cpd(self):
+		self.g.add_node(self.node5)
+		self.assertEqual(self.g._nodes_original_id['cpd_E'], [self.node5])
+
+	def test_add_node_with_type_rxn(self):
+		self.g.add_node(self.node4)
+		self.assertEqual(self.g._nodes_original_id['A,B'], [self.node4])
 
 	def test_node_id_dict(self):
 		self.g.add_node(self.node1)
@@ -139,6 +116,114 @@ class TestGraph(unittest.TestCase):
 			edges_for_list.append(i)
 		self.assertTrue(edges_for_list == [(self.node2, set([self.edge1_2]))])
 		self.assertEqual('A', 'A')
+
+	def test_get_node(self):
+		self.g.add_node(self.node1)
+		test_node = self.g.get_node('A')
+		self.assertEqual(test_node, self.node1)
+
+	def test_nodes_id_dict(self):
+		self.g.add_node(self.node1)
+		self.g.add_node(self.node2)
+		self.assertEqual(self.g.nodes_id_dict, {'A': self.node1, 'B': self.node2})
+
+	def test_write_cytoscap_nodes(self):
+		self.g.add_node(self.node2)
+		self.g.add_node(self.node3)
+		self.g.add_edge(self.edge2_3)
+		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_node')
+		with open(path, mode='w') as f:
+			self.g.write_cytoscape_nodes(f)
+		read_file = []
+		f = open(path, 'r')
+		for i in f.readlines():
+			read_file.append(i)
+		f.close()
+		self.assertEqual(read_file, ['id\tcolor\tlabel\n', 'B\tblue\tB\n', 'C\tred\tC\n'])
+
+	def test_write_cytoscape_edges(self):
+		self.g.add_node(self.node2)
+		self.g.add_node(self.node3)
+		self.g.add_edge(self.edge2_3)
+		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+		with open(path, mode='w') as f:
+			self.g.write_cytoscape_edges(f)
+		read_file = []
+		f = open(path, 'r')
+		for i in f.readlines():
+			read_file.append(i)
+		f.close()
+		self.assertEqual(read_file, ['source\ttarget\tid\n', 'B\tC\t2_3\n'])
+
+	def test_write_graphviz(self):
+		self.g.add_node(self.node2)
+		self.g.add_node(self.node3)
+		self.g.add_edge(self.edge2_3)
+		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+		with open(path, mode='w') as f:
+			self.g.write_graphviz(f, 2, 2)
+		read_file = []
+		f = open(path, 'r')
+		for i in f.readlines():
+			read_file.append(i)
+		f.close()
+		self.assertEqual(read_file, ['digraph {\n', 'size = "2, 2"; ratio = fill; node[fontname=Arail, fontsize=12]\n', ' "B"[color="blue",id="B"]\n', ' "C"[color="red",id="C"]\n', ' "B" -> "C"[id="2_3"]\n', '}\n'])
+
+	def test_write_graphviz_compartmentalize(self):
+		self.node2.props['compartment'] = 'c'
+		self.node3.props['compartment'] = 'e'
+		self.edge2_3.props['compartment'] = 'e'
+		self.g.add_node(self.node2)
+		self.g.add_node(self.node3)
+		self.g.add_edge(self.edge2_3)
+		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+		with open(path, mode='w') as f:
+			self.g.write_graphviz_compartmentalized(f, {'e': {'c'}, 'c': set()}, 'e', 2, 2)
+		read_file = []
+		f = open(path, 'r')
+		for i in f.readlines():
+			read_file.append(i)
+		f.close()
+		self.assertEqual(read_file, ['digraph {\n', 'size="2,2"; ratio = fill; node[fontname=Arail, fontsize=12]\n', ' subgraph cluster_e {\n', '  style=solid;\n', '  color=black;\n', '  penwidth=4;\n', '  fontsize=35;\n', '  label = "Compartment: e"\n', ' "C"[color="red",compartment="e",id="C"]\n', ' subgraph cluster_c {\n', '  style=dashed;\n', '  color=black;\n', '  penwidth=4;\n', '  fontsize=35;\n', '  label = "Compartment: c"\n', ' "B"[color="blue",compartment="c",id="B"]\n', '}} "B" -> "C"[compartment="e",id="2_3"]\n', '}\n'])
+
+
+class TestNodes(unittest.TestCase):
+	def setUp(self):
+		self.g = graph.Graph()
+		self.node1 = graph.Node({'id': 'A'})
+		self.node2 = graph.Node({'id': 'B'})
+		self.node3 = graph.Node({'id': 'C'})
+		self.edge1_2 = graph.Edge(self.node1, self.node2)
+
+	def test_eq_nodes(self):
+		self.g.add_node(self.node1)
+		self.assertEqual(self.node1 == self.g.get_node('A'), self.node1.props == self.g.get_node('A').props)
+
+	def test_neq_nodes(self):
+		self.assertTrue(self.node1 != self.node2)
+
+	def test_neq_node_edge(self):
+		self.assertFalse(self.node1 == self.edge1_2)
+
+
+class TestEdges(unittest.TestCase):
+	def setUp(self):
+		self.g = graph.Graph()
+		self.node1 = graph.Node({'id': 'A'})
+		self.node2 = graph.Node({'id': 'B'})
+		self.node3 = graph.Node({'id': 'C'})
+		self.node4 = graph.Node({'id': 'A'})
+		self.edge1_2 = graph.Edge(self.node1, self.node2)
+		self.edge2_3 = graph.Edge(self.node2, self.node3)
+
+	def test_eq_edges(self):
+		self.assertTrue(self.node1 == self.node4)
+
+	def test_neq_edges(self):
+		self.assertTrue(self.edge1_2 != self.edge2_3)
+
+	def test_neq_edge_node(self):
+		self.assertFalse(self.edge1_2 == self.node1)
 
 
 if __name__ == '__main__':

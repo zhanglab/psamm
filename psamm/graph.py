@@ -28,7 +28,7 @@ from collections import defaultdict
 
 def _graphviz_prop_string(d):
     return ','.join('{}="{}"'.format(k, text_type(v)) for k, v
-                    in iteritems(d))
+                    in sorted(iteritems(d)))
 
 
 class Entity(object):
@@ -125,13 +125,6 @@ class Graph(Entity):
 
     def edges_for(self, node):
         return iteritems(self._node_edges.get(node, {}))
-
-    def apply_layout(self, layout):
-        for node in self.nodes:
-            x, y = layout[node]
-            node.props['x'] = x
-            node.props['y'] = y
-            node.props['pos'] = '{},{}!'.format(x, y)
 
     @property
     def default_node_props(self):
@@ -235,7 +228,7 @@ class Graph(Entity):
             if vertex == extracellular:
                 f.write(''.join(
                     [' subgraph cluster_{} '.format(edit_labels(vertex)),
-                     '{\n  style=dashed;\n  color=black;\n  penwidth=4;\n  '
+                     '{\n  style=solid;\n  color=black;\n  penwidth=4;\n  '
                      'fontsize=35;\n', '  label = "Compartment: {}"\n'.format
                      (edit_labels(vertex))]))
                 for x in sorted(node_dict[vertex], key=lambda k: k.props['id']):
@@ -281,13 +274,16 @@ class Graph(Entity):
             if 'label' not in node.props:
                 node.props['label'] = node.props['id']
             properties.update(node.props)
-
-        properties.remove('id')
-        properties.remove('label')
-        properties.remove('original_id')
+        if 'id' in properties:
+            properties.remove('id')
+        if 'label' in properties:
+            properties.remove('label')
+        if 'original_id' in properties:
+            properties.remove('original_id')
         properties = ['id'] + sorted(properties) + ['label']
         f.write('\t'.join(properties) + '\n')
-        for node in self.nodes:
+
+        for node in sorted(self.nodes, key=lambda k: k.props['id']):
             a = '\t'.join(node.props.get(x)
                           for x in properties if x != 'label')
             b = node.props['label'].replace('\n', ',')
@@ -307,10 +303,10 @@ class Graph(Entity):
         properties = sorted(properties)
         header = ['source', 'target'] + properties
         f.write('\t'.join(header) + '\n')
-        for edge in self.edges:
+        for edge in sorted(self.edges, key=lambda k: (edge.source.props['id'], edge.dest.props['id'], edge.props.get('dir'))):
             f.write('{}\t{}\t{}\n'.format(
                 edge.source.props['id'], edge.dest.props['id'],
-                '\t'.join(text_type(edge.props.get(x.encode('utf8')))
+                '\t'.join(text_type(edge.props.get(x.encode('ascii').decode('ascii')))
                           for x in properties)))
 
 
