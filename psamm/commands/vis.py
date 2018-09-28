@@ -861,7 +861,7 @@ def set_edge_props_withfba(g, edge_values):
                 rxn_string = ','.join(edge.source.props['original_id'])
                 edge_test = edge.dest.props['original_id'], rxn_string
 
-            if edge_test in edge_values:
+            if edge_values.get(edge_test) is not None:
                 edge.props['penwidth'] = pen_width(edge_values[edge_test])
             else:
                 edge.props['style'] = 'dotted'
