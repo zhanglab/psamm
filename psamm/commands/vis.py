@@ -385,13 +385,10 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
             hide_edges.append((cpd_object[row[0]], cpd_object[row[1]]))
             hide_edges.append((cpd_object[row[1]], cpd_object[row[0]]))
 
-    fpp_rxns, rxns_no_equation, rxns_no_formula = set(), set(), []
+    fpp_rxns, rxns_no_formula = set(), []
     for reaction in model.reactions:
         if (reaction.id in mm.reactions and
                 reaction.id not in exclude_rxns):
-            if reaction.equation is None:
-                rxns_no_equation.add(reaction.id)
-                continue
 
             if any(c.name not in cpd_formula for c, _ in
                    reaction.equation.compounds):
@@ -399,12 +396,6 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
                 continue
 
             fpp_rxns.add(reaction)
-
-    if len(rxns_no_equation) > 0:
-        logger.warning(
-            '{} reactions have no reaction equation, fix or exclude them.'
-            'These reactions contain {}'.format(len(rxns_no_equation),
-                                                rxns_no_equation))
 
     if len(rxns_no_formula) > 0:
         logger.warning(
