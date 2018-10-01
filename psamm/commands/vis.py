@@ -179,7 +179,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         g = add_edges(g, cpair_dict, self._args.method,
                       split=self._args.split_map)
 
-        if self._model.biomass_reaction in subset_reactions:
+        if self._model.biomass_reaction in subset_reactions and \
+                self._model.biomass_reaction not in self._args.exclude:
             biomass_rxn = self._mm.get_reaction(self._model.biomass_reaction)
             g = add_biomass_rxns(g, biomass_rxn, self._model.biomass_reaction)
 
