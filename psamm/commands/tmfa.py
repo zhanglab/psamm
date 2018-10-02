@@ -28,6 +28,7 @@ import copy
 import csv
 import math
 import random
+import argparse
 from collections import Counter
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			type=file)
 		parser.add_argument(
 			'--dgf-file', help='tab separated file containing estimated deltaGf values for all metabolites',
-			type=file)
+			type=argparse.FileType('rU'))
 		parser.add_argument('--trans-param', help='file containing transport c and h values.', type=file)
 		parser.add_argument(
 			'--set-concentrations', help='Tab seperated file with Reaction ID, [lower], [upper]', type=file)
@@ -68,9 +69,9 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
 		# Parse exclude file provided through command line.
 		base_exclude_list = []
-
-		for line in self._args.exclude.readlines():
-			base_exclude_list.append(line.rstrip())
+		if self._args.exclude is not None:
+			for line in self._args.exclude.readlines():
+				base_exclude_list.append(line.rstrip())
 
 		# Parse set of reactions that will have their deltaG constrainted only by deltaG of the transport component.
 		ph_difference_rxn = []
@@ -182,7 +183,6 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		                                        split_reversible, transport_parameters, testing_list_tmp, self._args.scaled_compounds, self._args.err)
 		biomax = solve_objective(TMFA_Problem, objective)
 		print('BIOMAX All TMFA: {}'.format(biomax))
-		TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
 
 		# quit()
 		if self._args.random_addition:
@@ -239,7 +239,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# TMFA_Problem.prob.set_objective_sense(lp.ObjectiveSense.Maximize)
 		# # Print problem Type from CPLEX
 		# quit()
-		print('PROBLEM TYPE:', TMFA_Problem.prob.cplex.problem_type[TMFA_Problem.prob.cplex.get_problem_type()])
+		# print('PROBLEM TYPE:', TMFA_Problem.prob.cplex.problem_type[TMFA_Problem.prob.cplex.get_problem_type()])
+		TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
 
 		# index_dict_vars = {}
 		# for i, j in TMFA_Problem.prob._variables.iteritems():
@@ -276,13 +277,13 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# 	print('{} {} {}'.format(' + '.join(equation), sign, TMFA_Problem.prob.cplex.linear_constraints.get_rhs(i)))
 		# 	print('-------------------------------------------------------------------')
 		#
-		# # TMFA_Problem.prob.solve()
-		# # result = TMFA_Problem.prob.result
-		# # biomax = result.get_value(TMFA_Problem.get_flux_var(objective))
-		# # for reaction in sorted(mm_irreversible.reactions):
-		# # 	print('RXN,Flux,DGRI,Zi\t{}\t{}\t{}\t{}'.format(reaction, result.get_value(TMFA_Problem.get_flux_var(reaction)), result.get_value('dgri_{}'.format(reaction)), result.get_value('zi_{}'.format(reaction))))
-		# # for compound in sorted(mm_irreversible.compounds):
-		# # 	print('CPD Activity\t{}\t{}'.format(compound, TMFA_Problem.prob.result.get_value(TMFA_Problem.prob.var(str(compound)))))
+		# TMFA_Problem.prob.solve()
+		# result = TMFA_Problem.prob.result
+		# biomax = result.get_value(TMFA_Problem.get_flux_var(objective))
+		# for reaction in sorted(mm_irreversible.reactions):
+		# 	print('RXN,Flux,DGRI,Zi\t{}\t{}\t{}\t{}'.format(reaction, result.get_value(TMFA_Problem.get_flux_var(reaction)), result.get_value('dgri_{}'.format(reaction)), result.get_value('zi_{}'.format(reaction))))
+		# for compound in sorted(mm_irreversible.compounds):
+		# 	print('CPD Activity\t{}\t{}'.format(compound, TMFA_Problem.prob.result.get_value(TMFA_Problem.prob.var(str(compound)))))
 		#
 		# bio = TMFA_Problem.get_flux_var(objective)
 		# # max_val = result.get_value(bio)
@@ -300,6 +301,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# 	print('Flux Variability\t{}\t{}\t{}'.format(reaction, min, max))
 		#
 		# for reaction in sorted(mm_irreversible.reactions):
+		# 	logger.info('testing reaction: {}'.format(reaction))
 		# 	if reaction not in exclude_unkown_list:
 		# 		try:
 		# 			rx_var = TMFA_Problem.prob.var('dgri_{}'.format(reaction))
@@ -321,6 +323,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# 		min = 'NA'
 		# 		max = 'NA'
 		# 	print('DGRI Variability\t{}\t{}\t{}'.format(reaction, min, max))
+		logger.info('TMFA Problem Status: {}'.format(biomax))
+
 		for compound in sorted(mm_irreversible.compounds):
 			logger.info('solving for compound {}'.format(compound))
 			cpd_var = TMFA_Problem.prob.var(str(compound))
@@ -372,11 +376,12 @@ def lump_parser(lump_file):
 
 def parse_tparam_file(file):
 	t_param = {}
-	for row in csv.reader(file, delimiter=str('\t')):
-		rxn, c, h = row
-		t_param[rxn] = (c, h)
-		t_param['{}_forward'.format(rxn)] = (c, h)
-		t_param['{}_reverse'.format(rxn)] = (-Decimal(c), -Decimal(h))
+	if file is not None:
+		for row in csv.reader(file, delimiter=str('\t')):
+			rxn, c, h = row
+			t_param[rxn] = (c, h)
+			t_param['{}_forward'.format(rxn)] = (c, h)
+			t_param['{}_reverse'.format(rxn)] = (-Decimal(c), -Decimal(h))
 	return t_param
 
 def parse_dgf(mm, dgf_file):
@@ -426,8 +431,11 @@ def add_conc_constraints(problem, conc_file):
 			if str(cp) not in excluded_compounds:
 				# print('Default Conc Constraint Applied\t{}\t{}\t{}'.format(str(cp), math.log(0.0001), math.log(0.02)))
 				# Add concentration constraints as the ln of the concentration (M).
+				# problem.prob.add_linear_constraints(var >= math.log(0.00001))
+				# problem.prob.add_linear_constraints(var >= math.log(0.000001))
 				problem.prob.add_linear_constraints(var >= math.log(0.00001))
 				problem.prob.add_linear_constraints(var <= math.log(0.02))
+
 		elif str(cp) in cpd_conc_dict.keys():
 			if str(cp) not in excluded_compounds:
 				conc_limits = cpd_conc_dict[str(cp)]
@@ -498,7 +506,7 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters, ph_dif
 	dgr_dict = {}
 	for reaction in mm.reactions:
 		if reaction not in excluded_reactions:
-			dgr = 0
+			dgr = 'NA'
 			dgerr = 0
 			rxn = mm.get_reaction(reaction)
 			if any(dgf_dict.get(j[0]) is None for j in rxn.compounds):
@@ -506,8 +514,9 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters, ph_dif
 				if reaction not in ph_difference_rxn:
 					logger.error('Reaction {} contains at least 1 compound with an unknown deltaGf value'.format(reaction))
 					# print(rxn.compounds)
-					quit()
+					# quit()
 			else:
+				dgr = 0
 				# Make a variable dgf_sum that represents the sum of sij *  (stoichiometry *
 				# deltaGf for reaction j.
 				for cpd in rxn.compounds:
@@ -517,7 +526,7 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters, ph_dif
 					else:
 						dgscale = 1
 					(dg, dge) = dgf_dict[cpd[0]]
-					print('{}'.format(dgscale))
+					# print('{}'.format(dgscale))
 					dgs = Decimal(dg) * (Decimal(cpd[1])*dgscale)
 					# print(cpd[0], dg, cpd[1], dgs)
 					# print(cpd, dg, Decimal(cpd[1]), dgs)
@@ -529,7 +538,7 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters, ph_dif
 			dgr_dict[reaction] = (dgr, dgerr)
 			# dgr_dict['{}_forward'.format(reaction)] = (dgr)#, dgerr)
 			# dgr_dict['{}_reverse'.format(reaction)] = (-dgr)#, dgerr)
-			print('Reaction DGR adjusted\t{}\t{}\t{}'.format(reaction, dgr, 0))
+			# print('Reaction DGR\t{}\t{}\t{}'.format(reaction, dgr, 0))
 	return dgr_dict
 
 
@@ -587,7 +596,7 @@ def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 				mm_irrev.add_reaction(r_id)
 				mm_irrev.add_reaction(r2_id)
 				split_reversible.append((r_id, r2_id))
-			print (upper, lower)
+			# print (upper, lower)
 			if upper == lower:
 				mm_irrev.limits[r_id].upper = upper
 				mm_irrev.limits[r_id].lower = lower
@@ -690,6 +699,11 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# dpsi = Decimal(-130)
 	F = Decimal(0.02306)
 	excluded_cpd_list = ['h2o[e]', 'h2o[c]']#, 'h[c]', 'h[e]']
+	# excluded_cpd_list = ['h2o[e]', 'h2o[c]', 'dtdp4aaddg[c]', 'g3p[c]', '23dhba[c]', '2aobut[c]', '2shchc[c]', '3c3hmp[c]',
+	#                      '5mdr1p[c]', '6hmhptpp[c]', '8aonn[c]', 'acglu[c]', 'adn[c]', 'btn[c]', 'cechddd[c]', 'csn[c]',
+	#                      'dxyl5p[c]', 'glyc3p[c]', 'malACP[c]', 'mmcoa-S[c]', 'ncam[c]', 'pe_EC[c]', 'prbatp[c]', 'succoa[c]',
+	#                      'ura[e]', 'urea[c]', '5mdru1p[c]', '2ippm[c]']
+
 	new_excluded_reactions = []
 	for reaction in mm.reactions:
 		rxn = mm.get_reaction(reaction)
