@@ -56,6 +56,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		parser.add_argument('--err', action='store_true')
 		parser.add_argument('--random-addition', action='store_true')
 		parser.add_argument('--hamilton', action='store_true')
+		parser.add_argument('--conc-testing', action='store_true')
 		super(TMFACommand, cls).init_parser(parser)
 
 	def run(self):
@@ -112,6 +113,13 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 				exclude_unkown_list.add(sub_rxn)
 		# Make list of all excluded, lumped, and unknown dgr.
 		exclude_lump_unkown = exclude_unkown_list.union(exclude_lump_list)
+
+		cpd_conc_dict = {}
+		# Parse file containing set concentrations and ranges.
+		if self._args.set_concentrations is not None:
+			for row in csv.reader(self._args.set_concentrations, delimiter=str('\t')):
+				cpd, lower, upper = row
+				cpd_conc_dict[cpd] = [lower, upper]
 
 		# Add lump reactions to the mm_irreversible model
 		for lump_id, rxn in lumpid_to_rxn.iteritems():
@@ -177,13 +185,32 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# Add thermodynamic constraints to the model.
 		testing_list_tmp = list(mm_irreversible.reactions)
 		TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
-		TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
+		cp_list = [str(cp) for cp in TMFA_Problem._model.compounds]
+		TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, cpd_conc_dict, cp_list)
 		TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
 		                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
 		                                        split_reversible, transport_parameters, testing_list_tmp, self._args.scaled_compounds, self._args.err)
 		biomax = solve_objective(TMFA_Problem, objective)
 		print('BIOMAX All TMFA: {}'.format(biomax))
-
+		if self._args.conc_testing:
+			fba_biomax = solve_objective(fluxanalysis.FluxBalanceProblem(mm_irreversible, solver), objective)
+			good_list = ['h[c]', 'h[e]', 'dhor-S[c]', 'cbasp[c]']
+			for cp in TMFA_Problem._model.compounds:
+				test_list = good_list + [str(cp)]
+				TMFA_Problem_conc = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
+				TMFA_Problem_conc, cpd_xij_dict = add_conc_constraints(TMFA_Problem_conc, cpd_conc_dict, test_list)
+				TMFA_Problem_conc = add_reaction_constraints(TMFA_Problem_conc, mm_irreversible, exclude_lump_list,
+				                                        exclude_unkown_list,
+				                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
+				                                        split_reversible, transport_parameters, testing_list_tmp,
+				                                        self._args.scaled_compounds, self._args.err)
+				biomax = solve_objective(TMFA_Problem_conc, objective)
+				print(fba_biomax, biomax)
+				if biomax >= 0.99*fba_biomax:
+					good_list.append(str(cp))
+					print('GoodConstraint\t{}'.format(str(cp)))
+				else:
+					print('BadConstraint\t{}'.format(str(cp)))
 		# quit()
 		if self._args.random_addition:
 			biomax = solve_objective(fluxanalysis.FluxBalanceProblem(mm_irreversible, solver), objective)
@@ -200,7 +227,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 				testing_list = [reaction] + checked_list
 				print(testing_list)
 				TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
-				TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, self._args.set_concentrations)
+				TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, cpd_conc_dict)
 				TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
 														exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict, split_reversible, transport_parameters, testing_list, self._args.scaled_compounds, self._args.err)
 
@@ -408,18 +435,14 @@ def parse_dgf(mm, dgf_file):
 	return cpd_dgf_dict
 
 
-def add_conc_constraints(problem, conc_file):
+def add_conc_constraints(problem, cpd_conc_dict, cp_list):
 	# Water needs to be excluded from these concentration constraints.
 	excluded_compounds = ['h2o[c]', 'h2o[e]']#, 'h[c]', 'h[e]']
 	# excluded_compounds = ['h2o[c]', 'h2o[e]', 'pe_ec[c]', '12dgr_ec[c]', 'agpc_EC[c]', 'agpe_EC[c]', 'agpg_EC[c]', 'cdpdag_EC[c]',
 	#                       'clpn_EC[c]', 'pa_EC[c]', 'pc_EC[c]', 'pg_EC[c]', 'pe_EC[c]', 'pgp_EC[c]', 'ps_EC[c]']
 	cpdid_xij_dict = {}
-	cpd_conc_dict = {}
-	# Parse file containing set concentrations and ranges.
-	if conc_file is not None:
-		for row in csv.reader(conc_file, delimiter=str('\t')):
-			cpd, lower, upper = row
-			cpd_conc_dict[cpd] = [lower, upper]
+	print(cp_list)
+	# for cp in problem._model.compounds:
 	for cp in problem._model.compounds:
 		# print(str(cp))
 		# define concentration variable for compound.
@@ -427,35 +450,36 @@ def add_conc_constraints(problem, conc_file):
 		var = problem.prob.var(str(cp))
 		cpdid_xij_dict[str(cp)] = var
 		# Define default constraints for anything not set in the conc file
-		if str(cp) not in cpd_conc_dict.keys():
-			if str(cp) not in excluded_compounds:
-				# print('Default Conc Constraint Applied\t{}\t{}\t{}'.format(str(cp), math.log(0.0001), math.log(0.02)))
-				# Add concentration constraints as the ln of the concentration (M).
-				# problem.prob.add_linear_constraints(var >= math.log(0.00001))
-				# problem.prob.add_linear_constraints(var >= math.log(0.000001))
-				problem.prob.add_linear_constraints(var >= math.log(0.00001))
-				problem.prob.add_linear_constraints(var <= math.log(0.02))
-
-		elif str(cp) in cpd_conc_dict.keys():
-			if str(cp) not in excluded_compounds:
-				conc_limits = cpd_conc_dict[str(cp)]
-				if conc_limits[0] > conc_limits[1]:
-					logger.error('lower bound for {} concentration higher than upper bound'.format(conc_limits))
-					quit()
-				if Decimal(conc_limits[0]) == Decimal(conc_limits[1]):
-					problem.prob.add_linear_constraints(var == math.log(Decimal(conc_limits[0])))
-					# Constraints to allow the concentration constraints on the problem to be more flexible
-					# problem.prob.add_linear_constraints(var >= math.log(Decimal(conc_limits[0]))-1)
-					# problem.prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1])+1))
-				else:
-					problem.prob.add_linear_constraints(var >= math.log(Decimal(conc_limits[0])))
-					problem.prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1])))
-					# Constraints to allow the concentration constraints to be more flexible
-					# problem.prob.add_linear_constraints(var >= math.log(Decimal(conc_limits[0]))-1)
-					# problem.prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1]))+1)
-				lower = math.log(Decimal(conc_limits[0]))
-				upper = math.log(Decimal(conc_limits[1]))
-				# print('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, upper))
+		if str(cp) in cp_list:
+			if str(cp) not in cpd_conc_dict.keys():
+				if str(cp) not in excluded_compounds:
+					# print('Default Conc Constraint Applied\t{}\t{}\t{}'.format(str(cp), math.log(0.0001), math.log(0.02)))
+					# Add concentration constraints as the ln of the concentration (M).
+					# problem.prob.add_linear_constraints(var >= math.log(0.00001))
+					problem.prob.add_linear_constraints(var >= math.log(0.000001))
+					# problem.prob.add_linear_constraints(var >= math.log(0.00001))
+					problem.prob.add_linear_constraints(var <= math.log(0.02))
+					print('default', str(cp))
+			elif str(cp) in cpd_conc_dict.keys():
+				if str(cp) not in excluded_compounds:
+					conc_limits = cpd_conc_dict[str(cp)]
+					if conc_limits[0] > conc_limits[1]:
+						logger.error('lower bound for {} concentration higher than upper bound'.format(conc_limits))
+						quit()
+					if Decimal(conc_limits[0]) == Decimal(conc_limits[1]):
+						problem.prob.add_linear_constraints(var == math.log(Decimal(conc_limits[0])))
+						# Constraints to allow the concentration constraints on the problem to be more flexible
+						# problem.prob.add_linear_constraints(var >= math.log(Decimal(conc_limits[0]))-1)
+						# problem.prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1])+1))
+					else:
+						problem.prob.add_linear_constraints(var >= math.log(Decimal(conc_limits[0])))
+						problem.prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1])))
+						# Constraints to allow the concentration constraints to be more flexible
+						# problem.prob.add_linear_constraints(var >= math.log(Decimal(conc_limits[0]))-1)
+						# problem.prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1]))+1)
+					lower = math.log(Decimal(conc_limits[0]))
+					upper = math.log(Decimal(conc_limits[1]))
+					print('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, upper))
 
 	return problem, cpdid_xij_dict
 
@@ -500,6 +524,7 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters, ph_dif
 	# 	t_param['{}_reverse'.format(rxn)] = (-Decimal(c), -Decimal(h))
 	dgf_scaling = {}
 	if scaled_compounds is not None:
+		scaled_compounds.seek(0)
 		for row in csv.reader(scaled_compounds, delimiter=str('\t')):
 			dgf_scaling[row[0]] = Decimal(row[1])
 
