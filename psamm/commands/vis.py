@@ -588,16 +588,19 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split=False):
         for direction, rlist in iteritems(reactions):
             if split or method == 'no-fpp':
                 for sub_rxn in rlist:
-                    rnode = graph.Node({
-                        'id': text_type(sub_rxn),
-                        'shape': 'box',
-                        'style': 'filled',
-                        'label': new_id_mapping[sub_rxn],
-                        'type': 'rxn',
-                        'fillcolor': REACTION_COLOR,
-                        'original_id': [new_id_mapping[sub_rxn]],
-                        'compartment': c.compartment})
-                    g.add_node(rnode)
+                    if sub_rxn not in graph_nodes:
+                        rnode = graph.Node({
+                            'id': text_type(sub_rxn),
+                            'shape': 'box',
+                            'style': 'filled',
+                            'label': new_id_mapping[sub_rxn],
+                            'type': 'rxn',
+                            'fillcolor': REACTION_COLOR,
+                            'original_id': [new_id_mapping[sub_rxn]],
+                            'compartment': c.compartment})
+                        g.add_node(rnode)
+                        graph_nodes.add(sub_rxn)
+
             else:
                 real_rxns = [new_id_mapping[r] for r in rlist]
                 rnode = graph.Node({
