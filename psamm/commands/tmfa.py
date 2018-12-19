@@ -193,7 +193,10 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
 		                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
 		                                        split_reversible, transport_parameters, testing_list_tmp, self._args.scaled_compounds, self._args.temp, self._args.err)
-		TMFA_Problem.add_thermodynamic()
+
+		if self._args.tfba:
+			TMFA_Problem.add_thermodynamic()
+
 		biomax = solve_objective(TMFA_Problem, objective)
 
 		print('BIOMAX All TMFA: {}'.format(biomax))
