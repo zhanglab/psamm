@@ -281,10 +281,10 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# # Print problem Type from CPLEX
 		# quit()
 		# print('PROBLEM TYPE:', TMFA_Problem.prob.cplex.problem_type[TMFA_Problem.prob.cplex.get_problem_type()])
-		if self._args.treshold != 1:
-			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
-		else:
+		if self._args.threshold != 1:
 			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) >= float(self._args.threshold)*biomax)
+		else:
+			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
 
 		# index_dict_vars = {}
 		# for i, j in TMFA_Problem.prob._variables.iteritems():
