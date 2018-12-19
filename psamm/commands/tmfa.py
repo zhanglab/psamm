@@ -59,7 +59,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		parser.add_argument('--conc-testing', action='store_true')
 		parser.add_argument('--temp')
 		parser.add_argument('--tfba', action='store_true')
-		parser.add_argument('--treshold', default=1)
+		parser.add_argument('--threshold', default=1)
 		super(TMFACommand, cls).init_parser(parser)
 
 	def run(self):
