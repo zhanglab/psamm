@@ -58,6 +58,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		parser.add_argument('--hamilton', action='store_true')
 		parser.add_argument('--conc-testing', action='store_true')
 		parser.add_argument('--temp')
+		parser.add_argument('--tfba', action='store_true')
+		parser.add_argument('--treshold', default=1)
 		super(TMFACommand, cls).init_parser(parser)
 
 	def run(self):
@@ -191,9 +193,15 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
 		                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
 		                                        split_reversible, transport_parameters, testing_list_tmp, self._args.scaled_compounds, self._args.temp, self._args.err)
+		TMFA_Problem.add_thermodynamic()
 		biomax = solve_objective(TMFA_Problem, objective)
+
 		print('BIOMAX All TMFA: {}'.format(biomax))
 		print(self._args.temp)
+
+		# quit()
+
+
 		if self._args.conc_testing:
 			fba_biomax = solve_objective(fluxanalysis.FluxBalanceProblem(mm_irreversible, solver), objective)
 			good_list = [i for i in cpd_conc_dict.keys()]
@@ -270,7 +278,10 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# # Print problem Type from CPLEX
 		# quit()
 		# print('PROBLEM TYPE:', TMFA_Problem.prob.cplex.problem_type[TMFA_Problem.prob.cplex.get_problem_type()])
-		TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) >= 0.99*biomax)
+		if self._args.treshold != 1:
+			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
+		else:
+			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) >= float(self._args.threshold)*biomax)
 
 		# index_dict_vars = {}
 		# for i, j in TMFA_Problem.prob._variables.iteritems():
@@ -736,7 +747,7 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# T = Decimal(293.15) # 20 C
 	# T = Decimal(288.15) # 15 C
 	# T = Decimal(277.15)  # 4 C
-	T = Decimal(temp)
+	T = Decimal(temp) + Decimal(273.15)
 	print('temperature', T)
 	k = 1000000
 	epsilon = 1e-6
