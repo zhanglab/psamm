@@ -59,7 +59,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		parser.add_argument('--conc-testing', action='store_true')
 		parser.add_argument('--temp')
 		parser.add_argument('--tfba', action='store_true')
-		parser.add_argument('--threshold', default=1)
+		parser.add_argument('--threshold', default=None)
+		parser.add_argument('--verbose', action='store_true')
 		super(TMFACommand, cls).init_parser(parser)
 
 	def run(self):
@@ -281,54 +282,55 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# # Print problem Type from CPLEX
 		# quit()
 		# print('PROBLEM TYPE:', TMFA_Problem.prob.cplex.problem_type[TMFA_Problem.prob.cplex.get_problem_type()])
-		if self._args.threshold != 1:
-			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) >= float(self._args.threshold)*biomax)
+		if self._args.threshold != None:
+			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == float(self._args.threshold))
 		else:
 			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
 
-		# index_dict_vars = {}
-		# for i, j in TMFA_Problem.prob._variables.iteritems():
-		# 	index_dict_vars[j] = str(i)
-		# for key, value in index_dict_vars.iteritems():
-		# 	print('## LP variable name, lp var lower bound, lp var upper bound, var type')
-		# 	print(value, key, TMFA_Problem.prob.cplex.variables.get_lower_bounds(key), TMFA_Problem.prob.cplex.variables.get_upper_bounds(key), TMFA_Problem.prob.cplex.variables.get_types(key))
-		#
-		# for i in TMFA_Problem.prob.cplex.linear_constraints.get_names():
-		# 	linear_constraint = TMFA_Problem.prob.cplex.linear_constraints.get_rows(i)
-		# 	vars = linear_constraint.ind
-		# 	tmp_vars = []
-		# 	for var in vars:
-		# 		tmp_vars.append(index_dict_vars[var])
-		# 	print('## Raw sparse pair from cplex')
-		# 	print(linear_constraint)
-		# 	print('## lhs variables, coefficients')
-		# 	print(tmp_vars, linear_constraint.val)
-		# 	print('## rhs value')
-		# 	print(TMFA_Problem.prob.cplex.linear_constraints.get_rhs(i))
-		# 	print('## rhs equation sense (L = less than or equal to, G = greater than or equal to, E = equal to' )
-		# 	print(TMFA_Problem.prob.cplex.linear_constraints.get_senses(i))
-		# 	print('condensed LP constraint')
-		# 	equation = []
-		# 	for j in range(0, len(vars), 1):
-		# 		equation.append('{}*{}'.format(tmp_vars[j], linear_constraint.val[j]))
-		# 	sense = TMFA_Problem.prob.cplex.linear_constraints.get_senses(i)
-		# 	if sense == 'L':
-		# 		sign = '<='
-		# 	elif sense == 'G':
-		# 		sign = '>='
-		# 	elif sense == 'E':
-		# 		sign = '=='
-		# 	print('{} {} {}'.format(' + '.join(equation), sign, TMFA_Problem.prob.cplex.linear_constraints.get_rhs(i)))
-		# 	print('-------------------------------------------------------------------')
-		#
-		# TMFA_Problem.prob.solve()
-		# result = TMFA_Problem.prob.result
-		# biomax = result.get_value(TMFA_Problem.get_flux_var(objective))
-		# for reaction in sorted(mm_irreversible.reactions):
-		# 	print('RXN,Flux,DGRI,Zi\t{}\t{}\t{}\t{}'.format(reaction, result.get_value(TMFA_Problem.get_flux_var(reaction)), result.get_value('dgri_{}'.format(reaction)), result.get_value('zi_{}'.format(reaction))))
-		# for compound in sorted(mm_irreversible.compounds):
-		# 	print('CPD Activity\t{}\t{}'.format(compound, TMFA_Problem.prob.result.get_value(TMFA_Problem.prob.var(str(compound)))))
-		#
+		if self._args.verbose:
+			index_dict_vars = {}
+			for i, j in TMFA_Problem.prob._variables.iteritems():
+				index_dict_vars[j] = str(i)
+			for key, value in index_dict_vars.iteritems():
+				print('## LP variable name, lp var lower bound, lp var upper bound, var type')
+				print(value, key, TMFA_Problem.prob.cplex.variables.get_lower_bounds(key), TMFA_Problem.prob.cplex.variables.get_upper_bounds(key), TMFA_Problem.prob.cplex.variables.get_types(key))
+
+			for i in TMFA_Problem.prob.cplex.linear_constraints.get_names():
+				linear_constraint = TMFA_Problem.prob.cplex.linear_constraints.get_rows(i)
+				vars = linear_constraint.ind
+				tmp_vars = []
+				for var in vars:
+					tmp_vars.append(index_dict_vars[var])
+				print('## Raw sparse pair from cplex')
+				print(linear_constraint)
+				print('## lhs variables, coefficients')
+				print(tmp_vars, linear_constraint.val)
+				print('## rhs value')
+				print(TMFA_Problem.prob.cplex.linear_constraints.get_rhs(i))
+				print('## rhs equation sense (L = less than or equal to, G = greater than or equal to, E = equal to' )
+				print(TMFA_Problem.prob.cplex.linear_constraints.get_senses(i))
+				print('condensed LP constraint')
+				equation = []
+				for j in range(0, len(vars), 1):
+					equation.append('{}*{}'.format(tmp_vars[j], linear_constraint.val[j]))
+				sense = TMFA_Problem.prob.cplex.linear_constraints.get_senses(i)
+				if sense == 'L':
+					sign = '<='
+				elif sense == 'G':
+					sign = '>='
+				elif sense == 'E':
+					sign = '=='
+				print('{} {} {}'.format(' + '.join(equation), sign, TMFA_Problem.prob.cplex.linear_constraints.get_rhs(i)))
+				print('-------------------------------------------------------------------')
+
+			TMFA_Problem.prob.solve()
+			result = TMFA_Problem.prob.result
+			biomax = result.get_value(TMFA_Problem.get_flux_var(objective))
+			for reaction in sorted(mm_irreversible.reactions):
+				print('RXN,Flux,DGRI,Zi\t{}\t{}\t{}\t{}'.format(reaction, result.get_value(TMFA_Problem.get_flux_var(reaction)), result.get_value('dgri_{}'.format(reaction)), result.get_value('zi_{}'.format(reaction))))
+			for compound in sorted(mm_irreversible.compounds):
+				print('CPD Activity\t{}\t{}'.format(compound, TMFA_Problem.prob.result.get_value(TMFA_Problem.prob.var(str(compound)))))
+
 		# bio = TMFA_Problem.get_flux_var(objective)
 		# # max_val = result.get_value(bio)
 		# TMFA_Problem.prob.add_linear_constraints(bio == biomax)
