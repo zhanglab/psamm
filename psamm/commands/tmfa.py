@@ -199,7 +199,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		if self._args.tfba:
 			TMFA_Problem.add_thermodynamic()
 
-		# biomax = solve_objective(TMFA_Problem, objective)
+		biomax = solve_objective(TMFA_Problem, objective)
 
 		# print('BIOMAX All TMFA: {}'.format(biomax))
 		# print(self._args.temp)
@@ -355,20 +355,30 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 					TMFA_Problem.prob.set_objective_sense(lp.ObjectiveSense.Maximize)
 					TMFA_Problem.prob.solve()
 					max = TMFA_Problem.prob.result.get_value(rx_var)
+					zi_max = TMFA_Problem.prob.result.get_value('zi_{}'.format(reaction))
+
 				except lpsolver.lp.SolverError:
 					max = 'SolverError'
+					zi_max = 'SolverError'
 				try:
 					TMFA_Problem.prob.set_objective_sense(lp.ObjectiveSense.Minimize)
 					TMFA_Problem.prob.solve()
 					min = TMFA_Problem.prob.result.get_value(rx_var)
+					zi_min = TMFA_Problem.prob.result.get_value('zi_{}'.format(reaction))
+
 				except lpsolver.lp.SolverError:
 					min = 'SolverError'
+					zi_min = 'SolverError'
 			else:
 				min = 'NA'
 				max = 'NA'
-			print('DGRI Variability\t{}\t{}\t{}'.format(reaction, min, max))
+				zi_max = 'NA'
+				zi_min = 'NA'
+			print('DGRI Variability\t{}\t{}\t{}\t{}\t{}'.format(reaction, min, max, zi_min, zi_max))
 		logger.info('TMFA Problem Status: {}'.format(biomax))
 
+
+		quit()
 		for compound in sorted(mm_irreversible.compounds):
 			# logger.info('solving for compound {}'.format(compound))
 			cpd_var = TMFA_Problem.prob.var(str(compound))
@@ -752,8 +762,9 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# T = Decimal(277.15)  # 4 C
 	T = Decimal(temp) + Decimal(273.15)
 	print('temperature', T)
-	k = 1000000
-	epsilon = 0.000000001
+	k = 650
+	epsilon = 0.0000001
+	# epsilon = 0
 	# h_e = problem.prob.var(str('h[e]'))
 	h_e = problem.prob.var(str('cpd_h[p]'))
 
@@ -807,7 +818,7 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 		if reaction not in exclude_lumps_unknown:
 			if reaction in testing_list:
 				if rhs_check != 0 and lhs_check != 0:
-					problem.prob.add_linear_constraints(dgri - k + (k * zi) <= - epsilon)
+					problem.prob.add_linear_constraints(dgri - k + (k * zi) <= 0 - epsilon)
 					# print('Reaction thermo feasibility constraint\t{}\t{}-{}+{}*{}<=-{}'.format(reaction, dgri, k, k, zi, epsilon))
 					# print('Reaction thermo feasibility raw constraint {}: '.format(reaction), (dgri - k + (k * zi) <= 0 - epsilon))
 		# add constraint to calculate dgri based on dgr0 and the concentrations of the metabolites
