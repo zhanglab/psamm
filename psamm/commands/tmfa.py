@@ -199,10 +199,10 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		if self._args.tfba:
 			TMFA_Problem.add_thermodynamic()
 
-		biomax = solve_objective(TMFA_Problem, objective)
+		# biomax = solve_objective(TMFA_Problem, objective)
 
-		print('BIOMAX All TMFA: {}'.format(biomax))
-		print(self._args.temp)
+		# print('BIOMAX All TMFA: {}'.format(biomax))
+		# print(self._args.temp)
 
 		# quit()
 
@@ -344,7 +344,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			TMFA_Problem.prob.set_objective_sense(lp.ObjectiveSense.Minimize)
 			TMFA_Problem.prob.solve()
 			min = TMFA_Problem.prob.result.get_value(rx_var)
-=			print('Flux Variability\t{}\t{}\t{}'.format(reaction, min, max))
+			print('Flux Variability\t{}\t{}\t{}'.format(reaction, min, max))
 		#
 		for reaction in sorted(mm_irreversible.reactions):
 			# logger.info('testing reaction: {}'.format(reaction))
@@ -753,7 +753,7 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	T = Decimal(temp) + Decimal(273.15)
 	print('temperature', T)
 	k = 1000000
-	epsilon = 0.000001
+	epsilon = 0.000000001
 	# h_e = problem.prob.var(str('h[e]'))
 	h_e = problem.prob.var(str('cpd_h[p]'))
 
