@@ -196,6 +196,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		                                        split_reversible, transport_parameters, testing_list_tmp,
 		                                        self._args.scaled_compounds, self._args.temp, self._args.err)
 
+		TMFA_Problem.prob.integrality_tolerance.value = 0.000000000001
+
 		if self._args.tfba:
 			TMFA_Problem.add_thermodynamic()
 
@@ -287,6 +289,9 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var('Core_Biomass') == float(self._args.threshold))
 		else:
 			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var('Core_Biomass') == biomax)
+			print('set biomass to: {}'.format(biomax))
+
+		print('integrality set to {}'.format(TMFA_Problem.prob.integrality_tolerance.value))
 
 		if self._args.verbose:
 			index_dict_vars = {}
@@ -377,8 +382,6 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			print('DGRI Variability\t{}\t{}\t{}\t{}\t{}'.format(reaction, min, max, zi_min, zi_max))
 		logger.info('TMFA Problem Status: {}'.format(biomax))
 
-
-		quit()
 		for compound in sorted(mm_irreversible.compounds):
 			# logger.info('solving for compound {}'.format(compound))
 			cpd_var = TMFA_Problem.prob.var(str(compound))
@@ -762,7 +765,7 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# T = Decimal(277.15)  # 4 C
 	T = Decimal(temp) + Decimal(273.15)
 	print('temperature', T)
-	k = 650
+	k = 2000
 	epsilon = 0.0000001
 	# epsilon = 0
 	# h_e = problem.prob.var(str('h[e]'))
@@ -810,7 +813,7 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 		dgri = problem.prob.var('dgri_{}'.format(reaction))
 		# add flux constraint linking vi and zi for all reactions except lumps
 		if reaction not in exclude_lumps:
-			problem.prob.add_linear_constraints(vi - zi * vmax <= 0)
+			problem.prob.add_linear_constraints(vi <= zi * vmax)
 			problem.prob.add_linear_constraints(vi >= 0)
 			# print('Reaction Zi Vi constraint\t{}\t{}-{}*{}<=0'.format(reaction, vi, zi, vmax))
 			# print('Reaction Zi Vi constraint {}: '.format(reaction), (vi - zi * vmax <= 0))
