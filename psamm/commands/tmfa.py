@@ -291,19 +291,19 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			cpd_var = TMFA_Problem.prob.var(str(compound))
 			try:
 				TMFA_Problem.prob.set_objective(cpd_var)
-				TMFA_Problem._.solve()
+				TMFA_Problem._solve()
 				max = TMFA_Problem.prob.result.get_value(cpd_var)
 			except:
 				max = 'NA'
 			try:
 				TMFA_Problem.prob.set_objective(-cpd_var)
-				TMFA_Problem._.solve()
+				TMFA_Problem._solve()
 				min = TMFA_Problem.prob.result.get_value(cpd_var)
 			except:
 				min = 'NA'
 			print('CPD Conc Variability\t{}\t{}\t{}'.format(compound, min, max))#, math.exp(min), math.exp(max)))
-		logger.info('TMFA Problem Status: {}'.format(biomax))
 
+		logger.info('TMFA Problem Status: {}'.format(biomax))
 		logger.info('TMFA Problem Status: {}'.format(TMFA_Problem.get_flux('Core_Biomass')))
 
 		quit()
@@ -676,7 +676,7 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# T = Decimal(277.15)  # 4 C
 	T = Decimal(temp) + Decimal(273.15)
 	print('temperature', T)
-	k = 2000
+	k = 1000
 	epsilon = 0.0000001
 	# epsilon = 0
 	# h_e = problem.prob.var(str('h[e]'))
