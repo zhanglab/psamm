@@ -283,75 +283,34 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			else:
 				min_drg = 'NA'
 				max_drg = 'NA'
-
 			print('Flux Variability\t{}\t{}\t{}'.format(reaction, min_flux, max_flux))
 			print('DGRI Variability\t{}\t{}\t{}'.format(reaction, min_drg, max_drg))
+
+		for compound in sorted(mm_irreversible.compounds):
+			# logger.info('solving for compound {}'.format(compound))
+			cpd_var = TMFA_Problem.prob.var(str(compound))
+			try:
+				TMFA_Problem.prob.set_objective(cpd_var)
+				TMFA_Problem._.solve()
+				max = TMFA_Problem.prob.result.get_value(cpd_var)
+			except:
+				max = 'NA'
+			try:
+				TMFA_Problem.prob.set_objective(-cpd_var)
+				TMFA_Problem._.solve()
+				min = TMFA_Problem.prob.result.get_value(cpd_var)
+			except:
+				min = 'NA'
+			print('CPD Conc Variability\t{}\t{}\t{}'.format(compound, min, max))#, math.exp(min), math.exp(max)))
+		logger.info('TMFA Problem Status: {}'.format(biomax))
+
+		logger.info('TMFA Problem Status: {}'.format(TMFA_Problem.get_flux('Core_Biomass')))
 
 		quit()
 
 
 
 
-		for reaction in sorted(mm_irreversible.reactions):
-			rx_var = TMFA_Problem.get_flux_var(reaction)
-			TMFA_Problem.prob.set_objective(rx_var)
-			TMFA_Problem.prob.set_objective_sense(lp.ObjectiveSense.Maximize)
-			TMFA_Problem.prob.solve()
-			max = TMFA_Problem.prob.result.get_value(rx_var)
-			TMFA_Problem.prob.set_objective_sense(lp.ObjectiveSense.Minimize)
-			TMFA_Problem.prob.solve()
-			min = TMFA_Problem.prob.result.get_value(rx_var)
-			print('Flux Variability\t{}\t{}\t{}'.format(reaction, min, max))
-		#
-		for reaction in sorted(mm_irreversible.reactions):
-			# logger.info('testing reaction: {}'.format(reaction))
-			if reaction not in exclude_unkown_list:
-				rx_var = TMFA_Problem.prob.var('dgri_{}'.format(reaction))
-				TMFA_Problem.prob.set_objective(rx_var)
-				try:
-					TMFA_Problem.prob.set_objective_sense(lp.ObjectiveSense.Maximize)
-					TMFA_Problem._solve()
-					max = TMFA_Problem.prob.result.get_value(rx_var)
-					zi_max = TMFA_Problem.prob.result.get_value('zi_{}'.format(reaction))
-
-				except lpsolver.lp.SolverError:
-					max = 'SolverError'
-					zi_max = 'SolverError'
-				try:
-					TMFA_Problem.prob.set_objective_sense(lp.ObjectiveSense.Minimize)
-					TMFA_Problem.prob.solve()
-					min = TMFA_Problem.prob.result.get_value(rx_var)
-					zi_min = TMFA_Problem.prob.result.get_value('zi_{}'.format(reaction))
-
-				except lpsolver.lp.SolverError:
-					min = 'SolverError'
-					zi_min = 'SolverError'
-			else:
-				min = 'NA'
-				max = 'NA'
-				zi_max = 'NA'
-				zi_min = 'NA'
-			print('DGRI Variability\t{}\t{}\t{}\t{}\t{}'.format(reaction, min, max, zi_min, zi_max))
-		logger.info('TMFA Problem Status: {}'.format(biomax))
-
-		for compound in sorted(mm_irreversible.compounds):
-			# logger.info('solving for compound {}'.format(compound))
-			cpd_var = TMFA_Problem.prob.var(str(compound))
-			TMFA_Problem.prob.set_objective(cpd_var)
-			try:
-				TMFA_Problem.prob.set_objective_sense(lp.ObjectiveSense.Maximize)
-				TMFA_Problem.prob.solve()
-				max = TMFA_Problem.prob.result.get_value(cpd_var)
-			except:
-				max = 'NA'
-			try:
-				TMFA_Problem.prob.set_objective_sense(lp.ObjectiveSense.Minimize)
-				TMFA_Problem.prob.solve()
-				min = TMFA_Problem.prob.result.get_value(cpd_var)
-			except:
-				min = 'NA'
-			print('CPD Conc Variability\t{}\t{}\t{}'.format(compound, min, max))#, math.exp(min), math.exp(max)))
-		logger.info('TMFA Problem Status: {}'.format(biomax))
 
 
 def lump_parser(lump_file):
