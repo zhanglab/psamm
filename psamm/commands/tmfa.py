@@ -542,8 +542,17 @@ def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 	lumped_rxns = []
 	new_lump_rxn_dict = {}
 	for rxn in mm.reactions:
+
+
 		upper = mm.limits[rxn].upper
 		lower = mm.limits[rxn].lower
+		mm_irrev.limits[rxn].upper = upper
+		mm_irrev.limits[rxn].lower = lower
+
+		print(rxn)
+		print(mm.limits[rxn])
+		print(mm_irrev.limits[rxn])
+
 		reaction = mm_irrev.get_reaction(rxn)
 		if rxn not in exclude_list:
 			# Allow for making all reversible reactions into a _forward and _reverse split reaction pair
@@ -647,9 +656,9 @@ def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 						mm_irrev.database.set_reaction(sub_r2_id, sub_r2)
 						mm_irrev.add_reaction(sub_r2_id)
 					mm_irrev.limits[sub_r1_id].lower = 0
-					mm_irrev.limits[sub_r1_id].upper = 1000
+					mm_irrev.limits[sub_r1_id].upper = 100
 					mm_irrev.limits[sub_r2_id].lower = 0
-					mm_irrev.limits[sub_r2_id].upper = 1000
+					mm_irrev.limits[sub_r2_id].upper = 100
 				new_lump_rxn_dict[r_id] = for_sub_rxn_list
 				new_lump_rxn_dict[r2_id] = rev_sub_rxn_list
 
