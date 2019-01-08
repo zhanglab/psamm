@@ -685,7 +685,7 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# T = Decimal(277.15)  # 4 C
 	T = Decimal(temp) + Decimal(273.15)
 	print('temperature', T)
-	k = 1000
+	k = 2000
 	epsilon = 0.0000001
 	# epsilon = 0
 	# h_e = problem.prob.var(str('h[e]'))
