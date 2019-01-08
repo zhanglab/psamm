@@ -51,7 +51,7 @@ class PsammotateCommand(Command):
 
     def run(self):
         """Run psammotate command"""
-        print(self._args.rbh)
+        #print(self._args.rbh)
         for i in app_reader(self._args.rbh, self._args.target, self._args.template):
             tdict = i
         for i in model_loader(self, tdict):
@@ -84,7 +84,7 @@ def app_reader(app_file, query, template):
             quer = row[query]
             if temp != '-':
                 temp_split = []
-                print(temp, quer)
+                #print(temp, quer)
                 if ',' in temp:
                     temp_split = temp.split(',')
                 else:
