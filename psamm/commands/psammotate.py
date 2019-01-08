@@ -160,8 +160,8 @@ def model_loader(self, translation_dict):
         model_rxns.append(rxd)
     for entry in model.reactions:
         if entry.id in model_rxns:
-            print(entry.id)
-            print('wp3_genes', entry.genes)
+            # print(entry.id)
+            # print('wp3_genes', entry.genes)
             if entry.genes is None:
                 target_model_reactions.append(entry.id)
                 translated_genes[entry.id] = None
@@ -174,9 +174,10 @@ def model_loader(self, translation_dict):
                 genes = re.sub(key, value, genes)
 
             e = boolean.Expression(genes)
-            print('wp2', genes)
+            # print('wp2', genes)
             e_1 = e.substitute(lambda v: target_genes_l.get(v.symbol, v))
-            print('wp2evaluation', e_1, e_1.value)
+            # print('wp2evaluation', e_1, e_1.value)
+            print('{}\t{}\t{}\t{}\t{}'.format(entry.id, entry.genes, genes, e_1, e_1.value))
             translated_genes[entry] = [genes_1, genes, e_1.value]
     yield(translated_genes)
 
