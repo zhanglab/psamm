@@ -165,7 +165,7 @@ def model_loader(self, translation_dict):
             if entry.genes is None:
                 target_model_reactions.append(entry.id)
                 translated_genes[entry.id] = None
-                print('{}\t{}\t{}\t{}\t{}'.format(entry.id, entry.genes, 'None', 'False', 'False'))
+                print('{}\t{}\t{}\t{}\t{}'.format(entry.id, entry.genes, 'None', 'True', 'True'))
 
             if entry.genes is not None:
                 genes = entry.genes
