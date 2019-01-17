@@ -164,7 +164,7 @@ def model_loader(self, translation_dict):
             # print('wp3_genes', entry.genes)
             if entry.genes is None:
                 target_model_reactions.append(entry.id)
-                translated_genes[entry.id] = None
+                translated_genes[entry] = ['None', 'True', 'True']
                 print('{}\t{}\t{}\t{}\t{}'.format(entry.id, entry.genes, 'None', 'True', 'True'))
 
             if entry.genes is not None:
