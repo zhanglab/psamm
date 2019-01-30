@@ -237,13 +237,22 @@ class TestMakeFilterDict(unittest.TestCase):
                 self.native, self.mm, 'path', 'none', self.cpd_formula,
                 self.hide_edges, self.exclude_rxns)
 
+    def test14_halffpp(self):
+        e14 = vis.make_filter_dict(
+            self.native, self.mm, 'half-fpp', self.element, self.cpd_formula,
+            self.hide_edges, self.exclude_rxns)
+        e14_res = {'rxn1': [(Compound('fum_c', 'c'), Compound('mal_L_c', 'c'))],
+                  'rxn2': [(Compound('q8_c', 'c'), Compound('q8h2_c', 'c')),
+                           (Compound('succ_c', 'c'), Compound('fum_c', 'c'))]}
+        self.assertEqual(e14, e14_res)
+
 
 class TestMakeCpairDict(unittest.TestCase):
     def setUp(self):
         native_model = NativeModel()
         native_model.reactions.add_entry(
             ReactionEntry({'id': 'rxn1', 'equation': parse_reaction(
-                'A[c] + B[c] <=> C[c] + D[c]')}))
+                'A[c] + B[c] + E[c] <=> C[c] + D[c] + F[c]')}))
         native_model.reactions.add_entry(
             ReactionEntry({'id': 'rxn2', 'equation': parse_reaction(
                 'B[c] <=> (2) D[c]')}))
@@ -259,7 +268,8 @@ class TestMakeCpairDict(unittest.TestCase):
         self.filter_dict = {
             'rxn1': [(Compound('A', 'c'), Compound('C', 'c')),
                      (Compound('B', 'c'), Compound('C', 'c')),
-                     (Compound('B', 'c'), Compound('D', 'c'))],
+                     (Compound('B', 'c'), Compound('D', 'c')),
+                     (Compound('E', 'c'), Compound('F', 'c'))],
             'rxn2': [(Compound('B', 'c'), Compound('D', 'c'))],
             'rxn3': [(Compound('D', 'c'), Compound('D', 'e'))]}
         self.subset = ['rxn1', 'rxn2', 'rxn3', 'rxn4']
@@ -276,11 +286,13 @@ class TestMakeCpairDict(unittest.TestCase):
             append('rxn1_2')
         e1_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] \
             = ['rxn1_3', 'rxn2_1']
+        e1_res[(Compound('E', 'c'), Compound('F', 'c'))]['both']. \
+            append('rxn1_4')
         e1_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'].\
             append('rxn3_1')
 
         n1_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1', 'rxn1_3': 'rxn1',
-                  'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3'}
+                  'rxn1_4': 'rxn1', 'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3'}
         self.assertEqual(e1, e1_res)
         self.assertEqual(n1, n1_res)
 
@@ -292,6 +304,7 @@ class TestMakeCpairDict(unittest.TestCase):
         e2_res[(Compound('B', 'c'), Compound('C', 'c'))]['both'] = ['rxn1']
         e2_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] = \
             ['rxn1', 'rxn2']
+        e2_res[(Compound('E', 'c'), Compound('F', 'c'))]['both'] = ['rxn1']
         e2_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'] = ['rxn3']
 
         n2_res = {'rxn1': 'rxn1', 'rxn2': 'rxn2', 'rxn3': 'rxn3'}
@@ -309,12 +322,14 @@ class TestMakeCpairDict(unittest.TestCase):
             append('rxn1_2')
         e3_res[(Compound('B', 'c'), Compound('D', 'c'))]['back'] \
             = ['rxn1_3']
+        e3_res[(Compound('E', 'c'), Compound('F', 'c'))]['back'] \
+            = ['rxn1_4']
         e3_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] = ['rxn2_1']
         e3_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'].\
             append('rxn3_1')
 
         n3_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1', 'rxn1_3': 'rxn1',
-                  'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3'}
+                  'rxn1_4': 'rxn1', 'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3'}
         self.assertEqual(e3, e3_res)
         self.assertEqual(n3, n3_res)
 
@@ -327,10 +342,11 @@ class TestMakeCpairDict(unittest.TestCase):
         e4_r[(Compound('A', 'c'), Compound('C', 'c'))]['forward'] = ['rxn1_1']
         e4_r[(Compound('B', 'c'), Compound('C', 'c'))]['forward'] = ['rxn1_2']
         e4_r[(Compound('B', 'c'), Compound('D', 'c'))]['forward'] = ['rxn1_3']
+        e4_r[(Compound('E', 'c'), Compound('F', 'c'))]['forward'] = ['rxn1_4']
         e4_r[(Compound('B', 'c'), Compound('D', 'c'))]['both'] = ['rxn2_1']
 
         n4_r = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1', 'rxn1_3': 'rxn1',
-                'rxn2_1': 'rxn2'}
+                'rxn1_4': 'rxn1', 'rxn2_1': 'rxn2'}
         self.assertEqual(e4, e4_r)
         self.assertEqual(n4, n4_r)
 
@@ -370,11 +386,13 @@ class TestMakeCpairDict(unittest.TestCase):
             append('rxn1_2')
         e6_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] \
             = ['rxn1_3', 'rxn2_1']
+        e6_res[(Compound('E', 'c'), Compound('F', 'c'))]['both']. \
+            append('rxn1_4')
         e6_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'].\
             append('rxn3_1')
 
         n6_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1', 'rxn1_3': 'rxn1',
-                  'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3'}
+                  'rxn1_4': 'rxn1', 'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3'}
         self.assertEqual(e6, e6_res)
         self.assertEqual(n6, n6_res)
 
@@ -416,16 +434,34 @@ class TestMakeCpairDict(unittest.TestCase):
             = ['rxn2_1']
         e7_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] \
             = ['rxn1_3']
+        e7_res[(Compound('E', 'c'), Compound('F', 'c'))]['both'] \
+            = ['rxn1_4']
         e7_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward']. \
             append('rxn3_1')
 
         n7_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1', 'rxn1_3': 'rxn1',
-                  'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3',
+                  'rxn1_4': 'rxn1', 'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3',
                   'c2c1_forward_1': 'c2c1_forward',
                   'c2c1_both_1': 'c2c1_both', 'c2c1_back_1': 'c2c1_back'}
 
         self.assertEqual(e7, e7_res)
         self.assertEqual(n7, n7_res)
+
+    def test_MakeCpairDict_halffpp(self):
+        e8, n8 = vis.make_cpair_dict(self.mm, self.filter_dict, self.subset,
+                                     self.reaction_flux, 'half-fpp')
+        e8_res = defaultdict(lambda: defaultdict(list))
+        e8_res[(Compound('A', 'c'), Compound('C', 'c'))]['both'] = ['rxn1_1']
+        e8_res[(Compound('B', 'c'), Compound('C', 'c'))]['both'] = ['rxn1_1']
+        e8_res[(Compound('B', 'c'), Compound('D', 'c'))]['both'] = \
+            ['rxn1_1', 'rxn2_1']
+        e8_res[(Compound('E', 'c'), Compound('F', 'c'))]['both'] = ['rxn1_2']
+        e8_res[(Compound('D', 'c'), Compound('D', 'e'))]['forward'] = ['rxn3_1']
+
+        n8_res = {'rxn1_1': 'rxn1', 'rxn1_2': 'rxn1', 'rxn2_1': 'rxn2',
+                  'rxn3_1': 'rxn3'}
+        self.assertEqual(e8, e8_res)
+        self.assertEqual(n8, n8_res)
 
 
 class TestMakeEdgeValues(unittest.TestCase):
@@ -631,13 +667,16 @@ class TestMakeEdgeValues(unittest.TestCase):
 class TestAddGraphNodes(unittest.TestCase):
     def setUp(self):
         cpair_dict = defaultdict(lambda: defaultdict(list))
+        cpair_dict[(Compound('A', 'c'), Compound('B', 'c'))]['both'] = \
+            ['rxn2_1']
         cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['both'] = \
-            ['rxn1_1', 'rxn2_1']
+            ['rxn1_1', 'rxn2_2']
         cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['forward'] \
             = ['rxn3_1']
+
         self.cpair_dict = cpair_dict
         self.new_id_mapping = {'rxn1_1': 'rxn1', 'rxn2_1': 'rxn2',
-                               'rxn3_1': 'rxn3'}
+                               'rxn2_2': 'rxn2', 'rxn3_1': 'rxn3'}
         self.method = 'fpp'
         self.split = False
         self.g = graph.Graph()
@@ -649,12 +688,20 @@ class TestAddGraphNodes(unittest.TestCase):
             'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled', 'type': 'cpd',
             'label': 'A[c]', 'original_id': Compound('A', 'c'),
             'compartment': 'c', 'fillcolor': '#ffd8bf'})
+        node_b1 = graph.Node({
+            'id': 'B[c]', 'shape': 'ellipse', 'style': 'filled', 'type': 'cpd',
+            'label': 'B[c]', 'original_id': Compound('B', 'c'),
+            'compartment': 'c', 'fillcolor': '#ffd8bf'})
         node_c1 = graph.Node({
             'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
                 'cpd', 'label': 'C[c]', 'original_id': Compound('C', 'c'),
             'compartment': 'c', 'fillcolor': '#ffd8bf'})
+        node_ab1_both = graph.Node({
+            'id': 'rxn2_1', 'shape': 'box', 'style': 'filled',
+            'label': 'rxn2', 'type': 'rxn', 'original_id':
+                ['rxn2'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
         node_ac1_both = graph.Node({
-            'id': 'rxn1_1,rxn2_1', 'shape': 'box', 'style': 'filled',
+            'id': 'rxn1_1,rxn2_2', 'shape': 'box', 'style': 'filled',
             'label': 'rxn1\nrxn2', 'type': 'rxn', 'original_id':
                 ['rxn1', 'rxn2'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
         node_ac1_forward = graph.Node({
@@ -662,10 +709,12 @@ class TestAddGraphNodes(unittest.TestCase):
             'label': 'rxn3', 'type': 'rxn', 'original_id': ['rxn3'],
             'compartment': 'c', 'fillcolor': '#c9fccd'})
 
-        self.assertTrue(all(i in [node_a1, node_c1, node_ac1_both,
-                                  node_ac1_forward] for i in g1.nodes))
+        self.assertTrue(all(i in [
+            node_a1, node_b1, node_c1, node_ac1_both, node_ac1_forward,
+            node_ab1_both] for i in g1.nodes))
         self.assertTrue(all(i in g1.nodes for i in [
-            node_a1, node_c1, node_ac1_both, node_ac1_forward]))
+            node_a1, node_b1, node_c1, node_ac1_both, node_ac1_forward,
+            node_ab1_both]))
 
     def test_addnodes_split(self):
         g2 = vis.add_graph_nodes(self.g, self.cpair_dict, self.method,
@@ -673,6 +722,10 @@ class TestAddGraphNodes(unittest.TestCase):
         node_a2 = graph.Node({
             'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
                 'cpd', 'label': 'A[c]', 'original_id': Compound('A', 'c'),
+            'compartment': 'c', 'fillcolor': '#ffd8bf'})
+        node_b2 = graph.Node({
+            'id': 'B[c]', 'shape': 'ellipse', 'style': 'filled', 'type': 'cpd',
+            'label': 'B[c]', 'original_id': Compound('B', 'c'),
             'compartment': 'c', 'fillcolor': '#ffd8bf'})
         node_c2 = graph.Node({
             'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
@@ -682,8 +735,12 @@ class TestAddGraphNodes(unittest.TestCase):
             'id': 'rxn1_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'label': 'rxn1', 'original_id': ['rxn1'], 'compartment': 'c',
             'fillcolor': '#c9fccd'})
-        node_rxn2 = graph.Node({
+        node_rxn2_1 = graph.Node({
             'id': 'rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
+            'label': 'rxn2', 'original_id': ['rxn2'], 'compartment': 'c',
+            'fillcolor': '#c9fccd'})
+        node_rxn2_2 = graph.Node({
+            'id': 'rxn2_2', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'label': 'rxn2', 'original_id': ['rxn2'], 'compartment': 'c',
             'fillcolor': '#c9fccd'})
         node_rxn3 = graph.Node({
@@ -691,41 +748,94 @@ class TestAddGraphNodes(unittest.TestCase):
             'label': 'rxn3', 'original_id': ['rxn3'], 'compartment': 'c',
             'fillcolor': '#c9fccd'})
 
-        self.assertTrue(all(i in [node_a2, node_c2, node_rxn1, node_rxn2,
-                                  node_rxn3] for i in g2.nodes))
+        self.assertTrue(all(i in [
+            node_a2, node_b2, node_c2, node_rxn1, node_rxn2_1, node_rxn2_2,
+            node_rxn3] for i in g2.nodes))
         self.assertTrue(all(i in g2.nodes for i in [
-            node_a2, node_c2, node_rxn1, node_rxn2, node_rxn3]))
+            node_a2, node_b2, node_c2, node_rxn1, node_rxn2_1, node_rxn2_2,
+            node_rxn3]))
 
     def test_addnodes_nofpp(self):
-        g3 = vis.add_graph_nodes(self.g, self.cpair_dict, 'no-fpp',
-                                 self.new_id_mapping, self.split)
+        cpair_dict = defaultdict(lambda: defaultdict(list))
+        cpair_dict[(Compound('A', 'c'), Compound('B', 'c'))]['both'] = \
+            ['rxn2']
+        cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['both'] = \
+            ['rxn1', 'rxn2']
+        cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['forward'] \
+            = ['rxn3']
+        new_id_mapping = {'rxn1': 'rxn1', 'rxn2': 'rxn2', 'rxn3': 'rxn3'}
+        g3 = vis.add_graph_nodes(self.g, cpair_dict, 'no-fpp',
+                                 new_id_mapping, self.split)
         node_a3 = graph.Node({
             'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
                 'cpd', 'original_id': Compound('A', 'c'), 'compartment': 'c',
             'fillcolor': '#ffd8bf', 'label': 'A[c]'})
+        node_b3 = graph.Node({
+            'id': 'B[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
+                'cpd', 'original_id': Compound('B', 'c'), 'compartment': 'c',
+            'fillcolor': '#ffd8bf', 'label': 'B[c]'})
         node_c3 = graph.Node({
             'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
                 'cpd', 'original_id': Compound('C', 'c'), 'compartment': 'c',
             'fillcolor': '#ffd8bf', 'label': 'C[c]'})
         node_rxn1 = graph.Node({
-            'id': 'rxn1_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
+            'id': 'rxn1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'original_id': ['rxn1'], 'compartment': 'c',
             'fillcolor': '#c9fccd', 'label': 'rxn1'})
-
         node_rxn2 = graph.Node({
-            'id': 'rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
+            'id': 'rxn2', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'original_id': ['rxn2'], 'compartment': 'c',
             'fillcolor': '#c9fccd', 'label': 'rxn2'})
-
         node_rxn3 = graph.Node({
-            'id': 'rxn3_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
+            'id': 'rxn3', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'original_id': ['rxn3'], 'compartment': 'c',
             'fillcolor': '#c9fccd', 'label': 'rxn3'})
 
-        self.assertTrue(all(i in [node_a3, node_c3, node_rxn1, node_rxn2,
-                                  node_rxn3] for i in g3.nodes))
+        self.assertTrue(all(i in [node_a3, node_b3, node_c3, node_rxn1,
+                                  node_rxn2, node_rxn3] for i in g3.nodes))
         self.assertTrue(all(i in g3.nodes for i in [
-            node_a3, node_c3, node_rxn1, node_rxn2, node_rxn3]))
+            node_a3, node_b3, node_c3, node_rxn1, node_rxn2, node_rxn3]))
+
+    def test_addnodes_halffpp(self):
+        cpair_dict = defaultdict(lambda: defaultdict(list))
+        cpair_dict[(Compound('A', 'c'), Compound('B', 'c'))]['both'] = \
+            ['rxn2_1']
+        cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['forward'] = \
+            ['rxn1_1', 'rxn3_1']
+        cpair_dict[(Compound('A', 'c'), Compound('C', 'c'))]['both'] \
+            = ['rxn2_1']
+        new_id_mapping = {'rxn1_1': 'rxn1', 'rxn2_1': 'rxn2', 'rxn3_1': 'rxn3'}
+        g4 = vis.add_graph_nodes(self.g, cpair_dict, 'half-fpp',
+                                 new_id_mapping, self.split)
+        node_a4 = graph.Node({
+            'id': 'A[c]', 'shape': 'ellipse', 'style': 'filled', 'type': 'cpd',
+            'label': 'A[c]', 'original_id': Compound('A', 'c'),
+            'compartment': 'c', 'fillcolor': '#ffd8bf'})
+        node_b4 = graph.Node({
+            'id': 'B[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
+                'cpd', 'original_id': Compound('B', 'c'), 'compartment': 'c',
+            'fillcolor': '#ffd8bf', 'label': 'B[c]'})
+        node_c4 = graph.Node({
+            'id': 'C[c]', 'shape': 'ellipse', 'style': 'filled', 'type':
+                'cpd', 'label': 'C[c]', 'original_id': Compound('C', 'c'),
+            'compartment': 'c', 'fillcolor': '#ffd8bf'})
+        node_ab_both = graph.Node({
+            'id': 'rxn2_1', 'shape': 'box', 'style': 'filled',
+            'label': 'rxn2', 'type': 'rxn', 'original_id': ['rxn2'],
+            'compartment': 'c', 'fillcolor': '#c9fccd'})
+        node_ac_forward = graph.Node({
+            'id': 'rxn1_1,rxn3_1', 'shape': 'box', 'style': 'filled',
+            'label': 'rxn1\nrxn3', 'type': 'rxn', 'original_id':
+                ['rxn1', 'rxn3'], 'compartment': 'c', 'fillcolor': '#c9fccd'})
+        node_ac_both = graph.Node({
+            'id': 'rxn2_1', 'shape': 'box', 'style': 'filled',
+            'label': 'rxn2', 'type': 'rxn', 'original_id': ['rxn2'],
+            'compartment': 'c', 'fillcolor': '#c9fccd'})
+
+        self.assertTrue(all(i in [node_a4, node_b4, node_c4, node_ab_both,
+                                  node_ac_forward, node_ac_both] for i in g4.nodes))
+        self.assertTrue(all(i in g4.nodes for i in [
+            node_a4, node_b4, node_c4, node_ab_both, node_ac_forward, node_ac_both]))
 
 
 class TestUpdateNodeColor(unittest.TestCase):

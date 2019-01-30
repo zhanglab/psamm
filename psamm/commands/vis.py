@@ -643,16 +643,19 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split=False):
 
             else:
                 real_rxns = [new_id_mapping[r] for r in rlist]
-                rnode = graph.Node({
-                    'id': text_type(','.join(rlist)),
-                    'shape': 'box',
-                    'style': 'filled',
-                    'label': '\n'.join(real_rxns),
-                    'type': 'rxn',
-                    'fillcolor': REACTION_COLOR,
-                    'original_id': real_rxns,
-                    'compartment': c.compartment})
-                g.add_node(rnode)
+                rxn_string = text_type(','.join(rlist))
+                if rxn_string not in graph_nodes:
+                    rnode = graph.Node({
+                        'id': text_type(','.join(rlist)),
+                        'shape': 'box',
+                        'style': 'filled',
+                        'label': '\n'.join(real_rxns),
+                        'type': 'rxn',
+                        'fillcolor': REACTION_COLOR,
+                        'original_id': real_rxns,
+                        'compartment': c.compartment})
+                    g.add_node(rnode)
+                    graph_nodes.add(rxn_string)
     return g
 
 
