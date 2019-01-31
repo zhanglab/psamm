@@ -529,15 +529,12 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
                         else:
                             cpair_dict[(c1, c2)]['both'].append(r_id)
     else:
-        cpd_counts = Counter()
+
         for rxn, cpairs in iteritems(filter_dict):
             cpd_rid = {}
             have_visited = set()
             if rxn in subset:
                 rx = mm.get_reaction(rxn)
-                for cp in cpairs:
-                    cpd_counts[cp[0]] += 1
-                    cpd_counts[cp[1]] += 1
                 for (c1, c2) in sorted(cpairs):
                     if c1 not in have_visited:
                         if c2 not in have_visited:
