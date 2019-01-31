@@ -13,7 +13,7 @@ This program allows you to specify a metabolic model and a command to apply to
 the given model. The available commands can be seen using the help command
 given above, and are also described in more details below.
 
-To run the program with a model, use
+To run the program with a model, use the following command:
 
 .. code-block:: shell
 
@@ -37,7 +37,7 @@ Linear programming solver
 -------------------------
 
 Many of the commands described below use a linear programming (LP) solver in
-order to perform the analysis. These commands all take an option `--solver`
+order to perform the analysis. These commands all take an option ``--solver``
 which can be used to select which solver to use and to specify additional
 options for the LP solver. For example, in order to run the ``fba`` command
 with the QSopt_ex solver, the option ``--solver name=qsoptex`` can be added:
@@ -92,6 +92,14 @@ example, the following command performs an FBA with thermodynamic constraints:
 
     $ psamm-model fba --loop-removal=tfba
 
+By default the output of the FBA command will only display reactions which
+have non-zero fluxes. This can be overridden with the ``--all-reactions``
+option to display all reactions even if they have flux values of zero.
+
+.. code-block:: shell
+
+    $ psamm-model fba --all-reactions
+
 Flux variability analysis (``fva``)
 -----------------------------------
 
@@ -114,9 +122,30 @@ In this example the ``PPCK`` reaction has a minimum flux of zero and maximum
 flux of 135.3 units. The ``PTAr`` reaction has a minimum flux of 62.3 and a
 maximum of 1000 units.
 
-If the parameter ``--loop-removal=tfba`` is given, additonal thermodynamic
+If the parameter ``--loop-removal=tfba`` is given, additional thermodynamic
 constraints will be imposed when evaluating model fluxes. This automatically
 removes internal flux loops [Schilling00]_ but is much more time-consuming.
+
+By default FVA is performed with the objective reaction (either the biomass
+reaction or reaction given through the ``--objective`` option) fixed at its
+maximum value. It is also possible allow this reaction flux to vary by a
+specified amount through the ``--thershold`` option. When this option is
+used the variability results will show the possible flux ranges when the
+objective reaction is greater than or equal to the threshold value.
+
+The threshold can be specified by either giving a percentage of the maximum
+objective flux or by giving an defined flux value.
+
+.. code-block:: shell
+
+    $ psamm-model fva --threshold 90%
+    or
+    $ psamm-model fva --threshold 1.2
+
+The FVA command can also be run as parallel processes to speed up simulations
+done on larger models. This can be done using the ``--parallel`` option. Either
+a specific number of parallel jobs can be given or 0 can be given to automatically
+detect and use the maximum number of parallel processes.
 
 Robustness (``robustness``)
 ---------------------------
@@ -148,6 +177,15 @@ If the parameter ``--loop-removal`` is given, additional constraints on the
 model can be imposed that remove internal flux loops. See the section on the
 :ref:`commands-fba` command for more information on this option.
 
+It is also possible to print out the flux of all reactions for each step in
+the robustness simulation instead of just printing the varying reaction flux.
+This can be done through using the ``--all-reaction-fluxes`` option.
+
+The Robustness command can also be run as parallel processes to speed up simulations
+done on larger models. This can be done using the ``--parallel`` option. Either
+a specific number of parallel jobs can be given or 0 can be given to automatically
+detect and use the maximum number of parallel processes.
+
 Random sparse network (``randomsparse``)
 ----------------------------------------
 
@@ -166,9 +204,20 @@ threshold. The tolerance can be specified as a relative value (as above) or as
 an absolute flux. Aggregating the results from multiple random sparse networks
 allows classifying reactions as essential, semi-essential or non-essential.
 
-If the option ``--exchange`` is given, the model will only try to delete
-exchange reactions. This can be used to provide putative minimal media for
-the model.
+By default the randomsparse command will perform the deletions on reactions
+in the model. The ``--type`` option can be used to change this deletion to
+act on the genes in the model or to act on only the set of exchange reactions.
+The gene deletion option will remove a gene from a network and then assess
+which reactions would be affected by that gene loss based on the provided
+gene associations. The exchange reaction deletion will only delete reactions
+from the set of exchange reactions in the model and can be used to generate
+a putative minimal media for the model.
+
+.. code-block:: shell
+
+    $ psamm-model randomsparse --type genes 95%
+    or
+    $ psamm-model randomsparse --type exchange 95%
 
 The output of the command is a tab-separated list of reaction IDs and a value
 indicating whether the reaction was eliminated (``0`` when eliminated, ``1``
@@ -386,6 +435,8 @@ constraints are imposed when considering whether reactions can take a non-zero
 flux. This automatically removes internal flux loops but is also much more
 time-consuming.
 
+Some reactions could
+
 Reaction duplicates check (``duplicatescheck``)
 -----------------------------------------------
 
@@ -528,7 +579,7 @@ Predict primary pairs (``primarypairs``)
 This command is used to predict element-transferring reactant/product pairs
 in the reactions of the model. This can be used to determine the flow of
 elements through reactions. Two methods for predicting the pairs are available:
-FindPrimaryPairs (``fpp``) [Steffensen17]_ and
+`FindPrimaryPairs` (``fpp``) [Steffensen17]_ and
 MapMaker (``mapmaker``) [Tervo16]_. The ``--method`` option can used to select
 which prediction method to use:
 
@@ -554,11 +605,12 @@ containing a list of reactions IDs to exclude:
     or
     $ psamm-model primarypairs --exclude @./exclude.tsv
 
-PSAMM Visualization (``vis``)
+PSAMM-Vis (``vis``)
 -----------------------------
 
-Models can be visualized through the use of the ``vis`` command in `PSAMM`. This
-command can use the `FindPrimaryPairs` algorithm to help generate images of full models
+Models can be visualized through the use of `PSAMM-vis` as implemented in the
+``vis`` command in `PSAMM`. This command can use
+the `FindPrimaryPairs` algorithm to help generate images of full models
 or subsets of models. The output of this command will consist of a graph file in the `dot`
 language, ``reactions.dot``, and two files called ``reactions.nodes.tsv`` and
 ``reactions.edges.tsv`` that contain the network data in a tsv format.
@@ -596,7 +648,8 @@ image format:
 
 While the ``vis`` function in `PSAMM` uses `FindPrimaryPairs` for graph simplification by
 default, the command is also able to run using no graph simplification (``no-fpp``), or by
-providing an input file containing prediciton results from the ``primarypairs`` command.
+providing an input file containing prediction results in the format produced by the
+``primarypairs`` command.
 
 This can be done through using the ``--method`` argument:
 
@@ -646,7 +699,7 @@ might have many connections in the final graph images. Typical examples of these
 pairs include ATP and ADP, NAD and NADH, etc. To use this option first a tab separated
 table containing the metabolite pairs to hide must be made:
 
-.. code-block::
+.. code-block:: shell
 
     atp[c]  adp[c]
     h2o[c]  h[c]
@@ -673,7 +726,7 @@ nodes in the graph. This can be done through using the ``--rxn-detail`` and
 of properties to include. For example the following could be run to show additional
 information on both sets of nodes:
 
-.. code-block::
+.. code-block:: shell
 
     $ psamm-model vis --cpd-detail id formula charge --rxn-detail id name equation
 
@@ -714,14 +767,17 @@ split these condensed nodes up into individual reaction nodes the ``--split-map`
 
 
 The ``--fba`` option can be used to run ``fba`` on the model to maximize the biomass reaction and then
-adjust the edge widths in the final graph based on the flux of the reactions in the model.
-When using this option the biomass reaction must be specified in the ``model.yaml``. The final edge
+adjust the edge widths in the final graph based on the flux of the reactions in the model. By default
+the biomass reaction specified in the ``model.yaml`` file will be maximized during the ``fba`` simulation.
+Any other reaction can be maximized through the use of the ``--objective`` argument. The final edge
 widths shown on the graph will be scaled relative to each other based on the reaction fluxes, with
 thicker edges representing larger fluxes:
 
 .. code-block:: shell
 
     $ psamm-model vis --fba
+    or
+    $ psamm-model vis --fba --objective {reaction id}
 
 The final graph image can also be modified to show the reactions and metabolites in different compartments
 based on the compartment information provided in the model's reactions. This can be done through using the
@@ -730,6 +786,15 @@ based on the compartment information provided in the model's reactions. This can
 .. code-block:: shell
 
     $ psamm-model vis --compartment
+
+The image file produced from the ``vis`` will be automatically sized by the `Graphviz` programs
+used to generate the image file. If a specific size is desired the ``--image-size`` argument can be
+used to supple a width and height in inches that the final image file should be. For example to generate
+a graph that will be made into a 5" width by 10" height image the following command can be used:
+
+.. code-block:: shell
+
+    $ psamm-model vis --image-size 5,10
 
 
 
@@ -793,6 +858,20 @@ The ``--compound`` option can be used to search for reactions that include a
 specific compound. If more that one compound identifier is given
 (comma-separated) this will find reactions that include all of the given
 compounds.
+
+PSAMM-SBML-Model
+----------------
+`PSAMM` normally takes a model in the `YAML` format as input. To deal with models
+that are in the `SBML` `PSAMM` includes various programs that allow users to convert
+these models to the `YAML` format. One additional option for dealing with models in
+the `SBML` format is using the `psamm-sbml-model` function. This function can be
+used to run any command normally accessed through `psamm-model` but with an `SBML`
+model as the input. To use this command the `SBML` model file needs to be specified
+first followed by the commands:
+
+.. code-block:: shell
+
+    $ psamm-sbml-model {model.xml} fba
 
 Console (``console``)
 ---------------------

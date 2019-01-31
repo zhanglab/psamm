@@ -1,0 +1,1377 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
+<title>Command line interface</title>
+<style type="text/css">
+
+/*
+:Author: David Goodger (goodger@python.org)
+:Id: $Id: html4css1.css 7614 2013-02-21 15:55:51Z milde $
+:Copyright: This stylesheet has been placed in the public domain.
+
+Default cascading style sheet for the HTML output of Docutils.
+
+See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+customize this style sheet.
+*/
+
+/* used to remove borders from tables and images */
+.borderless, table.borderless td, table.borderless th {
+  border: 0 }
+
+table.borderless td, table.borderless th {
+  /* Override padding for "table.docutils td" with "! important".
+     The right padding separates the table cells. */
+  padding: 0 0.5em 0 0 ! important }
+
+.first {
+  /* Override more specific margin styles with "! important". */
+  margin-top: 0 ! important }
+
+.last, .with-subtitle {
+  margin-bottom: 0 ! important }
+
+.hidden {
+  display: none }
+
+a.toc-backref {
+  text-decoration: none ;
+  color: black }
+
+blockquote.epigraph {
+  margin: 2em 5em ; }
+
+dl.docutils dd {
+  margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
+
+/* Uncomment (and remove this text!) to get bold-faced definition list terms
+dl.docutils dt {
+  font-weight: bold }
+*/
+
+div.abstract {
+  margin: 2em 5em }
+
+div.abstract p.topic-title {
+  font-weight: bold ;
+  text-align: center }
+
+div.admonition, div.attention, div.caution, div.danger, div.error,
+div.hint, div.important, div.note, div.tip, div.warning {
+  margin: 2em ;
+  border: medium outset ;
+  padding: 1em }
+
+div.admonition p.admonition-title, div.hint p.admonition-title,
+div.important p.admonition-title, div.note p.admonition-title,
+div.tip p.admonition-title {
+  font-weight: bold ;
+  font-family: sans-serif }
+
+div.attention p.admonition-title, div.caution p.admonition-title,
+div.danger p.admonition-title, div.error p.admonition-title,
+div.warning p.admonition-title, .code .error {
+  color: red ;
+  font-weight: bold ;
+  font-family: sans-serif }
+
+/* Uncomment (and remove this text!) to get reduced vertical space in
+   compound paragraphs.
+div.compound .compound-first, div.compound .compound-middle {
+  margin-bottom: 0.5em }
+
+div.compound .compound-last, div.compound .compound-middle {
+  margin-top: 0.5em }
+*/
+
+div.dedication {
+  margin: 2em 5em ;
+  text-align: center ;
+  font-style: italic }
+
+div.dedication p.topic-title {
+  font-weight: bold ;
+  font-style: normal }
+
+div.figure {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+div.footer, div.header {
+  clear: both;
+  font-size: smaller }
+
+div.line-block {
+  display: block ;
+  margin-top: 1em ;
+  margin-bottom: 1em }
+
+div.line-block div.line-block {
+  margin-top: 0 ;
+  margin-bottom: 0 ;
+  margin-left: 1.5em }
+
+div.sidebar {
+  margin: 0 0 0.5em 1em ;
+  border: medium outset ;
+  padding: 1em ;
+  background-color: #ffffee ;
+  width: 40% ;
+  float: right ;
+  clear: right }
+
+div.sidebar p.rubric {
+  font-family: sans-serif ;
+  font-size: medium }
+
+div.system-messages {
+  margin: 5em }
+
+div.system-messages h1 {
+  color: red }
+
+div.system-message {
+  border: medium outset ;
+  padding: 1em }
+
+div.system-message p.system-message-title {
+  color: red ;
+  font-weight: bold }
+
+div.topic {
+  margin: 2em }
+
+h1.section-subtitle, h2.section-subtitle, h3.section-subtitle,
+h4.section-subtitle, h5.section-subtitle, h6.section-subtitle {
+  margin-top: 0.4em }
+
+h1.title {
+  text-align: center }
+
+h2.subtitle {
+  text-align: center }
+
+hr.docutils {
+  width: 75% }
+
+img.align-left, .figure.align-left, object.align-left {
+  clear: left ;
+  float: left ;
+  margin-right: 1em }
+
+img.align-right, .figure.align-right, object.align-right {
+  clear: right ;
+  float: right ;
+  margin-left: 1em }
+
+img.align-center, .figure.align-center, object.align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.align-left {
+  text-align: left }
+
+.align-center {
+  clear: both ;
+  text-align: center }
+
+.align-right {
+  text-align: right }
+
+/* reset inner alignment in figures */
+div.align-right {
+  text-align: inherit }
+
+/* div.align-center * { */
+/*   text-align: left } */
+
+ol.simple, ul.simple {
+  margin-bottom: 1em }
+
+ol.arabic {
+  list-style: decimal }
+
+ol.loweralpha {
+  list-style: lower-alpha }
+
+ol.upperalpha {
+  list-style: upper-alpha }
+
+ol.lowerroman {
+  list-style: lower-roman }
+
+ol.upperroman {
+  list-style: upper-roman }
+
+p.attribution {
+  text-align: right ;
+  margin-left: 50% }
+
+p.caption {
+  font-style: italic }
+
+p.credits {
+  font-style: italic ;
+  font-size: smaller }
+
+p.label {
+  white-space: nowrap }
+
+p.rubric {
+  font-weight: bold ;
+  font-size: larger ;
+  color: maroon ;
+  text-align: center }
+
+p.sidebar-title {
+  font-family: sans-serif ;
+  font-weight: bold ;
+  font-size: larger }
+
+p.sidebar-subtitle {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+p.topic-title {
+  font-weight: bold }
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font: inherit }
+
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+pre.code .ln { color: grey; } /* line numbers */
+pre.code, code { background-color: #eeeeee }
+pre.code .comment, code .comment { color: #5C6576 }
+pre.code .keyword, code .keyword { color: #3B0D06; font-weight: bold }
+pre.code .literal.string, code .literal.string { color: #0C5404 }
+pre.code .name.builtin, code .name.builtin { color: #352B84 }
+pre.code .deleted, code .deleted { background-color: #DEB0A1}
+pre.code .inserted, code .inserted { background-color: #A3D289}
+
+span.classifier {
+  font-family: sans-serif ;
+  font-style: oblique }
+
+span.classifier-delimiter {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+span.interpreted {
+  font-family: sans-serif }
+
+span.option {
+  white-space: nowrap }
+
+span.pre {
+  white-space: pre }
+
+span.problematic {
+  color: red }
+
+span.section-subtitle {
+  /* font-size relative to parent (h1..h6 element) */
+  font-size: 80% }
+
+table.citation {
+  border-left: solid 1px gray;
+  margin-left: 1px }
+
+table.docinfo {
+  margin: 2em 4em }
+
+table.docutils {
+  margin-top: 0.5em ;
+  margin-bottom: 0.5em }
+
+table.footnote {
+  border-left: solid 1px black;
+  margin-left: 1px }
+
+table.docutils td, table.docutils th,
+table.docinfo td, table.docinfo th {
+  padding-left: 0.5em ;
+  padding-right: 0.5em ;
+  vertical-align: top }
+
+table.docutils th.field-name, table.docinfo th.docinfo-name {
+  font-weight: bold ;
+  text-align: left ;
+  white-space: nowrap ;
+  padding-left: 0 }
+
+/* "booktabs" style (no vertical lines) */
+table.docutils.booktabs {
+  border: 0px;
+  border-top: 2px solid;
+  border-bottom: 2px solid;
+  border-collapse: collapse;
+}
+table.docutils.booktabs * {
+  border: 0px;
+}
+table.docutils.booktabs th {
+  border-bottom: thin solid;
+  text-align: left;
+}
+
+h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
+h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
+  font-size: 100% }
+
+ul.auto-toc {
+  list-style-type: none }
+
+</style>
+<style type="text/css">
+
+/*
+*   math2html: convert LaTeX equations to HTML output.
+*
+*   Copyright (C) 2009,2010 Alex Fernández
+*
+*   Released under the terms of the `2-Clause BSD license'_, in short:
+*   Copying and distribution of this file, with or without modification,
+*   are permitted in any medium without royalty provided the copyright
+*   notice and this notice are preserved.
+*   This file is offered as-is, without any warranty.
+*
+* .. _2-Clause BSD license: http://www.spdx.org/licenses/BSD-2-Clause
+*
+*   Based on eLyXer: convert LyX source files to HTML output.
+*   http://elyxer.nongnu.org/
+*/
+/* --end--
+* CSS file for LaTeX formulas.
+*/
+
+/* Formulas */
+.formula {
+	text-align: center;
+	font-family: "Droid Serif", "DejaVu Serif", "STIX", serif;
+	margin: 1.2em 0;
+}
+span.formula {
+	white-space: nowrap;
+}
+div.formula {
+	padding: 0.5ex;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+/* Basic features */
+a.eqnumber {
+	display: inline-block;
+	float: right;
+	clear: right;
+	font-weight: bold;
+}
+span.unknown {
+	color: #800000;
+}
+span.ignored, span.arraydef {
+	display: none;
+}
+.formula i {
+	letter-spacing: 0.1ex;
+}
+
+/* Alignment */
+.align-left, .align-l {
+	text-align: left;
+}
+.align-right, .align-r {
+	text-align: right;
+}
+.align-center, .align-c {
+	text-align: center;
+}
+
+/* Structures */
+span.overline, span.bar {
+	text-decoration: overline;
+}
+.fraction, .fullfraction {
+	display: inline-block;
+	vertical-align: middle;
+	text-align: center;
+}
+.fraction .fraction {
+	font-size: 80%;
+	line-height: 100%;
+}
+span.numerator {
+	display: block;
+}
+span.denominator {
+	display: block;
+	padding: 0ex;
+	border-top: thin solid;
+}
+sup.numerator, sup.unit {
+	font-size: 70%;
+	vertical-align: 80%;
+}
+sub.denominator, sub.unit {
+	font-size: 70%;
+	vertical-align: -20%;
+}
+span.sqrt {
+	display: inline-block;
+	vertical-align: middle;
+	padding: 0.1ex;
+}
+sup.root {
+	font-size: 70%;
+	position: relative;
+	left: 1.4ex;
+}
+span.radical {
+	display: inline-block;
+	padding: 0ex;
+	font-size: 150%;
+	vertical-align: top;
+}
+span.root {
+	display: inline-block;
+	border-top: thin solid;
+	padding: 0ex;
+	vertical-align: middle;
+}
+span.symbol {
+	line-height: 125%;
+	font-size: 125%;
+}
+span.bigsymbol {
+	line-height: 150%;
+	font-size: 150%;
+}
+span.largesymbol {
+	font-size: 175%;
+}
+span.hugesymbol {
+	font-size: 200%;
+}
+span.scripts {
+	display: inline-table;
+	vertical-align: middle;
+}
+.script {
+	display: table-row;
+	text-align: left;
+	line-height: 150%;
+}
+span.limits {
+	display: inline-table;
+	vertical-align: middle;
+}
+.limit {
+	display: table-row;
+	line-height: 99%;
+}
+sup.limit, sub.limit {
+	line-height: 100%;
+}
+span.symbolover {
+	display: inline-block;
+	text-align: center;
+	position: relative;
+	float: right;
+	right: 100%;
+	bottom: 0.5em;
+	width: 0px;
+}
+span.withsymbol {
+	display: inline-block;
+}
+span.symbolunder {
+	display: inline-block;
+	text-align: center;
+	position: relative;
+	float: right;
+	right: 80%;
+	top: 0.3em;
+	width: 0px;
+}
+
+/* Environments */
+span.array, span.bracketcases, span.binomial, span.environment {
+	display: inline-table;
+	text-align: center;
+	border-collapse: collapse;
+	margin: 0em;
+	vertical-align: middle;
+}
+span.arrayrow, span.binomrow {
+	display: table-row;
+	padding: 0ex;
+	border: 0ex;
+}
+span.arraycell, span.bracket, span.case, span.binomcell, span.environmentcell {
+	display: table-cell;
+	padding: 0ex 0.2ex;
+	line-height: 99%;
+	border: 0ex;
+}
+/*
+* CSS file for LaTeX formulas, extra stuff:
+* binomials, vertical braces, stackrel, fonts and colors.
+*/
+
+/* Inline binomials */
+span.binom {
+	display: inline-block;
+	vertical-align: middle;
+	text-align: center;
+	font-size: 80%;
+}
+span.binomstack {
+	display: block;
+	padding: 0em;
+}
+
+/* Over- and underbraces */
+span.overbrace {
+	border-top: 2pt solid;
+}
+span.underbrace {
+	border-bottom: 2pt solid;
+}
+
+/* Stackrel */
+span.stackrel {
+	display: inline-block;
+	text-align: center;
+}
+span.upstackrel {
+	display: block;
+	padding: 0em;
+	font-size: 80%;
+	line-height: 64%;
+	position: relative;
+	top: 0.15em;
+
+}
+span.downstackrel {
+	display: block;
+	vertical-align: bottom;
+	padding: 0em;
+}
+
+/* Fonts */
+span.mathsf, span.textsf {
+	font-style: normal;
+	font-family: sans-serif;
+}
+span.mathrm, span.textrm {
+	font-style: normal;
+	font-family: serif;
+}
+span.text, span.textnormal {
+	font-style: normal;
+}
+span.textipa {
+	color: #008080;
+}
+span.fraktur {
+	font-family: "Lucida Blackletter", eufm10, blackletter;
+}
+span.blackboard {
+	font-family: Blackboard, msbm10, serif;
+}
+span.scriptfont {
+	font-family: "Monotype Corsiva", "Apple Chancery", "URW Chancery L", cursive;
+	font-style: italic;
+}
+
+/* Colors */
+span.colorbox {
+	display: inline-block;
+	padding: 5px;
+}
+span.fbox {
+	display: inline-block;
+	border: thin solid black;
+	padding: 2px;
+}
+span.boxed, span.framebox {
+	display: inline-block;
+	border: thin solid black;
+	padding: 5px;
+}
+
+
+</style>
+</head>
+<body>
+<div class="document" id="command-line-interface">
+<h1 class="title">Command line interface</h1>
+
+<p>The tools that can be applied to metabolic models are run through the
+<tt class="docutils literal"><span class="pre">psamm-model</span></tt> program. To see the full help text of the program use</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model --help
+</pre>
+<p>This program allows you to specify a metabolic model and a command to apply to
+the given model. The available commands can be seen using the help command
+given above, and are also described in more details below.</p>
+<p>To run the program with a model, use</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model --model model.yaml <span class="name builtin">command</span> <span class="operator">[</span>...<span class="operator">]</span>
+</pre>
+<p>In most cases you will probably be running the command from the same directory
+as where the <tt class="docutils literal">model.yaml</tt> file is located, and in that case you can simply
+run</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model <span class="name builtin">command</span> <span class="operator">[</span>...<span class="operator">]</span>
+</pre>
+<p>To see the help text of a command use</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model <span class="name builtin">command</span> --help
+</pre>
+<div class="section" id="linear-programming-solver">
+<h1>Linear programming solver</h1>
+<p>Many of the commands described below use a linear programming (LP) solver in
+order to perform the analysis. These commands all take an option <tt class="docutils literal"><span class="pre">--solver</span></tt>
+which can be used to select which solver to use and to specify additional
+options for the LP solver. For example, in order to run the <tt class="docutils literal">fba</tt> command
+with the QSopt_ex solver, the option <tt class="docutils literal"><span class="pre">--solver</span> name=qsoptex</tt> can be added:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model fba --solver <span class="name variable">name</span><span class="operator">=</span>qsoptex
+</pre>
+<p>The <tt class="docutils literal"><span class="pre">--solver</span></tt> option can also be used to specify additional options for the
+solver in use. For example, the Cplex solver recognizes the <tt class="docutils literal">threads</tt>
+option which can be used to adjust the maximum number of threads that Cplex
+will use internally (by default, Cplex will use as many threads as there are
+cores on the computer):</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model fba --solver <span class="name variable">threads</span><span class="operator">=</span>4
+</pre>
+</div>
+<div class="section" id="flux-balance-analysis-fba">
+<span id="commands-fba"></span><h1>Flux balance analysis (<tt class="docutils literal">fba</tt>)</h1>
+<p>This command will try to maximize the flux of the biomass reaction defined in
+the model. It is also possible to provide a different reaction on the command
+line to maximize. <a href="#id20"><span class="problematic" id="id21"><span id="id1"></span>[Orth10]_</span></a> <a href="#id22"><span class="problematic" id="id23"><span id="id2"></span>[Fell86]_</span></a></p>
+<p>To run FBA use:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model fba
+</pre>
+<p>or with a specific reaction:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model fba --objective<span class="operator">=</span>ATPM
+</pre>
+<p>By default, this performs a standard FBA and the result is output as
+tab-separated values with the reaction ID, the reaction flux and the reaction
+equation. If the parameter <tt class="docutils literal"><span class="pre">--loop-removal</span></tt> is given, the flux of the
+internal reactions is further constrained to remove internal loops
+<a href="#id24"><span class="problematic" id="id25"><span id="id3"></span>[Schilling00]_</span></a>. Loop removal is more time-consuming and under normal
+circumstances the biomass reaction flux will <em>not</em> change in response to the
+loop removal (only internal reaction fluxes may change). The <tt class="docutils literal"><span class="pre">--loop-removal</span></tt>
+option is followed by <tt class="docutils literal">none</tt> (no loop removal), <tt class="docutils literal">tfba</tt> (removal using
+thermodynamic constraints), or <tt class="docutils literal">l1min</tt> (L1 minimization of the fluxes). For
+example, the following command performs an FBA with thermodynamic constraints:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model fba --loop-removal<span class="operator">=</span>tfba
+</pre>
+<p>By default the output of the FBA command will only display reactions which
+have non-zero fluxes. This can be overridden with the <tt class="docutils literal"><span class="pre">--all-reactions</span></tt>
+option to display all reactions even if they have flux values of zero.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model fba --all-reactions
+</pre>
+</div>
+<div class="section" id="flux-variability-analysis-fva">
+<h1>Flux variability analysis (<tt class="docutils literal">fva</tt>)</h1>
+<p>This command will find the possible flux range of each reaction when the
+biomass is at the maximum value <a href="#id26"><span class="problematic" id="id27"><span id="id4"></span>[Mahadevan03]_</span></a>. The command will use the
+biomass reaction specified in the model definition, or alternatively, a
+reaction can be given on the command line following the <tt class="docutils literal"><span class="pre">--objective</span></tt> option.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model fva
+</pre>
+<p>The output of the command will show each reaction in the model along with the
+minimum and maximum possible flux values as tab-separated values.</p>
+<pre class="literal-block">
+PPCK    0.0     135.266721627  [...]
+PTAr    62.3091585921    1000.0  [...]
+</pre>
+<p>In this example the <tt class="docutils literal">PPCK</tt> reaction has a minimum flux of zero and maximum
+flux of 135.3 units. The <tt class="docutils literal">PTAr</tt> reaction has a minimum flux of 62.3 and a
+maximum of 1000 units.</p>
+<p>If the parameter <tt class="docutils literal"><span class="pre">--loop-removal=tfba</span></tt> is given, additional thermodynamic
+constraints will be imposed when evaluating model fluxes. This automatically
+removes internal flux loops <a href="#id28"><span class="problematic" id="id29"><span id="id5"></span>[Schilling00]_</span></a> but is much more time-consuming.</p>
+<p>By default FVA is performed with the objective reaction (either the biomass
+reaction or reaction given through the <tt class="docutils literal"><span class="pre">--objective</span></tt> option) fixed at its
+maximum value. It is also possible allow this reaction flux to vary by a
+specified amount through the <tt class="docutils literal"><span class="pre">--thershold</span></tt> option. When this option is
+used the variability results will show the possible flux ranges when the
+objective reaction is greater than or equal to the threshold value.</p>
+<p>The threshold can be specified by either giving a percentage of the maximum
+objective flux or by giving an defined flux value.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model fva --threshold 90%
+or
+<span class="name variable">$ </span>psamm-model fva --threshold 1.2
+</pre>
+<p>The FVA command can also be run as parallel processes to speed up simulations
+done on larger models. This can be done using the <tt class="docutils literal"><span class="pre">--parallel</span></tt> option. Either
+a specific number of parallel jobs can be given or 0 can be given to automatically
+detect and use the maximum number of parallel processes.</p>
+</div>
+<div class="section" id="robustness-robustness">
+<h1>Robustness (<tt class="docutils literal">robustness</tt>)</h1>
+<p>Given a reaction to maximize and a reaction to vary, the robustness analysis
+will run flux balance analysis and flux minimization while fixing the reaction
+to vary at each iteration. The reaction will be fixed at a given number of
+steps between the minimum and maximum flux value specified in the model
+<a href="#id30"><span class="problematic" id="id31"><span id="id6"></span>[Edwards00]_</span></a>.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model robustness <span class="literal string escape">\
+</span>    --steps <span class="literal number">200</span> --minimum -20 --maximum <span class="literal number">160</span> EX_Oxygen
+</pre>
+<p>In the example above, the biomass reaction will be maximized while the
+<tt class="docutils literal">EX_Oxygen</tt> (oxygen exchange) reaction is fixed at a certain flux in each
+iteration. The fixed flux will vary between the minimum and maximum flux. The
+number of iterations can be set using <tt class="docutils literal"><span class="pre">--steps</span></tt>. In each iteration, all
+reactions and the corresponding fluxes will be shown in a table, as well as
+the value of the fixed flux. If the fixed flux results in an infeasible model,
+no output will be shown for that iteration.</p>
+<p>The output of the command is a list of tab-separated values indicating a
+reaction ID, the flux of the varying reaction, and the flux of the reaction
+with the given ID.</p>
+<p>If the parameter <tt class="docutils literal"><span class="pre">--loop-removal</span></tt> is given, additional constraints on the
+model can be imposed that remove internal flux loops. See the section on the
+<a href="#id7"><span class="problematic" id="id8">:ref:`commands-fba`</span></a> command for more information on this option.</p>
+<div class="system-message" id="id7">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 176); <em><a href="#id8">backlink</a></em></p>
+Unknown interpreted text role &quot;ref&quot;.</div>
+<p>It is also possible to print out the flux of all reactions for each step in
+the robustness simulation instead of just printing the varying reaction flux.
+This can be done through using the <tt class="docutils literal"><span class="pre">--all-reaction-fluxes</span></tt> option.</p>
+<p>The Robustness command can also be run as parallel processes to speed up simulations
+done on larger models. This can be done using the <tt class="docutils literal"><span class="pre">--parallel</span></tt> option. Either
+a specific number of parallel jobs can be given or 0 can be given to automatically
+detect and use the maximum number of parallel processes.</p>
+</div>
+<div class="section" id="random-sparse-network-randomsparse">
+<h1>Random sparse network (<tt class="docutils literal">randomsparse</tt>)</h1>
+<p>Delete reactions randomly until the flux of the biomass reaction falls below
+the threshold. Keep deleting reactions until no more reactions can be deleted.
+This can also be applied to other reactions than the biomass reaction by
+specifying the reaction explicitly.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model randomsparse 95%
+</pre>
+<p>When the given reaction is the biomass reaction, this results in a smaller
+model which is still producing biomass within the tolerance given by the
+threshold. The tolerance can be specified as a relative value (as above) or as
+an absolute flux. Aggregating the results from multiple random sparse networks
+allows classifying reactions as essential, semi-essential or non-essential.</p>
+<p>By default the randomsparse command will perform the deletions on reactions
+in the model. The <tt class="docutils literal"><span class="pre">--type</span></tt> option can be used to change this deletion to
+act on the genes in the model or to act on only the set of exchange reactions.
+The gene deletion option will remove a gene from a network and then assess
+which reactions would be affected by that gene loss based on the provided
+gene associations. The exchange reaction deletion will only delete reactions
+from the set of exchange reactions in the model and can be used to generate
+a putative minimal media for the model.</p>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">../commands.rst</tt>, line 216)</p>
+<p>Cannot analyze code. No Pygments lexer found for &quot;shell;&quot;.</p>
+<pre class="literal-block">
+.. code-block:: shell;
+
+    $ psamm-model randomsparse --type genes 95%
+    or
+    $ psamm-model randomsparse --type exchange 95%
+
+</pre>
+</div>
+<p>The output of the command is a tab-separated list of reaction IDs and a value
+indicating whether the reaction was eliminated (<tt class="docutils literal">0</tt> when eliminated, <tt class="docutils literal">1</tt>
+otherwise). If multiple minimal networks are desired, the command can be run
+again and it will sample another random minimal network.</p>
+</div>
+<div class="section" id="gene-deletion-genedelete">
+<h1>Gene Deletion (<tt class="docutils literal">genedelete</tt>)</h1>
+<p>Delete single and multiple genes from a model. Once gene(s) are given the
+command will delete reactions from the model requiring the gene(s) specified.
+The reactions deleted will be returned as a set as well as the flux of the
+model with the specified gene(s) removed.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model genedelete
+</pre>
+<p>To delete genes the option <tt class="docutils literal"><span class="pre">--gene</span></tt> must be entered followed by the desired
+gene ID specified in the model files. To delete multiple genes, each new gene
+must first be followed by a <tt class="docutils literal"><span class="pre">--gene</span></tt> option. For example:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model genedelete --gene ExGene1 --gene ExGene2
+</pre>
+<p>The list of genes to delete can also be specified in a text file. This allows
+to you perform many gene deletions by simply specifying the file name when
+running the <tt class="docutils literal">genedelete</tt> command. The text file must contain one gene ID per
+line. For example:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model genedelete --gene &#64;gene_file.txt
+</pre>
+<p>The file gene_file.txt would contain the following lines:</p>
+<pre class="literal-block">
+ExGene1
+ExGene2
+</pre>
+<p>To delete genes using different algorithms use <tt class="docutils literal"><span class="pre">--method</span></tt> to specify
+which algorithm for the solver to use. The default method for the command is
+FBA. To delete genes using the Minimization of Metabolic Adjustment (MOMA)
+algorithm use the command line argument <tt class="docutils literal"><span class="pre">--method</span> moma</tt>. MOMA is based on
+the assumption that the knockout organism has not had time to adjust its gene
+regulation to maximize biomass production so fluxes will be close to wildtype
+fluxes.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model genedelete --gene ExGene1 --method moma
+</pre>
+<p>There are four variations of MOMA available in PSAMM, defined in the following
+way (where <span class="formula"><span class="bar"><i>v</i></span></span> is the wild type fluxes and <span class="formula"><span class="bar"><i>u</i></span></span> is the
+knockout fluxes):</p>
+<dl class="docutils">
+<dt>MOMA (<tt class="docutils literal"><span class="pre">--method</span> moma</tt>)</dt>
+<dd>Finds the reaction fluxes in the knockout, such that the difference in flux
+from the wildtype is minimized. Minimization is performed with the
+Euclidean distance: <span class="formula"><span class="limits"><span class="limit"><span class="symbol">∑</span></span></span><sub><i>j</i></sub>(<i>v</i><sub><i>j</i></sub> − <i>u</i><sub><i>j</i></sub>)<sup>2</sup></span>. The wildtype fluxes are
+obtained from the wildtype model (i.e. before genes are deleted) by FBA
+with L1 minimization. L1 minimization is performed on the FBA result to
+remove loops and make the result disregard internal loop fluxes. <a href="#id32"><span class="problematic" id="id33"><span id="id9"></span>[Segre02]_</span></a></dd>
+<dt>Linear MOMA (<tt class="docutils literal"><span class="pre">--method</span> lin_moma</tt>)</dt>
+<dd>Finds the reaction fluxes in the knockout, such that the difference in flux
+from the wildtype is minimized. Minimization is performed with the
+Manhattan distance: <span class="formula"><span class="limits"><span class="limit"><span class="symbol">∑</span></span></span><sub><i>j</i></sub>∥<i>v</i><sub><i>j</i></sub> − <i>u</i><sub><i>j</i></sub>∥</span>. The wildtype fluxes are
+obtained from the wildtype model (i.e. before genes are deleted) by FBA
+with L1 minimization. L1 minimization is performed on the FBA result to
+remove loops and make the result disregard internal loop fluxes. <a href="#id34"><span class="problematic" id="id35"><span id="id10"></span>[Mo09]_</span></a></dd>
+<dt>Combined-model MOMA (<tt class="docutils literal"><span class="pre">--method</span> moma2</tt>) (Experimental)</dt>
+<dd>Similar to <tt class="docutils literal">moma</tt>, but this implementation solves for the wild type
+fluxes at the same time as the knockout fluxes to ensure not to rely on the
+arbitrary flux vector found with FBA.</dd>
+<dt>Combined-model linear MOMA (<tt class="docutils literal"><span class="pre">--method</span> lin_moma2</tt>) (Experimental)</dt>
+<dd>Similar to <tt class="docutils literal">lin_moma</tt>, but this implementation solves for the wild type
+fluxes at the same time as the knockout fluxes to ensure not to rely on the
+arbitrary flux vector found with FBA.</dd>
+</dl>
+</div>
+<div class="section" id="flux-coupling-analysis-fluxcoupling">
+<h1>Flux coupling analysis (<tt class="docutils literal">fluxcoupling</tt>)</h1>
+<p>The flux coupling analysis identifies any reaction pairs where the flux of one
+reaction constrains the flux of another reaction. The reactions can be coupled
+in three distinct ways depending on the ratio between the reaction fluxes
+<a href="#id36"><span class="problematic" id="id37"><span id="id11"></span>[Burgard04]_</span></a>.</p>
+<p>The reactions can be fully coupled (the ratio is static and non-zero);
+partially coupled (the ratio is bounded and non-zero); or directionally
+coupled (the ratio is non-zero).</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model fluxcoupling
+</pre>
+</div>
+<div class="section" id="stoichiometric-consistency-check-masscheck">
+<h1>Stoichiometric consistency check (<tt class="docutils literal">masscheck</tt>)</h1>
+<p>A model or reaction database can be checked for stoichiometric inconsistencies
+(mass inconsistencies). The basic idea is that we should be able to assign a
+positive mass to each compound in the model and have each reaction be balanced
+with respect to these mass assignments. If it can be shown that assigning the
+masses is impossible, we have discovered an inconsistency <a href="#id38"><span class="problematic" id="id39"><span id="id12"></span>[Gevorgyan08]_</span></a>.</p>
+<p>Some variants of this idea is implemented in the <a href="#id13"><span class="problematic" id="id14">:mod:`psamm.massconsistency`</span></a>
+module. The mass consistency check can be run using</p>
+<div class="system-message" id="id13">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 328); <em><a href="#id14">backlink</a></em></p>
+Unknown interpreted text role &quot;mod&quot;.</div>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model masscheck
+</pre>
+<p>This will first try to assign a positive mass to as many compounds as possible.
+This will indicate whether or not the model is consistent but in case it is
+<em>not</em> consistent it is often hard to figure out how to fix the model from this
+list of masses:</p>
+<pre class="literal-block">
+[...]
+INFO: Checking stoichiometric consistency of reactions...
+C0223       1.0     Dihydrobiopterin
+C9779       1.0     2-hydroxy-Octadec-ACP(n-C18:1)
+EC0065      0.0     H+[e]
+C0065       0.0     H+
+INFO: Consistent compounds: 832/834
+</pre>
+<p>In this case the <cite>H+</cite> compounds were inconsistent because they were not
+assigned a non-zero mass. A different check can be run where the residual mass
+is minimized for all reactions in the model. This will often give a better idea
+of which reactions need fixing:</p>
+<pre class="literal-block">
+.. code-block:: shell
+</pre>
+<blockquote>
+$ psamm-model masscheck --type=reaction</blockquote>
+<p>The following output might be generated from this command:</p>
+<pre class="literal-block">
+[...]
+INFO: Checking stoichiometric consistency of reactions...
+IR01815     7.0     (6) |H+[c]| + |Uroporphyrinogen III[c]| [...]
+IR00307     1.0     |H+[c]| + |L-Arginine[c]| =&gt; [...]
+IR00146     0.5     |UTP[c]| + |D-Glucose 1-phosphate[c]| =&gt; [...]
+[...]
+INFO: Consistent reactions: 946/959
+</pre>
+<p>This is a list of reactions with non-zero residuals and their residual values.
+In the example above the three reactions that are shown have been assigned a
+non-zero residual (7, 1 and 0.5, respectively). This means that there is an
+issue either with this reaction itself or a closely related one. In this
+example the first two reactions were missing a number of <cite>H+</cite> compounds for
+the reaction to balance.</p>
+<p>Now the mass check can be run again marking the reactions above as checked:</p>
+<pre class="literal-block">
+$ psamm-model masscheck --type=reaction --checked IR01815 \
+    --checked IR00307 --checked IR00146
+[...]
+IR00149 0.5     |ATP[c]| + |D-Glucose[c]| =&gt; [...]
+</pre>
+<p>The output has now changed and the remaining residual has been shifted to
+another reaction. This iterative procedure can be continued until all
+stoichiometric inconsistencies have been corrected. In this example the
+<cite>IR00149</cite> reaction also had a missing <cite>H+</cite> for the reaction to balance. After
+fixing this error the model is consistent and the <cite>H+</cite> compounds can be
+assigned a non-zero mass:</p>
+<pre class="literal-block">
+$ psamm-model masscheck
+[...]
+EC0065      1.0     H+[e]
+C0065       1.0     H+
+INFO: Consistent compounds: 834/834
+</pre>
+</div>
+<div class="section" id="formula-consistency-check-formulacheck">
+<h1>Formula consistency check (<tt class="docutils literal">formulacheck</tt>)</h1>
+<p>Similarly, a model or reaction database can be checked for formula
+inconsistencies when the chemical formulae of the compounds in the model are
+known.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model formulacheck
+</pre>
+<p>For each inconsistent reaction, the reaction identifier will be printed
+followed by the elements (&quot;atoms&quot;) in, respectively, the left- and right-hand
+side of the reaction, followed by the elements needed to balance the left- and
+right-hand side, respectively.</p>
+</div>
+<div class="section" id="charge-consistency-check-chargecheck">
+<h1>Charge consistency check (<tt class="docutils literal">chargecheck</tt>)</h1>
+<p>The charge check will evaluate whether the compound charge is balanced in all
+reactions of the model. Any reactions that have an imbalance of charge will be
+reported along with the excess charge.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model chargecheck
+</pre>
+</div>
+<div class="section" id="flux-consistency-check-fluxcheck">
+<h1>Flux consistency check (<tt class="docutils literal">fluxcheck</tt>)</h1>
+<p>The flux consistency check will report any reactions that are unable to take on
+a non-zero flux. This is useful for finding any reactions that do not
+contribute anything to the model simulation. This may indicate that the
+reaction is part of a pathway that is incompletely modeled.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model fluxcheck
+</pre>
+<p>If the parameter <tt class="docutils literal"><span class="pre">--loop-removal=tfba</span></tt> is given, additional thermodynamic
+constraints are imposed when considering whether reactions can take a non-zero
+flux. This automatically removes internal flux loops but is also much more
+time-consuming.</p>
+<p>Some reactions could</p>
+</div>
+<div class="section" id="reaction-duplicates-check-duplicatescheck">
+<h1>Reaction duplicates check (<tt class="docutils literal">duplicatescheck</tt>)</h1>
+<p>This command simply checks whether multiple reactions exist in the model that
+have the same or similar reaction equations. By default, this check will ignore
+reaction directionality and stoichiometric values when considering whether
+reactions are identical. The options <tt class="docutils literal"><span class="pre">--compare-direction</span></tt> and
+<tt class="docutils literal"><span class="pre">--compare-stoichiometry</span></tt> can be used to make the command consider these
+properties as well.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model duplicatescheck
+</pre>
+</div>
+<div class="section" id="gap-check-gapcheck">
+<h1>Gap check (<tt class="docutils literal">gapcheck</tt>)</h1>
+<p>This gap check command will try to identify the compounds in the model
+that cannot be produced. This is useful for identifying incomplete pathways in
+the model. The command will report a list of all compounds in the model that
+are blocked for production.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model gapcheck
+</pre>
+<p>When checking whether a compound can be produced, it is sufficient for
+production that all precursors can be produced and it is <em>not</em> necessary for
+every compound to also be consumed by another reaction (in other words, for
+the purpose of this analysis there are implicit sinks for every compound in
+the model). This means that even if this command reports that no compounds are
+blocked, it may still not be possible for the model to be viable under the
+steady-state assumption of FBA. The option <tt class="docutils literal"><span class="pre">--no-implicit-sinks</span></tt> can be used
+to perform the gap check without implicit sinks.</p>
+<p>The gap check is performed with the medium that is defined in the model. It
+may be useful to run the gap check with every compound in the medium available.
+This can easily be done by specifying the <tt class="docutils literal"><span class="pre">--unrestricted-exchange</span></tt> option
+which removes all limits on the exchange reactions during the check.</p>
+<p>There are some additional gap checking methods that can be enabled with the
+<tt class="docutils literal"><span class="pre">--method</span></tt> option. The method <tt class="docutils literal">sinkcheck</tt> can be used to find compounds
+that cannot be synthesized from scratch. The standard gap check will report
+compounds as produced if they can participate in a reaction, even if the
+compound itself cannot be synthesized from precursors in the medium. To find
+such compounds use the <tt class="docutils literal">sinkcheck</tt>. This check will generally indicate more
+compounds as blocked. Lastly, the method <tt class="docutils literal">gapfind</tt> can be used. This method
+should produce the same result as the default method but is implemented in an
+alternative way that is specified in <a href="#id40"><span class="problematic" id="id41"><span id="id15"></span>[Kumar07]_</span></a>. This method is <em>not</em> used by
+default because it tends to result in difficulties for the solver when used
+with larger models.</p>
+</div>
+<div class="section" id="gapfill-gapfill">
+<h1>GapFill (<tt class="docutils literal">gapfill</tt>)</h1>
+<p>The GapFill algorithm will try to compute an extension of the model with
+reactions from the reaction database and try to find a minimal subset that
+allows all blocked compounds to be produced. In addition to suggesting possible
+database reactions to add to the model, the command will also suggest possible
+transport and exchange reactions. The GapFill algorithm implemented in this
+command is a variant of the gap-filling procedure described in <a href="#id42"><span class="problematic" id="id43"><span id="id16"></span>[Kumar07]_</span></a>.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model gapfill
+</pre>
+<p>The command will first list the reactions in the model followed by the
+suggested reactions to add to the model in order to unblock the blocked
+compounds. If <tt class="docutils literal"><span class="pre">--allow-bounds-expansion</span></tt> is specified, the procedure may also
+suggest that existing model reactions have their flux bounds widened, e.g.
+making an existing irreversible reaction reversible. To unblock only specific
+compounds, use the <tt class="docutils literal"><span class="pre">--compound</span></tt> option:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model gapfill --compound leu-L<span class="operator">[</span>c<span class="operator">]</span> --compound ile-L<span class="operator">[</span>c<span class="operator">]</span>
+</pre>
+<p>In this example, the procedure will try to add reactions so that leucine
+(<tt class="docutils literal"><span class="pre">leu-L</span></tt>) and isoleucine (<tt class="docutils literal"><span class="pre">ile-L</span></tt>) in the <tt class="docutils literal">c</tt> compartment can be
+produced. Multiple compounds can be unblocked at the same time and the list of
+compounds to unblock can optionally be specified as a file by prefixing the
+file name with <tt class="docutils literal">&#64;</tt>.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model gapfill --compound &#64;list_of_compounds_to_unblock.tsv
+</pre>
+<p>The GapFind algorithm is defined in terms of a MILP problem and can therefore
+be computationally expensive to run for larger models.</p>
+<p>The original GapFill algorithm uses a solution procedure which implicitly
+assumes that the model contains implicit sinks for all compounds. This means
+that even with the reactions proposed by GapFill the model may need to produce
+compounds that cannot be used anywhere. The implicit sinks can be disabled
+with the <tt class="docutils literal"><span class="pre">--no-implicit-sinks</span></tt> option.</p>
+</div>
+<div class="section" id="fastgapfill-fastgapfill">
+<h1>FastGapFill (<tt class="docutils literal">fastgapfill</tt>)</h1>
+<p>The FastGapFill algorithm tries to reconstruct a flux consistent model (i.e. a
+model where every reaction takes a non-zero flux for at least one solutions).
+This is done by extending the model with reactions from the reaction database
+and trying to find a minimal subset that is flux consistent. The solution is
+approximate <a href="#id44"><span class="problematic" id="id45"><span id="id17"></span>[Thiele14]_</span></a>.</p>
+<p>The database reactions can be assigned a weight (or &quot;cost&quot;) using the
+<tt class="docutils literal"><span class="pre">--penalty</span></tt> option. These weights are taken into account when determining the
+minimal solution.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model fastgapfill --penalty penalty.tsv
+</pre>
+<p>The penalty file provided should be a tab separated table that contains reaction IDs
+and assigned penalty values in two columns:</p>
+<pre class="code shell literal-block">
+RXN1    10
+RXN2    15
+RXN3    20
+....
+</pre>
+<p>In addition to setting penalty values directly through the <tt class="docutils literal"><span class="pre">--penalty</span></tt> argument,
+default penalties for all other database reactions can be set through the <tt class="docutils literal"><span class="pre">--db-penalty</span></tt>
+argument. Reactions that do not have penalty values explicitly set through
+the <tt class="docutils literal"><span class="pre">--penalty</span></tt> argument will be assigned this penalty value. Similarly penalty values can be
+assigned for new exchange reactions and artificial transport reactions through the
+<tt class="docutils literal"><span class="pre">--ex-penalty</span></tt> and <tt class="docutils literal"><span class="pre">--tp-penalty</span></tt> arguments. An example using all three of these
+arguments can be seen here:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model fastgapfill --db-penalty <span class="literal number">100</span> --tp-penalty <span class="literal number">1000</span> --ex-penalty 150
+</pre>
+</div>
+<div class="section" id="predict-primary-pairs-primarypairs">
+<h1>Predict primary pairs (<tt class="docutils literal">primarypairs</tt>)</h1>
+<p>This command is used to predict element-transferring reactant/product pairs
+in the reactions of the model. This can be used to determine the flow of
+elements through reactions. Two methods for predicting the pairs are available:
+<cite>FindPrimaryPairs</cite> (<tt class="docutils literal">fpp</tt>) <a href="#id46"><span class="problematic" id="id47"><span id="id18"></span>[Steffensen17]_</span></a> and
+MapMaker (<tt class="docutils literal">mapmaker</tt>) <a href="#id48"><span class="problematic" id="id49"><span id="id19"></span>[Tervo16]_</span></a>. The <tt class="docutils literal"><span class="pre">--method</span></tt> option can used to select
+which prediction method to use:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model primarypairs --method<span class="operator">=</span>fpp
+</pre>
+<p>The result is reported as a table of four columns. The first column is the
+reactions ID, the second and third columns contain the compound ID of the
+reactant and product. The fourth column contains the predicted transfer of
+elements.</p>
+<p>The <tt class="docutils literal">primarypairs</tt> command will run slowly on models that contain artificial
+reactions such as biomass reactions or condensed biosynthesis reactions. Because
+the reactant/product pair prediciton in these reactions is not as biologically
+meaningful these reactions can be excluded through the <tt class="docutils literal"><span class="pre">--exclude</span></tt> option. This
+option can be used to either give reaction IDs to exclude or to give an input file
+containing a list of reactions IDs to exclude:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model primarypairs --exclude BiomassReaction
+or
+<span class="name variable">$ </span>psamm-model primarypairs --exclude &#64;./exclude.tsv
+</pre>
+</div>
+<div class="section" id="psamm-visualization-vis">
+<h1>PSAMM Visualization (<tt class="docutils literal">vis</tt>)</h1>
+<p>Models can be visualized through the use of the <tt class="docutils literal">vis</tt> command in <cite>PSAMM</cite>. This
+command can use the <cite>FindPrimaryPairs</cite> algorithm to help generate images of full models
+or subsets of models. The output of this command will consist of a graph file in the <cite>dot</cite>
+language, <tt class="docutils literal">reactions.dot</tt>, and two files called <tt class="docutils literal">reactions.nodes.tsv</tt> and
+<tt class="docutils literal">reactions.edges.tsv</tt> that contain the network data in a tsv format.</p>
+<p>To run the <tt class="docutils literal">vis</tt> command the following command can be used:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model vis
+</pre>
+<div class="section" id="basic-graph-generation">
+<h2>Basic Graph Generation</h2>
+<p>By default the vis command uses the <cite>FindPrimaryPairs</cite> algorithm to simplify the graph
+that is produced. This algorithm runs much faster if certain types of artificial reactions
+are not considered when doing the reactant/product pair prediction. These reactions often
+represent Biomass production or condensed biosynthesis processes. To exclude these reactions
+the <tt class="docutils literal">vis</tt> command can be run with the <tt class="docutils literal"><span class="pre">--exlcude</span></tt> option to provide an input file that
+contains a list of reaction IDs:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model vis --exlcude &#64;<span class="operator">{</span>path to file<span class="operator">}</span>
+</pre>
+<p>The vis command will only produce the files described above by default. Graph image generating
+software can be used to convert these files to actual images. If the program <cite>Graphviz</cite> is
+installed on the computer then that program can be used within <cite>PSAMM</cite> to generate the image file
+directly. This can be done by using the <tt class="docutils literal"><span class="pre">--imgae</span></tt> argument followed by any <cite>Graphviz</cite> supported
+image format:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model vis --image <span class="operator">{</span>format <span class="operator">(</span>pdf, eps, svg, etc.<span class="operator">)}</span>
+</pre>
+<p>While the <tt class="docutils literal">vis</tt> function in <cite>PSAMM</cite> uses <cite>FindPrimaryPairs</cite> for graph simplification by
+default, the command is also able to run using no graph simplification (<tt class="docutils literal"><span class="pre">no-fpp</span></tt>), or by
+providing an input file containing prediciton results from the <tt class="docutils literal">primarypairs</tt> command.</p>
+<p>This can be done through using the <tt class="docutils literal"><span class="pre">--method</span></tt> argument:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model vis --method no-fpp
+or
+<span class="name variable">$ </span>psamm-model vis --method <span class="operator">{</span>path to file<span class="operator">}</span>
+</pre>
+<p>The resulting graphs can be further simplified to only show element transfers that contain
+a specified element through the <tt class="docutils literal"><span class="pre">--element</span></tt> argument. When using this option any
+reactantproduct pairs that do not transfer the specified element will not be shown on the graph.
+To use this option the following command can be used:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model vis --element <span class="operator">{</span>Atomic Symbol<span class="operator">}</span>
+</pre>
+<p>Additionally the final graphs created through the <tt class="docutils literal">vis</tt> command can be subsetted to only show a
+specified set of reactions from the larger model. This can be done using the <tt class="docutils literal"><span class="pre">--subset</span></tt> argument
+to provide a file containing a single column list of either reaction IDs or metabolite IDs.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model vis --subset <span class="operator">{</span>path to file<span class="operator">}</span>
+</pre>
+<p>And example of this file would be:</p>
+<pre class="code shell literal-block">
+rxn_1
+rxn_2
+rxn_4
+</pre>
+<p>Or:</p>
+<pre class="code shell literal-block">
+cpd_1<span class="operator">[</span>c<span class="operator">]</span>
+cpd_1<span class="operator">[</span>e<span class="operator">]</span>
+cpd_2<span class="operator">[</span>c<span class="operator">]</span>
+</pre>
+<p>Further modification can be done to the graph image to selectively hide certain edges
+in the final graph. This can be use to hide edges between paris of metabolites that
+might have many connections in the final graph images. Typical examples of these
+pairs include ATP and ADP, NAD and NADH, etc. To use this option first a tab separated
+table containing the metabolite pairs to hide must be made:</p>
+<pre class="code literal-block">
+atp[c]  adp[c]
+h2o[c]  h[c]
+nad[c]  nadh[c]
+</pre>
+<p>This file can then be used with the <tt class="docutils literal">vis</tt> command through the <tt class="docutils literal"><span class="pre">--hide-edges</span></tt> argument:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model vis --hide-edges <span class="operator">{</span>path to edges file<span class="operator">}</span>
+</pre>
+</div>
+<div class="section" id="graph-image-customization">
+<h2>Graph Image Customization</h2>
+<p>By default the reaction and metabolite nodes in a graph will only show the reaction or
+metabolite IDs, but the final graphs output by the command can be customized to
+include additional reaction metabolite information that is present in the model.
+This additional information will be shown directly on the reaction or metabolite
+nodes in the graph. This can be done through using the <tt class="docutils literal"><span class="pre">--rxn-detail</span></tt> and
+<tt class="docutils literal"><span class="pre">--cpd-detail</span></tt> options. These options can be used followed by a space separated list
+of properties to include. For example the following could be run to show additional
+information on both sets of nodes:</p>
+<pre class="code literal-block">
+$ psamm-model vis --cpd-detail id formula charge --rxn-detail id name equation
+</pre>
+<p>The reaction and metabolite nodes can be further customized by specifying which colors
+they should be filled in with on the final graph image. This can be done by first
+creating a two column file of reaction or metabolite IDs and hex color codes:</p>
+<pre class="code shell literal-block">
+ACONTa  <span class="comment">#c4a0ef
+</span>succ<span class="operator">[</span>c<span class="operator">]</span> <span class="comment">#10ea88
+</span>FUM <span class="comment">#c4a0ef
+</span>....
+</pre>
+<p>This file can be used to color the nodes on the graph through the <tt class="docutils literal"><span class="pre">--color</span></tt> option:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model vis --color <span class="operator">{</span>path to color table<span class="operator">}</span>
+</pre>
+<p>The default graph images generated through the <cite>vis</cite> command will show condensed reaction nodes
+that contain multiple reactions that all have the same reactant/product pairs. This might be
+seen when multiple reactions that all involve ATP and ADP are present in the model. In these nodes
+only the reaction IDs will be shown and only the default colors can be used. If the user wants to
+split these condensed nodes up into individual reaction nodes the <tt class="docutils literal"><span class="pre">--split-map</span></tt> option can be used:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model vis --split-map
+</pre>
+<div class="note">
+<p class="first admonition-title">Note</p>
+<p class="last">The <tt class="docutils literal"><span class="pre">--split-map</span></tt> option can not be used with the <tt class="docutils literal"><span class="pre">--no-fpp</span></tt> option. The <tt class="docutils literal"><span class="pre">--no-fpp</span></tt> graphs
+do not contain condensed reaction nodes.</p>
+</div>
+<p>The <tt class="docutils literal"><span class="pre">--fba</span></tt> option can be used to run <tt class="docutils literal">fba</tt> on the model to maximize the biomass reaction and then
+adjust the edge widths in the final graph based on the flux of the reactions in the model.
+When using this option the biomass reaction must be specified in the <tt class="docutils literal">model.yaml</tt>. The final edge
+widths shown on the graph will be scaled relative to each other based on the reaction fluxes, with
+thicker edges representing larger fluxes:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model vis --fba
+</pre>
+<p>The final graph image can also be modified to show the reactions and metabolites in different compartments
+based on the compartment information provided in the model's reactions. This can be done through using the
+<tt class="docutils literal"><span class="pre">--compartment</span></tt> option:</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model vis --compartment
+</pre>
+</div>
+</div>
+<div class="section" id="sbml-export-sbmlexport">
+<h1>SBML Export (<tt class="docutils literal">sbmlexport</tt>)</h1>
+<p>Exports the model to the SBML file format. This command exports the model as
+an <a class="reference external" href="http://sbml.org/Documents/Specifications">SBML level 3</a> file with flux bounds, objective and gene information
+encoded with <a class="reference external" href="http://sbml.org/Documents/Specifications/SBML_Level_3/Packages/fbc">Flux Balance Constraints version 2</a>.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model sbmlexport model.xml
+</pre>
+<p>If the file name is omitted, the file contents will be output directly to the
+screen. Using the <tt class="docutils literal"><span class="pre">--pretty</span></tt> option makes the output formatted for
+readability.</p>
+</div>
+<div class="section" id="excel-export-excelexport">
+<h1>Excel Export (<tt class="docutils literal">excelexport</tt>)</h1>
+<p>Exports the model to the Excel file format.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model excelexport model.xls
+</pre>
+</div>
+<div class="section" id="table-export-tableexport">
+<h1>Table Export (<tt class="docutils literal">tableexport</tt>)</h1>
+<p>Exports the model to the tsv file format.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model tableexport reactions &gt; model.tsv
+</pre>
+</div>
+<div class="section" id="search-search">
+<h1>Search (<tt class="docutils literal">search</tt>)</h1>
+<p>This command can be used to search in a database for compounds or reactions. To
+search for a compound use</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model search compound <span class="operator">[</span>...<span class="operator">]</span>
+</pre>
+<p>Use the <tt class="docutils literal"><span class="pre">--name</span></tt> option to search for a compound with a specific name or use
+the <tt class="docutils literal"><span class="pre">--id</span></tt> option to search for a compound with a specific identifier.</p>
+<p>To search for a reaction use</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model search reaction <span class="operator">[</span>...<span class="operator">]</span>
+</pre>
+<p>Use the <tt class="docutils literal"><span class="pre">--id</span></tt> option to search for a reaction with a specific identifier.
+The <tt class="docutils literal"><span class="pre">--compound</span></tt> option can be used to search for reactions that include a
+specific compound. If more that one compound identifier is given
+(comma-separated) this will find reactions that include all of the given
+compounds.</p>
+</div>
+<div class="section" id="console-console">
+<h1>Console (<tt class="docutils literal">console</tt>)</h1>
+<p>This command will start a Python session where the model has been loaded into
+the corresponding Python object representation.</p>
+<pre class="code shell literal-block">
+<span class="name variable">$ </span>psamm-model console
+</pre>
+</div>
+<div class="system-messages section">
+<h1>Docutils System Messages</h1>
+<div class="system-message" id="id20">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 64); <em><a href="#id21">backlink</a></em></p>
+Unknown target name: &quot;orth10&quot;.</div>
+<div class="system-message" id="id22">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 64); <em><a href="#id23">backlink</a></em></p>
+Unknown target name: &quot;fell86&quot;.</div>
+<div class="system-message" id="id24">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 80); <em><a href="#id25">backlink</a></em></p>
+Unknown target name: &quot;schilling00&quot;.</div>
+<div class="system-message" id="id26">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 106); <em><a href="#id27">backlink</a></em></p>
+Unknown target name: &quot;mahadevan03&quot;.</div>
+<div class="system-message" id="id28">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 125); <em><a href="#id29">backlink</a></em></p>
+Unknown target name: &quot;schilling00&quot;.</div>
+<div class="system-message" id="id30">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 153); <em><a href="#id31">backlink</a></em></p>
+Unknown target name: &quot;edwards00&quot;.</div>
+<div class="system-message" id="id32">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 278); <em><a href="#id33">backlink</a></em></p>
+Unknown target name: &quot;segre02&quot;.</div>
+<div class="system-message" id="id34">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 286); <em><a href="#id35">backlink</a></em></p>
+Unknown target name: &quot;mo09&quot;.</div>
+<div class="system-message" id="id36">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 306); <em><a href="#id37">backlink</a></em></p>
+Unknown target name: &quot;burgard04&quot;.</div>
+<div class="system-message" id="id38">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 322); <em><a href="#id39">backlink</a></em></p>
+Unknown target name: &quot;gevorgyan08&quot;.</div>
+<div class="system-message" id="id40">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 480); <em><a href="#id41">backlink</a></em></p>
+Unknown target name: &quot;kumar07&quot;.</div>
+<div class="system-message" id="id42">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 495); <em><a href="#id43">backlink</a></em></p>
+Unknown target name: &quot;kumar07&quot;.</div>
+<div class="system-message" id="id44">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 539); <em><a href="#id45">backlink</a></em></p>
+Unknown target name: &quot;thiele14&quot;.</div>
+<div class="system-message" id="id46">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 579); <em><a href="#id47">backlink</a></em></p>
+Unknown target name: &quot;steffensen17&quot;.</div>
+<div class="system-message" id="id48">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">../commands.rst</tt>, line 579); <em><a href="#id49">backlink</a></em></p>
+Unknown target name: &quot;tervo16&quot;.</div>
+</div>
+</div>
+</body>
+</html>
