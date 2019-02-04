@@ -131,6 +131,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         filter_dict = make_filter_dict(
             self._model, self._mm, self._args.method, self._args.element,
             compound_formula, self._args.hide_edges, self._args.exclude)
+        if self._args.method != 'fpp':
+            filter_dict_for_table = make_filter_dict(
+                self._model, self._mm, 'fpp', self._args.element,
+                compound_formula, self._args.hide_edges, self._args.exclude)
+        else:
+            filter_dict_for_table = filter_dict
 
         reaction_flux = {}
         if self._args.fba is True:
@@ -160,10 +166,18 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             self._mm, filter_dict, subset_reactions, reaction_flux,
             self._args.method)
 
+        cpair_dict_for_table, new_id_mapping_for_table = \
+            make_cpair_dict(self._mm, filter_dict_for_table,
+                            subset_reactions, reaction_flux, 'fpp')
+
         edge_values = make_edge_values(
             reaction_flux, self._mm, compound_formula, self._args.element,
             self._args.split_map, cpair_dict, new_id_mapping,
             self._args.method)
+        edge_values_for_table = make_edge_values(
+            reaction_flux, self._mm, compound_formula, self._args.element,
+            'True', cpair_dict_for_table, new_id_mapping_for_table,
+            'fpp')
 
         model_compound_entries, model_reaction_entries = {}, {}
         for c in self._model.compounds:
@@ -172,22 +186,48 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             model_reaction_entries[r.id] = r
 
         g = graph.Graph()
+        g_table = graph.Graph()
         g._default_node_props['fontname'] = 'Arial'
         g._default_node_props['fontsize'] = 12
         g = add_graph_nodes(g, cpair_dict, self._args.method,
                             new_id_mapping, split=self._args.split_map)
+        g_table = add_graph_nodes(g_table, cpair_dict_for_table, 'fpp',
+                                  new_id_mapping_for_table, split=True)
         g = add_edges(g, cpair_dict, self._args.method,
                       split=self._args.split_map)
+        g_table = add_edges(g_table, cpair_dict_for_table, 'fpp',
+                            split=True)
 
+        bio_cpds_sub = set()
+        bio_cpds_pro = set()
+        if self._model.biomass_reaction is not None:
+            biomass_rxn = self._mm.get_reaction(self._model.biomass_reaction)
+            for cpd, _ in biomass_rxn.left:
+                bio_cpds_sub.add(text_type(cpd))
+            for cpd, _ in biomass_rxn.right:
+                bio_cpds_pro.add(text_type(cpd))
         if self._model.biomass_reaction in subset_reactions and \
                 self._model.biomass_reaction not in self._args.exclude:
             biomass_rxn = self._mm.get_reaction(self._model.biomass_reaction)
             g = add_biomass_rxns(g, biomass_rxn, self._model.biomass_reaction)
 
+        exchange_cpds = set()
         for reaction in self._mm.reactions:
             if self._mm.is_exchange(reaction):
                 exchange_rxn = self._mm.get_reaction(reaction)
                 g = add_exchange_rxns(g, reaction, exchange_rxn)
+                for cpd, _ in exchange_rxn.compounds:
+                    exchange_cpds.add(text_type(cpd))
+
+        for node in g_table.nodes:
+            if node.props['id'] in bio_cpds_sub:
+                node.props['type'] = 'cpd_biomass_substrate'
+            elif node.props['id'] in bio_cpds_pro:
+                node.props['type'] = 'cpd_biomass_product'
+            elif node.props['id'] in exchange_cpds:
+                node.props['type'] = 'cpd_exchange'
+            else:
+                continue
 
         recolor_dict = {}
         if self._args.color is not None:
@@ -197,12 +237,17 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
 
         if len(recolor_dict) > 0:
             g = update_node_color(g, recolor_dict)
+            g_table = update_node_color(g_table, recolor_dict)
         if self._args.cpd_detail is not None or self._args.rxn_detail \
                 is not None or self._args.fba is True:
             g = update_node_label(
                 g, self._args.cpd_detail, self._args.rxn_detail,
                 model_compound_entries, model_reaction_entries, reaction_flux)
+            g_table = update_node_label(
+                g_table, self._args.cpd_detail, self._args.rxn_detail,
+                model_compound_entries, model_reaction_entries, reaction_flux)
         g = set_edge_props_withfba(g, edge_values)
+        g_table = set_edge_props_withfba(g_table, edge_values_for_table)
 
         if self._args.method == 'no-fpp' and self._args.split_map is True:
             logger.warning('--split-map is not compatible with no-fpp option')
@@ -225,9 +270,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             with open('reactions.dot', 'w') as f:
                 g.write_graphviz(f, width, height)
         with open('reactions.nodes.tsv', 'w') as f:
-            g.write_cytoscape_nodes(f)
+            g_table.write_cytoscape_nodes(f)
         with open('reactions.edges.tsv', 'w') as f:
-            g.write_cytoscape_edges(f)
+            g_table.write_cytoscape_edges(f)
 
         if self._args.Image is not None:
             if render is None:
@@ -487,122 +532,7 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
     return cpairs_ordered_filter_dict
 
 
-def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
-    """Create a mapping from compound pair to a defaultdict containing
-    lists of reactions for the forward, reverse, and both directions.
-
-    Args:
-        mm: Class 'psamm.metabolicmodel.MetabolicModel'.
-        filter_dict: A dictionary mapping form reaction ID to compound pairs
-            that go through this reaction.
-        subset: A list of reaction IDs, including all the reactions that
-            will be visualized.
-        reaction_flux: A dictionary mapping from reaction ID to
-            reaction flux value.
-        args_method: Command line argument, a string, including 'fpp',
-            'no-fpp' and file path.
-    """
-    new_id_mapping = {}
-    rxn_count = Counter()
-    cpair_dict = defaultdict(lambda: defaultdict(list))
-
-    if args_method != 'half-fpp':
-        for r, cpairs in iteritems(filter_dict):
-            if r in subset:
-                rx = mm.get_reaction(r)     # metabolic model won't have reaction 'back'
-                for (c1, c2) in cpairs:
-                    if args_method == 'no-fpp':
-                        r_id = r
-                        new_id_mapping[r_id] = r
-                    else:
-                        rxn_count[r] += 1
-                        r_id = str('{}_{}'.format(r, rxn_count[r]))
-                        new_id_mapping[r_id] = r
-                    if rx.direction == Direction.Forward:
-                        cpair_dict[(c1, c2)]['forward'].append(r_id)
-                    else:
-                        if r in reaction_flux:
-                            if reaction_flux[r] > 0:
-                                cpair_dict[(c1, c2)]['forward'].append(r_id)
-                            else:
-                                cpair_dict[(c1, c2)]['back'].append(r_id)
-                        else:
-                            cpair_dict[(c1, c2)]['both'].append(r_id)
-    else:
-        ####  all cpairs that shared substrate or product will be connected to the same reaction node, used for visualization
-        # for rxn, cpairs in iteritems(filter_dict):
-        #     cpd_rid = {}
-        #     have_visited = set()
-        #     if rxn in subset:
-        #         rx = mm.get_reaction(rxn)
-        #         for (c1, c2) in sorted(cpairs):
-        #             if c1 not in have_visited:
-        #                 if c2 not in have_visited:
-        #                     rxn_count[rxn] += 1
-        #                     rxn_id = str('{}_{}'.format(rxn, rxn_count[rxn]))
-        #                     new_id_mapping[rxn_id] = rxn
-        #                     have_visited.add(c1)
-        #                     have_visited.add(c2)
-        #                     cpd_rid[c1] = rxn_id
-        #                     cpd_rid[c2] = rxn_id
-        #                 else:
-        #                     rxn_id = cpd_rid[c2]
-        #                     have_visited.add(c1)
-        #                     cpd_rid[c1] = rxn_id
-        #             else:
-        #                 rxn_id = cpd_rid[c1]
-        #                 have_visited.add(c2)
-        #                 cpd_rid[c2] = rxn_id
-        #
-        #             if rx.direction == Direction.Forward:
-        #                 cpair_dict[(c1, c2)]['forward'].append(rxn_id)
-        #             else:
-        #                 if rxn in reaction_flux:
-        #                     if reaction_flux[rxn] > 0:
-        #                         cpair_dict[(c1, c2)]['forward'].append(rxn_id)
-        #                     else:
-        #                         cpair_dict[(c1, c2)]['back'].append(rxn_id)
-        #                 else:
-        #                     cpair_dict[(c1, c2)]['both'].append(rxn_id)
-
-        #### reduce the node and edge number but also represent the element transfer.
-        for rxn, cpairs in iteritems(filter_dict):
-            cpd_rid = {}
-            have_visited = set()
-            sub_pro = defaultdict(list)     # substrate map to a list of product
-            rxn_mixcpairs = defaultdict(list)
-            if rxn in subset:
-                rx = mm.get_reaction(rxn)
-                for (c1, c2) in sorted(cpairs):
-                    sub_pro[c1].append(c2)
-                for k1, v1 in iteritems(sub_pro):
-                    if k1 not in have_visited:
-                        rxn_count[rxn] += 1
-                        have_visited.add(k1)
-                        r_id = str('{}_{}'.format(rxn, rxn_count[rxn]))
-                        new_id_mapping[r_id] = rxn
-                        for v in v1:
-                            rxn_mixcpairs[r_id].append((k1, v))
-                        for k2, v2 in iteritems(sub_pro):
-                            if k2 not in have_visited:
-                                if k2 != k1:
-                                    if v1 == v2:
-                                        have_visited.add(k2)
-                                        for vtest in v2:
-                                            rxn_mixcpairs[r_id].append((k2, vtest))
-                for rxn_id, cpairs in iteritems(rxn_mixcpairs):
-                    for (c1, c2) in cpairs:
-                        if rx.direction == Direction.Forward:
-                            cpair_dict[(c1, c2)]['forward'].append(rxn_id)
-                        else:
-                            if rxn in reaction_flux:
-                                if reaction_flux[rxn] > 0:
-                                    cpair_dict[(c1, c2)]['forward'].append(rxn_id)
-                                else:
-                                    cpair_dict[(c1, c2)]['back'].append(rxn_id)
-                            else:
-                                cpair_dict[(c1, c2)]['both'].append(rxn_id)
-
+def make_mature_cpair_dict(cpair_dict):
     new_cpair_dict = {}
     cpair_list = []
     for (c1, c2), rxns in sorted(iteritems(cpair_dict)):
@@ -630,7 +560,129 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
         for direction, rlist in iteritems(rxns):
             rxns_sorted_cpair_dict[(c1, c2)][direction] = sorted(rlist)
 
+    return rxns_sorted_cpair_dict
+
+
+def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
+    """Create a mapping from compound pair to a defaultdict containing
+    lists of reactions for the forward, reverse, and both directions.
+
+    Args:
+        mm: Class 'psamm.metabolicmodel.MetabolicModel'.
+        filter_dict: A dictionary mapping form reaction ID to compound pairs
+            that go through this reaction.
+        subset: A list of reaction IDs, including all the reactions that
+            will be visualized.
+        reaction_flux: A dictionary mapping from reaction ID to
+            reaction flux value.
+        args_method: Command line argument, a string, including 'fpp',
+            'no-fpp' and file path.
+    """
+    new_id_mapping = {}
+    rxn_count = Counter()
+    cpair_dict = defaultdict(lambda: defaultdict(list))
+
+    if args_method == 'no-fpp':
+        for r, cpairs in iteritems(filter_dict):
+            if r in subset:
+                rx = mm.get_reaction(r)     # metabolic model won't have reaction 'back'
+                for (c1, c2) in cpairs:
+                    r_id = r
+                    new_id_mapping[r_id] = r
+                    if rx.direction == Direction.Forward:
+                        cpair_dict[(c1, c2)]['forward'].append(r_id)
+                    else:
+                        if r in reaction_flux:
+                            if reaction_flux[r] > 0:
+                                cpair_dict[(c1, c2)]['forward'].append(r_id)
+                            else:
+                                cpair_dict[(c1, c2)]['back'].append(r_id)
+                        else:
+                            cpair_dict[(c1, c2)]['both'].append(r_id)
+    else:
+        for rxn, cpairs in iteritems(filter_dict):
+            cpd_rid = {}
+            have_visited = set()
+            if rxn in subset:
+                rx = mm.get_reaction(rxn)
+                for (c1, c2) in sorted(cpairs):
+                    if c1 not in have_visited:
+                        if c2 not in have_visited:
+                            rxn_count[rxn] += 1
+                            rxn_id = str('{}_{}'.format(rxn, rxn_count[rxn]))
+                            new_id_mapping[rxn_id] = rxn
+                            have_visited.add(c1)
+                            have_visited.add(c2)
+                            cpd_rid[c1] = rxn_id
+                            cpd_rid[c2] = rxn_id
+                        else:
+                            rxn_id = cpd_rid[c2]
+                            have_visited.add(c1)
+                            cpd_rid[c1] = rxn_id
+                    else:
+                        rxn_id = cpd_rid[c1]
+                        have_visited.add(c2)
+                        cpd_rid[c2] = rxn_id
+
+                    if rx.direction == Direction.Forward:
+                        cpair_dict[(c1, c2)]['forward'].append(rxn_id)
+                    else:
+                        if rxn in reaction_flux:
+                            if reaction_flux[rxn] > 0:
+                                cpair_dict[(c1, c2)]['forward'].append(rxn_id)
+                            else:
+                                cpair_dict[(c1, c2)]['back'].append(rxn_id)
+                        else:
+                            cpair_dict[(c1, c2)]['both'].append(rxn_id)
+
+    rxns_sorted_cpair_dict = make_mature_cpair_dict(cpair_dict)
+
     return rxns_sorted_cpair_dict, new_id_mapping
+
+
+def make_cpair_dict_for_table(mm, filter_dict, subset, reaction_flux):
+    new_id_mapping_for_table = {}
+    rxn_count = Counter()
+    cpair_dict = defaultdict(lambda: defaultdict(list))
+    for rxn, cpairs in iteritems(filter_dict):
+        have_visited = set()
+        sub_pro = defaultdict(list)     # substrate map to a list of product
+        rxn_mixcpairs = defaultdict(list)
+        if rxn in subset:
+            rx = mm.get_reaction(rxn)
+            for (c1, c2) in sorted(cpairs):
+                sub_pro[c1].append(c2)
+            for k1, v1 in iteritems(sub_pro):
+                if k1 not in have_visited:
+                    rxn_count[rxn] += 1
+                    have_visited.add(k1)
+                    r_id = str('{}_{}'.format(rxn, rxn_count[rxn]))
+                    new_id_mapping_for_table[r_id] = rxn
+                    for v in v1:
+                        rxn_mixcpairs[r_id].append((k1, v))
+                    for k2, v2 in iteritems(sub_pro):
+                        if k2 not in have_visited:
+                            if k2 != k1:
+                                if v1 == v2:
+                                    have_visited.add(k2)
+                                    for vtest in v2:
+                                        rxn_mixcpairs[r_id].append((k2, vtest))
+            for rxn_id, cpairs in iteritems(rxn_mixcpairs):
+                for (c1, c2) in cpairs:
+                    if rx.direction == Direction.Forward:
+                        cpair_dict[(c1, c2)]['forward'].append(rxn_id)
+                    else:
+                        if rxn in reaction_flux:
+                            if reaction_flux[rxn] > 0:
+                                cpair_dict[(c1, c2)]['forward'].append(rxn_id)
+                            else:
+                                cpair_dict[(c1, c2)]['back'].append(rxn_id)
+                        else:
+                            cpair_dict[(c1, c2)]['both'].append(rxn_id)
+
+    final_cpair_dict_for_table = make_mature_cpair_dict(cpair_dict)
+
+    return final_cpair_dict_for_table, new_id_mapping_for_table
 
 
 def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, split=False):
