@@ -529,41 +529,79 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method):
                         else:
                             cpair_dict[(c1, c2)]['both'].append(r_id)
     else:
+        ####  all cpairs that shared substrate or product will be connected to the same reaction node, used for visualization
+        # for rxn, cpairs in iteritems(filter_dict):
+        #     cpd_rid = {}
+        #     have_visited = set()
+        #     if rxn in subset:
+        #         rx = mm.get_reaction(rxn)
+        #         for (c1, c2) in sorted(cpairs):
+        #             if c1 not in have_visited:
+        #                 if c2 not in have_visited:
+        #                     rxn_count[rxn] += 1
+        #                     rxn_id = str('{}_{}'.format(rxn, rxn_count[rxn]))
+        #                     new_id_mapping[rxn_id] = rxn
+        #                     have_visited.add(c1)
+        #                     have_visited.add(c2)
+        #                     cpd_rid[c1] = rxn_id
+        #                     cpd_rid[c2] = rxn_id
+        #                 else:
+        #                     rxn_id = cpd_rid[c2]
+        #                     have_visited.add(c1)
+        #                     cpd_rid[c1] = rxn_id
+        #             else:
+        #                 rxn_id = cpd_rid[c1]
+        #                 have_visited.add(c2)
+        #                 cpd_rid[c2] = rxn_id
+        #
+        #             if rx.direction == Direction.Forward:
+        #                 cpair_dict[(c1, c2)]['forward'].append(rxn_id)
+        #             else:
+        #                 if rxn in reaction_flux:
+        #                     if reaction_flux[rxn] > 0:
+        #                         cpair_dict[(c1, c2)]['forward'].append(rxn_id)
+        #                     else:
+        #                         cpair_dict[(c1, c2)]['back'].append(rxn_id)
+        #                 else:
+        #                     cpair_dict[(c1, c2)]['both'].append(rxn_id)
 
+        #### reduce the node and edge number but also represent the element transfer.
         for rxn, cpairs in iteritems(filter_dict):
             cpd_rid = {}
             have_visited = set()
+            sub_pro = defaultdict(list)     # substrate map to a list of product
+            rxn_mixcpairs = defaultdict(list)
             if rxn in subset:
                 rx = mm.get_reaction(rxn)
                 for (c1, c2) in sorted(cpairs):
-                    if c1 not in have_visited:
-                        if c2 not in have_visited:
-                            rxn_count[rxn] += 1
-                            rxn_id = str('{}_{}'.format(rxn, rxn_count[rxn]))
-                            new_id_mapping[rxn_id] = rxn
-                            have_visited.add(c1)
-                            have_visited.add(c2)
-                            cpd_rid[c1] = rxn_id
-                            cpd_rid[c2] = rxn_id
+                    sub_pro[c1].append(c2)
+                for k1, v1 in iteritems(sub_pro):
+                    if k1 not in have_visited:
+                        rxn_count[rxn] += 1
+                        have_visited.add(k1)
+                        r_id = str('{}_{}'.format(rxn, rxn_count[rxn]))
+                        new_id_mapping[r_id] = rxn
+                        for v in v1:
+                            rxn_mixcpairs[r_id].append((k1, v))
+                        for k2, v2 in iteritems(sub_pro):
+                            if k2 not in have_visited:
+                                if k2 != k1:
+                                    if v1 == v2:
+                                        have_visited.add(k2)
+                                        for vtest in v2:
+                                            rxn_mixcpairs[r_id].append((k2, vtest))
+                for rxn_id, cpairs in iteritems(rxn_mixcpairs):
+                    for (c1, c2) in cpairs:
+                        if rx.direction == Direction.Forward:
+                            cpair_dict[(c1, c2)]['forward'].append(rxn_id)
                         else:
-                            rxn_id = cpd_rid[c2]
-                            have_visited.add(c1)
-                            cpd_rid[c1] = rxn_id
-                    else:
-                        rxn_id = cpd_rid[c1]
-                        have_visited.add(c2)
-                        cpd_rid[c2] = rxn_id
-
-                    if rx.direction == Direction.Forward:
-                        cpair_dict[(c1, c2)]['forward'].append(rxn_id)
-                    else:
-                        if rxn in reaction_flux:
-                            if reaction_flux[rxn] > 0:
-                                cpair_dict[(c1, c2)]['forward'].append(rxn_id)
+                            if rxn in reaction_flux:
+                                if reaction_flux[rxn] > 0:
+                                    cpair_dict[(c1, c2)]['forward'].append(rxn_id)
+                                else:
+                                    cpair_dict[(c1, c2)]['back'].append(rxn_id)
                             else:
-                                cpair_dict[(c1, c2)]['back'].append(rxn_id)
-                        else:
-                            cpair_dict[(c1, c2)]['both'].append(rxn_id)
+                                cpair_dict[(c1, c2)]['both'].append(rxn_id)
 
     new_cpair_dict = {}
     cpair_list = []
