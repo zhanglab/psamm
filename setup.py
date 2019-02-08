@@ -61,12 +61,15 @@ setup(
 
     classifiers=[
         'Development Status :: 4 - Beta',
-        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+        (
+            'License :: OSI Approved :: '
+            'GNU General Public License v3 or later (GPLv3+)'),
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6'
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
 
     packages=find_packages(),
@@ -100,6 +103,7 @@ setup(
         sbmlexport = psamm.commands.sbmlexport:SBMLExport
         search = psamm.commands.search:SearchCommand
         tableexport = psamm.commands.tableexport:ExportTableCommand
+        modelmapping = psamm.commands.model_mapping:ModelMappingCommand
 
         [psamm.importer]
         JSON = psamm.importers.cobrajson:Importer
@@ -112,7 +116,9 @@ setup(
     install_requires=[
         'PyYAML~=3.11',
         'six',
-        'xlsxwriter'
+        'xlsxwriter',
+        'future',
+        'pandas'
     ],
     extras_require={
         'docs': ['sphinx', 'sphinx_rtd_theme', 'mock'],

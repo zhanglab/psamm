@@ -449,7 +449,7 @@ def count_genes(model):
 
 def write_yaml_model(model, dest='.', convert_exchange=True,
                      split_subsystem=True):
-    """Write the given MetabolicModel to YAML files in dest folder.
+    """Write the given NativeModel to YAML files in dest folder.
 
     The parameter ``convert_exchange`` indicates whether the exchange reactions
     should be converted automatically to an exchange file.
