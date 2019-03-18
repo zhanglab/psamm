@@ -98,6 +98,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             help='Generate visualization of the network with compartments '
                  'shown.')
         parser.add_argument(
+            '--output', type=text_type, help='set output name.')
+        parser.add_argument(
             '--image-size', type=text_type, default=None,
             help='Set width and height of the graph image. '
                  '(width,height)(inches)')
@@ -126,7 +128,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                         msg += '\n{}'.format(e.indicator)
                     logger.warning(msg)
 
-        subset_reactions = make_subset(self._mm, self._args.subset)
+        vis_rxns = rxnset_for_vis(self._mm, self._args.subset)
 
         filter_dict = make_filter_dict(
             self._model, self._mm, self._args.method, self._args.element,
@@ -157,23 +159,15 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                     reaction_flux[r_id] = flux
 
         cpair_dict, new_id_mapping = make_cpair_dict(
-            self._mm, filter_dict, subset_reactions, reaction_flux,
+            self._mm, filter_dict, vis_rxns, reaction_flux,
             self._args.method, self._args.combine)
-        print(len(filter_dict))
-        print('length:', len(cpair_dict))
-
-        # cpair_dict_for_table, new_id_mapping_for_table = \
-        #     make_cpair_dict(self._mm, filter_dict_for_table,
-        #                     subset_reactions, reaction_flux, 'fpp')
+        print('filter_dict length:', len(filter_dict))
+        print('cpair_dict length:', len(cpair_dict))
 
         edge_values = make_edge_values(
             reaction_flux, self._mm, compound_formula, self._args.element,
             self._args.combine, cpair_dict, new_id_mapping,
             self._args.method)
-        # edge_values_for_table = make_edge_values(
-        #     reaction_flux, self._mm, compound_formula, self._args.element,
-        #     'True', cpair_dict_for_table, new_id_mapping_for_table,
-        #     'fpp')
 
         model_compound_entries, model_reaction_entries = {}, {}
         for c in self._model.compounds:
@@ -182,20 +176,15 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             model_reaction_entries[r.id] = r
 
         g = graph.Graph()
-        # g_table = graph.Graph()
         g._default_node_props['fontname'] = 'Arial'
         g._default_node_props['fontsize'] = 12
         g = add_graph_nodes(g, cpair_dict, self._args.method,
                             new_id_mapping, self._args.combine)
-        # g_table = add_graph_nodes(g_table, cpair_dict_for_table, 'fpp',
-        #                           new_id_mapping_for_table, split=True)
         g = add_edges(g, cpair_dict, self._args.method, self._args.combine)
-        # g_table = add_edges(g_table, cpair_dict_for_table, 'fpp',
-        #                     split=True)
 
         bio_cpds_sub = set()
         bio_cpds_pro = set()
-        if self._model.biomass_reaction in subset_reactions and \
+        if self._model.biomass_reaction in vis_rxns and \
                 self._model.biomass_reaction not in self._args.exclude:
             biomass_rxn = self._mm.get_reaction(self._model.biomass_reaction)
             g = add_biomass_rxns(g, biomass_rxn, self._model.biomass_reaction)
@@ -230,17 +219,14 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
 
         if len(recolor_dict) > 0:
             g = update_node_color(g, recolor_dict)
-            # g_table = update_node_color(g_table, recolor_dict)
+
         if self._args.cpd_detail is not None or self._args.rxn_detail \
                 is not None or self._args.fba is True:
             g = update_node_label(
                 g, self._args.cpd_detail, self._args.rxn_detail,
                 model_compound_entries, model_reaction_entries, reaction_flux)
-            # g_table = update_node_label(
-            #     g_table, self._args.cpd_detail, self._args.rxn_detail,
-            #     model_compound_entries, model_reaction_entries, reaction_flux)
+
         g = set_edge_props_withfba(g, edge_values)
-        # g_table = set_edge_props_withfba(g_table, edge_values_for_table)
 
         # if self._args.method == 'no-fpp' and self._args.split_map is True:
         #     logger.warning('--split-map is not compatible with no-fpp option')
@@ -254,6 +240,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             width = hw[0]
             height = hw[1]
 
+        if self._args.output is not None:
+            output = '{}.dot'.format(self._args.output)
+        else:
+            output = 'reactions.dot'
+
         if self._args.compartment:
             boundaries, extracellular = get_cpt_boundaries(self._model)
             boundary_tree, extracellular = make_cpt_tree(boundaries,
@@ -262,7 +253,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                 g.write_graphviz_compartmentalized(
                     f, boundary_tree, extracellular, width, height)
         else:
-            with open('reactions.dot', 'w') as f:
+            # with open('reactions.dot', 'w') as f:
+            with open(output, 'w') as f:
                 g.write_graphviz(f, width, height)
         with open('reactions.nodes.tsv', 'w') as f:
             g.write_cytoscape_nodes(f)
@@ -285,10 +277,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                     render('dot', self._args.Image,
                            'reactions_compartmentalized.dot')
                 else:
-                    render('dot', self._args.Image, 'reactions.dot')
+                    # render('dot', self._args.Image, 'reactions.dot')
+                    render('dot', self._args.Image, output)
 
 
-def make_subset(mm, subset_file):
+def rxnset_for_vis(mm, subset_file):
     """create a collection of reaction IDs that need to be visualized.
 
     Args:
@@ -296,29 +289,42 @@ def make_subset(mm, subset_file):
         subset_file: None or an open file containing a list of reactions
                      or compound ids.
     """
+    all_cpds = set()
+    for cpd in mm.compounds:
+        all_cpds.add(cpd.name)
     if subset_file is None:
         return set(mm.reactions)
     else:
+        final_rxn_set = set()
         cpd_set = set()
         rxn_set = set()
         for l in subset_file.readlines():
-            id = l.rstrip()
-            if mm.has_compound(id):
-                cpd_set.add(id)
-            elif mm.has_reaction(id):
-                rxn_set.add(id)
+            value = l.strip()
+            # if mm.has_compound(value):
+            #     cpd_set.add(value)
+            # elif mm.has_reaction(value):
+            #     rxn_set.add(value)
+            if value in all_cpds:
+                cpd_set.add(value)
+            elif mm.has_reaction(value):
+                rxn_set.add(value)
             else:
-                raise ValueError('{} was in subset file but is '
-                                 'not a compound or reaction id'.format(id))
+                raise ValueError('{} is in subset file but is '
+                                 'not a compound or reaction id'.format(value))
+
         if all(i > 0 for i in [len(cpd_set), len(rxn_set)]):
-            raise ValueError('Subset file contains a mix of reactions and '
+            raise ValueError('Subset file is a mixture of reactions and '
                              'compounds.')
-        if len(cpd_set) > 0:
-            for rx in mm.reactions:
-                rxn = mm.get_reaction(rx)
-                if any(str(c) in cpd_set for (c, _) in rxn.compounds):
-                    rxn_set.add(rx)
-        return rxn_set
+        else:
+            if len(cpd_set) > 0:
+                for rx in mm.reactions:
+                    rxn = mm.get_reaction(rx)
+                    if any(str(c.name) in cpd_set for (c, _) in rxn.compounds):
+                        final_rxn_set.add(rx)
+            elif len(rxn_set) > 0:
+                final_rxn_set = rxn_set
+
+        return final_rxn_set
 
 
 def make_edge_values(reaction_flux, mm, compound_formula, element, args_combine,
@@ -370,17 +376,19 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, args_combine,
         rxn_set = set()
         for (c1, c2), rxns in iteritems(cpair_dict):
             for direction, rlist in iteritems(rxns):
-                rlist_string = ','.join(new_id_mapping[r] for r in rlist)
+                new_rlist = (','.join(rlist)).split(',')
+                rlist_string = ','.join(new_id_mapping[r] for r in new_rlist)
                 if any(new_id_mapping[r] in reaction_flux and abs(
                         reaction_flux[new_id_mapping[r]]) > 1e-9 for
-                       r in rlist):
+                       r in new_rlist):
                     x_comb_c1, x_comb_c2 = 0, 0
-                    for r in rlist:
-                        real_r = new_id_mapping[r]
-                        rxn_set.add(real_r)
-                        if real_r in reaction_flux and abs(reaction_flux[real_r]) > 1e-9:
-                            x_comb_c1 += edge_values[(c1, real_r)]
-                            x_comb_c2 += edge_values[(c2, real_r)]
+                    for rxns in rlist:
+                        for r in rxns.split(','):
+                            real_r = new_id_mapping[r]
+                            rxn_set.add(real_r)
+                            if real_r in reaction_flux and abs(reaction_flux[real_r]) > 1e-9:
+                                x_comb_c1 += edge_values[(c1, real_r)]
+                                x_comb_c2 += edge_values[(c2, real_r)]
                     edge_values_combined[(c1, rlist_string)] = x_comb_c1
                     edge_values_combined[(c2, rlist_string)] = x_comb_c2
 
@@ -438,7 +446,12 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
             if any(c.name not in cpd_formula for c, _ in
                    reaction.equation.compounds):
                 rxns_no_formula.append(reaction.id)
-                continue
+
+                # # check cpds without formula
+                # for c, _ in reaction.equation.compounds:
+                #     if c.name not in cpd_formula:
+                #         print('{}, cpds needs to check:{}'.format(reaction.id, c.name))
+                # continue
 
             fpp_rxns.add(reaction)
 
@@ -471,6 +484,9 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
                     else:
                         if any(Atom(element) in k for k in transfer):
                             compound_pairs.append(cpd_pair)
+                        # if any(Atom('Fe') in k for k in transfer):
+                        #     compound_pairs.append(cpd_pair)
+
             if len(compound_pairs) != 0:
                 filter_dict[rxn_id] = compound_pairs
 
@@ -574,12 +590,15 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method, args_co
             reaction flux value.
         args_method: Command line argument, a string, including 'fpp',
             'no-fpp' and file path.
+        args_combine: combine level, default = 0, optional: 1 and 2.
     """
 
     new_id_mapping = {}
     rxn_count = Counter()
     cpair_dict = defaultdict(lambda: defaultdict(list))
 
+
+    ### PDH PFL combine 2 not change version
     if args_method != 'no-fpp':
         rxn_mixcpairs = defaultdict(list)
         # if args_combine == 0 or args_combine == 2:
@@ -672,41 +691,6 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method, args_co
                     else:
                         cpair_dict[(c1, c2)]['both'].append(rxn_id)
 
-        # elif args_combine == 1:
-        #     for rxn, cpairs in iteritems(filter_dict):
-        #         if rxn in subset:
-        #             rx = mm.get_reaction(rxn)
-        #             cpd_rid = {}
-        #             have_visited = set()
-        #             for (c1, c2) in sorted(cpairs):
-        #                 if c1 not in have_visited:
-        #                     if c2 not in have_visited:
-        #                         rxn_count[rxn] += 1
-        #                         rxn_id = str('{}_{}'.format(rxn, rxn_count[rxn]))
-        #                         new_id_mapping[rxn_id] = rxn
-        #                         have_visited.add(c1)
-        #                         have_visited.add(c2)
-        #                         cpd_rid[c1] = rxn_id
-        #                         cpd_rid[c2] = rxn_id
-        #                     else:
-        #                         rxn_id = cpd_rid[c2]
-        #                         have_visited.add(c1)
-        #                         cpd_rid[c1] = rxn_id
-        #                 else:
-        #                     rxn_id = cpd_rid[c1]
-        #                     have_visited.add(c2)
-        #                     cpd_rid[c2] = rxn_id
-        #
-        #                 if rx.direction == Direction.Forward:
-        #                     cpair_dict[(c1, c2)]['forward'].append(rxn_id)
-        #                 else:
-        #                     if rxn in reaction_flux:
-        #                         if reaction_flux[rxn] > 0:
-        #                             cpair_dict[(c1, c2)]['forward'].append(rxn_id)
-        #                         else:
-        #                             cpair_dict[(c1, c2)]['back'].append(rxn_id)
-        #                     else:
-        #                         cpair_dict[(c1, c2)]['both'].append(rxn_id)
     else:
         for rxn, cpairs in iteritems(filter_dict):
             if rxn in subset:
@@ -777,12 +761,12 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, args_combine):
             for sub_rxn in rlist:
                 if ',' in sub_rxn:
                     rl = sub_rxn.split(',')
-                    original_id = ','.join(new_id_mapping[i] for i in rl)
+                    original_id = [new_id_mapping[i] for i in rl]
                     label = '\n'.join(new_id_mapping[i] for i in rl)
                     # label = '\n'.join(i for i in rl)
                 else:
                     label = new_id_mapping[sub_rxn]
-                    original_id = new_id_mapping[sub_rxn]
+                    original_id = [new_id_mapping[sub_rxn]]
 
                 if sub_rxn not in graph_nodes:
                     rnode = graph.Node({
@@ -960,10 +944,11 @@ def update_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
         reaction_flux: dict of rxn_id: reaction flux value.
     """
 
+    cpd_types = ['cpd', 'cpd_biomass_product', 'cpd_biomass_substrate', 'cpd_exchange']
     for node in g.nodes:
-        if node.props['type'] == 'cpd':
+        if node.props['type'] in cpd_types:
             if cpd_detail is not None:
-                cpd_id = node.props['original_id'].name
+                cpd_id = node.props['original_id'].name     # original_id is compound entry, so it has property 'name'
                 props = model_compound_entries[cpd_id].properties
                 cpd_detail_list = [i for i in cpd_detail[0] if i in props]
                 pre_label = '\n'.join(((props[value].encode(
@@ -977,10 +962,17 @@ def update_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
 
         elif node.props['type'] == 'rxn':
             if rxn_detail is not None:
-                rxn_id = '\n'.join(node.props['original_id'])
                 if len(node.props['original_id']) == 1:
+                    rxn_id = node.props['original_id'][0]
+                    print('test original_id:', rxn_id)
                     props = model_reaction_entries[rxn_id].properties
                     rxn_detail_list = [i for i in rxn_detail[0] if i in props]
+
+                    for i in rxn_detail_list:
+                        if isinstance(props[i], list):
+                            tmp = ',  '.join(props[i])
+                            props[i] = tmp
+
                     pre_label = '\n'.join(_encode_value(
                         props[value]) for value in rxn_detail_list
                                           if value != 'id')
@@ -1040,10 +1032,11 @@ def set_edge_props_withfba(g, edge_values):
 
     if len(edge_values) > 0:
         for edge in g.edges:
-            if edge.source.props['type'] == 'cpd':
+            cpd_types = ['cpd', 'cpd_biomass_substrate', 'cpd_biomass_product', 'cpd_exchange']
+            if edge.source.props['type'] in cpd_types:
                 rxn_string = ','.join(edge.dest.props['original_id'])
                 edge_test = edge.source.props['original_id'], rxn_string
-            elif edge.dest.props['type'] == 'cpd':
+            else:
                 rxn_string = ','.join(edge.source.props['original_id'])
                 edge_test = edge.dest.props['original_id'], rxn_string
 
