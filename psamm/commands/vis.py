@@ -241,9 +241,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             height = hw[1]
 
         if self._args.output is not None:
-            output = '{}.dot'.format(self._args.output)
+            output = self._args.output
         else:
-            output = 'reactions.dot'
+            output = 'reactions'
 
         if self._args.compartment:
             boundaries, extracellular = get_cpt_boundaries(self._model)
@@ -253,12 +253,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                 g.write_graphviz_compartmentalized(
                     f, boundary_tree, extracellular, width, height)
         else:
-            # with open('reactions.dot', 'w') as f:
-            with open(output, 'w') as f:
+            with open('{}.dot'.format(output), 'w') as f:
                 g.write_graphviz(f, width, height)
-        with open('reactions.nodes.tsv', 'w') as f:
+        with open('{}.nodes.tsv'.format(output), 'w') as f:
             g.write_cytoscape_nodes(f)
-        with open('reactions.edges.tsv', 'w') as f:
+        with open('{}.edges.tsv'.format(output), 'w') as f:
             g.write_cytoscape_edges(f)
 
         if self._args.Image is not None:
@@ -278,7 +277,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                            'reactions_compartmentalized.dot')
                 else:
                     # render('dot', self._args.Image, 'reactions.dot')
-                    render('dot', self._args.Image, output)
+                    render('dot', self._args.Image, '{}.dot'.format(output))
 
 
 def rxnset_for_vis(mm, subset_file):
@@ -300,10 +299,6 @@ def rxnset_for_vis(mm, subset_file):
         rxn_set = set()
         for l in subset_file.readlines():
             value = l.strip()
-            # if mm.has_compound(value):
-            #     cpd_set.add(value)
-            # elif mm.has_reaction(value):
-            #     rxn_set.add(value)
             if value in all_cpds:
                 cpd_set.add(value)
             elif mm.has_reaction(value):
@@ -376,19 +371,17 @@ def make_edge_values(reaction_flux, mm, compound_formula, element, args_combine,
         rxn_set = set()
         for (c1, c2), rxns in iteritems(cpair_dict):
             for direction, rlist in iteritems(rxns):
-                new_rlist = (','.join(rlist)).split(',')
-                rlist_string = ','.join(new_id_mapping[r] for r in new_rlist)
+                rlist_string = ','.join(new_id_mapping[r] for r in rlist)
                 if any(new_id_mapping[r] in reaction_flux and abs(
                         reaction_flux[new_id_mapping[r]]) > 1e-9 for
-                       r in new_rlist):
+                       r in rlist):
                     x_comb_c1, x_comb_c2 = 0, 0
-                    for rxns in rlist:
-                        for r in rxns.split(','):
-                            real_r = new_id_mapping[r]
-                            rxn_set.add(real_r)
-                            if real_r in reaction_flux and abs(reaction_flux[real_r]) > 1e-9:
-                                x_comb_c1 += edge_values[(c1, real_r)]
-                                x_comb_c2 += edge_values[(c2, real_r)]
+                    for r in rlist:
+                        real_r = new_id_mapping[r]
+                        rxn_set.add(real_r)
+                        if real_r in reaction_flux and abs(reaction_flux[real_r]) > 1e-9:
+                            x_comb_c1 += edge_values[(c1, real_r)]
+                            x_comb_c2 += edge_values[(c2, real_r)]
                     edge_values_combined[(c1, rlist_string)] = x_comb_c1
                     edge_values_combined[(c2, rlist_string)] = x_comb_c2
 
@@ -446,6 +439,7 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
             if any(c.name not in cpd_formula for c, _ in
                    reaction.equation.compounds):
                 rxns_no_formula.append(reaction.id)
+                continue
 
                 # # check cpds without formula
                 # for c, _ in reaction.equation.compounds:
@@ -597,100 +591,79 @@ def make_cpair_dict(mm, filter_dict, subset, reaction_flux, args_method, args_co
     rxn_count = Counter()
     cpair_dict = defaultdict(lambda: defaultdict(list))
 
-
-    ### PDH PFL combine 2 not change version
     if args_method != 'no-fpp':
-        rxn_mixcpairs = defaultdict(list)
-        # if args_combine == 0 or args_combine == 2:
-        for rxn, cpairs in iteritems(filter_dict):
-            if rxn in subset:
-                # rx = mm.get_reaction(rxn)
-                have_visited = set()
-                sub_pro = defaultdict(list)  # substrate map to a list of product
-                # rxn_mixcpairs = defaultdict(list)
-                for (c1, c2) in cpairs:
-                    sub_pro[c1].append(c2)
-                for k1, v1 in sorted(iteritems(sub_pro)):
-                    if k1 not in have_visited:
-                        rxn_count[rxn] += 1
-                        have_visited.add(k1)
-                        r_id = str('{}_{}'.format(rxn, rxn_count[rxn]))
-                        new_id_mapping[r_id] = rxn
-                        for v in v1:
-                            rxn_mixcpairs[r_id].append((k1, v))
-                        for k2, v2 in iteritems(sub_pro):
-                            if k2 not in have_visited:
-                                if k2 != k1:
-                                    if args_combine == 0:
+        if args_combine == 0:
+            for rxn, cpairs in iteritems(filter_dict):
+                if rxn in subset:
+                    rx = mm.get_reaction(rxn)
+                    have_visited = set()
+                    sub_pro = defaultdict(list)  # substrate map to a list of product
+                    rxn_mixcpairs = defaultdict(list)
+                    for (c1, c2) in sorted(cpairs):
+                        sub_pro[c1].append(c2)
+                    for k1, v1 in iteritems(sub_pro):
+                        if k1 not in have_visited:
+                            rxn_count[rxn] += 1
+                            have_visited.add(k1)
+                            r_id = str('{}_{}'.format(rxn, rxn_count[rxn]))
+                            new_id_mapping[r_id] = rxn
+                            for v in v1:
+                                rxn_mixcpairs[r_id].append((k1, v))
+                            for k2, v2 in iteritems(sub_pro):
+                                if k2 not in have_visited:
+                                    if k2 != k1:
                                         if v1 == v2:
                                             have_visited.add(k2)
                                             for vtest in v2:
                                                 rxn_mixcpairs[r_id].append((k2, vtest))
-                                    elif args_combine == 1 or args_combine == 2:
-                                        if any(product in v1 for product in v2):
-                                            have_visited.add(k2)
-                                            for product in v2:
-                                                rxn_mixcpairs[r_id].append((k2, product))
-
-        print('mix cpairs dict', len(rxn_mixcpairs))
-        have_check = set()
-        if args_combine == 2:
-            new_rxn_mixcpairs = defaultdict(list)
-            for rid, cpairs in iteritems(rxn_mixcpairs):
-                rx1 = mm.get_reaction(new_id_mapping[rid])
-                if rid not in have_check:
-                    have_check.add(rid)
-                    rxn_sub = set()
-                    rxn_pro = set()
-                    rxn_cpds = set()
-                    for (c1, c2) in sorted(cpairs):
-                        rxn_sub.add(str(c1))
-                        rxn_pro.add(str(c2))
-                        rxn_cpds.add(str(c1))
-                        rxn_cpds.add(str(c2))
-                    rl = set()
-                    rl.add(rid)
-                    for rid_2, cpairs_2 in iteritems(rxn_mixcpairs):
-                        rx2 = mm.get_reaction(new_id_mapping[rid_2])
-                        if rid_2 != rid and rx1.direction == rx2.direction:
-                            if rid_2 not in have_check:
-                                if rx1.direction != Direction.Both:
-                                    rxn2_sub = set()
-                                    rxn2_pro = set()
-                                    for (c1, c2) in cpairs_2:
-                                        rxn2_sub.add(str(c1))
-                                        rxn2_pro.add(str(c2))
-
-                                    if rxn2_sub == rxn_sub and rxn2_pro == rxn_pro:
-                                        rl.add(rid_2)
-                                        have_check.add(rid_2)
+                    for rxn_id, cpairs in iteritems(rxn_mixcpairs):
+                        for (c1, c2) in cpairs:
+                            if rx.direction == Direction.Forward:
+                                cpair_dict[(c1, c2)]['forward'].append(rxn_id)
+                            else:
+                                if rxn in reaction_flux:
+                                    if reaction_flux[rxn] > 0:
+                                        cpair_dict[(c1, c2)]['forward'].append(rxn_id)
+                                    else:
+                                        cpair_dict[(c1, c2)]['back'].append(rxn_id)
                                 else:
-                                    rxn2_cpds = set()
-                                    for (c1, c2) in cpairs_2:
-                                        rxn2_cpds.add(str(c1))
-                                        rxn2_cpds.add(str(c2))
-                                    if rxn2_cpds == rxn_cpds:
-                                        rl.add(rid_2)
-                                        have_check.add(rid_2)
-                    new_rxn_mixcpairs[','.join(rl)] = cpairs
-        else:
-            new_rxn_mixcpairs = rxn_mixcpairs
+                                    cpair_dict[(c1, c2)]['both'].append(rxn_id)
 
-        for rxn_id, cpairs in iteritems(new_rxn_mixcpairs):
-            rl = rxn_id.split(',')
-            rxn = mm.get_reaction(new_id_mapping[rl[0]])
-            for (c1, c2) in cpairs:
-                if rxn.direction == Direction.Forward:
-                    cpair_dict[(c1, c2)]['forward'].append(rxn_id)
-                else:
-                    if rxn in reaction_flux:
-                        if reaction_flux[rxn] > 0:
+        elif args_combine == 1 or args_combine == 2:
+            for rxn, cpairs in iteritems(filter_dict):
+                if rxn in subset:
+                    rx = mm.get_reaction(rxn)
+                    cpd_rid = {}
+                    have_visited = set()
+                    for (c1, c2) in sorted(cpairs):
+                        if c1 not in have_visited:
+                            if c2 not in have_visited:
+                                rxn_count[rxn] += 1
+                                rxn_id = str('{}_{}'.format(rxn, rxn_count[rxn]))
+                                new_id_mapping[rxn_id] = rxn
+                                have_visited.add(c1)
+                                have_visited.add(c2)
+                                cpd_rid[c1] = rxn_id
+                                cpd_rid[c2] = rxn_id
+                            else:
+                                rxn_id = cpd_rid[c2]
+                                have_visited.add(c1)
+                                cpd_rid[c1] = rxn_id
+                        else:
+                            rxn_id = cpd_rid[c1]
+                            have_visited.add(c2)
+                            cpd_rid[c2] = rxn_id
+
+                        if rx.direction == Direction.Forward:
                             cpair_dict[(c1, c2)]['forward'].append(rxn_id)
                         else:
-                            cpair_dict[(c1, c2)]['back'].append(rxn_id)
-                    else:
-                        cpair_dict[(c1, c2)]['both'].append(rxn_id)
-
+                            if rxn in reaction_flux:
+                                if reaction_flux[rxn] > 0:
+                                    cpair_dict[(c1, c2)]['forward'].append(rxn_id)
+                                else:
+                                    cpair_dict[(c1, c2)]['back'].append(rxn_id)
+                            else:
+                                cpair_dict[(c1, c2)]['both'].append(rxn_id)
     else:
         for rxn, cpairs in iteritems(filter_dict):
             if rxn in subset:
@@ -742,44 +715,35 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, args_combine):
                 g.add_node(node)
                 graph_nodes.add(c)
         for direction, rlist in iteritems(reactions):
-            # if args_combine == 2 and method != 'no-fpp':
-            #     real_rxns = [new_id_mapping[r] for r in rlist]
-            #     rxn_string = text_type(','.join(rlist))
-            #     if rxn_string not in graph_nodes:
-            #         rnode = graph.Node({
-            #             'id': text_type(','.join(rlist)),
-            #             'shape': 'box',
-            #             'style': 'filled',
-            #             'label': '\n'.join(real_rxns),
-            #             'type': 'rxn',
-            #             'fillcolor': REACTION_COLOR,
-            #             'original_id': real_rxns,
-            #             'compartment': c.compartment})
-            #         g.add_node(rnode)
-            #         graph_nodes.add(rxn_string)
-            # else:
-            for sub_rxn in rlist:
-                if ',' in sub_rxn:
-                    rl = sub_rxn.split(',')
-                    original_id = [new_id_mapping[i] for i in rl]
-                    label = '\n'.join(new_id_mapping[i] for i in rl)
-                    # label = '\n'.join(i for i in rl)
-                else:
-                    label = new_id_mapping[sub_rxn]
-                    original_id = [new_id_mapping[sub_rxn]]
-
-                if sub_rxn not in graph_nodes:
+            if method != 'no-fpp' and args_combine == 2:
+                real_rxns = [new_id_mapping[r] for r in rlist]
+                rxn_string = text_type(','.join(rlist))
+                if rxn_string not in graph_nodes:
                     rnode = graph.Node({
-                        'id': text_type(sub_rxn),
+                        'id': text_type(','.join(rlist)),
                         'shape': 'box',
                         'style': 'filled',
-                        'label': label,
+                        'label': '\n'.join(real_rxns),
                         'type': 'rxn',
                         'fillcolor': REACTION_COLOR,
-                        'original_id': original_id,
+                        'original_id': real_rxns,
                         'compartment': c.compartment})
                     g.add_node(rnode)
-                    graph_nodes.add(sub_rxn)
+                    graph_nodes.add(rxn_string)
+            else:
+                for sub_rxn in rlist:
+                    if sub_rxn not in graph_nodes:
+                        rnode = graph.Node({
+                            'id': text_type(sub_rxn),
+                            'shape': 'box',
+                            'style': 'filled',
+                            'label': new_id_mapping[sub_rxn],
+                            'type': 'rxn',
+                            'fillcolor': REACTION_COLOR,
+                            'original_id': [new_id_mapping[sub_rxn]],
+                            'compartment': c.compartment})
+                        g.add_node(rnode)
+                        graph_nodes.add(sub_rxn)
 
     return g
 
@@ -799,35 +763,35 @@ def add_edges(g, cpairs_dict, method, args_combine):
     edge_list = []
     for (c1, c2), value in iteritems(cpairs_dict):
         for direction, rlist in iteritems(value):
-            # new_rlist = ','.join(rlist)
-            # if args_combine == 0 or args_combine == 1 or method == 'no-fpp':
-            for sub_rxn in rlist:
-                test1 = c1, sub_rxn
+            new_rlist = ','.join(rlist)
+            if args_combine == 0 or args_combine == 1 or method == 'no-fpp':
+                for sub_rxn in rlist:
+                    test1 = c1, sub_rxn
+                    if test1 not in edge_list:
+                        edge_list.append(test1)
+                        g.add_edge(graph.Edge(
+                            g.get_node(text_type(c1)),
+                            g.get_node(text_type(sub_rxn)), {'dir': direction}))
+
+                    test2 = c2, sub_rxn
+                    if test2 not in edge_list:
+                        edge_list.append(test2)
+                        g.add_edge(graph.Edge(
+                            g.get_node(text_type(sub_rxn)),
+                            g.get_node(text_type(c2)), {'dir': direction}))
+            else:
+                test1 = c1, new_rlist
+                test2 = c2, new_rlist
                 if test1 not in edge_list:
                     edge_list.append(test1)
                     g.add_edge(graph.Edge(
                         g.get_node(text_type(c1)),
-                        g.get_node(text_type(sub_rxn)), {'dir': direction}))
-
-                test2 = c2, sub_rxn
+                        g.get_node(text_type(new_rlist)), {'dir': direction}))
                 if test2 not in edge_list:
                     edge_list.append(test2)
                     g.add_edge(graph.Edge(
-                        g.get_node(text_type(sub_rxn)),
+                        g.get_node(text_type(new_rlist)),
                         g.get_node(text_type(c2)), {'dir': direction}))
-            # else:
-            #     test1 = c1, new_rlist
-            #     test2 = new_rlist, c2
-            #     if test1 not in edge_list:
-            #         edge_list.append(test1)
-            #         g.add_edge(graph.Edge(
-            #             g.get_node(text_type(c1)),
-            #             g.get_node(text_type(new_rlist)), {'dir': direction}))
-            #     if test2 not in edge_list:
-            #         edge_list.append(test2)
-            #         g.add_edge(graph.Edge(
-            #             g.get_node(text_type(new_rlist)),
-            #             g.get_node(text_type(c2)), {'dir': direction}))
     return g
 
 
@@ -964,7 +928,6 @@ def update_node_label(g, cpd_detail, rxn_detail, model_compound_entries,
             if rxn_detail is not None:
                 if len(node.props['original_id']) == 1:
                     rxn_id = node.props['original_id'][0]
-                    print('test original_id:', rxn_id)
                     props = model_reaction_entries[rxn_id].properties
                     rxn_detail_list = [i for i in rxn_detail[0] if i in props]
 
