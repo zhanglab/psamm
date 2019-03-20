@@ -161,8 +161,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         cpair_dict, new_id_mapping = make_cpair_dict(
             self._mm, filter_dict, vis_rxns, reaction_flux,
             self._args.method, self._args.combine)
-        print('filter_dict length:', len(filter_dict))
-        print('cpair_dict length:', len(cpair_dict))
 
         edge_values = make_edge_values(
             reaction_flux, self._mm, compound_formula, self._args.element,
@@ -441,12 +439,6 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
                 rxns_no_formula.append(reaction.id)
                 continue
 
-                # # check cpds without formula
-                # for c, _ in reaction.equation.compounds:
-                #     if c.name not in cpd_formula:
-                #         print('{}, cpds needs to check:{}'.format(reaction.id, c.name))
-                # continue
-
             fpp_rxns.add(reaction)
 
     if len(rxns_no_formula) > 0:
@@ -533,7 +525,7 @@ def make_filter_dict(model, mm, method, element, cpd_formula,
                           'directory: {}' .format(method))
 
     cpairs_ordered_filter_dict = {}
-    for r, cpairs in iteritems(filter_dict):
+    for r, cpairs in sorted(iteritems(filter_dict)):
         cpairs_ordered_filter_dict[r] = sorted(cpairs)
 
     return cpairs_ordered_filter_dict
@@ -563,7 +555,7 @@ def make_mature_cpair_dict(cpair_dict):
                 cpair_list.append((c1, c2))
 
     rxns_sorted_cpair_dict = defaultdict(lambda: defaultdict(list))
-    for (c1, c2), rxns in iteritems(new_cpair_dict):
+    for (c1, c2), rxns in sorted(iteritems(new_cpair_dict)):
         for direction, rlist in iteritems(rxns):
             rxns_sorted_cpair_dict[(c1, c2)][direction] = sorted(rlist)
 
@@ -700,7 +692,7 @@ def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, args_combine):
     return: A graph object that contains a set of nodes.
     """
     graph_nodes = set()
-    for cpair, reactions in iteritems(cpairs_dict):
+    for cpair, reactions in sorted(iteritems(cpairs_dict)):
         for c in cpair:
             if c not in graph_nodes:
                 node = graph.Node({
