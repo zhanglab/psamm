@@ -194,10 +194,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         exchange_cpds = set()
         for reaction in self._mm.reactions:
             if self._mm.is_exchange(reaction):
-                exchange_rxn = self._mm.get_reaction(reaction)
-                g = add_exchange_rxns(g, reaction, exchange_rxn)
-                for cpd, _ in exchange_rxn.compounds:
-                    exchange_cpds.add(text_type(cpd))
+                if reaction != self._model.biomass_reaction:
+                    exchange_rxn = self._mm.get_reaction(reaction)
+                    g = add_exchange_rxns(g, reaction, exchange_rxn)
+                    for cpd, _ in exchange_rxn.compounds:
+                        exchange_cpds.add(text_type(cpd))
 
         for node in g.nodes:
             if node.props['id'] in bio_cpds_sub:
