@@ -189,6 +189,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# Add thermodynamic constraints to the model.
 		testing_list_tmp = list(mm_irreversible.reactions)
 		TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
+		tmp = solve_objective(TMFA_Problem, objective)
+		print(tmp)
 		cp_list = [str(cp) for cp in TMFA_Problem._model.compounds]
 		TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, cpd_conc_dict, cp_list)
 		TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
@@ -203,15 +205,16 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			TMFA_Problem.add_thermodynamic()
 
 		biomax = solve_objective(TMFA_Problem, objective)
+		TMFA_Problem.prob.cplex.CPX_PARAM_THREADS = 1
 
 		print('PROBLEM TYPE:', TMFA_Problem.prob.cplex.problem_type[TMFA_Problem.prob.cplex.get_problem_type()])
 
 		if self._args.threshold != None:
-			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var('Core_Biomass') == float(self._args.threshold))
+			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == float(self._args.threshold))
 			print('set biomass to: {}'.format(self._args.threshold))
 
 		else:
-			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var('Core_Biomass') == biomax)
+			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
 			print('set biomass to: {}'.format(biomax))
 
 		if self._args.verbose:
@@ -251,7 +254,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 				print('-------------------------------------------------------------------')
 
 
-		# TMFA_Problem.prob.solve()
+		TMFA_Problem.prob.solve()
 		# result = TMFA_Problem.prob.result
 		# biomax = result.get_value(TMFA_Problem.get_flux_var(objective))
 		# for reaction in sorted(mm_irreversible.reactions):
@@ -259,8 +262,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# for compound in sorted(mm_irreversible.compounds):
 		# 	print('CPD Activity\t{}\t{}'.format(compound, TMFA_Problem.prob.result.get_value(TMFA_Problem.prob.var(str(compound)))))
 		# bio = TMFA_Problem.get_flux_var(objective)
-		# # max_val = result.get_value(bio)
-		# TMFA_Problem.prob.add_linear_constraints(bio == biomax)
+		# max_val = result.get_value(bio)
+		# TMFA_Problem.prob.add_linear_constraints(bio >= 0.99*biomax)
 
 
 		for reaction in sorted(mm_irreversible.reactions):
@@ -303,8 +306,9 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 				min = 'NA'
 			print('CPD Conc Variability\t{}\t{}\t{}'.format(compound, min, max))#, math.exp(min), math.exp(max)))
 
+
 		logger.info('TMFA Problem Status: {}'.format(biomax))
-		logger.info('TMFA Problem Status: {}'.format(TMFA_Problem.get_flux('Core_Biomass')))
+		logger.info('TMFA Problem Status: {}'.format(TMFA_Problem.get_flux(objective)))
 
 		quit()
 
@@ -479,7 +483,7 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters, ph_dif
 			dgerr = 0
 			rxn = mm.get_reaction(reaction)
 			if any(dgf_dict.get(j[0]) is None for j in rxn.compounds):
-				print('Reaction DGR Bad\t{}\t{}'.format(reaction, 'NA'))
+				# print('Reaction DGR Bad\t{}\t{}'.format(reaction, 'NA'))
 				for j in rxn.compounds:
 					if j[0] not in dgf_dict.keys():
 						print(j[0])
@@ -510,7 +514,7 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters, ph_dif
 			dgr_dict[reaction] = (dgr, dgerr)
 			# dgr_dict['{}_forward'.format(reaction)] = (dgr)#, dgerr)
 			# dgr_dict['{}_reverse'.format(reaction)] = (-dgr)#, dgerr)
-			print('Reaction DGR\t{}\t{}'.format(reaction, dgr))
+			# print('Reaction DGR\t{}\t{}'.format(reaction, dgr))
 	# quit()
 	return dgr_dict
 
@@ -549,9 +553,9 @@ def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 		mm_irrev.limits[rxn].upper = upper
 		mm_irrev.limits[rxn].lower = lower
 
-		print(rxn)
-		print(mm.limits[rxn])
-		print(mm_irrev.limits[rxn])
+		# print(rxn)
+		# print(mm.limits[rxn])
+		# print(mm_irrev.limits[rxn])
 
 		reaction = mm_irrev.get_reaction(rxn)
 		if rxn not in exclude_list:
@@ -685,7 +689,7 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# T = Decimal(277.15)  # 4 C
 	T = Decimal(temp) + Decimal(273.15)
 	print('temperature', T)
-	k = 2000
+	k = 225
 	epsilon = 0.0000001
 	# epsilon = 0
 	# h_e = problem.prob.var(str('h[e]'))
