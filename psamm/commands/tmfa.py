@@ -187,6 +187,43 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# logger.info('TMFA Problem Status: {}'.format(result.get_value(TMFA_Problem.get_flux_var(objective))))
 		#
 		# Add thermodynamic constraints to the model.
+
+		if self._args.random_addition:
+			full_testing_list = list(mm_irreversible.reactions)
+			random.shuffle(full_testing_list)
+			testing_list_tmp = []
+			for rx in full_testing_list:
+				testing_list_iter = testing_list_tmp + [rx]
+				logger.info('testing list: {}'.format(testing_list_tmp))
+				logger.info('testing rxn: {}'.format(rx))
+				TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
+				baseline_flux = solve_objective(TMFA_Problem, objective)
+				logger.info('Objective flux mm_irreversible: {}'.format(baseline_flux))
+				cp_list = [str(cp) for cp in TMFA_Problem._model.compounds]
+				TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, cpd_conc_dict, cp_list)
+				TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list,
+				                                        exclude_unkown_list,
+				                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
+				                                        split_reversible, transport_parameters, testing_list_iter,
+				                                        self._args.scaled_compounds, self._args.temp, self._args.err)
+				TMFA_Problem.prob.integrality_tolerance.value = 0.0
+				biomax = solve_objective(TMFA_Problem, objective)
+				logger.info('Objective flux tmfa problem: {}'.format(biomax))
+				if biomax >= 0.1*baseline_flux:
+					testing_list_tmp.append(rx)
+				else:
+					continue
+			for rx in full_testing_list:
+				if rx in testing_list_tmp:
+					print('{}\tGoodConstraint'.format(rx))
+				else:
+					print('{}\tBadConstraint'.format(rx))
+			quit()
+
+
+
+
+
 		testing_list_tmp = list(mm_irreversible.reactions)
 		TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
 		tmp = solve_objective(TMFA_Problem, objective)
@@ -205,7 +242,6 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			TMFA_Problem.add_thermodynamic()
 
 		biomax = solve_objective(TMFA_Problem, objective)
-		TMFA_Problem.prob.cplex.CPX_PARAM_THREADS = 1
 
 		print('PROBLEM TYPE:', TMFA_Problem.prob.cplex.problem_type[TMFA_Problem.prob.cplex.get_problem_type()])
 
@@ -264,7 +300,6 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# bio = TMFA_Problem.get_flux_var(objective)
 		# max_val = result.get_value(bio)
 		# TMFA_Problem.prob.add_linear_constraints(bio >= 0.99*biomax)
-
 
 		for reaction in sorted(mm_irreversible.reactions):
 			rx_var = TMFA_Problem.get_flux_var(reaction)
