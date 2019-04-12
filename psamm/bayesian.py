@@ -278,7 +278,7 @@ def reaction_equation_mapping_approx_max_likelihood(
                 # the possibility that compounds are equal
                 p_match += np.log(score)
                 # the possibility that compounds are NOT equal
-                p_no_match += np.log(max(1 - score, 0.05))
+                p_no_match += np.log(max(1 - score, 1e-5))
                 cpd_set1.remove(c1)
                 cpd_set2.remove(c2)
 
