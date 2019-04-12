@@ -25,7 +25,7 @@ from future.utils import itervalues
 
 import re
 from collections import namedtuple
-from builtins import object
+from builtins import object, input
 import operator
 from itertools import product
 import time
@@ -33,6 +33,7 @@ import time
 from psamm.formula import Formula
 import psamm.bayesian as bayesian
 import psamm.translate_id as tr_id
+import psamm.manual_curation as curation
 from psamm.util import mkdir_p
 from psamm.datasource.native import ModelReader
 from psamm.command import Command
@@ -251,15 +252,15 @@ class ModelMappingCommand(Command):
             'map', help='Bayesian model mapping')
         parser_mm.set_defaults(which='mm')
         parser_mm.add_argument(
-            'dest_model', type=str, help='Model to map to')
+            '--dest-model', type=str, required=True, help='Model to map to')
         parser_mm.add_argument(
-            '--compound_map', type=str, nargs='?',
+            '--compound-map', type=str, nargs='?',
             help='Actual compound mapping, evaluation only')
         parser_mm.add_argument(
-            '--reaction_map', type=str, nargs='?',
+            '--reaction-map', type=str, nargs='?',
             help='Actual reaction mapping, evaluation only')
         parser_mm.add_argument(
-            '-c', '--consistency_check', action='store_true',
+            '-c', '--consistency-check', action='store_true',
             help=(
                 'Check the consistency of compound id '
                 'between compounds.yaml and reactions.yaml'))
@@ -300,17 +301,41 @@ class ModelMappingCommand(Command):
                 'for each feature, '
                 'may be very big with large models'))
 
+        # manual curation subcommand
+        parser_c = subparsers.add_parser(
+            'manual_curation',
+            help='Interactive mode to check mapping result')
+        parser_c.set_defaults(which='curation')
+        parser_c.add_argument(
+            '--dest-model', type=str, required=True, help='Model to map to')
+        parser_c.add_argument(
+            '--compound-map', type=str, required=True,
+            help='Compound model mapping result')
+        parser_c.add_argument(
+            '--reaction-map', type=str, required=True,
+            help='Reaction model mapping result')
+        parser_c.add_argument(
+            '--curated-compound-map', type=str,
+            help=(
+                'File to store curated compound mapping, if file exists, '
+                'resume previous curation'))
+        parser_c.add_argument(
+            '--curated-reaction-map', type=str,
+            help=(
+                'File to store curated reaction mapping, if file exists, '
+                'resume previous curation'))
+
         # translate id subcommand
         parser_t = subparsers.add_parser(
             'translate_id', help='Translate ids based on mapping result')
         parser_t.set_defaults(which='translateid')
         parser_t.add_argument(
-            '--compound_map', type=str, required=True,
+            '--compound-map', type=str, required=True,
             help=(
                 'Tab-delimited table, the first two columns store the '
                 'original and target ids'))
         parser_t.add_argument(
-            '--reaction_map', type=str, required=True,
+            '--reaction-map', type=str, required=True,
             help=(
                 'Tab-delimited table, the first two columns store the '
                 'original and target ids'))
@@ -328,6 +353,8 @@ class ModelMappingCommand(Command):
             self._model_mapping()
         if which_command == 'translateid':
             self._translate_id()
+        if which_command == 'curation':
+            self._curation()
 
     def _model_mapping(self):
         """Run model mapping"""
@@ -343,9 +370,9 @@ class ModelMappingCommand(Command):
 
         # Model summaries
         model1.print_summary()
-        print()
+        print('\n')
         model2.print_summary()
-        print()
+        print('\n')
 
         # Load actual model mappings
         actual_compound_mapping = None
@@ -361,9 +388,9 @@ class ModelMappingCommand(Command):
         # Check models
         if (
             not (
-                model1.check_reaction_compounds()
-                and model2.check_reaction_compounds())
-                and self._args.consistency_check):
+                model1.check_reaction_compounds() and
+                model2.check_reaction_compounds()) and
+                self._args.consistency_check):
             quit((
                 '\nError: '
                 'equations have something not listed in compounds.yaml, '
@@ -388,8 +415,8 @@ class ModelMappingCommand(Command):
         t = time.time()
         # Write out ROC curve results
         if (actual_compound_mapping is not None):
-            with open(self._args.outpath
-                      + '/roc/compound_bayes.tsv', 'w') as f:
+            with open(self._args.outpath +
+                      '/roc/compound_bayes.tsv', 'w') as f:
                 write_roc_curve(f, cpd_bayes_pred.model1.compounds,
                                 cpd_bayes_pred.model2.compounds,
                                 cpd_bayes_pred,
@@ -400,9 +427,9 @@ class ModelMappingCommand(Command):
         if (actual_compound_mapping is not None):
             for c1, c2 in product(cpd_bayes_pred.model1.compounds,
                                   cpd_bayes_pred.model2.compounds):
-                maps = (c1 in actual_compound_mapping
-                        and actual_compound_mapping[c1] is not None
-                        and c2 in actual_compound_mapping[c1])
+                maps = (c1 in actual_compound_mapping and
+                        actual_compound_mapping[c1] is not None and
+                        c2 in actual_compound_mapping[c1])
                 p = cpd_bayes_pred.map(c1, c2)
                 if (p > self._args.threshold_compound and not maps):
                     print('Incorrect map: {}\t{}\t{}'.format(c2, c1, p))
@@ -435,8 +462,8 @@ class ModelMappingCommand(Command):
         t = time.time()
         # Write out ROC curve results
         if (actual_reaction_mapping is not None):
-            with open(self._args.outpath
-                      + '/roc/reaction_bayes.tsv', 'w') as f:
+            with open(self._args.outpath +
+                      '/roc/reaction_bayes.tsv', 'w') as f:
                 write_roc_curve(f, rxn_bayes_pred.model1.reactions,
                                 rxn_bayes_pred.model2.reactions,
                                 rxn_bayes_pred,
@@ -447,9 +474,9 @@ class ModelMappingCommand(Command):
         if (actual_reaction_mapping is not None):
             for r1, r2 in product(rxn_bayes_pred.model1.reactions,
                                   rxn_bayes_pred.model2.reactions):
-                maps = (r1 in actual_reaction_mapping
-                        and actual_reaction_mapping[r1] is not None
-                        and r2 in actual_reaction_mapping[r1])
+                maps = (r1 in actual_reaction_mapping and
+                        actual_reaction_mapping[r1] is not None and
+                        r2 in actual_reaction_mapping[r1])
                 p = rxn_bayes_pred.map(r1, r2)
                 if (p > self._args.threshold_reaction and not maps):
                     print('Incorrect map: {}\t{}\t{}'.format(r2, r1, p))
@@ -467,6 +494,101 @@ class ModelMappingCommand(Command):
         reaction_best.to_csv(
             self._args.outpath + '/bayes_reactions_best.tsv', sep='\t')
         print('It takes %s seconds to write output...' % (time.time() - t))
+
+    def _curation(self):
+        # read models
+        model1 = ModelReader.reader_from_path(self._args.model)
+        model1 = model1.create_model()
+        model2 = ModelReader.reader_from_path(self._args.dest_model)
+        model2 = model2.create_model()
+
+        # initiate curator
+        curator = curation.Curator(
+            self._args.compound_map, self._args.reaction_map,
+            self._args.curated_compound_map, self._args.curated_reaction_map)
+
+        print('Starting to do manual curation...\n')
+        print('Type "stop" to stop\n')
+        # iterate through reaction mapping
+        for rmap in curator.reaction_map.iterrows():
+            # skip already curated reactions
+            if curator.reaction_checked(rmap[0]):
+                continue
+            # check the compound mapping in current reaction
+            compounds = curation.search_reaction(model1, [rmap[0][0]])
+            dest_compounds = curation.search_reaction(model2, [rmap[0][1]])
+            print('Below are the compound mapping involved:\n')
+            for compound in compounds:
+                for cmap in curator.compound_map.loc[compound].iterrows():
+                    if (cmap[0] not in dest_compounds
+                            or curator.compound_checked((compound, cmap[0]))):
+                        continue
+                    print(cmap[1])
+                    print('\n')
+                    curation.search_compound(model1, [compound])
+                    curation.search_compound(model2, [cmap[0]])
+                    # waiting for legal curation input
+                    while True:
+                        ask = input(
+                            ('True compound match? (y/n/save/stop, '
+                             'type save to save current progress, '
+                             'type stop to save and exit): '))
+                        if ask.lower() == 'n':
+                            curator.add_mapping(
+                                (compound, cmap[0]),
+                                'c',
+                                False
+                            )
+                            break
+                        if ask.lower() == 'y':
+                            curator.add_mapping(
+                                (compound, cmap[0]),
+                                'c',
+                                True
+                            )
+                            break
+                        if ask.lower() == 'stop':
+                            curator.save()
+                            exit(0)
+                        if ask.lower() == 'save':
+                            curator.save()
+
+                    print('\n')
+            print('Here is the reaction mapping:')
+            print(rmap[1])
+            print('\n')
+            curation.search_reaction(model1, [rmap[0][0]])
+            curation.search_reaction(model2, [rmap[0][1]])
+            print(('These two reactions have the following curated compound '
+                   'pairs:\n'))
+            for compound in compounds:
+                if compound in curator.curated_compound_map.index:
+                    for cmap in curator.curated_compound_map.loc[
+                            compound].iterrows():
+                        if cmap[0] in dest_compounds:
+                            print(compound, cmap[0])
+            print('\n')
+            ask = ''
+            # waiting for legal curation input
+            while ask not in ['y', 'n', 'stop']:
+                ask = input(
+                    ('True reaction match? (y/n/save/stop, '
+                     'type save to save current progress, '
+                     'type stop to save and exit): ')
+                )
+                if ask.lower() == 'n':
+                    curator.add_mapping(rmap[0], 'r', False)
+                    break
+                if ask.lower() == 'y':
+                    curator.add_mapping(rmap[0], 'r', True)
+                    break
+                if ask.lower() == 'stop':
+                    curator.save()
+                    exit(0)
+                if ask.lower() == 'save':
+                    curator.save()
+            print('\n', '=' * 50, '\n')
+        curator.save()
 
     def _translate_id(self):
         """Translate ids"""
