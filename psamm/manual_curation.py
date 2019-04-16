@@ -83,18 +83,22 @@ class Curator(object):
                 )
 
     def save(self):
-        self.curated_compound_map.to_csv(
-            self.curated_compound_map_file, sep='\t'
-        )
-        self.curated_reaction_map.to_csv(
-            self.curated_reaction_map_file, sep='\t'
-        )
-        self.false_compound_map.to_csv(
-            self.false_compound_map_file, sep='\t'
-        )
-        self.false_reaction_map.to_csv(
-            self.false_reaction_map_file, sep='\t'
-        )
+        if len(self.curated_compound_map) > 0:
+            self.curated_compound_map.to_csv(
+                self.curated_compound_map_file, sep='\t'
+            )
+        if len(self.curated_reaction_map) > 0:
+            self.curated_reaction_map.to_csv(
+                self.curated_reaction_map_file, sep='\t'
+            )
+        if len(self.false_compound_map) > 0:
+            self.false_compound_map.to_csv(
+                self.false_compound_map_file, sep='\t'
+            )
+        if len(self.false_reaction_map) > 0:
+            self.false_reaction_map.to_csv(
+                self.false_reaction_map_file, sep='\t'
+            )
         print('Progress saved\n')
 
 
