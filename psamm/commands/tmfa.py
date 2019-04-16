@@ -59,7 +59,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		parser.add_argument('--conc-testing', action='store_true')
 		parser.add_argument('--temp')
 		parser.add_argument('--tfba', action='store_true')
-		parser.add_argument('--threshold', default=None)
+		parser.add_argument('--threshold', default=None, type=Decimal)
 		parser.add_argument('--verbose', action='store_true')
 		super(TMFACommand, cls).init_parser(parser)
 
@@ -242,15 +242,20 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			TMFA_Problem.add_thermodynamic()
 
 		biomax = solve_objective(TMFA_Problem, objective)
+		# TMFA_Problem.prob.cplex.parameters.emphasis.numerical.set(1)
+		# TMFA_Problem.prob.cplex.parameters.lpmethod.set(5)
 
 		print('PROBLEM TYPE:', TMFA_Problem.prob.cplex.problem_type[TMFA_Problem.prob.cplex.get_problem_type()])
 
 		if self._args.threshold != None:
-			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == float(self._args.threshold))
+			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == Decimal(self._args.threshold))
+			# TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) >= Decimal(self._args.threshold))
 			print('set biomass to: {}'.format(self._args.threshold))
 
 		else:
 			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
+			# TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) >= biomax)
+
 			print('set biomass to: {}'.format(biomax))
 
 		if self._args.verbose:
@@ -290,6 +295,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 				print('-------------------------------------------------------------------')
 
 
+
+		TMFA_Problem.prob.set_objective(TMFA_Problem.get_flux_var(objective))
 		TMFA_Problem.prob.solve()
 		# result = TMFA_Problem.prob.result
 		# biomax = result.get_value(TMFA_Problem.get_flux_var(objective))
@@ -301,43 +308,52 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# max_val = result.get_value(bio)
 		# TMFA_Problem.prob.add_linear_constraints(bio >= 0.99*biomax)
 
+		logger.info('TMFA Problem Status: {}'.format(TMFA_Problem.get_flux(objective)))
+
 		for reaction in sorted(mm_irreversible.reactions):
-			rx_var = TMFA_Problem.get_flux_var(reaction)
-			drg_var = TMFA_Problem.prob.var('dgri_{}'.format(reaction))
-			min_flux = TMFA_Problem.flux_bound(reaction, -1)
-			max_flux = TMFA_Problem.flux_bound(reaction, 1)
+			try:
+				min_flux = TMFA_Problem.flux_bound(reaction, -1)
+				max_flux = TMFA_Problem.flux_bound(reaction, 1)
+				print('Flux Variability\t{}\t{}\t{}'.format(reaction, min_flux, max_flux))
+			except:
+				print('Flux Variability\t{}\t{}\t{}'.format(reaction, 'SovlerError', 'SolverError'))
 
-			if reaction not in exclude_unkown_list:
-				try:
-					TMFA_Problem.prob.set_objective(-drg_var)
-					TMFA_Problem._solve()
-					min_drg = TMFA_Problem.prob.result.get_value(drg_var)
-					TMFA_Problem.prob.set_objective(drg_var)
-					TMFA_Problem._solve()
-					max_drg = TMFA_Problem.prob.result.get_value(drg_var)
-				except lpsolver.lp.SolverError:
-					min_drg = 'SolverError'
-					max_drg = 'SolverError'
-			else:
-				min_drg = 'NA'
-				max_drg = 'NA'
-			print('Flux Variability\t{}\t{}\t{}'.format(reaction, min_flux, max_flux))
-			print('DGRI Variability\t{}\t{}\t{}'.format(reaction, min_drg, max_drg))
 
+		for reaction in sorted(mm_irreversible.reactions):
+			# if not any(reaction.startswith(i) for i in ['A', 'B', 'C', 'D', 'E', 'F']):
+				drg_var = TMFA_Problem.prob.var('dgri_{}'.format(reaction))
+				logger.info('{}'.format(reaction))
+				if reaction not in exclude_unkown_list:
+					try:
+						TMFA_Problem.prob.set_objective(-drg_var)
+						TMFA_Problem._solve()
+						min_drg = TMFA_Problem.prob.result.get_value(drg_var)
+						TMFA_Problem.prob.set_objective(drg_var)
+						TMFA_Problem._solve()
+						max_drg = TMFA_Problem.prob.result.get_value(drg_var)
+					except:
+						min_drg = 'SolverError'
+						max_drg = 'SolverError'
+				else:
+					min_drg = 'NA'
+					max_drg = 'NA'
+				print('DGRI Variability\t{}\t{}\t{}'.format(reaction, min_drg, max_drg))
+
+		excluded_compounds = ['cpd_h[c]', 'cpd_h[p]', 'cpd_h[e]', 'cpd_h2o[c]', 'cpd_h2o[p]', 'cpd_h2o[e]']
 		for compound in sorted(mm_irreversible.compounds):
 			# logger.info('solving for compound {}'.format(compound))
 			cpd_var = TMFA_Problem.prob.var(str(compound))
-			try:
+			if compound not in excluded_compounds:
 				TMFA_Problem.prob.set_objective(cpd_var)
 				TMFA_Problem._solve()
 				max = TMFA_Problem.prob.result.get_value(cpd_var)
-			except:
+			else:
 				max = 'NA'
-			try:
+			if compound not in excluded_compounds:
 				TMFA_Problem.prob.set_objective(-cpd_var)
 				TMFA_Problem._solve()
 				min = TMFA_Problem.prob.result.get_value(cpd_var)
-			except:
+			else:
 				min = 'NA'
 			print('CPD Conc Variability\t{}\t{}\t{}'.format(compound, min, max))#, math.exp(min), math.exp(max)))
 
@@ -461,7 +477,7 @@ def add_conc_constraints(problem, cpd_conc_dict, cp_list):
 					# problem.prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1]))+1)
 				lower = math.log(Decimal(conc_limits[0]))
 				upper = math.log(Decimal(conc_limits[1]))
-				# print('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, upper))
+				logger.info('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, upper))
 	return problem, cpdid_xij_dict
 
 
@@ -728,16 +744,21 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	epsilon = 0.0000001
 	# epsilon = 0
 	# h_e = problem.prob.var(str('h[e]'))
-	h_e = problem.prob.var(str('cpd_h[p]'))
+	h_e = problem.prob.var(str('cpd_h[e]'))
 
 	problem.prob.add_linear_constraints(h_e <= 11)
 	problem.prob.add_linear_constraints(h_e >= 4)
+
+	h_p = problem.prob.var(str('cpd_h[p]'))
+
+	problem.prob.add_linear_constraints(h_p <= 11)
+	problem.prob.add_linear_constraints(h_p >= 4)
 	# problem.prob.add_linear_constraints(h_e == 7.4)
 	# h_c = problem.prob.var(str('h[c]'))
 	h_c = problem.prob.var(str('cpd_h[c]'))
 
 	problem.prob.add_linear_constraints(h_c == 7)
-	delta_ph = (h_e - h_c)
+	delta_ph = (h_p - h_c)
 	F = Decimal(0.02306)
 	excluded_cpd_list = ['cpd_h2o[e]', 'cpd_h2o[c]', 'cpd_h[c]', 'cpd_h[e]', 'cpd_h[p]', 'cpd_h2o[p]']
 	# excluded_cpd_list = ['h2o[e]', 'h2o[c]', 'h[c]', 'h[e]']
