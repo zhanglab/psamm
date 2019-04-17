@@ -160,14 +160,14 @@ def compound_charge_likelihood(
         p_match = 0.9
         p_no_match = max(
             0,
-            ((compound_charge_equal_marg - p_match * compound_prior)
-             / (1.0 - compound_prior)))
+            ((compound_charge_equal_marg - p_match * compound_prior) /
+             (1.0 - compound_prior)))
     else:
         p_match = 0.1
         p_no_match = max(
             0,
-            ((compound_charge_not_equal_marg - p_match * compound_prior)
-             / (1.0 - compound_prior)))
+            ((compound_charge_not_equal_marg - p_match * compound_prior) /
+             (1.0 - compound_prior)))
 
     return p_match, p_no_match
 
@@ -184,14 +184,14 @@ def compound_formula_likelihood(
         p_match = 0.9
         p_no_match = max(
             0,
-            ((compound_formula_equal_marg - p_match * compound_prior)
-             / (1.0 - compound_prior)))
+            ((compound_formula_equal_marg - p_match * compound_prior) /
+             (1.0 - compound_prior)))
     else:
         p_match = 0.1
         p_no_match = max(
             0,
-            ((compound_formula_not_equal_marg - p_match * compound_prior)
-             / (1.0 - compound_prior)))
+            ((compound_formula_not_equal_marg - p_match * compound_prior) /
+             (1.0 - compound_prior)))
 
     return p_match, p_no_match
 
@@ -208,14 +208,14 @@ def compound_kegg_likelihood(
         p_match = 0.65
         p_no_match = max(
             0,
-            ((compound_kegg_equal_marg - p_match * compound_prior)
-             / (1.0 - compound_prior)))
+            ((compound_kegg_equal_marg - p_match * compound_prior) /
+             (1.0 - compound_prior)))
     else:
         p_match = 0.35
         p_no_match = max(
             0,
-            ((compound_kegg_not_equal_marg - p_match * compound_prior)
-             / (1.0 - compound_prior)))
+            ((compound_kegg_not_equal_marg - p_match * compound_prior) /
+             (1.0 - compound_prior)))
 
     return p_match, p_no_match
 
@@ -227,14 +227,14 @@ def reaction_id_likelihood(
         p_match = 0.52
         p_no_match = max(
             0,
-            ((reaction_id_equal_marg - p_match * reaction_prior)
-             / (1.0 - reaction_prior)))
+            ((reaction_id_equal_marg - p_match * reaction_prior) /
+             (1.0 - reaction_prior)))
     else:
         p_match = 0.48
         p_no_match = max(
             0,
-            ((reaction_id_not_equal_marg - p_match * reaction_prior)
-             / (1.0 - reaction_prior)))
+            ((reaction_id_not_equal_marg - p_match * reaction_prior) /
+             (1.0 - reaction_prior)))
 
     return p_match, p_no_match
 
@@ -244,14 +244,14 @@ def reaction_name_likelihood(r1, r2, reaction_prior, reaction_name_marg):
         p_match = 0.59
         p_no_match = max(
             0,
-            ((reaction_name_marg - p_match * reaction_prior)
-             / (1.0 - reaction_prior)))
+            ((reaction_name_marg - p_match * reaction_prior) /
+             (1.0 - reaction_prior)))
     else:
         p_match = 0.41
         p_no_match = max(
             0,
-            ((1.0 - reaction_name_marg - p_match * reaction_prior)
-             / (1.0 - reaction_prior)))
+            ((1.0 - reaction_name_marg - p_match * reaction_prior) /
+             (1.0 - reaction_prior)))
 
     return p_match, p_no_match
 
@@ -277,21 +277,16 @@ def reaction_equation_mapping_approx_max_likelihood(
                 score = cpd_pred[(c1, c2)]
                 # the possibility that compounds are equal
                 p_match += np.log(score)
-                # the possibility that compounds are NOT equal
-                p_no_match += np.log(max(1 - score, 1e-5))
                 cpd_set1.remove(c1)
                 cpd_set2.remove(c2)
 
-    def modify_p_value(p_match, p_no_match, pvalue):
-        p_match += np.log(pvalue)
-        p_no_match += np.log(1 - pvalue)
-        return p_match, p_no_match
-
     for c in cpd_set1:
-        p_match, p_no_match = modify_p_value(p_match, p_no_match, pvalue=1e-5)
+        p_match += np.log(0.01)
     for c in cpd_set2:
-        p_match, p_no_match = modify_p_value(p_match, p_no_match, pvalue=1e-5)
+        p_match += np.log(0.01)
 
+    p_match = np.exp(p_match)
+    p_no_match = 1 - p_match
     return p_match, p_no_match
 
 
@@ -324,15 +319,13 @@ def get_best_p_value_set(r1, r2, cpd_pred):
         cpd_set1_right, cpd_set2_left)
 
     # maintain the direction with better p values
-    if (np.exp(p_forward_match) / np.exp(p_forward_no_match)
-            >= np.exp(p_reverse_match) / np.exp(p_reverse_no_match)):
+    if (p_forward_match >= p_reverse_match):
         p_match = p_forward_match
         p_no_match = p_forward_no_match
     else:
         p_match = p_reverse_match
         p_no_match = p_reverse_no_match
 
-    p_match, p_no_match = np.exp(p_match), np.exp(p_no_match)
     return p_match, p_no_match
 
 
@@ -350,8 +343,8 @@ def merge_partial_p_set(cpd_set1_left, cpd_set2_left, cpd_pred,
     p_set_right = \
         reaction_equation_mapping_approx_max_likelihood(
             cpd_set1_right, cpd_set2_right, cpd_pred)
-    p_match = p_set_left[0] + p_set_right[0]
-    p_no_match = p_set_left[1] + p_set_right[1]
+    p_match = p_set_left[0] * p_set_right[0]
+    p_no_match = p_set_left[1] * p_set_right[1]
     return p_match, p_no_match
 
 
@@ -473,18 +466,18 @@ def map_model_compounds(model1, model2, nproc, outpath, log, kegg):
     # Compound charge
     # Marginal probability of observing two compounds with the same charge
     compound_charge_equal_marg = sum(
-        c1.charge is not None
-        and c2.charge is not None
-        and c1.charge == c2.charge
+        c1.charge is not None and
+        c2.charge is not None and
+        c1.charge == c2.charge
         for c1, c2 in product(
             itervalues(model1.compounds), itervalues(model2.compounds))
     ) / compound_pairs
 
     # Marginal probability of observing two compounds with different charge
     compound_charge_not_equal_marg = sum(
-        c1.charge is not None
-        and c2.charge is not None
-        and c1.charge != c2.charge
+        c1.charge is not None and
+        c2.charge is not None and
+        c1.charge != c2.charge
         for c1, c2 in product(
             itervalues(model1.compounds), itervalues(model2.compounds))
     ) / compound_pairs
@@ -511,8 +504,8 @@ def map_model_compounds(model1, model2, nproc, outpath, log, kegg):
     compound_formula_not_equal_marg = 1.0 - compound_formula_equal_marg - (
         sum(c1.formula is None or c2.formula is None
             for c1, c2 in product(itervalues(model1.compounds),
-                                  itervalues(model2.compounds)))
-        / compound_pairs)
+                                  itervalues(model2.compounds))) /
+        compound_pairs)
 
     print('Calculating compound formula likelihoods...')
     compound_formula_likelihoods = pairwise_likelihood(
@@ -526,9 +519,9 @@ def map_model_compounds(model1, model2, nproc, outpath, log, kegg):
         # Marginal probability of observing two compounds
         # where KEGG ids are equal
         compound_kegg_equal_marg = sum(
-            c1.kegg is not None
-            and c2.kegg is not None
-            and c1.kegg == c2.kegg
+            c1.kegg is not None and
+            c2.kegg is not None and
+            c1.kegg == c2.kegg
             for c1, c2 in product(
                 itervalues(model1.compounds),
                 itervalues(model2.compounds))
@@ -537,9 +530,9 @@ def map_model_compounds(model1, model2, nproc, outpath, log, kegg):
         # Marginal probability of observing two compounds
         # where KEGG ids are different
         compound_kegg_not_equal_marg = sum(
-            c1.kegg is not None
-            and c2.kegg is not None
-            and c1.kegg != c2.kegg for c1, c2 in product(
+            c1.kegg is not None and
+            c2.kegg is not None and
+            c1.kegg != c2.kegg for c1, c2 in product(
                 itervalues(model1.compounds),
                 itervalues(model2.compounds))
         ) / compound_pairs

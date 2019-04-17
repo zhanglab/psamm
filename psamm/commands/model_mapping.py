@@ -315,12 +315,12 @@ class ModelMappingCommand(Command):
             '--reaction-map', type=str, required=True,
             help='Reaction model mapping result')
         parser_c.add_argument(
-            '--curated-compound-map', type=str,
+            '--curated-compound-map', type=str, required=True,
             help=(
                 'File to store curated compound mapping, if file exists, '
                 'resume previous curation'))
         parser_c.add_argument(
-            '--curated-reaction-map', type=str,
+            '--curated-reaction-map', type=str, required=True,
             help=(
                 'File to store curated reaction mapping, if file exists, '
                 'resume previous curation'))
