@@ -276,17 +276,20 @@ def reaction_equation_mapping_approx_max_likelihood(
             if (c1 in cpd_set1) and (c2 in cpd_set2):
                 score = cpd_pred[(c1, c2)]
                 # the possibility that compounds are equal
-                p_match += np.log(score)
+                p_match += np.log(score * 0.9 + (1 - score) * 0.1)
+                p_no_match += np.log(score * 0.1 + (1 - score) * 0.9)
                 cpd_set1.remove(c1)
                 cpd_set2.remove(c2)
 
     for c in cpd_set1:
-        p_match += np.log(0.01)
+        p_match += np.log(0.1)
+        p_no_match += np.log(0.9)
     for c in cpd_set2:
-        p_match += np.log(0.01)
+        p_match += np.log(0.1)
+        p_no_match += np.log(0.9)
 
     p_match = np.exp(p_match)
-    p_no_match = 1 - p_match
+    p_no_match = np.exp(p_no_match)
     return p_match, p_no_match
 
 
@@ -319,7 +322,8 @@ def get_best_p_value_set(r1, r2, cpd_pred):
         cpd_set1_right, cpd_set2_left)
 
     # maintain the direction with better p values
-    if (p_forward_match >= p_reverse_match):
+    if (p_forward_match / p_forward_no_match
+            >= p_reverse_match / p_reverse_no_match):
         p_match = p_forward_match
         p_no_match = p_forward_no_match
     else:

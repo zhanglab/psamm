@@ -105,7 +105,7 @@ class Curator(object):
 def read_mapping(file):
     try:
         df = pd.read_csv(file, sep='\t', index_col=[0, 1])
-    except OSError as e:
+    except IOError as e:
         if e.errno != errno.ENOENT:
             raise
         df = pd.DataFrame()
