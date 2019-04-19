@@ -343,13 +343,13 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		for compound in sorted(mm_irreversible.compounds):
 			# logger.info('solving for compound {}'.format(compound))
 			cpd_var = TMFA_Problem.prob.var(str(compound))
-			if compound not in excluded_compounds:
+			if str(compound) not in excluded_compounds:
 				TMFA_Problem.prob.set_objective(cpd_var)
 				TMFA_Problem._solve()
 				max = TMFA_Problem.prob.result.get_value(cpd_var)
 			else:
 				max = 'NA'
-			if compound not in excluded_compounds:
+			if str(compound) not in excluded_compounds:
 				TMFA_Problem.prob.set_objective(-cpd_var)
 				TMFA_Problem._solve()
 				min = TMFA_Problem.prob.result.get_value(cpd_var)
