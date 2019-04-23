@@ -29,6 +29,7 @@ from builtins import object, input
 import operator
 from itertools import product
 import time
+import sys
 
 from psamm.formula import Formula
 import psamm.bayesian as bayesian
@@ -408,10 +409,11 @@ class ModelMappingCommand(Command):
             model1, model2, self._args.nproc, self._args.outpath,
             log=self._args.log, kegg=self._args.map_compound_kegg)
         print(
-            'It takes %s seconds to calculate compound mapping...'
+            'It took %s seconds to calculate compound mapping...'
             % (time.time() - t))
 
         print('Writing output...')
+        sys.stdout.flush()
         t = time.time()
         # Write out ROC curve results
         if (actual_compound_mapping is not None):
@@ -424,17 +426,17 @@ class ModelMappingCommand(Command):
 
         # Write out classifier results
 
-        if (actual_compound_mapping is not None):
-            for c1, c2 in product(cpd_bayes_pred.model1.compounds,
-                                  cpd_bayes_pred.model2.compounds):
-                maps = (c1 in actual_compound_mapping and
-                        actual_compound_mapping[c1] is not None and
-                        c2 in actual_compound_mapping[c1])
-                p = cpd_bayes_pred.map(c1, c2)
-                if (p > self._args.threshold_compound and not maps):
-                    print('Incorrect map: {}\t{}\t{}'.format(c2, c1, p))
-                if (p <= self._args.threshold_compound and maps):
-                    print('Incorrect unmap: {}\t{}\t{}'.format(c2, c1, p))
+        # if (actual_compound_mapping is not None):
+        #     for c1, c2 in product(cpd_bayes_pred.model1.compounds,
+        #                           cpd_bayes_pred.model2.compounds):
+        #         maps = (c1 in actual_compound_mapping and
+        #                 actual_compound_mapping[c1] is not None and
+        #                 c2 in actual_compound_mapping[c1])
+        #         p = cpd_bayes_pred.map(c1, c2)
+        #         if (p > self._args.threshold_compound and not maps):
+        #             print('Incorrect map: {}\t{}\t{}'.format(c2, c1, p))
+        #         if (p <= self._args.threshold_compound and maps):
+        #             print('Incorrect unmap: {}\t{}\t{}'.format(c2, c1, p))
 
         # Parse and output raw mapping
         if self._args.raw:
@@ -446,7 +448,8 @@ class ModelMappingCommand(Command):
             self._args.threshold_compound)
         compound_best.to_csv(
             self._args.outpath + '/bayes_compounds_best.tsv', sep='\t')
-        print('It takes %s seconds to write output...' % (time.time() - t))
+        print('It took %s seconds to write output...' % (time.time() - t))
+        sys.stdout.flush()
 
         # Bayesian classifier
         t = time.time()
@@ -455,10 +458,11 @@ class ModelMappingCommand(Command):
             self._args.nproc, self._args.outpath,
             log=self._args.log, gene=self._args.map_reaction_gene)
         print(
-            'It takes %s seconds to calculate reaction mapping...'
+            'It took %s seconds to calculate reaction mapping...'
             % (time.time() - t))
 
         print('Writing output...')
+        sys.stdout.flush()
         t = time.time()
         # Write out ROC curve results
         if (actual_reaction_mapping is not None):
@@ -471,17 +475,17 @@ class ModelMappingCommand(Command):
 
         # Write out classifier results
 
-        if (actual_reaction_mapping is not None):
-            for r1, r2 in product(rxn_bayes_pred.model1.reactions,
-                                  rxn_bayes_pred.model2.reactions):
-                maps = (r1 in actual_reaction_mapping and
-                        actual_reaction_mapping[r1] is not None and
-                        r2 in actual_reaction_mapping[r1])
-                p = rxn_bayes_pred.map(r1, r2)
-                if (p > self._args.threshold_reaction and not maps):
-                    print('Incorrect map: {}\t{}\t{}'.format(r2, r1, p))
-                if (p <= self._args.threshold_reaction and maps):
-                    print('Incorrect unmap: {}\t{}\t{}'.format(r2, r1, p))
+        # if (actual_reaction_mapping is not None):
+        #     for r1, r2 in product(rxn_bayes_pred.model1.reactions,
+        #                         rxn_bayes_pred.model2.reactions):
+        #         maps = (r1 in actual_reaction_mapping and
+        #                 actual_reaction_mapping[r1] is not None and
+        #                 r2 in actual_reaction_mapping[r1])
+        #         p = rxn_bayes_pred.map(r1, r2)
+        #         if (p > self._args.threshold_reaction and not maps):
+        #             print('Incorrect map: {}\t{}\t{}'.format(r2, r1, p))
+        #         if (p <= self._args.threshold_reaction and maps):
+        #             print('Incorrect unmap: {}\t{}\t{}'.format(r2, r1, p))
 
         # Parse and output raw mapping
         if self._args.raw:
@@ -493,7 +497,8 @@ class ModelMappingCommand(Command):
             self._args.threshold_reaction)
         reaction_best.to_csv(
             self._args.outpath + '/bayes_reactions_best.tsv', sep='\t')
-        print('It takes %s seconds to write output...' % (time.time() - t))
+        print('It took %s seconds to write output...' % (time.time() - t))
+        sys.stdout.flush()
 
     def _curation(self):
         # read models

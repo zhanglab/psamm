@@ -24,6 +24,7 @@ from builtins import object, range
 from itertools import product
 from multiprocessing import Pool
 import operator
+import sys
 
 import numpy as np
 import pandas as pd
@@ -451,6 +452,7 @@ def map_model_compounds(model1, model2, nproc, outpath, log, kegg):
     compound_id_marg = sum(result) / float(compound_pairs)
 
     print('Calculating compound ID likelihoods...')
+    sys.stdout.flush()
     compound_id_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.compounds, model2.compounds,
         compound_id_likelihood, (compound_prior, compound_id_marg))
@@ -463,6 +465,7 @@ def map_model_compounds(model1, model2, nproc, outpath, log, kegg):
     compound_name_marg = sum(result) / float(compound_pairs)
 
     print('Calculating compound name likelihoods...')
+    sys.stdout.flush()
     compound_name_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.compounds, model2.compounds,
         compound_name_likelihood, (compound_prior, compound_name_marg))
@@ -487,6 +490,8 @@ def map_model_compounds(model1, model2, nproc, outpath, log, kegg):
     ) / compound_pairs
 
     print('Calculating compound charge likelihoods...')
+    sys.stdout.flush()
+
     compound_charge_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.compounds, model2.compounds,
         compound_charge_likelihood, (
@@ -512,6 +517,7 @@ def map_model_compounds(model1, model2, nproc, outpath, log, kegg):
         compound_pairs)
 
     print('Calculating compound formula likelihoods...')
+    sys.stdout.flush()
     compound_formula_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.compounds, model2.compounds,
         compound_formula_likelihood, (
@@ -542,6 +548,7 @@ def map_model_compounds(model1, model2, nproc, outpath, log, kegg):
         ) / compound_pairs
 
         print('Calculating compound KEGG ID likelihoods...')
+        sys.stdout.flush()
         compound_kegg_likelihoods = pairwise_likelihood(
             pool, chunksize, model1.compounds, model2.compounds,
             compound_kegg_likelihood, (
@@ -614,6 +621,7 @@ def map_model_reactions(model1, model2, cpd_pred, nproc, outpath, log, gene):
     reaction_id_not_equal_marg = 1.0 - reaction_id_equal_marg
 
     print('Calculating reaction ID likelihoods...')
+    sys.stdout.flush()
     reaction_id_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.reactions, model2.reactions,
         reaction_id_likelihood, (
@@ -629,6 +637,7 @@ def map_model_reactions(model1, model2, cpd_pred, nproc, outpath, log, gene):
     reaction_name_equal_marg = sum(result) / float(reaction_pairs)
 
     print('Calculating reaction name likelihoods...')
+    sys.stdout.flush()
     reaction_name_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.reactions, model2.reactions,
         reaction_name_likelihood, (reaction_prior, reaction_name_equal_marg))
@@ -636,6 +645,7 @@ def map_model_reactions(model1, model2, cpd_pred, nproc, outpath, log, gene):
     # Reaction equation
 
     print('Calculating reaction equation likelihoods...')
+    sys.stdout.flush()
     reaction_equation_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.reactions, model2.reactions,
         reaction_equation_compound_mapping_likelihood,
@@ -648,6 +658,7 @@ def map_model_reactions(model1, model2, cpd_pred, nproc, outpath, log, gene):
     # do _not_ match.
     if gene:
         print('Calculating reaction genes likelihoods...')
+        sys.stdout.flush()
         reaction_genes_likelihoods = pairwise_likelihood(
             pool, chunksize, model1.reactions, model2.reactions,
             reaction_genes_likelihood, ())
