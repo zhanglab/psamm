@@ -61,6 +61,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		parser.add_argument('--tfba', action='store_true')
 		parser.add_argument('--threshold', default=None, type=Decimal)
 		parser.add_argument('--verbose', action='store_true')
+		parser.add_argument('--randomsparse', action='store_true')
 		super(TMFACommand, cls).init_parser(parser)
 
 	def run(self):
@@ -139,7 +140,10 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# make an irreversible version of the metabolic model:
 		mm_irreversible, split_reversible, reversible_lump_to_rxn_dict = make_irreversible(mm, exclude_lump_unkown, lump_to_rxnids_dir, self._args.hamilton)
 		split_reactions = []
+		for_rev_reactions = []
 		for (i,j) in split_reversible:
+			for_rev_reactions.append(i)
+			for_rev_reactions.append(j)
 			split_reactions.append(i[:-8])
 
 
@@ -221,6 +225,67 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			quit()
 
 
+		if self._args.randomsparse:
+			testing_list = []
+			tmp_list = list(mm_irreversible.reactions)
+			for i in tmp_list:
+				if mm_irreversible.is_exchange(i):
+					continue
+				else:
+					testing_list.append(i)
+			random.shuffle(testing_list)
+			TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
+			cp_list = [str(cp) for cp in TMFA_Problem._model.compounds]
+			TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, cpd_conc_dict, cp_list)
+			TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list,
+			                                        exclude_unkown_list,
+			                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
+			                                        split_reversible, transport_parameters, list(mm_irreversible.reactions),
+			                                        self._args.scaled_compounds, self._args.temp, self._args.err)
+			TMFA_Problem.prob.integrality_tolerance.value = 0.0
+			biomax = solve_objective(TMFA_Problem, objective)
+			logger.info('Biomass Maximum: {}'.format(biomax))
+			logger.info('Testing with threshold: {}'.format(self._args.threshold))
+
+			essential_reactions = []
+			non_essential_reactions = []
+			for test_reaction in testing_list:
+				if test_reaction in for_rev_reactions:
+					base_rx = test_reaction[:-8]
+					test_var_for = TMFA_Problem.get_flux_var('{}_forward'.format(base_rx))
+					test_var_rev = TMFA_Problem.get_flux_var('{}_reverse'.format(base_rx))
+					c, = TMFA_Problem.prob.add_linear_constraints(test_var_for == 0)
+					d, = TMFA_Problem.prob.add_linear_constraints(test_var_rev == 0)
+					test_bio = solve_objective(TMFA_Problem, objective)
+					logger.info('biomass after deleting {}: {}'.format(base_rx, test_bio))
+					if test_bio < self._args.threshold:
+						c.delete()
+						d.delete()
+						logger.info('reaction {} was marked as essential'.format(base_rx))
+						essential_reactions.append('{}_forward'.format(base_rx))
+						essential_reactions.append('{}_reverse'.format(base_rx))
+
+					else:
+						logger.info('reaction {} was marked as non-essential'.format(base_rx))
+						non_essential_reactions.append('{}_forward'.format(base_rx))
+						non_essential_reactions.append('{}_reverse'.format(base_rx))
+				else:
+					testing_var = TMFA_Problem.get_flux_var(test_reaction)
+					c, = TMFA_Problem.prob.add_linear_constraints(testing_var == 0)
+					test_bio = solve_objective(TMFA_Problem, objective)
+					logger.info('biomass after deleting {}: {}'.format(test_reaction, test_bio))
+					if test_bio < self._args.threshold:
+						c.delete()
+						logger.info('reaction {} was marked as essential'.format(test_reaction))
+						essential_reactions.append(test_reaction)
+					else:
+						logger.info('reaction {} was marked as non-essential'.format(test_reaction))
+						non_essential_reactions.append(test_reaction)
+			for j in essential_reactions:
+				print('{}\t{}'.format(j, 1))
+			for j in non_essential_reactions:
+				print('{}\t{}'.format(j, 0))
+			quit()
 
 
 
