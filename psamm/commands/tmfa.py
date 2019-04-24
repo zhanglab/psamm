@@ -245,36 +245,46 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			TMFA_Problem.prob.integrality_tolerance.value = 0.0
 			biomax = solve_objective(TMFA_Problem, objective)
 			logger.info('Biomass Maximum: {}'.format(biomax))
-			logger.info('Testing with threshold: {}'.format(self._args.threshold))
+			if self._args.threshold is not None:
+				threshold = self._args.threshold
+			else:
+				threshold = biomax
+			logger.info('Testing with threshold: {}'.format(threshold))
 
 			essential_reactions = []
 			non_essential_reactions = []
+			checked_list = []
 			for test_reaction in testing_list:
 				if test_reaction in for_rev_reactions:
-					base_rx = test_reaction[:-8]
-					test_var_for = TMFA_Problem.get_flux_var('{}_forward'.format(base_rx))
-					test_var_rev = TMFA_Problem.get_flux_var('{}_reverse'.format(base_rx))
-					c, = TMFA_Problem.prob.add_linear_constraints(test_var_for == 0)
-					d, = TMFA_Problem.prob.add_linear_constraints(test_var_rev == 0)
-					test_bio = solve_objective(TMFA_Problem, objective)
-					logger.info('biomass after deleting {}: {}'.format(base_rx, test_bio))
-					if test_bio < self._args.threshold:
-						c.delete()
-						d.delete()
-						logger.info('reaction {} was marked as essential'.format(base_rx))
-						essential_reactions.append('{}_forward'.format(base_rx))
-						essential_reactions.append('{}_reverse'.format(base_rx))
-
+					if test_reaction in checked_list:
+						continue
 					else:
-						logger.info('reaction {} was marked as non-essential'.format(base_rx))
-						non_essential_reactions.append('{}_forward'.format(base_rx))
-						non_essential_reactions.append('{}_reverse'.format(base_rx))
+						base_rx = test_reaction[:-8]
+						checked_list.append('{}_forward'.format(base_rx))
+						checked_list.append('{}_reverse'.format(base_rx))
+						test_var_for = TMFA_Problem.get_flux_var('{}_forward'.format(base_rx))
+						test_var_rev = TMFA_Problem.get_flux_var('{}_reverse'.format(base_rx))
+						c, = TMFA_Problem.prob.add_linear_constraints(test_var_for == 0)
+						d, = TMFA_Problem.prob.add_linear_constraints(test_var_rev == 0)
+						test_bio = solve_objective(TMFA_Problem, objective)
+						logger.info('biomass after deleting {}: {}'.format(base_rx, test_bio))
+						if test_bio < threshold:
+							c.delete()
+							d.delete()
+							logger.info('reaction {} was marked as essential'.format(base_rx))
+							essential_reactions.append('{}_forward'.format(base_rx))
+							essential_reactions.append('{}_reverse'.format(base_rx))
+
+						else:
+							logger.info('reaction {} was marked as non-essential'.format(base_rx))
+							non_essential_reactions.append('{}_forward'.format(base_rx))
+							non_essential_reactions.append('{}_reverse'.format(base_rx))
 				else:
 					testing_var = TMFA_Problem.get_flux_var(test_reaction)
 					c, = TMFA_Problem.prob.add_linear_constraints(testing_var == 0)
 					test_bio = solve_objective(TMFA_Problem, objective)
 					logger.info('biomass after deleting {}: {}'.format(test_reaction, test_bio))
-					if test_bio < self._args.threshold:
+					if test_bio < threshold:
 						c.delete()
 						logger.info('reaction {} was marked as essential'.format(test_reaction))
 						essential_reactions.append(test_reaction)
