@@ -110,10 +110,11 @@ class RandomSparseNetworkCommand(MetabolicMixin, LoopRemovalMixin,
         if self._args.type == 'rxgenes':
             essential, deleted = randomsparse.random_sparse_return_all(
                 strategy, p, reaction, flux_threshold)
-            for i in essential:
-                print('{}\t{}'.format(i, 1))
-            for i in deleted:
-                print('{}\t{}'.format(i, 0))
+            for i in self._mm.reactions:
+                if i in deleted:
+                    print('{}\t{}'.format(i, 0))
+                else:
+                    print('{}\t{}'.format(i, 1))
         else:
             essential, deleted = randomsparse.random_sparse(
                 strategy, p, reaction, flux_threshold)

@@ -260,10 +260,11 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			strategy = GeneDeletionStrategy(mm_irreversible, get_gene_associations(model))
 
 			essential, deleted = random_sparse_return_all(strategy, TMFA_Problem, objective, threshold)
-			for j in essential:
-				print('{}\t{}'.format(j, 1))
-			for j in deleted:
-				print('{}\t{}'.format(j, 0))
+			for i in mm_irreversible.reactions:
+				if i in deleted:
+					print('{}\t{}'.format(i, 0))
+				else:
+					print('{}\t{}'.format(i, 1))
 			quit()
 
 		if self._args.randomsparse:
