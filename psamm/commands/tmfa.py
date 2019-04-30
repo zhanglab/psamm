@@ -29,7 +29,11 @@ import csv
 import math
 import random
 import argparse
-from collections import Counter
+from psamm.datasource.entry import (DictCompoundEntry as CompoundEntry,
+                    DictReactionEntry as ReactionEntry,
+                    DictCompartmentEntry as CompartmentEntry)
+from collections import Counter, defaultdict
+from psamm.randomsparse import  GeneDeletionStrategy, random_sparse_return_all, get_gene_associations
 logger = logging.getLogger(__name__)
 
 
@@ -62,6 +66,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		parser.add_argument('--threshold', default=None, type=Decimal)
 		parser.add_argument('--verbose', action='store_true')
 		parser.add_argument('--randomsparse', action='store_true')
+		parser.add_argument('--randomsparse_genes', action='store_true')
 		super(TMFACommand, cls).init_parser(parser)
 
 	def run(self):
@@ -146,7 +151,17 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			for_rev_reactions.append(j)
 			split_reactions.append(i[:-8])
 
+		model = self._model
 
+		gene_dictionary = defaultdict(list)
+		# for rx in split_reactions:
+		# 	print(rx)
+		for rx in model.reactions:
+			if rx.id in split_reactions:
+				f = ReactionEntry(dict(id='{}_forward'.format(rx.id), genes=rx.genes))
+				r = ReactionEntry(dict(id='{}_reverse'.format(rx.id), genes=rx.genes))
+				model.reactions.add_entry(f)
+				model.reactions.add_entry(r)
 
 		# update these lists for the new reversible lumps and constituent reactions.
 		# exclude lump_list is a list of all excluded reactions and lump reactions.
@@ -224,6 +239,32 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 					print('{}\tBadConstraint'.format(rx))
 			quit()
 
+		if self._args.randomsparse_genes:
+			TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
+			cp_list = [str(cp) for cp in TMFA_Problem._model.compounds]
+			TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, cpd_conc_dict, cp_list)
+			TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list,
+			                                        exclude_unkown_list,
+			                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
+			                                        split_reversible, transport_parameters,
+			                                        list(mm_irreversible.reactions),
+			                                        self._args.scaled_compounds, self._args.temp, self._args.err)
+			TMFA_Problem.prob.integrality_tolerance.value = 0.0
+			biomax = solve_objective(TMFA_Problem, objective)
+			logger.info('Biomass Maximum: {}'.format(biomax))
+			if self._args.threshold is not None:
+				threshold = self._args.threshold
+			else:
+				threshold = biomax
+			logger.info('Testing with threshold: {}'.format(threshold))
+			strategy = GeneDeletionStrategy(mm_irreversible, get_gene_associations(model))
+
+			essential, deleted = random_sparse_return_all(strategy, TMFA_Problem, objective, threshold)
+			for j in essential:
+				print('{}\t{}'.format(j, 1))
+			for j in deleted:
+				print('{}\t{}'.format(j, 0))
+			quit()
 
 		if self._args.randomsparse:
 			testing_list = []
