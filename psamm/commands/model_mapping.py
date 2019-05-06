@@ -525,7 +525,8 @@ class ModelMappingCommand(Command):
             print('Below are the compound mapping involved:\n')
             for compound in compounds:
                 for cmap in curator.compound_map.loc[compound].iterrows():
-                    if (cmap[0] not in dest_compounds
+                    if (cmap is None
+                            or cmap[0] not in dest_compounds
                             or curator.compound_checked((compound, cmap[0]))):
                         continue
                     print(cmap[1])

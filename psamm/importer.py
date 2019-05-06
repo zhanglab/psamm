@@ -656,6 +656,8 @@ def main(importer_class=None, args=None):
         logger.error('Failed to parse model!', exc_info=True)
         logger.error(text_type(e))
         sys.exit(-1)
+    except Exception:
+        importer.help()
 
     if args.merge_compounds:
         compounds_before = len(model.compounds)
