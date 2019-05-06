@@ -567,13 +567,18 @@ class ModelMappingCommand(Command):
             curation.search_reaction(model2, [rmap[0][1]])
             print(('These two reactions have the following curated compound '
                    'pairs:\n'))
+            count = 0
             for compound in compounds:
                 if compound in curator.curated_compound_map.index:
                     for cmap in curator.curated_compound_map.loc[
                             compound].iterrows():
                         if cmap[0] in dest_compounds:
                             print(compound, cmap[0])
+                            count += 1
             print('\n')
+            print('%i compounds in %s, ' % (len(compounds, rmap[0][0])))
+            print('%i compounds in %s\n' % (len(compounds, rmap[0][1])))
+            print('%i curated compound pairs\n' % count)
             ask = ''
             # waiting for legal curation input
             while ask not in ['y', 'n', 'stop']:
