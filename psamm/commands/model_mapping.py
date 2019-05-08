@@ -576,8 +576,8 @@ class ModelMappingCommand(Command):
                             print(compound, cmap[0])
                             count += 1
             print('\n')
-            print('%i compounds in %s, ' % (len(compounds, rmap[0][0])))
-            print('%i compounds in %s\n' % (len(compounds, rmap[0][1])))
+            print('%i compounds in %s, ' % (len(compounds), rmap[0][0]))
+            print('%i compounds in %s\n' % (len(dest_compounds), rmap[0][1]))
             print('%i curated compound pairs\n' % count)
             ask = ''
             # waiting for legal curation input
