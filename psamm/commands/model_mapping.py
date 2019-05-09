@@ -573,7 +573,7 @@ class ModelMappingCommand(Command):
                     for cmap in curator.curated_compound_map.loc[
                             compound].iterrows():
                         if cmap[0] in dest_compounds:
-                            print(compound, cmap[0])
+                            print(compound, cmap[0], cmap[1]['p'])
                             count += 1
             print('\n')
             print('%i compounds in %s, ' % (len(compounds), rmap[0][0]))
