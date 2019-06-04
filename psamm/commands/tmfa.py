@@ -212,25 +212,28 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			random.shuffle(full_testing_list)
 			testing_list_tmp = []
 			for rx in full_testing_list:
-				testing_list_iter = testing_list_tmp + [rx]
-				logger.info('testing list: {}'.format(testing_list_tmp))
-				logger.info('testing rxn: {}'.format(rx))
-				TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
-				baseline_flux = solve_objective(TMFA_Problem, objective)
-				logger.info('Objective flux mm_irreversible: {}'.format(baseline_flux))
-				cp_list = [str(cp) for cp in TMFA_Problem._model.compounds]
-				TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, cpd_conc_dict, cp_list)
-				TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list,
-				                                        exclude_unkown_list,
-				                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
-				                                        split_reversible, transport_parameters, testing_list_iter,
-				                                        self._args.scaled_compounds, self._args.temp, self._args.err)
-				TMFA_Problem.prob.integrality_tolerance.value = 0.0
-				biomax = solve_objective(TMFA_Problem, objective)
-				logger.info('Objective flux tmfa problem: {}'.format(biomax))
-				if biomax >= 0.1*baseline_flux:
-					testing_list_tmp.append(rx)
-				else:
+				try:
+					testing_list_iter = testing_list_tmp + [rx]
+					logger.info('testing list: {}'.format(testing_list_tmp))
+					logger.info('testing rxn: {}'.format(rx))
+					TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
+					baseline_flux = solve_objective(TMFA_Problem, objective)
+					logger.info('Objective flux mm_irreversible: {}'.format(baseline_flux))
+					cp_list = [str(cp) for cp in TMFA_Problem._model.compounds]
+					TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, cpd_conc_dict, cp_list)
+					TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list,
+					                                        exclude_unkown_list,
+					                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
+					                                        split_reversible, transport_parameters, testing_list_iter,
+					                                        self._args.scaled_compounds, self._args.temp, self._args.err)
+					TMFA_Problem.prob.integrality_tolerance.value = 0.0
+					biomax = solve_objective(TMFA_Problem, objective)
+					logger.info('Objective flux tmfa problem: {}'.format(biomax))
+					if biomax >= 0.1*baseline_flux:
+						testing_list_tmp.append(rx)
+					else:
+						continue
+				except:
 					continue
 			for rx in full_testing_list:
 				if rx in testing_list_tmp:
@@ -358,6 +361,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		if self._args.tfba:
 			TMFA_Problem.add_thermodynamic()
 
+		logger.info('solving tmfa problem')
 		biomax = solve_objective(TMFA_Problem, objective)
 		# TMFA_Problem.prob.cplex.parameters.emphasis.numerical.set(1)
 		# TMFA_Problem.prob.cplex.parameters.lpmethod.set(5)
@@ -594,7 +598,7 @@ def add_conc_constraints(problem, cpd_conc_dict, cp_list):
 					# problem.prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1]))+1)
 				lower = math.log(Decimal(conc_limits[0]))
 				upper = math.log(Decimal(conc_limits[1]))
-				logger.info('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, upper))
+				# logger.info('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, upper))
 	return problem, cpdid_xij_dict
 
 
