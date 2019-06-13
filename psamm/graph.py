@@ -25,6 +25,15 @@ from six import iteritems, text_type
 
 from collections import defaultdict
 
+from . import findprimarypairs
+
+import logging
+
+from .formula import Formula, Atom, ParseError
+
+from .datasource.reaction import Direction
+
+logger = logging.getLogger(__name__)
 
 def _graphviz_prop_string(d):
     return ','.join('{}="{}"'.format(k, text_type(v)) for k, v
@@ -341,3 +350,85 @@ class Edge(Entity):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+
+def get_compound_dict(model):
+    compound_formula = {}
+    for compound in model.compounds:
+        if compound.formula is not None:
+            try:
+                f = Formula.parse(compound.formula).flattened()
+                if not f.is_variable():
+                    compound_formula[compound.id] = f
+                else:
+                    logger.warning(
+                        'Skipping variable formula {}: {}'.format(
+                            compound.id, compound.formula))
+            except ParseError as e:
+                msg = (
+                    'Error parsing formula'
+                    ' for compound {}:\n{}\n{}'.format(
+                        compound.id, e, compound.formula))
+                if e.indicator is not None:
+                    msg += '\n{}'.format(e.indicator)
+                logger.warning(msg)
+    return compound_formula
+
+# Fix subset here
+def make_network_dict(nm, mm, method='fpp', element=None, excluded_reactions=[]):
+    compound_formula = get_compound_dict(nm)
+
+    testing_list = [rxn for rxn in nm.reactions if rxn.id not in excluded_reactions]
+
+    reaction_data = {}
+    for rxn in testing_list:
+        reaction_data[rxn.id] = (rxn, rxn.equation.direction)
+
+    full_pairs_dict = {}
+
+    if method == 'fpp':
+        element_weight = findprimarypairs.element_weight
+        reaction_pairs = [(r.id, r.equation) for r in testing_list]
+        fpp_dict, _ = findprimarypairs.predict_compound_pairs_iterated(
+            reaction_pairs, compound_formula, element_weight=element_weight)
+
+        for rxn_id, fpp_pairs in iteritems(fpp_dict):
+            compound_pairs = []
+            for cpd_pair, transfer in iteritems(fpp_pairs[0]):
+                if element is None:
+                    compound_pairs.append(cpd_pair)
+                else:
+                    if any(Atom(element) in k for k in transfer):
+                        compound_pairs.append(cpd_pair)
+            (rxn_entry, rxn_dir) = reaction_data[rxn_id]
+            full_pairs_dict[rxn_entry] = (compound_pairs, rxn_dir)
+
+    elif method == 'no-fpp':
+        for reaction in testing_list:
+            compound_pairs = []
+            for substrate in reaction.equation.left:
+                for product in reaction.equation.right:
+                    if element is None:
+                        compound_pairs.append((substrate[0], product[0]))
+                    else:
+                        if Atom(element) in compound_formula[substrate[0].name] and Atom(element) in compound_formula[product[0].name]:
+                            compound_pairs.append((substrate[0], product[0]))
+            full_pairs_dict[reaction] = (compound_pairs, reaction.equation.direction)
+    return full_pairs_dict
+
+
+def write_network_dict(network_dict):
+
+    def get_direction_string(dir):
+        if dir == Direction.Both:
+            return 'both'
+        elif dir == Direction.Reverse:
+            return 'reverse'
+        elif dir == Direction.Forward:
+            return 'forward'
+
+    for key, value in sorted(iteritems(network_dict), key=lambda x:str(x)):
+        (cpair_list, dir) = value
+        for (c1,c2) in cpair_list:
+            print('{}\t{}\t{}\t{}'.format(key.id, c1, c2, get_direction_string(dir)))
+
