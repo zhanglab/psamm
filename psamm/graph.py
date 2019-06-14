@@ -374,11 +374,14 @@ def get_compound_dict(model):
                 logger.warning(msg)
     return compound_formula
 
-# Fix subset here
-def make_network_dict(nm, mm, method='fpp', element=None, excluded_reactions=[]):
+
+def make_network_dict(nm, mm, subset=None, method='fpp', element=None, excluded_reactions=[]):
     compound_formula = get_compound_dict(nm)
 
-    testing_list = [rxn for rxn in nm.reactions if rxn.id not in excluded_reactions]
+    if subset is not None:
+        testing_list = [rxn for rxn in nm.reactions if rxn.id not in excluded_reactions and rxn.id in subset and rxn.id in mm.reactions]
+    else:
+        testing_list = [rxn for rxn in nm.reactions if rxn.id not in excluded_reactions and rxn.id in mm.reactions]
 
     reaction_data = {}
     for rxn in testing_list:
