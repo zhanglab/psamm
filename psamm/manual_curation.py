@@ -37,26 +37,33 @@ class Curator(object):
         self.curated_reaction_map_file = curated_reaction_map_file
         self.false_compound_map_file = curated_compound_map_file + '.false'
         self.false_reaction_map_file = curated_reaction_map_file + '.false'
-        self.compound_map = read_mapping(self.compound_map_file)
+        self.ignore_compound_file = curated_compound_map_file + '.ignore'
+        self.ignore_reaction_file = curated_reaction_map_file + '.ignore'
+
+        self.compound_map = read_mapping(self.compound_map_file, [0, 1])
         self.compound_map.sort_values(by='p', inplace=True, ascending=False)
-        self.reaction_map = read_mapping(self.reaction_map_file)
+        self.reaction_map = read_mapping(self.reaction_map_file, [0, 1])
         self.reaction_map.sort_values(by='p', inplace=True, ascending=False)
         self.curated_compound_map = read_mapping(
-            self.curated_compound_map_file)
+            self.curated_compound_map_file, [0, 1])
         self.curated_reaction_map = read_mapping(
-            self.curated_reaction_map_file)
+            self.curated_reaction_map_file, [0, 1])
         self.false_compound_map = read_mapping(
-            self.false_compound_map_file)
+            self.false_compound_map_file, [0, 1])
         self.false_reaction_map = read_mapping(
-            self.false_reaction_map_file)
+            self.false_reaction_map_file, [0, 1])
+        self.ignore_compound = read_ignore(self.ignore_compound_file)
+        self.ignore_reaction = read_ignore(self.ignore_reaction_file)
 
     def reaction_checked(self, id):
         return (id in self.curated_reaction_map.index or
-                id in self.false_reaction_map.index)
+                id in self.false_reaction_map.index or
+                id in self.ignore_reaction)
 
     def compound_checked(self, id):
         return (id in self.curated_compound_map.index or
-                id in self.false_compound_map.index)
+                id in self.false_compound_map.index or
+                id in self.ignore_compound)
 
     def add_mapping(self, id, type, correct):
         if type == 'c':
@@ -82,6 +89,12 @@ class Curator(object):
                     self.reaction_map.loc[id]
                 )
 
+    def add_ignore(self, id, type):
+        if type == 'c':
+            self.ignore_compound.append(id)
+        if type == 'r':
+            self.ignore_reaction.append(id)
+
     def save(self):
         if len(self.curated_compound_map) > 0:
             self.curated_compound_map.to_csv(
@@ -99,12 +112,16 @@ class Curator(object):
             self.false_reaction_map.to_csv(
                 self.false_reaction_map_file, sep='\t'
             )
+        if len(self.ignore_compound) > 0:
+            write_ignore(self.ignore_compound, self.ignore_compound_file)
+        if len(self.ignore_reaction) > 0:
+            write_ignore(self.ignore_reaction, self.ignore_reaction_file)
         print('Progress saved\n')
 
 
-def read_mapping(file):
+def read_mapping(file, index_col):
     try:
-        df = pd.read_csv(file, sep='\t', index_col=[0, 1])
+        df = pd.read_csv(file, sep='\t', index_col=index_col)
     except IOError as e:
         if e.errno != errno.ENOENT:
             raise
@@ -114,6 +131,24 @@ def read_mapping(file):
 
 def add_mapping(map, row):
     return map.append(pd.DataFrame(row).T)
+
+
+def read_ignore(file):
+    ignore = list()
+    try:
+        with open(file) as f:
+            for r in f:
+                ignore.append(r.strip())
+    except IOError as e:
+        if e.errno != errno.ENOENT:
+            raise
+    return ignore
+
+
+def write_ignore(ignore, file):
+    with open(file, 'w') as o:
+        for i in ignore:
+            o.write('%s\n' % i)
 
 
 def filter_search_term(s):

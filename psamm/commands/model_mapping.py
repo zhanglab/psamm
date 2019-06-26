@@ -517,7 +517,8 @@ class ModelMappingCommand(Command):
         # iterate through reaction mapping
         for rmap in curator.reaction_map.iterrows():
             # skip already curated reactions
-            if curator.reaction_checked(rmap[0]):
+            if (curator.reaction_checked(rmap[0])
+                    or curator.reaction_checked(rmap[0][0])):
                 continue
             # check the compound mapping in current reaction
             compounds = curation.search_reaction(model1, [rmap[0][0]])
@@ -527,7 +528,8 @@ class ModelMappingCommand(Command):
                 for cmap in curator.compound_map.loc[compound].iterrows():
                     if (cmap is None
                             or cmap[0] not in dest_compounds
-                            or curator.compound_checked((compound, cmap[0]))):
+                            or curator.compound_checked((compound, cmap[0]))
+                            or curator.compound_checked(compound)):
                         continue
                     print(cmap[1])
                     print('\n')
@@ -536,7 +538,8 @@ class ModelMappingCommand(Command):
                     # waiting for legal curation input
                     while True:
                         ask = input(
-                            ('True compound match? (y/n/save/stop, '
+                            ('True compound match? (y/n/ignore/save/stop, '
+                             'type ignore to ignore this compound in future, '
                              'type save to save current progress, '
                              'type stop to save and exit): '))
                         if ask.lower() == 'n':
@@ -552,6 +555,9 @@ class ModelMappingCommand(Command):
                                 'c',
                                 True
                             )
+                            break
+                        if ask.lower() == 'ignore':
+                            curator.add_ignore(compound, 'c')
                             break
                         if ask.lower() == 'stop':
                             curator.save()
@@ -584,6 +590,7 @@ class ModelMappingCommand(Command):
             while ask not in ['y', 'n', 'stop']:
                 ask = input(
                     ('True reaction match? (y/n/save/stop, '
+                     'type ignore to ignore this reaction in future, '
                      'type save to save current progress, '
                      'type stop to save and exit): ')
                 )
@@ -592,6 +599,9 @@ class ModelMappingCommand(Command):
                     break
                 if ask.lower() == 'y':
                     curator.add_mapping(rmap[0], 'r', True)
+                    break
+                if ask.lower() == 'ignore':
+                    curator.add_ignore(rmap[0][0], 'r')
                     break
                 if ask.lower() == 'stop':
                     curator.save()
