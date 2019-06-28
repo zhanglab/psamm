@@ -376,11 +376,13 @@ def get_compound_dict(model):
     return compound_formula
 
 
-# Fix subset here
-def make_network_dict(nm, mm, method='fpp', element=None, excluded_reactions=[]):
+def make_network_dict(nm, mm, subset=None, method='fpp', element=None, excluded_reactions=[]):
     compound_formula = get_compound_dict(nm)
 
-    testing_list = [rxn for rxn in nm.reactions if rxn.id not in excluded_reactions and rxn.id != nm.biomass_reaction]
+    if subset is not None:
+        testing_list = [rxn for rxn in nm.reactions if rxn.id not in excluded_reactions and rxn.id in subset and rxn.id in mm.reactions]
+    else:
+        testing_list = [rxn for rxn in nm.reactions if rxn.id not in excluded_reactions and rxn.id in mm.reactions]
 
     reaction_data = {}
     for rxn in testing_list:
@@ -435,6 +437,7 @@ def write_network_dict(network_dict):
             print('{}\t{}\t{}\t{}'.format(key.id, c1, c2, get_direction_string(dir)))
 
 
+<<<<<<< HEAD
 def make_mature_cpair_dict(cpair_dict):
     new_cpair_dict = {}
     cpair_list = []
@@ -699,5 +702,42 @@ def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method, args_combin
     return g
 
 
+def make_compound_graph(network_dictionary, nm):
+    g = Graph()
+    compound_nodes = []
+    edge_list = []
+    for reaction, (cpair_list, dir) in iteritems(network_dictionary):
+        for (c1,c2) in cpair_list:
+            if c1 not in compound_nodes:
+                g.add_node(Node({'id': c1.name, 'entry':c1}))
+                compound_nodes.append(c1)
+            if c2 not in compound_nodes:
+                g.add_node(Node({'id':c2.name, 'entry':c2}))
+                compound_nodes.append(c2)
+            cpair_sorted = sorted([c1.name, c2.name])
+            edge = Edge(g.get_node(c1.name), g.get_node(c2.name), props={'id': '{}_{}_{}'.format(cpair_sorted[0], cpair_sorted[1], dir_value(dir)), 'dir':dir_value(dir)})
+            if edge.props['id'] not in edge_list:
+                g.add_edge(edge)
+                edge_list.append(edge.props['id'])
+            print(edge_list)
+    return g
 
 
+def make_reaction_graph(network_dictionary):
+    # Note, there is no difference between reaction graph for different pair prediction methods as of this version.
+    g = Graph()
+    for rxn in network_dictionary.keys():
+        g.add_node(Node({'id':rxn.id, 'entry':rxn}))
+
+    
+    print([n for n in g.nodes])
+
+
+def dir_value(direction):
+    """assign value to different reaction directions"""
+    if direction == Direction.Forward:
+        return 'forward'
+    elif direction == Direction.Reverse:
+        return 'back'
+    else:
+        return 'both'
