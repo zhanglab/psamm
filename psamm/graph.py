@@ -437,7 +437,6 @@ def write_network_dict(network_dict):
             print('{}\t{}\t{}\t{}'.format(key.id, c1, c2, get_direction_string(dir)))
 
 
-<<<<<<< HEAD
 def make_mature_cpair_dict(cpair_dict):
     new_cpair_dict = {}
     cpair_list = []

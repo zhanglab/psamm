@@ -107,12 +107,13 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         """Run visualization command."""
 
         compound_formula = graph.get_compound_dict(self._model)
-        print(compound_formula)
 
         vis_rxns = rxnset_for_vis(self._mm, self._args.subset, self._args.exclude)
 
+        exclude_for_fpp = [self._model.biomass_reaction] + self._args.exclude
         filter_dict = graph.make_network_dict(
-            self._model, self._mm, self._args.method, self._args.element, self._args.exclude)
+            self._model, self._mm, vis_rxns, self._args.method,
+            self._args.element, exclude_for_fpp)
 
         reaction_flux = {}
         if self._args.fba is True:
@@ -478,7 +479,7 @@ def add_node_props(g, recolor_dict):
             node.props['shape'] = 'box'
         else:
             if node.props['type'] not in ['bio_rxn', 'Ex_rxn']:
-                print('invalid nodes', type(node.props['entry']), node.props['entry'])
+                print('invalid nodes:', type(node.props['entry']), node.props['entry'])
 
     for r_id in recolor_dict:
         if r_id in g.nodes_original_id_dict:
@@ -499,7 +500,6 @@ def add_node_label(g, cpd_detail, rxn_detail):
             element, this element is a reaction properties name list,
             e.g. detail = [['id', genes', 'equation']].
     """
-    print(cpd_detail, rxn_detail)
     for node in g.nodes:
         node.props['label'] = '\n'.join(obj.id for obj in node.props['entry'])
 
