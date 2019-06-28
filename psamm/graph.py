@@ -468,7 +468,7 @@ def make_mature_cpair_dict(cpair_dict):
     return rxns_sorted_cpair_dict
 
 
-def make_cpair_dict(filter_dict, reaction_flux, args_method, args_combine):
+def make_cpair_dict(filter_dict, args_method, args_combine):
     """Create a mapping from compound pair to a defaultdict containing
     lists of reactions for the forward, reverse, and both directions.
 
@@ -476,7 +476,6 @@ def make_cpair_dict(filter_dict, reaction_flux, args_method, args_combine):
         filter_dict: A dictionary mapping reaction entry to compound pairs (inside
             of the pairs there are cpd opbject, not cpd IDs)involved in this reaction.
             Example: {rxn_entry: ([(c1, c3), (c1, c4), (c2, c4)], dir), ...}
-        reaction_flux: A dictionary mapping from reaction ID to reaction flux value.
         args_method: Command line argument, a string, including 'fpp' and 'no-fpp'.
         args_combine: combine level, default = 0, optional: 1 and 2.
     """
@@ -513,13 +512,7 @@ def make_cpair_dict(filter_dict, reaction_flux, args_method, args_combine):
                         if cpairs_dir[1] == Direction.Forward:
                             cpair_dict[(c1, c2)]['forward'].append(rxn_id)
                         else:
-                            if rxn.id in reaction_flux:
-                                if reaction_flux[rxn.id] > 0:
-                                    cpair_dict[(c1, c2)]['forward'].append(rxn_id)
-                                else:
-                                    cpair_dict[(c1, c2)]['back'].append(rxn_id)
-                            else:
-                                cpair_dict[(c1, c2)]['both'].append(rxn_id)
+                            cpair_dict[(c1, c2)]['both'].append(rxn_id)
 
         elif args_combine == 1 or args_combine == 2:
             for rxn, cpairs_dir in iteritems(filter_dict):
@@ -547,13 +540,7 @@ def make_cpair_dict(filter_dict, reaction_flux, args_method, args_combine):
                     if cpairs_dir[1] == Direction.Forward:
                         cpair_dict[(c1, c2)]['forward'].append(rxn_id)
                     else:
-                        if rxn.id in reaction_flux:
-                            if reaction_flux[rxn.id] > 0:
-                                cpair_dict[(c1, c2)]['forward'].append(rxn_id)
-                            else:
-                                cpair_dict[(c1, c2)]['back'].append(rxn_id)
-                        else:
-                            cpair_dict[(c1, c2)]['both'].append(rxn_id)
+                        cpair_dict[(c1, c2)]['both'].append(rxn_id)
     else:
         for rxn, cpairs_dir in iteritems(filter_dict):
             for (c1, c2) in cpairs_dir[0]:
@@ -562,13 +549,7 @@ def make_cpair_dict(filter_dict, reaction_flux, args_method, args_combine):
                 if cpairs_dir[1] == Direction.Forward:
                     cpair_dict[(c1, c2)]['forward'].append(r_id)
                 else:
-                    if rxn.id in reaction_flux:
-                        if reaction_flux[rxn.id] > 0:
-                            cpair_dict[(c1, c2)]['forward'].append(r_id)
-                        else:
-                            cpair_dict[(c1, c2)]['back'].append(r_id)
-                    else:
-                        cpair_dict[(c1, c2)]['both'].append(r_id)
+                    cpair_dict[(c1, c2)]['both'].append(r_id)
 
     rxns_sorted_cpair_dict = make_mature_cpair_dict(cpair_dict)
 

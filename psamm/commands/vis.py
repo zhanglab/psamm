@@ -23,13 +23,11 @@ import logging
 import csv
 import argparse
 from collections import defaultdict, Counter
-from six import text_type, iteritems, itervalues
+from six import text_type
 from ..command import (LoopRemovalMixin, ObjectiveMixin, SolverCommandMixin,
                        MetabolicMixin, Command, FilePrefixAppendAction)
 from ..reaction import Direction
-from ..formula import Atom
 from .. import graph
-from .. import fluxanalysis
 
 try:
     from graphviz import render
@@ -60,9 +58,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             help='Reaction(s) to exclude from metabolite pair '
                  'prediction and final visualization of the model'
                  '. (e.g. biomass reactions or biosynthesis reactions)')
-        parser.add_argument(
-            '--fba', action='store_true',
-            help='Run and visualize l1min FBA simulation on network image')
         parser.add_argument(
             '--element', type=text_type, default='C',
             help='Element transfer to show on the graph (C, N, O, S).')
@@ -106,8 +101,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
     def run(self):
         """Run visualization command."""
 
-        compound_formula = graph.get_compound_dict(self._model)
-
         vis_rxns = rxnset_for_vis(self._mm, self._args.subset, self._args.exclude)
 
         exclude_for_fpp = [self._model.biomass_reaction] + self._args.exclude
@@ -115,38 +108,14 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             self._model, self._mm, vis_rxns, self._args.method,
             self._args.element, exclude_for_fpp)
 
-        reaction_flux = {}
-        if self._args.fba is True:
-            solver = self._get_solver()
-            p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
-            try:
-                p.maximize(self._get_objective())
-            except fluxanalysis.FluxBalanceError as e:
-                self.report_flux_balance_error(e)
-
-            fluxes = {r: p.get_flux(r) for r in self._mm.reactions}
-
-            flux_var = p.get_flux_var(self._get_objective())
-            p.prob.add_linear_constraints(flux_var == p.get_flux(
-                self._get_objective()))
-            p.minimize_l1()
-
-            count = 0
-            for r_id in self._mm.reactions:
-                flux = p.get_flux(r_id)
-                if abs(flux - fluxes[r_id]) > 1e-6:
-                    count += 1
-                if abs(flux) > 1e-6:
-                    reaction_flux[r_id] = flux
-
         model_compound_entries, model_reaction_entries = {}, {}
         for c in self._model.compounds:
             model_compound_entries[c.id] = c
         for r in self._model.reactions:
             model_reaction_entries[r.id] = r
 
-        cpair_dict, new_id_mapping = graph.make_cpair_dict(filter_dict, reaction_flux,
-            self._args.method, self._args.combine)
+        cpair_dict, new_id_mapping = graph.make_cpair_dict(
+            filter_dict, self._args.method, self._args.combine)
 
         g = graph.make_bipartite_graph_object(
             cpair_dict, new_id_mapping, self._args.method, self._args.combine,
@@ -160,8 +129,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         g = add_node_props(g, recolor_dict)
 
         g = add_node_label(g, self._args.cpd_detail, self._args.rxn_detail)
-        if len(reaction_flux) != 0:
-            g = update_rxnnode_label(g, reaction_flux)
 
         bio_cpds_sub = set()
         bio_cpds_pro = set()
@@ -192,13 +159,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                 node.props['type'] = 'cpd_exchange'
             else:
                 continue
-
-        edge_values = make_edge_values(
-            reaction_flux, self._mm, compound_formula, self._args.element,
-            self._args.combine, cpair_dict, new_id_mapping,
-            self._args.method)
-        if len(edge_values) > 0:
-            g = set_edge_props_withfba(g, edge_values)
 
         if self._args.method == 'no-fpp' and self._args.combine != 0:
             logger.warning('--combine option is not compatible with no-fpp method')
@@ -296,85 +256,6 @@ def rxnset_for_vis(mm, subset_file, exclude):
     return final_rxn_set
 
 
-def make_edge_values(reaction_flux, mm, compound_formula, element, args_combine,
-                     cpair_dict, new_id_mapping, method):
-    """set edge_values according to reaction fluxes
-
-    Start from reaction equation and reaction flux to create a dictionary
-    where the key is an edge(a tuple of (c, r) or (r, c)) and the value is
-    a flux between the compound and reaction
-
-    Args:
-        reaction_flux: dictionary of reaction id and flux value.
-        mm: Metabolic model, class 'psamm.metabolicmodel.MetabolicModel'.
-        compound_formula: A dictionary of compound id and
-            class 'psamm.formula.Formula'.
-        element: Chemical symbol of an element, such as C(carbon),
-            N(nitrogen), S(sulfur).
-        args_combine: Interger, 0, 1 or 2. Decide whether to combine the
-            reaction nodes in different level (2 levels allowed) to get other
-            perspectives.
-        cpair_dict: A defaultdict of compound pair and another defaultdict of
-            list(in the latter defaultdict, key is direction(forward, back or
-            both), value is reaction list),{(c1, c2): {'forward':[rxns],...}}.
-        new_id_mapping: dictionary of reaction ID with suffix(number) and
-            real reaction id, e.g.{r_1:r, r_2: r,...}.
-        method: Command line argument, including 3 options:'fpp', 'no-fpp'
-            or a file path.
-        """
-
-    edge_values = {}
-    edge_values_combined = {}
-    if len(reaction_flux) > 0:
-        for reaction in reaction_flux:
-            rx = mm.get_reaction(reaction)
-            flux = reaction_flux[reaction]
-            if abs(flux) < 1e-9:
-                continue
-
-            for cpd, val in rx.compounds:
-                c = text_type(cpd)
-                if element == 'none':
-                    edge_values[c, reaction] = abs(flux * float(val))
-                else:
-                    if cpd.name in compound_formula:
-                        if Atom(element) in compound_formula[cpd.name]:
-                            edge_values[c, reaction] = abs(flux * float(val))
-                    else:
-                        edge_values[c, reaction] = abs(flux * float(val))
-
-        rxn_set = set()
-        for (cpd1, cpd2), rxns in iteritems(cpair_dict):
-            c1 = text_type(cpd1)
-            c2 = text_type(cpd2)
-            for direction, rlist in iteritems(rxns):
-                rlist_string = ','.join(new_id_mapping[r].id for r in rlist)
-                if any(new_id_mapping[r].id in reaction_flux and abs(
-                        reaction_flux[new_id_mapping[r].id]) > 1e-9 for
-                       r in rlist):
-                    x_comb_c1, x_comb_c2 = 0, 0
-                    for r in rlist:
-                        real_r = new_id_mapping[r].id
-                        rxn_set.add(real_r)
-                        if real_r in reaction_flux and abs(reaction_flux[real_r]) > 1e-9:
-                            x_comb_c1 += edge_values[(c1, real_r)]
-                            x_comb_c2 += edge_values[(c2, real_r)]
-                    edge_values_combined[(c1, rlist_string)] = x_comb_c1
-                    edge_values_combined[(c2, rlist_string)] = x_comb_c2
-
-        for r in reaction_flux:
-            if r not in rxn_set:
-                for (cpd, rxn) in edge_values:
-                    if rxn == r:
-                        edge_values_combined[(cpd, r)] = \
-                            edge_values[(cpd, rxn)]
-
-    if args_combine == 0 or args_combine == 1 or method == 'no-fpp':
-        return edge_values
-    else:
-        return edge_values_combined
-
-
 def dir_value(direction):
     """assign value to different reaction directions"""
     if direction == Direction.Forward:
@@ -413,7 +294,6 @@ def add_biomass_rxns(g, nm_bio_reaction, biomass_rxn_id):
                 'label': biomass_rxn_id,
                 'type': 'bio_rxn',
                 'fillcolor': ALT_COLOR,
-                'original_id': [biomass_rxn_id],
                 'compartment': c.compartment})
             g.add_node(node_bio)
 
@@ -445,7 +325,6 @@ def add_exchange_rxns(g, rxn_id, reaction):
                 'label': rxn_id,
                 'type': 'Ex_rxn',
                 'fillcolor': ACTIVE_COLOR,
-                'original_id': [rxn_id],
                 'compartment': c.compartment})
             g.add_node(node_ex)
 
@@ -468,7 +347,6 @@ def add_node_props(g, recolor_dict):
     return: a graph object that contains a set of node with defined color.
     """
     cpd_types = ['cpd', 'cpd_biomass_substrate', 'cpd_biomass_product', 'cpd_exchange']
-    rxn_types = ['rxn', 'bio_rxn', 'Ex_rxn']
     for node in g.nodes:
         node.props['style'] = 'filled'
         if node.props['type'] in cpd_types:
@@ -525,79 +403,6 @@ def add_node_label(g, cpd_detail, rxn_detail):
                     else:
                         label = pre_label
                     node.props['label'] = label
-    return g
-
-
-def update_rxnnode_label(g, reaction_flux):
-    """
-    add rxn flux value to the rxn node when --fba is given in command line.
-    :param g:
-    :param reaction_flux: dict of rxn_id: reaction flux value. Length is not 0.
-    :return: an updated graph object, flux values are shown on rxn nodes.
-    """
-    rxn_types = ['rxn', 'bio_rxn', 'Ex_rxn']
-    for node in g.nodes:
-        if node.props['type'] in rxn_types:
-            if type(node.props['entry']) is list:
-                sum_flux = 0
-                for r in node.props['entry']:
-                    sum_flux += abs(reaction_flux.get(r.id, 0))
-            else:
-                sum_flux = abs(reaction_flux.get(node.props['entry'].id, 0))
-            if sum_flux != 0:
-                node.props['label'] = '{}\n{}'.format(
-                    node.props['label'], sum_flux)
-    return g
-
-
-def set_edge_props_withfba(g, edge_values):
-    """set edge values, including direction, width, style.
-
-    Args:
-        g: A graph object contains nodes and edges.
-        edge_values: dictionary of (cpd, rxn): flux value.
-    return: a complete graph object.
-    """
-
-    if len(edge_values) > 0:
-        value_list = sorted(edge_values.values())
-        ninety_percentile = value_list[int(len(value_list) * 0.9) - 1]
-        min_edge_value = min(itervalues(edge_values))
-        max_edge_value = ninety_percentile
-    else:
-        min_edge_value = 1
-        max_edge_value = 1
-
-    def pen_width(value):
-        """calculate final edges width"""
-        if max_edge_value - min_edge_value == 0:
-            return 1
-        else:
-            if value > max_edge_value:
-                value = max_edge_value
-            alpha = value / max_edge_value
-            beta = float("{:.4f}".format(alpha))
-
-            return 10 * beta
-
-    if len(edge_values) > 0:
-        for edge in g.edges:
-            # print(edge.source.props['id'], edge.dest.props['id'])
-            cpd_types = ['cpd', 'cpd_biomass_substrate', 'cpd_biomass_product', 'cpd_exchange']
-            if edge.source.props['type'] in cpd_types:
-                rxn_string = ','.join([r.id if edge.dest.props['type'] != 'Ex_rxn' else edge.dest.props['id'] for
-                                       r in edge.dest.props['entry']])
-                edge_test = (edge.source.props['id'], rxn_string)
-
-            else:
-                rxn_string = ','.join([r.id if edge.source.props['type'] != 'Ex_rxn' else edge.source.props['id'] for
-                                       r in edge.source.props['entry']])
-                edge_test = (edge.dest.props['id'], rxn_string)
-
-            if edge_test in edge_values:
-                edge.props['penwidth'] = pen_width(edge_values[edge_test])
-            else:
-                edge.props['style'] = 'dotted'
     return g
 
 
