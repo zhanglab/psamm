@@ -432,6 +432,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		logger.info('TMFA Problem Status: {}'.format(TMFA_Problem.get_flux(objective)))
 
 		for reaction in sorted(mm_irreversible.reactions):
+			logger.info('testing {}'.format(reaction))
 			try:
 				min_flux = TMFA_Problem.flux_bound(reaction, -1)
 				max_flux = TMFA_Problem.flux_bound(reaction, 1)
