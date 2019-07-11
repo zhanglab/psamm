@@ -866,23 +866,26 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	epsilon = 0.0000001
 	# epsilon = 0
 	# h_e = problem.prob.var(str('h[e]'))
-	h_e = problem.prob.var(str('cpd_h[e]'))
+	# h_e = problem.prob.var(str('cpd_h[e]'))
 
-	problem.prob.add_linear_constraints(h_e <= 11)
-	problem.prob.add_linear_constraints(h_e >= 4)
+	# problem.prob.add_linear_constraints(h_e <= 11)
+	# problem.prob.add_linear_constraints(h_e >= 4)
 
-	h_p = problem.prob.var(str('cpd_h[p]'))
+	# h_p = problem.prob.var(str('cpd_h[p]'))
+	h_p = problem.prob.var(str('C00080[e]'))
 
 	problem.prob.add_linear_constraints(h_p <= 11)
 	problem.prob.add_linear_constraints(h_p >= 4)
 	# problem.prob.add_linear_constraints(h_e == 7.4)
 	# h_c = problem.prob.var(str('h[c]'))
-	h_c = problem.prob.var(str('cpd_h[c]'))
+	# h_c = problem.prob.var(str('cpd_h[c]'))
+	h_c = problem.prob.var(str('C00080[c]'))
 
 	problem.prob.add_linear_constraints(h_c == 7)
 	delta_ph = (h_p - h_c)
 	F = Decimal(0.02306)
-	excluded_cpd_list = ['cpd_h2o[e]', 'cpd_h2o[c]', 'cpd_h[c]', 'cpd_h[e]', 'cpd_h[p]', 'cpd_h2o[p]']
+	excluded_cpd_list = ['cpd_h2o[e]', 'cpd_h2o[c]', 'cpd_h[c]', 'cpd_h[e]', 'cpd_h[p]', 'cpd_h2o[p]',
+	                     'C00080[e]', 'C00080[c]', 'C00001[e]', 'C00001[c]']
 	# excluded_cpd_list = ['h2o[e]', 'h2o[c]', 'h[c]', 'h[e]']
 
 	# excluded_cpd_list = ['h2o[e]', 'h2o[c]', 'dtdp4aaddg[c]', 'g3p[c]', '23dhba[c]', '2aobut[c]', '2shchc[c]', '3c3hmp[c]',
@@ -941,8 +944,8 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 				dgr_trans = 0
 
 			# print('Reaction DGRTRANS {}: {}'.format(reaction, dgr_trans))
-
 			(dgr0, err) = dgr_dict[reaction]
+
 			# print('Reaction DGR0 dict lookup value: {}\t{}'.format(reaction, dgr_dict[reaction]))
 			ssxi = 0
 			problem.prob.define('dgr_err_{}'.format(reaction))
