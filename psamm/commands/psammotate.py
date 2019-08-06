@@ -14,16 +14,18 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2014-2017  Keith Dufault-Thompson <keitht547@uri.edu>
+# Copyright 2019    Jing Wang <jingwang89@uri.edu>
 
-from __future__ import unicode_literals
+from __future__ import print_function
 from collections import defaultdict, OrderedDict
+import argparse
 import re
 import csv
 import logging
 import os
 import yaml
 
-from ..command import Command, FilePrefixAppendAction
+from ..command import Command
 from ..expression import boolean
 logger = logging.getLogger(__name__)
 
@@ -37,22 +39,26 @@ class PsammotateCommand(Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--rbh', metavar='file',
-            type=file, help='Exclude reaction from balance check')
+            '--rbh', metavar='file', type=argparse.FileType('r'),
+            help=('The homologous gene table file, generally '
+                  'from pan-genome analysis'))
         parser.add_argument(
             '--template', type=int,
-            help='The column of the RBH file where the template model genes are listed'
+            help=('The column of the RBH file where the template model '
+                  'genes are listed')
         )
         parser.add_argument(
             '--target', type=int,
-            help='The column of the RBH file where the target model genes are listed'
+            help=('The column of the RBH file where the target '
+                  'model genes are listed')
         )
         super(PsammotateCommand, cls).init_parser(parser)
 
     def run(self):
         """Run psammotate command"""
         # print(self._args.rbh)
-        for i in app_reader(self._args.rbh, self._args.target, self._args.template):
+        for i in app_reader(self._args.rbh, self._args.target,
+                            self._args.template):
             tdict = i
         for i in model_loader(self, tdict):
             trans_genes_dict = i
@@ -60,19 +66,20 @@ class PsammotateCommand(Command):
 
 
 def app_reader(app_file, query, template):
-    '''This function will read in the app file and produce the mapping dictionary
+    '''This function will read in the app file and produce the mapping
+    dictionary.
 
-    The input is the app_file argument that the user enters, the query genome, which
-    is the number of the genome that the user wishes to make a model of, and the
-    number of the template genome which the user wishes to use to create the new model
-    from.
+    The input is the app_file argument that the user enters, the query genome,
+    which is the number of the genome that the user wishes to make a model of,
+    and the number of the template genome which the user wishes to use to
+    create the new model from.
     '''
 
     new_list = {}
     trans_dict = defaultdict(list)
     transl_dict = {}
     # Check what csv.reader in Python 3 takes (byte string or unicode string)
-    for x, row in enumerate(csv.reader(app_file, delimiter=str('\t'))):
+    for x, row in enumerate(csv.reader(app_file, delimiter='\t')):
         temp_l = []
         quer_l = []
         if x == 0:
@@ -84,7 +91,7 @@ def app_reader(app_file, query, template):
             quer = row[query]
             if temp != '-':
                 temp_split = []
-                #print(temp, quer)
+                # print(temp, quer)
                 if ',' in temp:
                     temp_split = temp.split(',')
                 else:
@@ -110,7 +117,7 @@ def app_reader(app_file, query, template):
             for j in quer_l:
                 j = j.strip()
                 trans_dict[i].append(j)
-        for key, value in trans_dict.iteritems():
+        for key, value in trans_dict.items():
             value = str(value)
             value = value.strip('[')
             value = value.strip(']')
@@ -128,7 +135,7 @@ def model_loader(self, translation_dict):
     target_genes_l = {}
     target_model_reactions = []
     translation_dict.pop('-', None)
-    for key, value in translation_dict.iteritems():
+    for key, value in translation_dict.items():
         value_s = None
         for i in value:
             if value_s is None:
@@ -195,7 +202,7 @@ def get_gene_list(genes):
 
 
 def encode_utf8(s):
-    if isinstance(s, unicode):
+    if isinstance(s, str):
         return s.encode('utf-8')
     return s
 
@@ -206,7 +213,7 @@ def print_yaml(self, trans_genes):
     def unicode_representer(dumper, uni):
         node = yaml.ScalarNode(tag=u'tag:yaml.org,2002:str', value=uni)
         return node
-    yaml.add_representer(unicode, unicode_representer)
+    yaml.add_representer(str, unicode_representer)
     yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
                          dict_constructor)
     dest = '.'
@@ -218,7 +225,7 @@ def print_yaml(self, trans_genes):
 
 
 def dict_representer(dumper, data):
-    return dumper.represent_dict(data.iteritems())
+    return dumper.represent_dict(data.items())
 
 
 def dict_constructor(loader, node):
@@ -226,7 +233,7 @@ def dict_constructor(loader, node):
 
 
 def model_export(self, trans_genes):
-    for entry, gene_list in trans_genes.iteritems():
+    for entry, gene_list in trans_genes.items():
         if gene_list[2] is not False:
             print(entry.id)
 
