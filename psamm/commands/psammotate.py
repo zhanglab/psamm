@@ -51,7 +51,7 @@ class PsammotateCommand(Command):
 
     def run(self):
         """Run psammotate command"""
-        #print(self._args.rbh)
+        # print(self._args.rbh)
         for i in app_reader(self._args.rbh, self._args.target, self._args.template):
             tdict = i
         for i in model_loader(self, tdict):
@@ -71,7 +71,7 @@ def app_reader(app_file, query, template):
     new_list = {}
     trans_dict = defaultdict(list)
     transl_dict = {}
-    #Check what csv.reader in Python 3 takes (byte string or unicode string)
+    # Check what csv.reader in Python 3 takes (byte string or unicode string)
     for x, row in enumerate(csv.reader(app_file, delimiter=str('\t'))):
         temp_l = []
         quer_l = []
@@ -135,7 +135,7 @@ def model_loader(self, translation_dict):
                 value_s = i
             elif value_s is not None:
                 value_s = value_s + ' or ' + i
-        if len(value) >=2:
+        if len(value) >= 2:
             value_s = '(' + value_s + ')'
         new_translation_dict[key] = value_s
 
@@ -165,49 +165,60 @@ def model_loader(self, translation_dict):
             if entry.genes is None:
                 target_model_reactions.append(entry.id)
                 translated_genes[entry] = ['None', 'True', 'True']
-                print('{}\t{}\t{}\t{}\t{}'.format(entry.id, entry.genes, 'None', 'True', 'True'))
+                print('{}\t{}\t{}\t{}\t{}'.format(
+                    entry.id, entry.genes, 'None', 'True', 'True'))
 
             if entry.genes is not None:
                 genes = entry.genes
-
+                print('%s\t%s' % (entry.id, entry.genes))
                 genes_1 = entry.genes
-                for key, value in new_translation_dict.iteritems():
-                        #print(genes, key, value)
-                    genes = re.sub(key, value, genes)
-
+                gene_list = get_gene_list(genes)
+                for g in gene_list:
+                    if g in new_translation_dict:
+                        genes = re.sub(r'\b' + g + r'\b',
+                                       new_translation_dict[g], genes)
                 e = boolean.Expression(genes)
                 # print('wp2', genes)
                 e_1 = e.substitute(lambda v: target_genes_l.get(v.symbol, v))
                 # print('wp2evaluation', e_1, e_1.value)
-                print('{}\t{}\t{}\t{}\t{}'.format(entry.id, entry.genes, genes, e_1, e_1.value))
+                print('{}\t{}\t{}\t{}\t{}'.format(
+                    entry.id, entry.genes, genes, e_1, e_1.value))
                 translated_genes[entry] = [genes_1, genes, e_1.value]
     yield(translated_genes)
 
 
+def get_gene_list(genes):
+    gene_list = re.sub(r'[,\(\)(or)(and)\']*', '', genes)
+    gene_list = re.split(r'\s+', gene_list)  # Transfer string to list
+    gene_list = frozenset(gene_list)
+    return gene_list
+
+
 def encode_utf8(s):
-            if isinstance(s, unicode):
-                return s.encode('utf-8')
-            return s
+    if isinstance(s, unicode):
+        return s.encode('utf-8')
+    return s
 
 
 def print_yaml(self, trans_genes):
     yaml.add_representer(OrderedDict, dict_representer)
+
     def unicode_representer(dumper, uni):
         node = yaml.ScalarNode(tag=u'tag:yaml.org,2002:str', value=uni)
         return node
     yaml.add_representer(unicode, unicode_representer)
     yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
-                             dict_constructor)
+                         dict_constructor)
     dest = '.'
     yaml_args = {'default_flow_style': False,
-                     'encoding': 'utf-8',
-                     'allow_unicode': True}
-    with open(os.path.join(dest, 'database_5.yaml'), 'w+') as f:
-            yaml.dump(list(model_export(self, trans_genes)), f, **yaml_args)
+                 'encoding': 'utf-8',
+                 'allow_unicode': True}
+    with open(os.path.join(dest, 'homolo_reactions.yaml'), 'w+') as f:
+        yaml.dump(list(model_export(self, trans_genes)), f, **yaml_args)
 
 
 def dict_representer(dumper, data):
-        return dumper.represent_dict(data.iteritems())
+    return dumper.represent_dict(data.iteritems())
 
 
 def dict_constructor(loader, node):
