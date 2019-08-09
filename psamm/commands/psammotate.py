@@ -176,17 +176,26 @@ def model_loader(self, translation_dict):
                     entry.id, entry.genes, 'None', 'True', 'True'))
 
             if entry.genes is not None:
-                genes = entry.genes
-                print('%s\t%s' % (entry.id, entry.genes))
+                genes = re.sub(r'\?', '', entry.genes)
+                e = boolean.Expression(genes)
+                e_1 = e.substitute(
+                    lambda v: new_translation_dict.get(v.symbol, '-')
+                    != '-')
+                # print('%s\t%s' % (entry.id, entry.genes))
                 genes_1 = entry.genes
                 gene_list = get_gene_list(genes)
+                print(gene_list)
                 for g in gene_list:
                     if g in new_translation_dict:
                         genes = re.sub(r'\b' + g + r'\b',
                                        new_translation_dict[g], genes)
-                e = boolean.Expression(genes)
+                    else:
+                        genes = re.sub(r'\b' + g + r'\b',
+                                       '-', genes)
+                # genes = remove_gap(genes)
+                # e = boolean.Expression(genes)
                 # print('wp2', genes)
-                e_1 = e.substitute(lambda v: target_genes_l.get(v.symbol, v))
+                # e_1 = e.substitute(lambda v: target_genes_l.get(v.symbol, v))
                 # print('wp2evaluation', e_1, e_1.value)
                 print('{}\t{}\t{}\t{}\t{}'.format(
                     entry.id, entry.genes, genes, e_1, e_1.value))
@@ -199,6 +208,18 @@ def get_gene_list(genes):
     gene_list = re.split(r'\s+', gene_list)  # Transfer string to list
     gene_list = frozenset(gene_list)
     return gene_list
+
+
+def remove_gap(string):
+    while True:
+        prev = string
+        string = re.sub(r'or - or', 'or', string)
+        string = re.sub(r' or -', '', string)
+        string = re.sub(r'- or ', '', string)
+        string = re.sub(r'\(\)', '', string)
+        string = re.sub(r'\'\'', '', string)
+        if prev == string:
+            return string
 
 
 def encode_utf8(s):
@@ -235,7 +256,7 @@ def dict_constructor(loader, node):
 def model_export(self, trans_genes):
     for entry, gene_list in trans_genes.items():
         if gene_list[2] is not False:
-            print(entry.id)
+            # print(entry.id)
 
             d = OrderedDict()
             d['id'] = str(entry.id)
