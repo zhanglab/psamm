@@ -262,7 +262,7 @@ class Graph(Entity):
 
         f.write('}\n')
 
-    def write_cytoscape_nodes(self, f):
+    def write_nodes_tables(self, f):
         """write a table file (.tsv) that contains nodes information.
         Args:
             self: Graph entity.
@@ -290,7 +290,7 @@ class Graph(Entity):
             b = node.props['label'].replace('\n', ',')
             f.write('{}\t{}\n'.format(a, b))
 
-    def write_cytoscape_edges(self, f):
+    def write_edges_tables(self, f):
         """ Write a tab separated table that contains edges information,
         including edge source, edge dest, and edge properties.
         Args:
@@ -423,49 +423,19 @@ def make_network_dict(nm, mm, subset=None, method='fpp', element=None, excluded_
 
 def write_network_dict(network_dict):
 
-    def get_direction_string(dir):
-        if dir == Direction.Both:
-            return 'both'
-        elif dir == Direction.Reverse:
-            return 'reverse'
-        elif dir == Direction.Forward:
-            return 'forward'
+    # def get_direction_string(dir):
+    #     if dir == Direction.Both:
+    #         return 'both'
+    #     elif dir == Direction.Reverse:
+    #         return 'reverse'
+    #     elif dir == Direction.Forward:
+    #         return 'forward'
 
-    for key, value in sorted(iteritems(network_dict), key=lambda x:str(x)):
+    for key, value in sorted(iteritems(network_dict), key=lambda x: str(x)):
         (cpair_list, dir) = value
-        for (c1,c2) in cpair_list:
-            print('{}\t{}\t{}\t{}'.format(key.id, c1, c2, get_direction_string(dir)))
+        for (c1, c2) in cpair_list:
+            print('{}\t{}\t{}\t{}'.format(key.id, c1, c2, dir_value(dir)))
 
-
-def make_mature_cpair_dict(cpair_dict):
-    new_cpair_dict = {}
-    cpair_list = []
-    for (c1, c2), rxns in sorted(iteritems(cpair_dict)):
-        if (c1, c2) not in cpair_list:
-            new_rxns = rxns
-            if (c2, c1) in cpair_dict:
-                if len(cpair_dict[(c2, c1)]['forward']) > 0:
-                    for r in cpair_dict[(c2, c1)]['forward']:
-                        new_rxns['back'].append(r)
-                if len(cpair_dict[(c2, c1)]['back']) > 0:
-                    for r in cpair_dict[(c2, c1)]['back']:
-                        new_rxns['forward'].append(r)
-                if len(cpair_dict[(c2, c1)]['both']) > 0:
-                    for r in cpair_dict[(c2, c1)]['both']:
-                        new_rxns['both'].append(r)
-                new_cpair_dict[(c1, c2)] = new_rxns
-                cpair_list.append((c1, c2))
-                cpair_list.append((c2, c1))
-            else:
-                new_cpair_dict[(c1, c2)] = new_rxns
-                cpair_list.append((c1, c2))
-
-    rxns_sorted_cpair_dict = defaultdict(lambda: defaultdict(list))
-    for (c1, c2), rxns in sorted(iteritems(new_cpair_dict)):
-        for direction, rlist in iteritems(rxns):
-            rxns_sorted_cpair_dict[(c1, c2)][direction] = sorted(rlist)
-
-    return rxns_sorted_cpair_dict
 
 
 def make_cpair_dict(filter_dict, args_method, args_combine):
@@ -483,6 +453,36 @@ def make_cpair_dict(filter_dict, args_method, args_combine):
     new_id_mapping = {}
     rxn_count = Counter()
     cpair_dict = defaultdict(lambda: defaultdict(list))
+
+    def make_mature_cpair_dict(cpair_dict):
+        new_cpair_dict = {}
+        cpair_list = []
+        for (c1, c2), rxns in sorted(iteritems(cpair_dict)):
+            if (c1, c2) not in cpair_list:
+                new_rxns = rxns
+                if (c2, c1) in cpair_dict:
+                    if len(cpair_dict[(c2, c1)]['forward']) > 0:
+                        for r in cpair_dict[(c2, c1)]['forward']:
+                            new_rxns['back'].append(r)
+                    if len(cpair_dict[(c2, c1)]['back']) > 0:
+                        for r in cpair_dict[(c2, c1)]['back']:
+                            new_rxns['forward'].append(r)
+                    if len(cpair_dict[(c2, c1)]['both']) > 0:
+                        for r in cpair_dict[(c2, c1)]['both']:
+                            new_rxns['both'].append(r)
+                    new_cpair_dict[(c1, c2)] = new_rxns
+                    cpair_list.append((c1, c2))
+                    cpair_list.append((c2, c1))
+                else:
+                    new_cpair_dict[(c1, c2)] = new_rxns
+                    cpair_list.append((c1, c2))
+
+        rxns_sorted_cpair_dict = defaultdict(lambda: defaultdict(list))
+        for (c1, c2), rxns in sorted(iteritems(new_cpair_dict)):
+            for direction, rlist in iteritems(rxns):
+                rxns_sorted_cpair_dict[(c1, c2)][direction] = sorted(rlist)
+
+        return rxns_sorted_cpair_dict
 
     if args_method != 'no-fpp':
         if args_combine == 0:
@@ -682,35 +682,26 @@ def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method, args_combin
     return g
 
 
-def make_compound_graph(network_dictionary, nm):
+def make_compound_graph(network_dictionary):
     g = Graph()
     compound_nodes = []
     edge_list = []
     for reaction, (cpair_list, dir) in iteritems(network_dictionary):
-        for (c1,c2) in cpair_list:
+        for (c1, c2) in cpair_list:
             if c1 not in compound_nodes:
-                g.add_node(Node({'id': c1.name, 'entry':c1}))
+                g.add_node(Node({'id': c1.name, 'entry': c1}))
                 compound_nodes.append(c1)
             if c2 not in compound_nodes:
-                g.add_node(Node({'id':c2.name, 'entry':c2}))
+                g.add_node(Node({'id': c2.name, 'entry': c2}))
                 compound_nodes.append(c2)
             cpair_sorted = sorted([c1.name, c2.name])
-            edge = Edge(g.get_node(c1.name), g.get_node(c2.name), props={'id': '{}_{}_{}'.format(cpair_sorted[0], cpair_sorted[1], dir_value(dir)), 'dir':dir_value(dir)})
+            edge = Edge(g.get_node(c1.name), g.get_node(c2.name), props={'id': '{}_{}_{}'.format(
+                cpair_sorted[0], cpair_sorted[1], dir_value(dir)), 'dir':dir_value(dir)})
             if edge.props['id'] not in edge_list:
                 g.add_edge(edge)
                 edge_list.append(edge.props['id'])
             print(edge_list)
     return g
-
-
-def make_reaction_graph(network_dictionary):
-    # Note, there is no difference between reaction graph for different pair prediction methods as of this version.
-    g = Graph()
-    for rxn in network_dictionary.keys():
-        g.add_node(Node({'id':rxn.id, 'entry':rxn}))
-
-    
-    print([n for n in g.nodes])
 
 
 def dir_value(direction):

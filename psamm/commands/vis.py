@@ -77,7 +77,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             '--color', type=argparse.FileType('rU'), default=None, nargs='+',
             help='Designate non-default colors for nodes in the graph')
         parser.add_argument(
-            '--Image', type=text_type, default=None,
+            '--image', type=text_type, default=None,
             help='Generate image file in designated format '
                  '(e.g. pdf, png, eps)')
         parser.add_argument(
@@ -93,7 +93,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         parser.add_argument(
             '--output', type=text_type, help='set output name.')
         parser.add_argument(
-            '--image-size', type=text_type, default=None,
+            '--image-size', type=text_type, default='None,None',
             help='Set width and height of the graph image. '
                  '(width,height)(inches)')
         super(VisualizationCommand, cls).init_parser(parser)
@@ -129,13 +129,11 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         g = add_node_props(g, recolor_dict)
 
         g = add_node_label(g, self._args.cpd_detail, self._args.rxn_detail)
-
         bio_cpds_sub = set()
         bio_cpds_pro = set()
-        if self._model.biomass_reaction in vis_rxns and \
-                self._model.biomass_reaction not in self._args.exclude:
+        if self._model.biomass_reaction in vis_rxns:
             nm_biomass_rxn = model_reaction_entries[self._model.biomass_reaction]
-            g = add_biomass_rxns(g, nm_biomass_rxn, self._model.biomass_reaction)
+            g = add_biomass_rxns(g, nm_biomass_rxn)
             for cpd, _ in nm_biomass_rxn.equation.left:
                 bio_cpds_sub.add(text_type(cpd))
             for cpd, _ in nm_biomass_rxn.equation.right:
@@ -163,12 +161,9 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         if self._args.method == 'no-fpp' and self._args.combine != 0:
             logger.warning('--combine option is not compatible with no-fpp method')
 
-        width = None
-        height = None
-        if self._args.image_size is not None:
-            hw = self._args.image_size.split(',')
-            width = hw[0]
-            height = hw[1]
+        hw = self._args.image_size.split(',')
+        width = hw[0]
+        height = hw[1]
 
         if self._args.output is not None:
             output = self._args.output
@@ -179,35 +174,30 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             boundaries, extracellular = get_cpt_boundaries(self._model)
             boundary_tree, extracellular = make_cpt_tree(boundaries,
                                                          extracellular)
-            with open('reactions_compartmentalized.dot', 'w') as f:
+            with open('{}.dot'.format(output), 'w') as f:
                 g.write_graphviz_compartmentalized(
                     f, boundary_tree, extracellular, width, height)
         else:
             with open('{}.dot'.format(output), 'w') as f:
                 g.write_graphviz(f, width, height)
         with open('{}.nodes.tsv'.format(output), 'w') as f:
-            g.write_cytoscape_nodes(f)
+            g.write_nodes_tables(f)
         with open('{}.edges.tsv'.format(output), 'w') as f:
-            g.write_cytoscape_edges(f)
+            g.write_edges_tables(f)
 
-        if self._args.Image is not None:
+        if self._args.image is not None:
             if render is None:
                 raise ImportError(
                     'Making an image directly requires the '
                     'graphviz python bindings and the graphviz program '
                     'to be installed ("pip install graphviz")')
             else:
-                if len(g.nodes_id_dict) > 1000:
+                if len(g.nodes_id_dict) > 700:
                     logger.info(
-                        'This graph contains a large number of reactions, '
+                        'This graph contains {} reactions, '
                         'graphs of this size may take a long time to '
                         'create'.format(len(filter_dict.keys())))
-                if self._args.compartment:
-                    render('dot', self._args.Image,
-                           'reactions_compartmentalized.dot')
-                else:
-                    # render('dot', self._args.Image, 'reactions.dot')
-                    render('dot', self._args.Image, '{}.dot'.format(output))
+                render('dot', self._args.image, '{}.dot'.format(output))
 
 
 def rxnset_for_vis(mm, subset_file, exclude):
@@ -256,26 +246,16 @@ def rxnset_for_vis(mm, subset_file, exclude):
     return final_rxn_set
 
 
-def dir_value(direction):
-    """assign value to different reaction directions"""
-    if direction == Direction.Forward:
-        return 'forward'
-    elif direction == Direction.Reverse:
-        return 'back'
-    else:
-        return 'both'
-
-
-def add_biomass_rxns(g, nm_bio_reaction, biomass_rxn_id):
+def add_biomass_rxns(g, nm_bio_reaction):
     """Adds biomass reaction nodes and edges to a graph object.
 
     Args:
         g: Graph object.
         nm_bio_reaction: Biomass reaction DictReactionEntry.
-        biomass_rxn_id: Biomass reaction ID.
     """
     bio_reaction = nm_bio_reaction.equation
-    direction = dir_value(bio_reaction.direction)
+    biomass_rxn_id = nm_bio_reaction.id
+    direction = graph.dir_value(bio_reaction.direction)
     reactant_list, product_list = [], []
     for c, _ in bio_reaction.left:
         reactant_list.append(c)
@@ -328,7 +308,7 @@ def add_exchange_rxns(g, rxn_id, reaction):
                 'compartment': c.compartment})
             g.add_node(node_ex)
 
-            direction = dir_value(reaction.direction)
+            direction = graph.dir_value(reaction.direction)
             for c1, _ in reaction.left:
                 g.add_edge(graph.Edge(
                     g.get_node(text_type(c1)), node_ex, {'dir': direction}))
@@ -386,7 +366,7 @@ def add_node_label(g, cpd_detail, rxn_detail):
             if node.props['type'] == 'cpd':
                 pre_label = '\n'.join(((node.props['entry'][0].properties.get(value).encode(
                 'ascii', 'backslashreplace')).decode('ascii')) for value
-                                  in cpd_detail[0] if value != 'id')
+                                  in cpd_detail[0] if value != 'id' and value in node.props['entry'][0].properties)
                 if 'id' in cpd_detail[0]:
                     label = '{}\n{}'.format(node.props['entry'][0].properties['id'], pre_label)
                 else:
@@ -396,8 +376,8 @@ def add_node_label(g, cpd_detail, rxn_detail):
             if node.props['type'] == 'rxn':
                 if len(node.props['entry']) == 1:
                     pre_label = '\n'.join((str(node.props['entry'][0].properties.get(value)).encode(
-                    'ascii', 'backslashreplace').decode('ascii')) for value
-                                          in rxn_detail[0] if value != 'id')
+                    'ascii', 'backslashreplace').decode('ascii')) for value in rxn_detail[0]
+                                          if value != 'id' and value in node.props['entry'][0].properties)
                     if 'id' in rxn_detail[0]:
                         label = '{}\n{}'.format(node.props['entry'][0].properties['id'], pre_label)
                     else:
