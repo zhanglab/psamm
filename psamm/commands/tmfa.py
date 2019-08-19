@@ -50,23 +50,25 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		parser.add_argument(
 			'--dgf-file', help='tab separated file containing estimated deltaGf values for all metabolites',
 			type=argparse.FileType('rU'))
-		parser.add_argument('--trans-param', help='file containing transport c and h values.', type=file)
 		parser.add_argument(
 			'--set-concentrations', help='Tab seperated file with Reaction ID, [lower], [upper]', type=file)
 		parser.add_argument('--transport-parameters', help='file containing parameters for transport rxn dgr', type=file)
 		parser.add_argument('--rxn-conc-only', help='file containing reactions where deltaGf of intracellular/extracellular compounds should only be determined by ph difference', type=file)
 		parser.add_argument('--scaled-compounds', help='compounds to scale deltaGf', type=file)
-		parser.add_argument('--dgr-file', type=file)
-		parser.add_argument('--err', action='store_true')
-		parser.add_argument('--random-addition', action='store_true')
-		parser.add_argument('--hamilton', action='store_true')
-		parser.add_argument('--conc-testing', action='store_true')
-		parser.add_argument('--temp')
-		parser.add_argument('--tfba', action='store_true')
-		parser.add_argument('--threshold', default=None, type=Decimal)
-		parser.add_argument('--verbose', action='store_true')
-		parser.add_argument('--randomsparse', action='store_true')
-		parser.add_argument('--randomsparse_genes', action='store_true')
+		parser.add_argument('--dgr-file', type=file, help='file containing estimated deltarG values for reactions in model.')
+		parser.add_argument('--err', action='store_true', help='use error estimates when running TMFA')
+		parser.add_argument('--random-addition', action='store_true', help='perform random reaction constraint addition in model')
+		parser.add_argument('--hamilton', action='store_true', help='run model using Hamilton TMFA method')
+		parser.add_argument('--conc-testing', action='store_true', help='peform random compound constraint addition in model')
+		parser.add_argument('--temp', help='Temperature in Celsius')
+		parser.add_argument('--tfba', action='store_true', help = 'run TMFA with tFBA like constraints (testing only)')
+		parser.add_argument('--threshold', default=None, type=Decimal, help='value to fix biomass flux to during tmfa simulations (default = max biomass)')
+		parser.add_argument('--verbose', action='store_true', help='print out all linear constraints and equalities from LP problem. ')
+		parser.add_argument('--randomsparse', action='store_true', help='run randomsparse on reactions in model with TMFA constraints applied')
+		parser.add_argument('--randomsparse_genes', action='store_true', help='run randomsparse on genes in model with TMFA constraints applied')
+		parser.add_argument('--water', type=str, help='water compound ID without compartment (cpd_h2o, C00001)')
+		parser.add_argument('--proton-in', type=str, help='id of proton compound with compartment (in the cell)')
+		parser.add_argument('--proton-out', type=str, help='id of proton compound with compartment (outside of the cell)')
 		super(TMFACommand, cls).init_parser(parser)
 
 	def run(self):
@@ -225,7 +227,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 					                                        exclude_unkown_list,
 					                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
 					                                        split_reversible, transport_parameters, testing_list_iter,
-					                                        self._args.scaled_compounds, self._args.temp, self._args.err)
+					                                        self._args.scaled_compounds, self._args.water, self._args.proton_in, self._args.proton_out, self._args.temp, self._args.err)
 					TMFA_Problem.prob.integrality_tolerance.value = 0.0
 					biomax = solve_objective(TMFA_Problem, objective)
 					logger.info('Objective flux tmfa problem: {}'.format(biomax))
@@ -251,7 +253,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
 			                                        split_reversible, transport_parameters,
 			                                        list(mm_irreversible.reactions),
-			                                        self._args.scaled_compounds, self._args.temp, self._args.err)
+			                                        self._args.scaled_compounds, self._args.water, self._args.proton_in, self._args.proton_out, self._args.temp, self._args.err)
 			TMFA_Problem.prob.integrality_tolerance.value = 0.0
 			biomax = solve_objective(TMFA_Problem, objective)
 			logger.info('Biomass Maximum: {}'.format(biomax))
@@ -286,7 +288,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			                                        exclude_unkown_list,
 			                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
 			                                        split_reversible, transport_parameters, list(mm_irreversible.reactions),
-			                                        self._args.scaled_compounds, self._args.temp, self._args.err)
+			                                        self._args.scaled_compounds, self._args.water, self._args.proton_in, self._args.proton_out, self._args.temp, self._args.err)
 			TMFA_Problem.prob.integrality_tolerance.value = 0.0
 			biomax = solve_objective(TMFA_Problem, objective)
 			logger.info('Biomass Maximum: {}'.format(biomax))
@@ -353,7 +355,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
 		                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
 		                                        split_reversible, transport_parameters, testing_list_tmp,
-		                                        self._args.scaled_compounds, self._args.temp, self._args.err)
+		                                        self._args.scaled_compounds, self._args.water, self._args.proton_in, self._args.proton_out, self._args.temp, self._args.err)
 
 		TMFA_Problem.prob.integrality_tolerance.value = 0.0
 		print('integrality set to {}'.format(TMFA_Problem.prob.integrality_tolerance.value))
@@ -366,7 +368,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# TMFA_Problem.prob.cplex.parameters.emphasis.numerical.set(1)
 		# TMFA_Problem.prob.cplex.parameters.lpmethod.set(5)
 
-		print('PROBLEM TYPE:', TMFA_Problem.prob.cplex.problem_type[TMFA_Problem.prob.cplex.get_problem_type()])
+		print('CPLEX PROBLEM TYPE:', TMFA_Problem.prob.cplex.problem_type[TMFA_Problem.prob.cplex.get_problem_type()])
 
 		if self._args.threshold != None:
 			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == Decimal(self._args.threshold))
@@ -419,15 +421,6 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
 		TMFA_Problem.prob.set_objective(TMFA_Problem.get_flux_var(objective))
 		TMFA_Problem.prob.solve()
-		# result = TMFA_Problem.prob.result
-		# biomax = result.get_value(TMFA_Problem.get_flux_var(objective))
-		# for reaction in sorted(mm_irreversible.reactions):
-		# 	print('RXN,Flux,DGRI,Zi\t{}\t{}\t{}\t{}'.format(reaction, result.get_value(TMFA_Problem.get_flux_var(reaction)), result.get_value('dgri_{}'.format(reaction)), result.get_value('zi_{}'.format(reaction))))
-		# for compound in sorted(mm_irreversible.compounds):
-		# 	print('CPD Activity\t{}\t{}'.format(compound, TMFA_Problem.prob.result.get_value(TMFA_Problem.prob.var(str(compound)))))
-		# bio = TMFA_Problem.get_flux_var(objective)
-		# max_val = result.get_value(bio)
-		# TMFA_Problem.prob.add_linear_constraints(bio >= 0.99*biomax)
 
 		logger.info('TMFA Problem Status: {}'.format(TMFA_Problem.get_flux(objective)))
 
@@ -442,9 +435,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
 
 		for reaction in sorted(mm_irreversible.reactions):
-			# if not any(reaction.startswith(i) for i in ['A', 'B', 'C', 'D', 'E', 'F']):
 				drg_var = TMFA_Problem.prob.var('dgri_{}'.format(reaction))
-				logger.info('{}'.format(reaction))
+				# logger.info('{}'.format(reaction))
 				if reaction not in exclude_unkown_list:
 					try:
 						TMFA_Problem.prob.set_objective(-drg_var)
@@ -461,7 +453,12 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 					max_drg = 'NA'
 				print('DGRI Variability\t{}\t{}\t{}'.format(reaction, min_drg, max_drg))
 
-		excluded_compounds = ['cpd_h[c]', 'cpd_h[p]', 'cpd_h[e]', 'cpd_h2o[c]', 'cpd_h2o[p]', 'cpd_h2o[e]']
+		excluded_compounds = [self._args.proton_in, self.args.proton_out]
+		for cpt in model.compartments:
+			excluded_compounds.append('{}[{}]'.format(self._args.water, cpt))
+
+
+		# excluded_compounds = ['cpd_h[c]', 'cpd_h[p]', 'cpd_h[e]', 'cpd_h2o[c]', 'cpd_h2o[p]', 'cpd_h2o[e]']
 		for compound in sorted(mm_irreversible.compounds):
 			# logger.info('solving for compound {}'.format(compound))
 			cpd_var = TMFA_Problem.prob.var(str(compound))
@@ -846,7 +843,8 @@ def make_irreversible(mm, exclude_list, lump_rxn_dir, all_reversible):
 
 
 def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclude_lumps_unknown, dgr_dict,
-							 lump_rxn_list, split_rxns, transport_parameters, testing_list, scaled_compounds, temp, err_est=False, hamilton=False):
+							 lump_rxn_list, split_rxns, transport_parameters, testing_list, scaled_compounds, water, hin, hout, temp, err_est=False, hamilton=False):
+
 	dgf_scaling = {}
 	if scaled_compounds is not None:
 		scaled_compounds.seek(0)
@@ -861,7 +859,7 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# T = Decimal(288.15) # 15 C
 	# T = Decimal(277.15)  # 4 C
 	T = Decimal(temp) + Decimal(273.15)
-	print('temperature', T)
+	print('temperature (kelvin)', T)
 	k = 225
 	epsilon = 0.0000001
 	# epsilon = 0
@@ -872,26 +870,26 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# problem.prob.add_linear_constraints(h_e >= 4)
 
 	# h_p = problem.prob.var(str('cpd_h[p]'))
-	h_p = problem.prob.var(str('C00080[e]'))
+	h_p = problem.prob.var(str(hout))
 
 	problem.prob.add_linear_constraints(h_p <= 11)
 	problem.prob.add_linear_constraints(h_p >= 4)
 	# problem.prob.add_linear_constraints(h_e == 7.4)
 	# h_c = problem.prob.var(str('h[c]'))
 	# h_c = problem.prob.var(str('cpd_h[c]'))
-	h_c = problem.prob.var(str('C00080[c]'))
+	h_c = problem.prob.var(str(hin))
 
 	problem.prob.add_linear_constraints(h_c == 7)
 	delta_ph = (h_p - h_c)
-	F = Decimal(0.02306)
-	excluded_cpd_list = ['cpd_h2o[e]', 'cpd_h2o[c]', 'cpd_h[c]', 'cpd_h[e]', 'cpd_h[p]', 'cpd_h2o[p]',
-	                     'C00080[e]', 'C00080[c]', 'C00001[e]', 'C00001[c]']
-	# excluded_cpd_list = ['h2o[e]', 'h2o[c]', 'h[c]', 'h[e]']
 
-	# excluded_cpd_list = ['h2o[e]', 'h2o[c]', 'dtdp4aaddg[c]', 'g3p[c]', '23dhba[c]', '2aobut[c]', '2shchc[c]', '3c3hmp[c]',
-	#                      '5mdr1p[c]', '6hmhptpp[c]', '8aonn[c]', 'acglu[c]', 'adn[c]', 'btn[c]', 'cechddd[c]', 'csn[c]',
-	#                      'dxyl5p[c]', 'glyc3p[c]', 'malACP[c]', 'mmcoa-S[c]', 'ncam[c]', 'pe_EC[c]', 'prbatp[c]', 'succoa[c]',
-	#                      'ura[e]', 'urea[c]', '5mdru1p[c]', '2ippm[c]']
+	F = Decimal(0.02306)
+
+	excluded_cpd_list = [hin, hout]
+	for cpt in mm.compartments:
+		excluded_cpd_list.append('{}[{}]'.format(water, cpt))
+	logger.info('Excluded compounds: {}'.format(','.join(excluded_cpd_list)))
+	# excluded_cpd_list = ['cpd_h2o[e]', 'cpd_h2o[c]', 'cpd_h[c]', 'cpd_h[e]', 'cpd_h[p]', 'cpd_h2o[p]',
+	#                      'C00080[e]', 'C00080[c]', 'C00001[e]', 'C00001[c]']
 
 	new_excluded_reactions = []
 	for reaction in mm.reactions:
