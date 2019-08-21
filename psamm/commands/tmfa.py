@@ -231,11 +231,12 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 					TMFA_Problem.prob.integrality_tolerance.value = 0.0
 					biomax = solve_objective(TMFA_Problem, objective)
 					logger.info('Objective flux tmfa problem: {}'.format(biomax))
-					if biomax >= 0.1*baseline_flux:
+					if biomax >= self._args.threshold:
 						testing_list_tmp.append(rx)
 					else:
 						continue
 				except:
+					logger.warning('failed to add constraint for rxn {}'.format(rx))
 					continue
 			for rx in full_testing_list:
 				if rx in testing_list_tmp:
