@@ -364,23 +364,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		if self._args.tfba:
 			TMFA_Problem.add_thermodynamic()
 
-		logger.info('solving tmfa problem')
-		biomax = solve_objective(TMFA_Problem, objective)
-		# TMFA_Problem.prob.cplex.parameters.emphasis.numerical.set(1)
-		# TMFA_Problem.prob.cplex.parameters.lpmethod.set(5)
 
 		print('CPLEX PROBLEM TYPE:', TMFA_Problem.prob.cplex.problem_type[TMFA_Problem.prob.cplex.get_problem_type()])
-
-		if self._args.threshold != None:
-			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == Decimal(self._args.threshold))
-			# TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) >= Decimal(self._args.threshold))
-			print('set biomass to: {}'.format(self._args.threshold))
-
-		else:
-			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
-			# TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) >= biomax)
-
-			print('set biomass to: {}'.format(biomax))
 
 		if self._args.verbose:
 			index_dict_vars = {}
@@ -417,6 +402,25 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 					sign = '=='
 				print('{} {} {}'.format(' + '.join(equation), sign, TMFA_Problem.prob.cplex.linear_constraints.get_rhs(i)))
 				print('-------------------------------------------------------------------')
+
+
+
+		logger.info('solving tmfa problem')
+		biomax = solve_objective(TMFA_Problem, objective)
+		# TMFA_Problem.prob.cplex.parameters.emphasis.numerical.set(1)
+		# TMFA_Problem.prob.cplex.parameters.lpmethod.set(5)
+
+		if self._args.threshold != None:
+			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == Decimal(self._args.threshold))
+			# TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) >= Decimal(self._args.threshold))
+			print('set biomass to: {}'.format(self._args.threshold))
+
+		else:
+			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
+			# TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) >= biomax)
+
+			print('set biomass to: {}'.format(biomax))
+
 
 
 
