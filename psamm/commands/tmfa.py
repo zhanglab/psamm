@@ -558,7 +558,7 @@ def parse_dgf(mm, dgf_file):
 def add_conc_constraints(problem, cpd_conc_dict, cp_list):
 	# Water needs to be excluded from these concentration constraints.
 	# excluded_compounds = ['h2o[c]', 'h2o[e]', 'h[c]', 'h[e]']
-	excluded_compounds = ['cpd_h2o[c]', 'cpd_h2o[e]', 'cpd_h[c]', 'cpd_h[e]', 'cpd_h2o[p]', 'cpd_h[p]']
+	excluded_compounds = ['cpd_h2o[c]', 'cpd_h2o[e]', 'cpd_h[c]', 'cpd_h[e]', 'cpd_h2o[p]', 'cpd_h[p]', 'C00080[c]', 'C00080[e]', 'C00001[c]', 'C00001[e]']
 
 	# excluded_compounds = ['h2o[c]', 'h2o[e]', 'pe_ec[c]', '12dgr_ec[c]', 'agpc_EC[c]', 'agpe_EC[c]', 'agpg_EC[c]', 'cdpdag_EC[c]',
 	#                       'clpn_EC[c]', 'pa_EC[c]', 'pc_EC[c]', 'pg_EC[c]', 'pe_EC[c]', 'pgp_EC[c]', 'ps_EC[c]']
@@ -601,7 +601,7 @@ def add_conc_constraints(problem, cpd_conc_dict, cp_list):
 					# problem.prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1]))+1)
 				lower = math.log(Decimal(conc_limits[0]))
 				upper = math.log(Decimal(conc_limits[1]))
-				# logger.info('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, upper))
+				logger.info('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, upper))
 	return problem, cpdid_xij_dict
 
 
@@ -856,15 +856,14 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 		for row in csv.reader(scaled_compounds, delimiter=str('\t')):
 			dgf_scaling[row[0]] = Decimal(row[1])
 
-	R = Decimal(8.3144621 / 1000) # kJ/mol
-	# R = Decimal(1.9858775 / 1000) # kcal/mol
+	# R = Decimal(8.3144621 / 1000) # kJ/mol
+	R = Decimal(1.9858775 / 1000) # kcal/mol
 
 	# T = Decimal(303.15)
 	# T = Decimal(293.15) # 20 C
 	# T = Decimal(288.15) # 15 C
 	# T = Decimal(277.15)  # 4 C
 	T = Decimal(temp) + Decimal(273.15)
-	print('temperature (kelvin)', T)
 	k = 225
 	epsilon = 0.0000001
 	# epsilon = 0
@@ -874,27 +873,35 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# problem.prob.add_linear_constraints(h_e <= 11)
 	# problem.prob.add_linear_constraints(h_e >= 4)
 
-	# h_p = problem.prob.var(str('cpd_h[p]'))
+	# h_p = problem.prob.var(str('C00080[e]'))
 	h_p = problem.prob.var(str(hout))
 
 	problem.prob.add_linear_constraints(h_p <= 11)
 	problem.prob.add_linear_constraints(h_p >= 4)
 	# problem.prob.add_linear_constraints(h_e == 7.4)
 	# h_c = problem.prob.var(str('h[c]'))
-	# h_c = problem.prob.var(str('cpd_h[c]'))
+
+	# h_c = problem.prob.var(str('C00080[c]'))
 	h_c = problem.prob.var(str(hin))
 
-	problem.prob.add_linear_constraints(h_c == 7)
+	problem.prob.add_linear_constraints(h_c >= 4)
+	problem.prob.add_linear_constraints(h_c <= 11)
 	delta_ph = (h_p - h_c)
 
 	F = Decimal(0.02306)
 
-	excluded_cpd_list = [hin, hout]
+	excluded_cpd_list = ['cpd_h2o[e]', 'cpd_h2o[c]', 'cpd_h[c]', 'cpd_h[e]', 'cpd_h[p]', 'cpd_h2o[p]',
+	                     'C00080[e]', 'C00080[c]', 'C00001[e]', 'C00001[c]']
+	excluded_cpd_list.append(hin)
+	excluded_cpd_list.append(hout)
 	for cpt in mm.compartments:
 		excluded_cpd_list.append('{}[{}]'.format(water, cpt))
 	logger.info('Excluded compounds: {}'.format(','.join(excluded_cpd_list)))
-	# excluded_cpd_list = ['cpd_h2o[e]', 'cpd_h2o[c]', 'cpd_h[c]', 'cpd_h[e]', 'cpd_h[p]', 'cpd_h2o[p]',
-	#                      'C00080[e]', 'C00080[c]', 'C00001[e]', 'C00001[c]']
+	logger.info('Temperature: {}'.format(T))
+	logger.info('using h in {}'.format(hin))
+	logger.info('using h out {}'.format(hout))
+	logger.info('using water {}'.format(water))
+
 
 	new_excluded_reactions = []
 	for reaction in mm.reactions:
