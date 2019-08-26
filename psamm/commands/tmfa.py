@@ -601,7 +601,7 @@ def add_conc_constraints(problem, cpd_conc_dict, cp_list):
 					# problem.prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1]))+1)
 				lower = math.log(Decimal(conc_limits[0]))
 				upper = math.log(Decimal(conc_limits[1]))
-				logger.info('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, upper))
+				# logger.info('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, upper))
 	return problem, cpdid_xij_dict
 
 
