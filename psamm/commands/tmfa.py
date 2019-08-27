@@ -409,6 +409,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		biomax = solve_objective(TMFA_Problem, objective)
 		# TMFA_Problem.prob.cplex.parameters.emphasis.numerical.set(1)
 		# TMFA_Problem.prob.cplex.parameters.lpmethod.set(5)
+		TMFA_Problem.prob.cplex.parameters.threads.set(0)
 
 		if self._args.threshold != None:
 			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == Decimal(self._args.threshold))
@@ -458,10 +459,12 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 					max_drg = 'NA'
 				print('DGRI Variability\t{}\t{}\t{}'.format(reaction, min_drg, max_drg))
 
-		excluded_compounds = [self._args.proton_in, self.args.proton_out]
+		excluded_compounds = [self._args.proton_in, self._args.proton_out]
 		for cpt in model.compartments:
 			excluded_compounds.append('{}[{}]'.format(self._args.water, cpt))
-
+		excluded_compounds.append('cpd_h[p]')
+		excluded_compounds.append('cpd_h[e]')
+		excluded_compounds.append('cpd_h[c]')
 
 		# excluded_compounds = ['cpd_h[c]', 'cpd_h[p]', 'cpd_h[e]', 'cpd_h2o[c]', 'cpd_h2o[p]', 'cpd_h2o[e]']
 		for compound in sorted(mm_irreversible.compounds):
