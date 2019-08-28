@@ -465,21 +465,31 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		excluded_compounds.append('cpd_h[p]')
 		excluded_compounds.append('cpd_h[e]')
 		excluded_compounds.append('cpd_h[c]')
+		excluded_compounds.append('cpd_h2o[c]')
+		excluded_compounds.append('cpd_h2o[e]')
+		excluded_compounds.append('cpd_h2o[p]')
+
 
 		# excluded_compounds = ['cpd_h[c]', 'cpd_h[p]', 'cpd_h[e]', 'cpd_h2o[c]', 'cpd_h2o[p]', 'cpd_h2o[e]']
 		for compound in sorted(mm_irreversible.compounds):
 			# logger.info('solving for compound {}'.format(compound))
 			cpd_var = TMFA_Problem.prob.var(str(compound))
 			if str(compound) not in excluded_compounds:
-				TMFA_Problem.prob.set_objective(cpd_var)
-				TMFA_Problem._solve()
-				max = TMFA_Problem.prob.result.get_value(cpd_var)
+				try:
+					TMFA_Problem.prob.set_objective(cpd_var)
+					TMFA_Problem._solve()
+					max = TMFA_Problem.prob.result.get_value(cpd_var)
+				except:
+					max = 'SolverError'
 			else:
 				max = 'NA'
 			if str(compound) not in excluded_compounds:
-				TMFA_Problem.prob.set_objective(-cpd_var)
-				TMFA_Problem._solve()
-				min = TMFA_Problem.prob.result.get_value(cpd_var)
+				try:
+					TMFA_Problem.prob.set_objective(-cpd_var)
+					TMFA_Problem._solve()
+					min = TMFA_Problem.prob.result.get_value(cpd_var)
+				except:
+					min = 'SolverError'
 			else:
 				min = 'NA'
 			print('CPD Conc Variability\t{}\t{}\t{}'.format(compound, min, max))#, math.exp(min), math.exp(max)))
