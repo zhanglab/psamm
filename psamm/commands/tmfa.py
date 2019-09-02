@@ -410,6 +410,18 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		# TMFA_Problem.prob.cplex.parameters.emphasis.numerical.set(1)
 		# TMFA_Problem.prob.cplex.parameters.lpmethod.set(5)
 		TMFA_Problem.prob.cplex.parameters.threads.set(0)
+		#
+		# for i in range(0, 120, 1):
+		# 	i = float(i)/100
+		# 	c, = TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var('ATPm') == i)
+		#
+		# 	TMFA_Problem.prob.set_objective(TMFA_Problem.get_flux_var(objective))
+		# 	TMFA_Problem.prob.solve()
+		# 	max = TMFA_Problem.get_flux(objective)
+		#
+		# 	print('{}\t{}'.format(i, max))
+		# 	c.delete()
+		# quit()
 
 		if self._args.threshold != None:
 			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == Decimal(self._args.threshold))
@@ -430,6 +442,16 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
 		logger.info('TMFA Problem Status: {}'.format(TMFA_Problem.get_flux(objective)))
 
+		# for reaction in sorted(mm_irreversible.reactions):
+		# 	zi = TMFA_Problem.prob.var('zi_{}'.format(reaction))
+		# 	TMFA_Problem.prob.set_objective(-zi)
+		# 	TMFA_Problem._solve()
+		# 	min_zi = TMFA_Problem.prob.result.get_value(zi)
+		# 	TMFA_Problem.prob.set_objective(zi)
+		# 	TMFA_Problem._solve()
+		# 	max_zi = TMFA_Problem.prob.result.get_value(zi)
+		# 	print('reaciton_vi\t{}\t{}\t{}'.format(reaction, min_zi, max_zi))
+		#
 		for reaction in sorted(mm_irreversible.reactions):
 			logger.info('testing {}'.format(reaction))
 			try:
@@ -440,20 +462,50 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 				print('Flux Variability\t{}\t{}\t{}'.format(reaction, 'SovlerError', 'SolverError'))
 
 
+
+
+
 		for reaction in sorted(mm_irreversible.reactions):
-				drg_var = TMFA_Problem.prob.var('dgri_{}'.format(reaction))
 				# logger.info('{}'.format(reaction))
 				if reaction not in exclude_unkown_list:
-					try:
-						TMFA_Problem.prob.set_objective(-drg_var)
-						TMFA_Problem._solve()
-						min_drg = TMFA_Problem.prob.result.get_value(drg_var)
-						TMFA_Problem.prob.set_objective(drg_var)
-						TMFA_Problem._solve()
-						max_drg = TMFA_Problem.prob.result.get_value(drg_var)
-					except:
-						min_drg = 'SolverError'
-						max_drg = 'SolverError'
+					if reaction in for_rev_reactions:
+						if '_forward' in reaction:
+							drg_var = TMFA_Problem.prob.var('dgri_{}'.format(reaction))
+							try:
+								TMFA_Problem.prob.set_objective(-drg_var)
+								TMFA_Problem._solve()
+								min_drg = TMFA_Problem.prob.result.get_value(drg_var)
+								TMFA_Problem.prob.set_objective(drg_var)
+								TMFA_Problem._solve()
+								max_drg = TMFA_Problem.prob.result.get_value(drg_var)
+							except:
+								min_drg = 'SolverError'
+								max_drg = 'SolverError'
+						elif '_reverse' in reaction:
+							base_rn = reaction[:-8]
+							drg_var = TMFA_Problem.prob.var('dgri_{}_forward'.format(base_rn))
+							try:
+								TMFA_Problem.prob.set_objective(-drg_var)
+								TMFA_Problem._solve()
+								min_drg = -1 * TMFA_Problem.prob.result.get_value(drg_var)
+								TMFA_Problem.prob.set_objective(drg_var)
+								TMFA_Problem._solve()
+								max_drg = -1 * TMFA_Problem.prob.result.get_value(drg_var)
+							except:
+								min_drg = 'SolverError'
+								max_drg = 'SolverError'
+					else:
+						drg_var = TMFA_Problem.prob.var('dgri_{}'.format(reaction))
+						try:
+							TMFA_Problem.prob.set_objective(-drg_var)
+							TMFA_Problem._solve()
+							min_drg = TMFA_Problem.prob.result.get_value(drg_var)
+							TMFA_Problem.prob.set_objective(drg_var)
+							TMFA_Problem._solve()
+							max_drg = TMFA_Problem.prob.result.get_value(drg_var)
+						except:
+							min_drg = 'SolverError'
+							max_drg = 'SolverError'
 				else:
 					min_drg = 'NA'
 					max_drg = 'NA'
@@ -914,7 +966,25 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	logger.info('using h in {}'.format(hin))
 	logger.info('using h out {}'.format(hout))
 	logger.info('using water {}'.format(water))
+	split_list = []
+	for (f, r) in split_rxns:
+		split_list.append(f)
+		split_list.append(r)
 
+	dgri_var_dict = {}
+	for reaction in mm.reactions:
+		if reaction not in exclude_unknown:
+			if reaction in split_list:
+				if '_forward' in reaction:
+					problem.prob.define('dgri_{}'.format(reaction), types=lp.VariableType.Continuous)
+					dgri = problem.prob.var('dgri_{}'.format(reaction))
+					dgri_var_dict[reaction] = dgri
+					base_rxn = reaction[:-8]
+					dgri_var_dict['{}_reverse'.format(base_rxn)] = -dgri
+			else:
+				problem.prob.define('dgri_{}'.format(reaction), types=lp.VariableType.Continuous)
+				dgri = problem.prob.var('dgri_{}'.format(reaction))
+				dgri_var_dict[reaction] = dgri
 
 	new_excluded_reactions = []
 	for reaction in mm.reactions:
@@ -934,11 +1004,13 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 		vmax = mm.limits[reaction].upper
 		problem.prob.define('zi_{}'.format(reaction), types=lp.VariableType.Binary)
 		problem.prob.define('yi_{}'.format(reaction), types=lp.VariableType.Binary)
-		problem.prob.define('dgri_{}'.format(reaction), types=lp.VariableType.Continuous)
 		zi = problem.prob.var('zi_{}'.format(reaction))
 		yi = problem.prob.var('yi_{}'.format(reaction))
 		vi = problem.get_flux_var(reaction)
-		dgri = problem.prob.var('dgri_{}'.format(reaction))
+
+		if reaction not in exclude_unknown:
+			dgri = dgri_var_dict[reaction]
+
 		# add flux constraint linking vi and zi for all reactions except lumps
 		if reaction not in exclude_lumps:
 			problem.prob.add_linear_constraints(vi <= zi * vmax)
