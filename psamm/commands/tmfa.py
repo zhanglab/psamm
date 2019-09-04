@@ -363,13 +363,10 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
 
 
-		# TMFA_Problem.prob.cplex.parameters.read.scale.set(-1)
 		TMFA_Problem.prob.integrality_tolerance.value = 1e-12
 		print('integrality set to {}'.format(TMFA_Problem.prob.integrality_tolerance.value))
-		# TMFA_Problem.prob.cplex.parameters.emphasis.numerical.set(1)
-		# TMFA_Problem.prob.cplex.parameters.read.scale.set(-1)
-		# TMFA_Problem.prob.cplex.parameters.simplex.tolerances.markowitz.set(0.9999)
-		# TMFA_Problem.prob.cplex.parameters.simplex.tolerances.feasibility.set(1e-5)
+		TMFA_Problem.prob.cplex.parameters.simplex.tolerances.feasibility.value = 1e-9
+
 		print('scaling: {}'.format(TMFA_Problem.prob.cplex.parameters.read.scale.get()))
 
 
@@ -488,16 +485,16 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 					if reaction in for_rev_reactions:
 						if '_forward' in reaction:
 							drg_var = TMFA_Problem.prob.var('dgri_{}'.format(reaction))
-							# try:
-							TMFA_Problem.prob.set_objective(-drg_var)
-							TMFA_Problem._solve()
-							min_drg = TMFA_Problem.prob.result.get_value(drg_var)
-							TMFA_Problem.prob.set_objective(drg_var)
-							TMFA_Problem._solve()
-							max_drg = TMFA_Problem.prob.result.get_value(drg_var)
-							# except:
-							# 	min_drg = 'SolverError'
-							# 	max_drg = 'SolverError'
+							try:
+								TMFA_Problem.prob.set_objective(-drg_var)
+								TMFA_Problem._solve()
+								min_drg = TMFA_Problem.prob.result.get_value(drg_var)
+								TMFA_Problem.prob.set_objective(drg_var)
+								TMFA_Problem._solve()
+								max_drg = TMFA_Problem.prob.result.get_value(drg_var)
+							except:
+								min_drg = 'SolverError'
+								max_drg = 'SolverError'
 						elif '_reverse' in reaction:
 							base_rn = reaction[:-8]
 							drg_var = TMFA_Problem.prob.var('dgri_{}_forward'.format(base_rn))
