@@ -366,7 +366,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		TMFA_Problem.prob.integrality_tolerance.value = 1e-12
 		print('integrality set to {}'.format(TMFA_Problem.prob.integrality_tolerance.value))
 		TMFA_Problem.prob.cplex.parameters.simplex.tolerances.feasibility.value = 1e-9
-
+		TMFA_Problem.prob.cplex.parameters.read.scale.value = -1
 		print('scaling: {}'.format(TMFA_Problem.prob.cplex.parameters.read.scale.get()))
 
 
@@ -465,7 +465,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
 
 		for reaction in sorted(mm_irreversible.reactions):
-			# if 'O2t' in reaction:
+			# if 'Biomass_WP2' in reaction:
 				logger.info('testing {}'.format(reaction))
 				try:
 					min_flux = TMFA_Problem.flux_bound(reaction, -1)
