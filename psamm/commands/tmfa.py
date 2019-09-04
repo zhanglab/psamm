@@ -359,11 +359,15 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
 		                                        split_reversible, transport_parameters, testing_list_tmp,
 		                                        self._args.scaled_compounds, self._args.water, self._args.proton_in, self._args.proton_out, self._args.temp, self._args.err)
-		TMFA_Problem.prob.cplex.parameters.read.scale.set(-1)
+
+
+
+
+		# TMFA_Problem.prob.cplex.parameters.read.scale.set(-1)
 		TMFA_Problem.prob.integrality_tolerance.value = 1e-12
 		print('integrality set to {}'.format(TMFA_Problem.prob.integrality_tolerance.value))
 		# TMFA_Problem.prob.cplex.parameters.emphasis.numerical.set(1)
-		TMFA_Problem.prob.cplex.parameters.read.scale.set(-1)
+		# TMFA_Problem.prob.cplex.parameters.read.scale.set(-1)
 		# TMFA_Problem.prob.cplex.parameters.simplex.tolerances.markowitz.set(0.9999)
 		# TMFA_Problem.prob.cplex.parameters.simplex.tolerances.feasibility.set(1e-5)
 		print('scaling: {}'.format(TMFA_Problem.prob.cplex.parameters.read.scale.get()))
