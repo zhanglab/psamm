@@ -72,18 +72,34 @@ class Importer(BaseImporter):
             return sources[0]
         return source
 
-    def _import(self, file):
+    def _import(self, file, name):
         model_doc = loadmat(file)
-        name = None
-        names = [k for k in model_doc.keys()
-                 if k not in ['__header__', '__version__', '__globals__']]
-        for i in names:
-            if isinstance(model_doc[i], np.ndarray):
-                name = str(i)
-                model_doc = model_doc[i]
         if name is None:
-            raise ModelLoadError('Incorrect format')
-
+            names = [k for k in model_doc.keys()
+                     if k not in ['__header__', '__version__', '__globals__']]
+            modelnames = list()
+            for i in names:
+                if (isinstance(model_doc[i], np.ndarray)
+                        and len(model_doc[i].dtype) > 1):
+                    modelnames.append(i)
+            if len(modelnames) == 1:
+                name = str(modelnames[0])
+                model_doc = model_doc[modelnames[0]]
+            elif len(modelnames) > 1:
+                raise ModelLoadError(
+                    ('More than one model exist, '
+                     'please choose from: %s '
+                     'using --model-name' % modelnames))
+            else:
+                raise ModelLoadError('Incorrect format')
+        else:
+            if name not in model_doc.keys():
+                raise ModelLoadError('Incorrect model name specified')
+            else:
+                model_doc = model_doc[name]
+                if not (isinstance(model_doc, np.ndarray)
+                        and len(model_doc.dtype) > 1):
+                    raise ModelLoadError('Incorrect format')
         model = native.NativeModel()
         self._compartments_from_compound = set()
         self._origid_compound = dict()
@@ -148,6 +164,8 @@ class Importer(BaseImporter):
             properties = dict()
             id = doc['mets'][0, 0][i][0][0]
             match = re.search(r'\[[0-9a-zA-Z]+\]$', id)
+            uniqid = id
+            compartment = None
             if match is not None:  # compartment information in id
                 compartment = match.group().strip('[]')
                 self._compartments_from_compound.add(
@@ -161,6 +179,13 @@ class Importer(BaseImporter):
                         CompartmentEntry(
                             dict(id=compartment, name='')))
                     uniqid = re.sub(r'_[0-9a-zA-Z]+$', '', id)
+                else:
+                    match = re.search(r'\([0-9a-zA-Z]+\)$', id)
+                    if match is not None:  # compartment information in id
+                        compartment = match.group().strip('()')
+                        self._compartments_from_compound.add(
+                            CompartmentEntry(dict(id=compartment, name='')))
+                        uniqid = re.sub(r'\([0-9a-zA-Z]+\)$', '', id)
             properties['id'] = uniqid
             self._origid_compound[id] = Compound(uniqid, compartment)
             for dtype in doc.dtype.names:
@@ -226,7 +251,13 @@ class Importer(BaseImporter):
 
             # parse equation
             compounds = list()
-            for j in doc['S'][0, 0][:, i].indices:
+            try:
+                # incase it's a sparse matrix
+                rows = doc['S'][0, 0][:, i].indices
+            except AttributeError:
+                # incase it's an ndarray
+                rows = np.flatnonzero(doc['S'][0, 0][:, i])
+            for j in rows:
                 compounds.append(
                     (
                         Compound(doc['mets'][0, 0][j][0][0]),  # compound id
@@ -245,17 +276,23 @@ class Importer(BaseImporter):
 
             # parse subsystem
             if 'subSystems' in doc.dtype.names:
-                properties['subsystem'] = str(
-                    doc['subSystems'][0, 0][i][0][0][0][0])
+                if doc['subSystems'][0, 0][i][0].size > 0:
+                    # the subSystem has either 2 levels or 4 levels
+                    # check which level to obtain
+                    if isinstance(doc['subSystems'][0, 0][i][0][0], str):
+                        properties['subsystem'] = str(
+                            doc['subSystems'][0, 0][i][0][0])
+                    elif doc['subSystems'][0, 0][i][0][0][0].size > 0:
+                        properties['subsystem'] = str(
+                            doc['subSystems'][0, 0][i][0][0][0][0])
 
             entry = ReactionEntry(properties)
             yield entry, lower, upper
 
-    def import_model(self, source):
+    def import_model(self, source, model_name=None):
         """Import and return model instance."""
         if not hasattr(source, 'read'):  # Not a File-like object
             with open(self._resolve_source(source), 'rb') as f:
-                return self._import(f)
+                return self._import(f, model_name)
         else:
-            return self._import(source)
-        return self._import(source)
+            return self._import(source, model_name)
