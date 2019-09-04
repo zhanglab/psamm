@@ -363,12 +363,14 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
 
 
-		TMFA_Problem.prob.integrality_tolerance.value = 1e-12
+		TMFA_Problem.prob.integrality_tolerance.value = 0
+		#TMFA_Problem.prob.cplex.parameters.simplex.tolerances.feasibility.value = 1e-4
+		#TMFA_Problem.prob.cplex.parameters.simplex.tolerances.optimality.value	= 1e-4
 		print('integrality set to {}'.format(TMFA_Problem.prob.integrality_tolerance.value))
-		TMFA_Problem.prob.cplex.parameters.simplex.tolerances.feasibility.value = 1e-9
-		TMFA_Problem.prob.cplex.parameters.read.scale.value = -1
-		print('scaling: {}'.format(TMFA_Problem.prob.cplex.parameters.read.scale.get()))
-
+		#TMFA_Problem.prob.cplex.parameters.simplex.tolerances.feasibility.value = 1e-6
+		#TMFA_Problem.prob.cplex.parameters.read.scale.value = 1
+		#print('scaling: {}'.format(TMFA_Problem.prob.cplex.parameters.read.scale.get()))
+		#TMFA_Problem.prob.cplex.parameters.emphasis.numerical.value = 1
 
 		if self._args.tfba:
 			TMFA_Problem.add_thermodynamic()
@@ -417,7 +419,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		logger.info('solving tmfa problem')
 		biomax = solve_objective(TMFA_Problem, objective)
 		# TMFA_Problem.prob.cplex.parameters.lpmethod.set(5)
-		TMFA_Problem.prob.cplex.parameters.threads.set(0)
+		TMFA_Problem.prob.cplex.parameters.threads.set(1)
 		#
 		# for i in range(0, 120, 1):
 		# 	i = float(i)/100
