@@ -196,7 +196,7 @@ class Importer(BaseImporter):
                             properties[
                                 'formula'] = doc['metFormulas'][0, 0][i][0][0]
                     elif dtype == 'metCharges':
-                        properties['charge'] = float(
+                        properties['charge'] = _float_parser(
                             doc['metCharges'][0, 0][i][0])
                     elif dtype == 'metNames':
                         properties['name'] = str(
