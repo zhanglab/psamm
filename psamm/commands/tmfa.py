@@ -314,8 +314,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 						checked_list.append('{}_reverse'.format(base_rx))
 						test_var_for = TMFA_Problem.get_flux_var('{}_forward'.format(base_rx))
 						test_var_rev = TMFA_Problem.get_flux_var('{}_reverse'.format(base_rx))
-						c, = TMFA_Problem.prob.add_linear_constraints(test_var_for == 0)
-						d, = TMFA_Problem.prob.add_linear_constraints(test_var_rev == 0)
+						c, = TMFA_Problem._prob.add_linear_constraints(test_var_for == 0)
+						d, = TMFA_Problem._prob.add_linear_constraints(test_var_rev == 0)
 						test_bio = solve_objective(TMFA_Problem, objective)
 						logger.info('biomass after deleting {}: {}'.format(base_rx, test_bio))
 						if test_bio < threshold:
@@ -331,7 +331,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 							non_essential_reactions.append('{}_reverse'.format(base_rx))
 				else:
 					testing_var = TMFA_Problem.get_flux_var(test_reaction)
-					c, = TMFA_Problem.prob.add_linear_constraints(testing_var == 0)
+					c, = TMFA_Problem._prob.add_linear_constraints(testing_var == 0)
 					test_bio = solve_objective(TMFA_Problem, objective)
 					logger.info('biomass after deleting {}: {}'.format(test_reaction, test_bio))
 					if test_bio < threshold:
@@ -349,34 +349,117 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
 
 
+		# testing_list_tmp = list(mm_irreversible.reactions)
+		# TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
+		# tmp = solve_objective(TMFA_Problem, objective)
+		# print(tmp)
+		# cp_list = [str(cp) for cp in TMFA_Problem._model.compounds]
+		# TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, cpd_conc_dict, cp_list)
+		# TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
+		#                                         exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
+		#                                         split_reversible, transport_parameters, testing_list_tmp,
+		#                                         self._args.scaled_compounds, self._args.water, self._args.proton_in, self._args.proton_out, self._args.temp, self._args.err)
+		#
+		#
+		#
+		# # TMFA_Problem.prob.cplex.parameters.read.scale.value = -1
+		# TMFA_Problem.prob.integrality_tolerance.value = 0
+		# #TMFA_Problem.prob.cplex.parameters.simplex.tolerances.feasibility.value = 1e-4
+		# #TMFA_Problem.prob.cplex.parameters.simplex.tolerances.optimality.value	= 1e-4
+		# print('integrality set to {}'.format(TMFA_Problem.prob.integrality_tolerance.value))
+		# #TMFA_Problem.prob.cplex.parameters.simplex.tolerances.feasibility.value = 1e-6
+		# #print('scaling: {}'.format(TMFA_Problem.prob.cplex.parameters.read.scale.get()))
+		# # TMFA_Problem.prob.cplex.parameters.emphasis.numerical.value = 1
+		#
+		# if self._args.tfba:
+		# 	TMFA_Problem.add_thermodynamic()
+		#
+		#
+		# print('CPLEX PROBLEM TYPE:', TMFA_Problem.prob.cplex.problem_type[TMFA_Problem.prob.cplex.get_problem_type()])
+		#
+		#
+		#
+		#
+		# logger.info('solving tmfa problem')
+		# biomax = solve_objective(TMFA_Problem, objective)
+		# # TMFA_Problem.prob.cplex.parameters.lpmethod.set(5)
+		# TMFA_Problem.prob.cplex.parameters.threads.set(1)
+		#
+		# for i in range(0, 120, 1):
+		# 	i = float(i)/100
+		# 	c, = TMFA_Problem._prob.add_linear_constraints(TMFA_Problem.get_flux_var('ATPm') == i)
+		#
+		# 	TMFA_Problem.prob.set_objective(TMFA_Problem.get_flux_var(objective))
+		# 	TMFA_Problem.prob.solve()
+		# 	max = TMFA_Problem.get_flux(objective)
+		#
+		# 	print('{}\t{}'.format(i, max))
+		# 	c.delete()
+		# quit()
+
+		# if self._args.threshold != None:
+		# 	TMFA_Problem._prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == Decimal(self._args.threshold))
+		# 	# TMFA_Problem._prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) >= Decimal(self._args.threshold))
+		# 	print('set biomass to: {}'.format(self._args.threshold))
+		#
+		# else:
+		# 	TMFA_Problem._prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
+		# 	# TMFA_Problem._prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) >= biomax)
+		#
+		# 	print('set biomass to: {}'.format(biomax))
+
+
+		# TMFA_Problem._prob.add_linear_constraints(TMFA_Problem.prob.var('zi_PUNP2_forward') == 0)
+
+		# TMFA_Problem.prob.set_objective(TMFA_Problem.get_flux_var(objective))
+		# TMFA_Problem.prob.solve()
+
+		# logger.info('TMFA Problem Status: {}'.format(TMFA_Problem.get_flux(objective)))
 		testing_list_tmp = list(mm_irreversible.reactions)
 		TMFA_Problem = fluxanalysis.FluxBalanceProblem(mm_irreversible, solver)
 		tmp = solve_objective(TMFA_Problem, objective)
-		print(tmp)
 		cp_list = [str(cp) for cp in TMFA_Problem._model.compounds]
 		TMFA_Problem, cpd_xij_dict = add_conc_constraints(TMFA_Problem, cpd_conc_dict, cp_list)
-		TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list, exclude_unkown_list,
+		TMFA_Problem = add_reaction_constraints(TMFA_Problem, mm_irreversible, exclude_lump_list,
+		                                        exclude_unkown_list,
 		                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
 		                                        split_reversible, transport_parameters, testing_list_tmp,
-		                                        self._args.scaled_compounds, self._args.water, self._args.proton_in, self._args.proton_out, self._args.temp, self._args.err)
+		                                        self._args.scaled_compounds, self._args.water, self._args.proton_in,
+		                                        self._args.proton_out, self._args.temp, self._args.err)
 
-
-
-
+		# TMFA_Problem.prob.cplex.parameters.read.scale.value = -1
 		TMFA_Problem.prob.integrality_tolerance.value = 0
-		#TMFA_Problem.prob.cplex.parameters.simplex.tolerances.feasibility.value = 1e-4
-		#TMFA_Problem.prob.cplex.parameters.simplex.tolerances.optimality.value	= 1e-4
-		print('integrality set to {}'.format(TMFA_Problem.prob.integrality_tolerance.value))
-		#TMFA_Problem.prob.cplex.parameters.simplex.tolerances.feasibility.value = 1e-6
-		#TMFA_Problem.prob.cplex.parameters.read.scale.value = 1
-		#print('scaling: {}'.format(TMFA_Problem.prob.cplex.parameters.read.scale.get()))
-		#TMFA_Problem.prob.cplex.parameters.emphasis.numerical.value = 1
+		# TMFA_Problem.prob.cplex.parameters.simplex.tolerances.feasibility.value = 1e-4
+		# TMFA_Problem.prob.cplex.parameters.simplex.tolerances.optimality.value	= 1e-4
+		logger.info('integrality set to {}'.format(TMFA_Problem.prob.integrality_tolerance.value))
+		# TMFA_Problem.prob.cplex.parameters.simplex.tolerances.feasibility.value = 1e-6
+		# print('scaling: {}'.format(TMFA_Problem.prob.cplex.parameters.read.scale.get()))
+		# TMFA_Problem.prob.cplex.parameters.emphasis.numerical.value = 1
 
 		if self._args.tfba:
 			TMFA_Problem.add_thermodynamic()
 
+		print(
+			'CPLEX PROBLEM TYPE:', TMFA_Problem.prob.cplex.problem_type[TMFA_Problem.prob.cplex.get_problem_type()])
 
-		print('CPLEX PROBLEM TYPE:', TMFA_Problem.prob.cplex.problem_type[TMFA_Problem.prob.cplex.get_problem_type()])
+		logger.info('solving tmfa problem')
+		biomax = solve_objective(TMFA_Problem, objective)
+		# TMFA_Problem.prob.cplex.parameters.lpmethod.set(5)
+		TMFA_Problem.prob.cplex.parameters.threads.set(1)
+
+		if self._args.threshold != None:
+			TMFA_Problem._prob.add_linear_constraints(
+				TMFA_Problem.get_flux_var(objective) == Decimal(self._args.threshold))
+			# TMFA_Problem._prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) >= Decimal(self._args.threshold))
+			print('set biomass to: {}'.format(self._args.threshold))
+
+		else:
+			TMFA_Problem._prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
+			# TMFA_Problem._prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) >= biomax)
+
+			print('set biomass to: {}'.format(biomax))
+
+
 
 		if self._args.verbose:
 			index_dict_vars = {}
@@ -414,119 +497,160 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 				print('{} {} {}'.format(' + '.join(equation), sign, TMFA_Problem.prob.cplex.linear_constraints.get_rhs(i)))
 				print('-------------------------------------------------------------------')
 
+		suff_rxn = [i for i in mm_irreversible.reactions]
+		random.shuffle(suff_rxn)
+
+		for reaction in suff_rxn:
 
 
-		logger.info('solving tmfa problem')
-		biomax = solve_objective(TMFA_Problem, objective)
-		# TMFA_Problem.prob.cplex.parameters.lpmethod.set(5)
-		TMFA_Problem.prob.cplex.parameters.threads.set(1)
-		#
-		# for i in range(0, 120, 1):
-		# 	i = float(i)/100
-		# 	c, = TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var('ATPm') == i)
-		#
-		# 	TMFA_Problem.prob.set_objective(TMFA_Problem.get_flux_var(objective))
-		# 	TMFA_Problem.prob.solve()
-		# 	max = TMFA_Problem.get_flux(objective)
-		#
-		# 	print('{}\t{}'.format(i, max))
-		# 	c.delete()
-		# quit()
-
-		if self._args.threshold != None:
-			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == Decimal(self._args.threshold))
-			# TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) >= Decimal(self._args.threshold))
-			print('set biomass to: {}'.format(self._args.threshold))
-
-		else:
-			TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) == biomax)
-			# TMFA_Problem.prob.add_linear_constraints(TMFA_Problem.get_flux_var(objective) >= biomax)
-
-			print('set biomass to: {}'.format(biomax))
+			# TMFA_Problem.maximize({reaction: -1})
+			# min_flux = TMFA_Problem.get_flux(reaction)
+			# TMFA_Problem.maximize({reaction: 1})
+			# max_flux = TMFA_Problem.get_flux(reaction)
 
 
 
+			vi = TMFA_Problem.flux_expr(reaction)
+			TMFA_Problem.prob.set_objective(vi)
+			TMFA_Problem._solve()
+			new_max = TMFA_Problem.get_flux(reaction)
 
-		TMFA_Problem.prob.set_objective(TMFA_Problem.get_flux_var(objective))
-		TMFA_Problem.prob.solve()
+			TMFA_Problem.prob.set_objective(-vi)
+			TMFA_Problem._solve()
+			new_min = TMFA_Problem.get_flux(reaction)
 
-		logger.info('TMFA Problem Status: {}'.format(TMFA_Problem.get_flux(objective)))
+			print('Flux\t{}\t{}\t{}'.format(reaction, new_min, new_max))
 
-		# for reaction in sorted(mm_irreversible.reactions):
-		# 	try:
-		# 		zi = TMFA_Problem.prob.var('zi_{}'.format(reaction))
-		# 		TMFA_Problem.prob.set_objective(-zi)
-		# 		TMFA_Problem._solve()
-		# 		min_zi = TMFA_Problem.prob.result.get_value(zi)
-		# 		TMFA_Problem.prob.set_objective(zi)
-		# 		TMFA_Problem._solve()
-		# 		max_zi = TMFA_Problem.prob.result.get_value(zi)
-		# 		print('reaciton_vi\t{}\t{}\t{}'.format(reaction, min_zi, max_zi))
-		# 	except:
-		# 		print('reaciton_vi\t{}\t{}\t{}'.format(reaction, 'NA', 'NA'))
+			# if reaction not in exclude_unkown_list:
+			# 	zi = TMFA_Problem._prob.var('zi_{}'.format(reaction))
+			# 	TMFA_Problem.maximize(zi)
+			# 	TMFA_Problem._prob.set_objective(lp.Expression(zi))
+			# 	TMFA_Problem._prob.solve(lp.ObjectiveSense.Maximize)
+			# 	max_zi = TMFA_Problem._prob.result.get_value(zi)
+			# 	TMFA_Problem.check_constraints()
+			#
+			# 	TMFA_Problem._prob.set_objective(-1*zi)
+			# 	TMFA_Problem._prob.solve(lp.ObjectiveSense.Maximize)
+			# 	min_zi = TMFA_Problem._prob.result.get_value(zi)
+			# 	TMFA_Problem.check_constraints()
+			#
+			# 	dgri = TMFA_Problem._prob.var('dgri_{}'.format(reaction))
+			# 	TMFA_Problem._prob.set_objective(dgri)
+			# 	TMFA_Problem._prob.solve(lp.ObjectiveSense.Maximize)
+			# 	max_dgri = TMFA_Problem._prob.result.get_value(dgri)
+			# 	TMFA_Problem.check_constraints()
+			#
+			# 	TMFA_Problem._prob.set_objective(dgri)
+			# 	TMFA_Problem._prob.solve(lp.ObjectiveSense.Minimize)
+			# 	min_dgri = TMFA_Problem._prob.result.get_value(dgri)
+			# 	TMFA_Problem.check_constraints()
+			#
+				# print('zi\t{}\t{}\t{}'.format(reaction, min_zi, max_zi))
+			# 	print('dgri\t{}\t{}\t{}'.format(reaction, min_dgri, max_dgri))
+			# else:
+			# 	print('zi\t{}\t{}\t{}'.format(reaction, 'NA', 'NA'))
+			# 	print('dgri\t{}\t{}\t{}'.format(reaction, 'NA', 'NA'))
+
+
+
+
+
+
+
+		quit()
 
 
 		for reaction in sorted(mm_irreversible.reactions):
-			# if 'Biomass_WP2' in reaction:
+			logger.info('testing ZI for reaciton {}'.format(reaction))
+			if reaction not in exclude_unkown_list:
+			# 	try:
+					zi = TMFA_Problem.prob.var('zi_{}'.format(reaction))
+					TMFA_Problem.prob.set_objective(-zi)
+					TMFA_Problem._solve()
+					min_zi = TMFA_Problem.prob.result.get_value(zi)
+					TMFA_Problem.prob.set_objective(zi)
+					TMFA_Problem._solve()
+					max_zi = TMFA_Problem.prob.result.get_value(zi)
+					if 'ACKr' in reaction:
+						print('reaciton_zi\t{}\t{}\t{}'.format(reaction, min_zi, max_zi))
+				# except:
+				# 	print('reaciton_zi\t{}\t{}\t{}'.format(reaction, 'NA', 'NA'))
+
+
+		for reaction in sorted(mm_irreversible.reactions):
 				logger.info('testing {}'.format(reaction))
-				try:
-					min_flux = TMFA_Problem.flux_bound(reaction, -1)
-					max_flux = TMFA_Problem.flux_bound(reaction, 1)
+				# try:
+				# min_flux = TMFA_Problem.flux_bound(reaction, -1)
+				# max_flux = TMFA_Problem.flux_bound(reaction, 1)
+				# vi = TMFA_Problem.get_flux_var(reaction)
+				# TMFA_Problem._prob.set_objective(-vi)
+				# TMFA_Problem._solve()
+				# min_flux = TMFA_Problem._prob.result.get_value(vi)
+				# TMFA_Problem._prob.set_objective(vi)
+				# TMFA_Problem._solve()
+				# max_flux = TMFA_Problem._prob.result.get_value(vi)
+
+				TMFA_Problem.maximize({reaction: -1})
+				min_flux = TMFA_Problem.get_flux(reaction)
+				TMFA_Problem.maximize({reaction: 1})
+				max_flux = TMFA_Problem.get_flux(reaction)
+				if 'ACKr' in reaction or 'Biomass' in reaction:
+
 					print('Flux Variability\t{}\t{}\t{}'.format(reaction, min_flux, max_flux))
-				except:
-					print('Flux Variability\t{}\t{}\t{}'.format(reaction, 'SolverError', 'SolverError'))
+				# except:
+				# 	print('Flux Variability\t{}\t{}\t{}'.format(reaction, 'SolverError', 'SolverError'))
 
 
 
 
 
 		for reaction in sorted(mm_irreversible.reactions):
-			# if 'O2t' in reaction:
-				# logger.info('{}'.format(reaction))
+				logger.info('testing deltag for {}'.format(reaction))
 				if reaction not in exclude_unkown_list:
-					if reaction in for_rev_reactions:
-						if '_forward' in reaction:
-							drg_var = TMFA_Problem.prob.var('dgri_{}'.format(reaction))
-							try:
-								TMFA_Problem.prob.set_objective(-drg_var)
-								TMFA_Problem._solve()
-								min_drg = TMFA_Problem.prob.result.get_value(drg_var)
-								TMFA_Problem.prob.set_objective(drg_var)
-								TMFA_Problem._solve()
-								max_drg = TMFA_Problem.prob.result.get_value(drg_var)
-							except:
-								min_drg = 'SolverError'
-								max_drg = 'SolverError'
-						elif '_reverse' in reaction:
-							base_rn = reaction[:-8]
-							drg_var = TMFA_Problem.prob.var('dgri_{}_forward'.format(base_rn))
-							try:
-								TMFA_Problem.prob.set_objective(-drg_var)
-								TMFA_Problem._solve()
-								max_drg = -1 * TMFA_Problem.prob.result.get_value(drg_var)
-								TMFA_Problem.prob.set_objective(drg_var)
-								TMFA_Problem._solve()
-								min_drg = -1 * TMFA_Problem.prob.result.get_value(drg_var)
-							except:
-								min_drg = 'SolverError'
-								max_drg = 'SolverError'
-					else:
-						drg_var = TMFA_Problem.prob.var('dgri_{}'.format(reaction))
-						try:
-							TMFA_Problem.prob.set_objective(-drg_var)
-							TMFA_Problem._solve()
-							min_drg = TMFA_Problem.prob.result.get_value(drg_var)
-							TMFA_Problem.prob.set_objective(drg_var)
-							TMFA_Problem._solve()
-							max_drg = TMFA_Problem.prob.result.get_value(drg_var)
-						except:
-							min_drg = 'SolverError'
-							max_drg = 'SolverError'
+					# if reaction in for_rev_reactions:
+					# 	if '_forward' in reaction:
+					# 		drg_var = TMFA_Problem.prob.var('dgri_{}'.format(reaction))
+					# 		try:
+					# 			TMFA_Problem.prob.set_objective(-drg_var)
+					# 			TMFA_Problem._solve()
+					# 			min_drg = TMFA_Problem.prob.result.get_value(drg_var)
+					# 			TMFA_Problem.prob.set_objective(drg_var)
+					# 			TMFA_Problem._solve()
+					# 			max_drg = TMFA_Problem.prob.result.get_value(drg_var)
+					# 		except:
+					# 			min_drg = 'SolverError'
+					# 			max_drg = 'SolverError'
+					# 	elif '_reverse' in reaction:
+					# 		base_rn = reaction[:-8]
+					# 		drg_var = TMFA_Problem.prob.var('dgri_{}_forward'.format(base_rn))
+					# 		try:
+					# 			TMFA_Problem.prob.set_objective(-drg_var)
+					# 			TMFA_Problem._solve()
+					# 			max_drg = -1 * TMFA_Problem.prob.result.get_value(drg_var)
+					# 			TMFA_Problem.prob.set_objective(drg_var)
+					# 			TMFA_Problem._solve()
+					# 			min_drg = -1 * TMFA_Problem.prob.result.get_value(drg_var)
+					# 		except:
+					# 			min_drg = 'SolverError'
+					# 			max_drg = 'SolverError'
+					# else:
+					drg_var = TMFA_Problem.prob.var('dgri_{}'.format(reaction))
+					try:
+						TMFA_Problem.prob.set_objective(-drg_var)
+						TMFA_Problem._solve()
+						min_drg = TMFA_Problem.prob.result.get_value(drg_var)
+						TMFA_Problem.prob.set_objective(drg_var)
+						TMFA_Problem._solve()
+						max_drg = TMFA_Problem.prob.result.get_value(drg_var)
+					except:
+						min_drg = 'SolverError'
+						max_drg = 'SolverError'
 				else:
 					min_drg = 'NA'
 					max_drg = 'NA'
-				print('DGRI Variability\t{}\t{}\t{}'.format(reaction, min_drg, max_drg))
-
+				if 'ACKr' in reaction:
+					print('DGRI Variability\t{}\t{}\t{}'.format(reaction, min_drg, max_drg))
+		quit()
 		excluded_compounds = [self._args.proton_in, self._args.proton_out]
 		for cpt in model.compartments:
 			excluded_compounds.append('{}[{}]'.format(self._args.water, cpt))
@@ -540,22 +664,22 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
 		# excluded_compounds = ['cpd_h[c]', 'cpd_h[p]', 'cpd_h[e]', 'cpd_h2o[c]', 'cpd_h2o[p]', 'cpd_h2o[e]']
 		for compound in sorted(mm_irreversible.compounds):
-			# logger.info('solving for compound {}'.format(compound))
-			cpd_var = TMFA_Problem.prob.var(str(compound))
+			logger.info('solving for compound {}'.format(compound))
+			cpd_var = TMFA_Problem._prob.var(str(compound))
 			if str(compound) not in excluded_compounds:
 				try:
-					TMFA_Problem.prob.set_objective(cpd_var)
+					TMFA_Problem._prob.set_objective(cpd_var)
 					TMFA_Problem._solve()
-					max = TMFA_Problem.prob.result.get_value(cpd_var)
+					max = TMFA_Problem._prob.result.get_value(cpd_var)
 				except:
 					max = 'SolverError'
 			else:
 				max = 'NA'
 			if str(compound) not in excluded_compounds:
 				try:
-					TMFA_Problem.prob.set_objective(-cpd_var)
+					TMFA_Problem._prob.set_objective(-cpd_var)
 					TMFA_Problem._solve()
-					min = TMFA_Problem.prob.result.get_value(cpd_var)
+					min = TMFA_Problem._prob.result.get_value(cpd_var)
 				except:
 					min = 'SolverError'
 			else:
@@ -563,7 +687,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			print('CPD Conc Variability\t{}\t{}\t{}'.format(compound, min, max))#, math.exp(min), math.exp(max)))
 
 
-		logger.info('TMFA Problem Status: {}'.format(biomax))
+		logger.info('TMFA Max Biomass: {}'.format(biomax))
 		logger.info('TMFA Problem Status: {}'.format(TMFA_Problem.get_flux(objective)))
 
 		quit()
@@ -658,10 +782,10 @@ def add_conc_constraints(problem, cpd_conc_dict, cp_list):
 				if str(cp) not in excluded_compounds:
 					# print('Default Conc Constraint Applied\t{}\t{}\t{}'.format(str(cp), math.log(0.0001), math.log(0.02)))
 					# Add concentration constraints as the ln of the concentration (M).
-					# problem.prob.add_linear_constraints(var >= math.log(0.00001))
-					# problem.prob.add_linear_constraints(var >= math.log(0.0000001))
-					problem.prob.add_linear_constraints(var >= math.log(0.00001))
-					problem.prob.add_linear_constraints(var <= math.log(0.02))
+					# problem._prob.add_linear_constraints(var >= math.log(0.00001))
+					# problem._prob.add_linear_constraints(var >= math.log(0.0000001))
+					problem._prob.add_linear_constraints(var >= math.log(0.00001))
+					problem._prob.add_linear_constraints(var <= math.log(0.02))
 					# print('default', str(cp))
 		elif str(cp) in cpd_conc_dict.keys():
 			if str(cp) not in excluded_compounds:
@@ -670,16 +794,16 @@ def add_conc_constraints(problem, cpd_conc_dict, cp_list):
 					logger.error('lower bound for {} concentration higher than upper bound'.format(conc_limits))
 					quit()
 				if Decimal(conc_limits[0]) == Decimal(conc_limits[1]):
-					problem.prob.add_linear_constraints(var == math.log(Decimal(conc_limits[0])))
+					problem._prob.add_linear_constraints(var == math.log(Decimal(conc_limits[0])))
 					# Constraints to allow the concentration constraints on the problem to be more flexible
-					# problem.prob.add_linear_constraints(var >= math.log(Decimal(conc_limits[0]))-1)
-					# problem.prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1])+1))
+					# problem._prob.add_linear_constraints(var >= math.log(Decimal(conc_limits[0]))-1)
+					# problem._prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1])+1))
 				else:
-					problem.prob.add_linear_constraints(var >= math.log(Decimal(conc_limits[0])))
-					problem.prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1])))
+					problem._prob.add_linear_constraints(var >= math.log(Decimal(conc_limits[0])))
+					problem._prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1])))
 					# Constraints to allow the concentration constraints to be more flexible
-					# problem.prob.add_linear_constraints(var >= math.log(Decimal(conc_limits[0]))-1)
-					# problem.prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1]))+1)
+					# problem._prob.add_linear_constraints(var >= math.log(Decimal(conc_limits[0]))-1)
+					# problem._prob.add_linear_constraints(var <= math.log(Decimal(conc_limits[1]))+1)
 				lower = math.log(Decimal(conc_limits[0]))
 				upper = math.log(Decimal(conc_limits[1]))
 				# logger.info('Non default Conc Constraints Applied\t{}\t{}\t{}'.format(str(cp), lower, upper))
@@ -951,22 +1075,22 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# h_e = problem.prob.var(str('h[e]'))
 	# h_e = problem.prob.var(str('cpd_h[e]'))
 
-	# problem.prob.add_linear_constraints(h_e <= 11)
-	# problem.prob.add_linear_constraints(h_e >= 4)
+	# problem._prob.add_linear_constraints(h_e <= 11)
+	# problem._prob.add_linear_constraints(h_e >= 4)
 
 	# h_p = problem.prob.var(str('C00080[e]'))
 	h_p = problem.prob.var(str(hout))
 
-	problem.prob.add_linear_constraints(h_p <= 11)
-	problem.prob.add_linear_constraints(h_p >= 4)
-	# problem.prob.add_linear_constraints(h_e == 7.4)
+	problem._prob.add_linear_constraints(h_p <= 11)
+	problem._prob.add_linear_constraints(h_p >= 4)
+	# problem._prob.add_linear_constraints(h_e == 7.4)
 	# h_c = problem.prob.var(str('h[c]'))
 
 	# h_c = problem.prob.var(str('C00080[c]'))
 	h_c = problem.prob.var(str(hin))
 
-	problem.prob.add_linear_constraints(h_c >= 4)
-	problem.prob.add_linear_constraints(h_c <= 11)
+	problem._prob.add_linear_constraints(h_c >= 4)
+	problem._prob.add_linear_constraints(h_c <= 11)
 	delta_ph = (h_p - h_c)
 
 	F = Decimal(0.02306)
@@ -990,17 +1114,15 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	dgri_var_dict = {}
 	for reaction in mm.reactions:
 		if reaction not in exclude_unknown:
-			if reaction in split_list:
-				if '_forward' in reaction:
-					problem.prob.define('dgri_{}'.format(reaction), types=lp.VariableType.Continuous, lower=-1000, upper=5000)
-					dgri = problem.prob.var('dgri_{}'.format(reaction))
-					dgri_var_dict[reaction] = dgri
-					base_rxn = reaction[:-8]
-					dgri_var_dict['{}_reverse'.format(base_rxn)] = -1*dgri
-			else:
-				problem.prob.define('dgri_{}'.format(reaction), types=lp.VariableType.Continuous)
-				dgri = problem.prob.var('dgri_{}'.format(reaction))
-				dgri_var_dict[reaction] = dgri
+			problem.prob.define('dgri_{}'.format(reaction), types=lp.VariableType.Continuous, lower=-1000, upper=1000)
+			dgri = problem.prob.var('dgri_{}'.format(reaction))
+			dgri_var_dict[reaction] = dgri
+
+	for (f,r) in split_rxns:
+		if f not in exclude_unknown:
+			dgrif = problem.prob.var('dgri_{}'.format(f))
+			dgrir = problem.prob.var('dgri_{}'.format(r))
+			problem._prob.add_linear_constraints(dgrif == dgrir * -1)
 
 	new_excluded_reactions = []
 	for reaction in mm.reactions:
@@ -1019,7 +1141,7 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 				new_excluded_reactions.append(reaction)
 			# define variables for vmax, dgri, zi, yi, and vi
 
-			problem.prob.define('zi_{}'.format(reaction), types=lp.VariableType.Binary,lower=int(0), upper=int(1))
+			problem.prob.define('zi_{}'.format(reaction), types=lp.VariableType.Binary, lower=int(0), upper=int(1))
 			zi = problem.prob.var('zi_{}'.format(reaction))
 			dgri = dgri_var_dict[reaction]
 			vi = problem.get_flux_var(reaction)
@@ -1042,18 +1164,18 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 
 				# print('Reaction DGR0 dict lookup value: {}\t{}'.format(reaction, dgr_dict[reaction]))
 				ssxi = 0
-				problem.prob.define('dgr_err_{}'.format(reaction))
 				# If no error then use this line
 
-				# If you want to use the error estimates for dgr values then uncomment these lines
 				if err_est:
+					problem.prob.define('dgr_err_{}'.format(reaction), types=lp.VariableType.Continuous, lower=-1000,
+					                    upper=1000)
 					dgr_err = problem.prob.var('dgr_err_{}'.format(reaction))
-					problem.prob.add_linear_constraints(dgr_err <= 2*err)
-					problem.prob.add_linear_constraints(dgr_err >= -2*err)
+					problem._prob.add_linear_constraints(dgr_err <= 2*err)
+					problem._prob.add_linear_constraints(dgr_err >= -2*err)
 				else:
 					dgr_err = 0
-				# problem.prob.add_linear_constraints(dgr_err <= 0)
-				# problem.prob.add_linear_constraints(dgr_err >= -20)
+				# problem._prob.add_linear_constraints(dgr_err <= 0)
+				# problem._prob.add_linear_constraints(dgr_err >= -20)
 
 				# print(reaction, 'error', 2*err)
 				for (cpd, stoich) in rxn.compounds:
@@ -1063,18 +1185,17 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 						# print('ssxi calc for {} compound {}\t{}'.format(reaction, problem.prob.var(str(cpd)), stoich))
 				# print('Reaction dgri constraint calculation\t{}\t{}={}+({}*{}*({}))'.format(reaction, dgri, dgr0, R, T, ssxi))
 
-				problem.prob.add_linear_constraints(dgri == dgr0 + (R * T * (ssxi)) + dgr_err + dgr_trans)
+				problem._prob.add_linear_constraints(dgri == dgr0 + (R * T * (ssxi)) + dgr_err + dgr_trans)
 				# print('Reaction dgri raw constraint calculation {}: '.format(reaction), (dgri == dgr0 + (R * T * (ssxi)) + dgr_err))
 				if hamilton:
-					problem.prob.add_linear_constraints(dgri <= 300-epsilon)
-					problem.prob.add_linear_constraints(dgri >= -300+epsilon)
+					problem._prob.add_linear_constraints(dgri <= 300-epsilon)
+					problem._prob.add_linear_constraints(dgri >= -300+epsilon)
 
 				if reaction not in exclude_lumps_unknown:
 					if rhs_check != 0 and lhs_check != 0:
-						problem.prob.add_linear_constraints(dgri - k + (k * zi) <= -epsilon)
-
-						problem.prob.add_linear_constraints(vi <= zi * vmax)
-						problem.prob.add_linear_constraints(vi >= int(0))
+						problem._prob.add_linear_constraints(dgri - k + (k * zi) <= -epsilon)
+						problem._prob.add_linear_constraints(vi <= zi * vmax)
+						# problem._prob.add_linear_constraints(vi >= int(0))
 
 
 
@@ -1086,23 +1207,23 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 						# print('TEST VI TEST', vi)
 						yi = problem.prob.var('yi_{}'.format(reaction))
 						dgri = problem.prob.var('dgri_{}'.format(reaction))
-						problem.prob.add_linear_constraints(vi == 0)
+						problem._prob.add_linear_constraints(vi == 0)
 						# print('Lumped Reaction flux = 0 constraint\t{}=0'.format(vi))
 						# print('Lumped Reaction flux = 0 raw constraint {}=0'.format(reaction), (vi == 0))
-						problem.prob.add_linear_constraints(dgri - (k * yi) <= - epsilon)
+						problem._prob.add_linear_constraints(dgri - (k * yi) <= - epsilon)
 						# print('Lumped Reaction feasibility constraint\t{}\t{}-{}*{}<={}'.format(reaction, dgri, k, yi, epsilon))
 						# print('Lumped reaction feasibility raw constraint {}: '.format(reaction), (dgri - (k * yi) <= - epsilon))
 						sub_rxn_list = lump_rxn_list[reaction]
 						sszi = 0
 						for sub_rxn in sub_rxn_list:
 							sszi += problem.prob.var('zi_{}'.format(sub_rxn))
-						problem.prob.add_linear_constraints(yi + sszi <= len(sub_rxn_list))
+						problem._prob.add_linear_constraints(yi + sszi <= len(sub_rxn_list))
 				# print('Lump component constraints\t{}\t{}+{}<={}'.format(reaction, yi, sszi, sub_rxn_list))
 				# print('Lumped component raw constraint {} :'.format(reaction), (yi + sszi <= len(sub_rxn_list)))
 
 	for (forward, reverse) in split_rxns:
-		problem.prob.add_linear_constraints(
-			problem.prob.var('zi_{}'.format(forward)) + problem.prob.var('zi_{}'.format(reverse)) <= 1)
+		problem._prob.add_linear_constraints(
+			problem.prob.var('zi_{}'.format(forward)) + problem.prob.var('zi_{}'.format(reverse)) <= int(1))
 			# print('Split reaction Zi constraints\t{}\t{}\t{}+{}<=1'.format(forward, reverse, problem.prob.var('zi_{}'.format(forward)), problem.prob.var('zi_{}'.format(reverse))))
 			# print('Split reaction zi raw constraint {} :'.format(forward), (problem.prob.var('zi_{}'.format(forward)) + problem.prob.var('zi_{}'.format(reverse)) <= 1))
 	return problem
@@ -1123,15 +1244,15 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	#
 	# 	# add flux constraint linking vi and zi for all reactions except lumps
 	# 	if reaction not in exclude_lumps:
-	# 		problem.prob.add_linear_constraints(vi <= zi * vmax)
-	# 		problem.prob.add_linear_constraints(vi >= 0)
+	# 		problem._prob.add_linear_constraints(vi <= zi * vmax)
+	# 		problem._prob.add_linear_constraints(vi >= 0)
 	# 		# print('Reaction Zi Vi constraint\t{}\t{}-{}*{}<=0'.format(reaction, vi, zi, vmax))
 	# 		# print('Reaction Zi Vi constraint {}: '.format(reaction), (vi - zi * vmax <= 0))
 	# 	# add thermodynamic feasibility constraint for all reactions where dgr0 is known except for lumps
 	# 	if reaction not in exclude_lumps_unknown:
 	# 		if reaction in testing_list:
 	# 			if rhs_check != 0 and lhs_check != 0:
-	# 				problem.prob.add_linear_constraints(dgri - k + (k * zi) <= 0 - epsilon)
+	# 				problem._prob.add_linear_constraints(dgri - k + (k * zi) <= 0 - epsilon)
 	# 				# print('Reaction thermo feasibility constraint\t{}\t{}-{}+{}*{}<=-{}'.format(reaction, dgri, k, k, zi, epsilon))
 	# 				# print('Reaction thermo feasibility raw constraint {}: '.format(reaction), (dgri - k + (k * zi) <= 0 - epsilon))
 	# 	# add constraint to calculate dgri based on dgr0 and the concentrations of the metabolites
@@ -1159,12 +1280,12 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# 		# If you want to use the error estimates for dgr values then uncomment these lines
 	# 		if err_est:
 	# 			dgr_err = problem.prob.var('dgr_err_{}'.format(reaction))
-	# 			problem.prob.add_linear_constraints(dgr_err <= 2*err)
-	# 			problem.prob.add_linear_constraints(dgr_err >= -2*err)
+	# 			problem._prob.add_linear_constraints(dgr_err <= 2*err)
+	# 			problem._prob.add_linear_constraints(dgr_err >= -2*err)
 	# 		else:
 	# 			dgr_err = 0
-	# 		# problem.prob.add_linear_constraints(dgr_err <= 0)
-	# 		# problem.prob.add_linear_constraints(dgr_err >= -20)
+	# 		# problem._prob.add_linear_constraints(dgr_err <= 0)
+	# 		# problem._prob.add_linear_constraints(dgr_err >= -20)
 	#
 	# 		# print(reaction, 'error', 2*err)
 	# 		for (cpd, stoich) in rxn.compounds:
@@ -1174,11 +1295,11 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# 				# print('ssxi calc for {} compound {}\t{}'.format(reaction, problem.prob.var(str(cpd)), stoich))
 	# 		# print('Reaction dgri constraint calculation\t{}\t{}={}+({}*{}*({}))'.format(reaction, dgri, dgr0, R, T, ssxi))
 	#
-	# 		problem.prob.add_linear_constraints(dgri == dgr0 + (R * T * (ssxi)) + dgr_err + dgr_trans)
+	# 		problem._prob.add_linear_constraints(dgri == dgr0 + (R * T * (ssxi)) + dgr_err + dgr_trans)
 	# 		# print('Reaction dgri raw constraint calculation {}: '.format(reaction), (dgri == dgr0 + (R * T * (ssxi)) + dgr_err))
 	# 		if hamilton:
-	# 			problem.prob.add_linear_constraints(dgri <= 300-epsilon)
-	# 			problem.prob.add_linear_constraints(dgri >= -300+epsilon)
+	# 			problem._prob.add_linear_constraints(dgri <= 300-epsilon)
+	# 			problem._prob.add_linear_constraints(dgri >= -300+epsilon)
 	# # add constraints for thermodynamic feasibility of lump reactions and to constrain their constituent reactions
 	# for reaction in mm.reactions:
 	# 	if reaction in lump_rxn_list.keys():
@@ -1188,22 +1309,22 @@ def add_reaction_constraints(problem, mm, exclude_lumps, exclude_unknown, exclud
 	# 			# print('TEST VI TEST', vi)
 	# 			yi = problem.prob.var('yi_{}'.format(reaction))
 	# 			dgri = problem.prob.var('dgri_{}'.format(reaction))
-	# 			problem.prob.add_linear_constraints(vi == 0)
+	# 			problem._prob.add_linear_constraints(vi == 0)
 	# 			# print('Lumped Reaction flux = 0 constraint\t{}=0'.format(vi))
 	# 			# print('Lumped Reaction flux = 0 raw constraint {}=0'.format(reaction), (vi == 0))
-	# 			problem.prob.add_linear_constraints(dgri - (k * yi) <= - epsilon)
+	# 			problem._prob.add_linear_constraints(dgri - (k * yi) <= - epsilon)
 	# 			# print('Lumped Reaction feasibility constraint\t{}\t{}-{}*{}<={}'.format(reaction, dgri, k, yi, epsilon))
 	# 			# print('Lumped reaction feasibility raw constraint {}: '.format(reaction), (dgri - (k * yi) <= - epsilon))
 	# 			sub_rxn_list = lump_rxn_list[reaction]
 	# 			sszi = 0
 	# 			for sub_rxn in sub_rxn_list:
 	# 				sszi += problem.prob.var('zi_{}'.format(sub_rxn))
-	# 			problem.prob.add_linear_constraints(yi + sszi <= len(sub_rxn_list))
+	# 			problem._prob.add_linear_constraints(yi + sszi <= len(sub_rxn_list))
 	# 			# print('Lump component constraints\t{}\t{}+{}<={}'.format(reaction, yi, sszi, sub_rxn_list))
 	# 			# print('Lumped component raw constraint {} :'.format(reaction), (yi + sszi <= len(sub_rxn_list)))
 	# # Add linear constraint to disallow solutions that use both the forward and reverse reaction from a split reaction.
 	# for (forward, reverse) in split_rxns:
-	# 	problem.prob.add_linear_constraints(problem.prob.var('zi_{}'.format(forward)) + problem.prob.var('zi_{}'.format(reverse)) <= 1)
+	# 	problem._prob.add_linear_constraints(problem.prob.var('zi_{}'.format(forward)) + problem.prob.var('zi_{}'.format(reverse)) <= 1)
 	# 	# print('Split reaction Zi constraints\t{}\t{}\t{}+{}<=1'.format(forward, reverse, problem.prob.var('zi_{}'.format(forward)), problem.prob.var('zi_{}'.format(reverse))))
 	# 	# print('Split reaction zi raw constraint {} :'.format(forward), (problem.prob.var('zi_{}'.format(forward)) + problem.prob.var('zi_{}'.format(reverse)) <= 1))
 	# return problem
