@@ -228,9 +228,72 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			cp_list.append(str(cp))
 			xij.define([str(cp)], lower=-50, upper=50, types=lp.VariableType.Continuous)
 
+		if self._args.random_addition:
+			testing_list = list(mm_irreversible.reactions)
+			random.shuffle(testing_list)
+			testing_list_tmp = []
+			for rx in testing_list:
+				testing_list_iter = testing_list_tmp + [rx]
+				logger.info('current testing list: {}'.format(testing_list_tmp))
+				logger.info('testing reaction: {}'.format(rx))
+
+				prob = solver.create_problem()
+				prob.cplex.parameters.threads.set(1)
+				prob.integrality_tolerance.value = 0
+				prob.cplex.parameters.emphasis.numerical.value = 1
+
+				self._v = v = prob.namespace(name='flux')
+				self._zi = zi = prob.namespace(name='zi')
+				self._dgri = dgri = prob.namespace(name='dgri')
+				self._xij = xij = prob.namespace(name='xij')
+				for reaction in mm_irreversible.reactions:
+					lower, upper = mm_irreversible.limits[reaction]
+					v.define([reaction], lower=lower, upper=upper, types=lp.VariableType.Continuous)
+					zi.define([reaction], lower=int(0), upper=int(1), types=lp.VariableType.Binary)
+					dgri.define([reaction], lower=-1000, upper=1000, types=lp.VariableType.Continuous)
+
+				massbalance_lhs = {compound: 0 for compound in mm_irreversible.compounds}
+				for spec, value in iteritems(mm_irreversible.matrix):
+					compound, reaction_id = spec
+					massbalance_lhs[compound] += v(reaction_id) * value
+				for compound, lhs in iteritems(massbalance_lhs):
+					prob.add_linear_constraints(lhs == 0)
+
+				cp_list = []
+				for cp in mm_irreversible.compounds:
+					cp_list.append(str(cp))
+					xij.define([str(cp)], lower=-50, upper=50, types=lp.VariableType.Continuous)
+
+				prob, cpd_xij_dict = add_conc_constraints(self, prob, cpd_conc_dict, cp_list)
+
+				prob = add_reaction_constraints(self, prob, mm_irreversible, exclude_lump_list,
+				                                        exclude_unkown_list,
+				                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
+				                                        split_reversible, transport_parameters, testing_list_iter,
+				                                        self._args.scaled_compounds, self._args.water,
+				                                        self._args.proton_in,
+				                                        self._args.proton_out, self._args.temp, self._args.err)
+				try:
+					biomass = get_var_bound(v(self._get_objective()), lp.ObjectiveSense.Maximize)
+					logger.info('Current Biomass: {}'.format(biomass))
+					if biomass < self._args.threshold:
+						continue
+					else:
+						testing_list_tmp.append(rx)
+				except:
+					continue
+
+			for rx in testing_list:
+				if rx not in testing_list_tmp:
+					print('{}\tBad Constraint'.format(rx))
+				else:
+					print('{}\tGood Constraint'.format(rx))
+			quit()
+
+
 		prob, cpd_xij_dict = add_conc_constraints(self, prob, cpd_conc_dict, cp_list)
 
-		TMFA_Problem = add_reaction_constraints(self, prob, mm_irreversible, exclude_lump_list,
+		prob = add_reaction_constraints(self, prob, mm_irreversible, exclude_lump_list,
 		                                        exclude_unkown_list,
 		                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
 		                                        split_reversible, transport_parameters, testing_list_tmp,
