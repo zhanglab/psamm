@@ -88,7 +88,9 @@ class MetabolicModel(object):
             genes = getattr(reaction, 'genes', None)
             if genes is not None:
                 # Delete operators in string
-                genes = re.sub(r'[,\(\)(or)(and)]*', '', genes)
+                genes = re.sub(r'[,()\']*', '', genes)
+                genes = re.sub(r'\band\b', '', genes)
+                genes = re.sub(r'\bor\b', '', genes)
                 genes = re.split(r'\s+', genes)  # Transfer string to list
                 genes = frozenset(genes)
             else:
