@@ -24,6 +24,10 @@ import os
 import tempfile
 import unittest
 from collections import defaultdict
+from psamm.datasource.reaction import parse_reaction, parse_compound, Direction, Compound
+from psamm.datasource.native import NativeModel, ReactionEntry, CompoundEntry
+from psamm.formula import Formula, Atom, ParseError
+
 
 class TestGraph(unittest.TestCase):
 	def setUp(self):
@@ -42,14 +46,6 @@ class TestGraph(unittest.TestCase):
 	def test_add_node(self):
 		self.g.add_node(self.node1)
 		self.assertTrue(self.node1 in self.g.nodes)
-
-	def test_add_node_with_type_cpd(self):
-		self.g.add_node(self.node5)
-		self.assertEqual(self.g._nodes_original_id['cpd_E'], [self.node5])
-
-	def test_add_node_with_type_rxn(self):
-		self.g.add_node(self.node4)
-		self.assertEqual(self.g._nodes_original_id['A,B'], [self.node4])
 
 	def test_node_id_dict(self):
 		self.g.add_node(self.node1)
@@ -128,6 +124,8 @@ class TestGraph(unittest.TestCase):
 	def test_node_original_id_dict(self):
 		self.g.add_node(self.node4)
 		self.g.add_node(self.node5)
+		self.g.set_original_id(self.node4)
+		self.g.set_original_id(self.node5)
 		d = defaultdict(list)
 		d['A,B'].append(self.node4)
 		d['cpd_E'].append(self.node5)
@@ -143,13 +141,13 @@ class TestGraph(unittest.TestCase):
 		d = {'shape': 'box'}
 		self.assertEqual(d, self.g.default_node_props)
 
-	def test_write_cytoscape_nodes(self):
+	def test_write_nodes_table(self):
 		self.g.add_node(self.node2)
 		self.g.add_node(self.node3)
 		self.g.add_edge(self.edge2_3)
 		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_node')
 		with open(path, mode='w') as f:
-			self.g.write_cytoscape_nodes(f)
+			self.g.write_nodes_tables(f)
 		read_file = []
 		f = open(path, 'r')
 		for i in f.readlines():
@@ -158,14 +156,14 @@ class TestGraph(unittest.TestCase):
 		self.assertEqual(read_file, ['id\tcolor\tlabel\n',
 		                             'B\tblue\tB\n', 'C\tred\tC\n'])
 
-	def test_write_cytoscape_nodes_with_original_id(self):
+	def test_write_nodes_table_with_original_id(self):
 		self.g.add_node(self.node2)
 		self.node3.props['original_id'] = 'A_1'
 		self.g.add_node(self.node3)
 		self.g.add_edge(self.edge2_3)
 		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_node')
 		with open(path, mode='w') as f:
-			self.g.write_cytoscape_nodes(f)
+			self.g.write_nodes_tables(f)
 		read_file = []
 		f = open(path, 'r')
 		for i in f.readlines():
@@ -174,13 +172,13 @@ class TestGraph(unittest.TestCase):
 		self.assertEqual(read_file, ['id\tcolor\tlabel\n',
 		                             'B\tblue\tB\n', 'C\tred\tC\n'])
 
-	def test_write_cytoscape_edges(self):
+	def write_edges_tables(self):
 		self.g.add_node(self.node2)
 		self.g.add_node(self.node3)
 		self.g.add_edge(self.edge2_3)
 		path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
 		with open(path, mode='w') as f:
-			self.g.write_cytoscape_edges(f)
+			self.g.write_edges_tables(f)
 		read_file = []
 		f = open(path, 'r')
 		for i in f.readlines():
@@ -451,6 +449,292 @@ class TestNodes(unittest.TestCase):
 	def test_node_repr(self):
 		rep = self.node1.__repr__()
 		self.assertEqual(rep, '<Node id=A>')
+
+
+class TestOther(unittest.TestCase):
+	def setUp(self):
+		native_model = NativeModel()
+		self.rxn1 = ReactionEntry({
+			'id': 'rxn1', 'equation': parse_reaction(
+				'fum_c[c] + h2o_c[c] <=> mal_L_c[c]')})
+		native_model.reactions.add_entry(self.rxn1)
+
+		self.fum = CompoundEntry({
+			'id': 'fum_c', 'formula': 'C4H2O4'})
+		native_model.compounds.add_entry(self.fum)
+
+		self.h2o = CompoundEntry({
+			'id': 'h2o_c', 'formula': 'H2O'})
+		native_model.compounds.add_entry(self.h2o)
+
+		self.mal = CompoundEntry(
+			{'id': 'mal_L_c', 'formula': 'C4H4O5'})
+		native_model.compounds.add_entry(self.mal)
+
+		self.rxn2 = ReactionEntry({
+			'id': 'rxn2', 'equation': parse_reaction(
+				'q8_c[c] + succ_c[c] => fum_c[c] + q8h2_c[c]')})
+		native_model.reactions.add_entry(self.rxn2)
+
+		self.q8 = CompoundEntry(
+			{'id': 'q8_c', 'formula': 'C49H74O4'})
+		native_model.compounds.add_entry(self.q8)
+
+		self.q8h2 = CompoundEntry({
+			'id': 'q8h2_c', 'formula': 'C49H76O4'})
+		native_model.compounds.add_entry(self.q8h2)
+
+		self.succ = CompoundEntry({
+			'id': 'succ_c', 'formula': 'C4H4O4'})
+		native_model.compounds.add_entry(self.succ)
+
+		self.native = native_model
+		self.mm = native_model.create_metabolic_model()
+
+	def test_compound_dict(self):
+		cpd_dict = graph.get_compound_dict(self.native)
+		test_dict = {'fum_c': Formula({Atom('O'): 4, Atom('C'): 4, Atom('H'): 2}),
+					  'h2o_c': Formula({Atom('O'): 1, Atom('H'): 2}),
+					  'mal_L_c': Formula({Atom('O'): 5, Atom('C'): 4, Atom('H'): 4}),
+					  'q8_c': Formula({Atom('O'): 4, Atom('C'): 49, Atom('H'): 74}),
+					  'q8h2_c': Formula({Atom('O'): 4, Atom('C'): 49, Atom('H'): 76}),
+					  'succ_c': Formula({Atom('O'): 4, Atom('C'): 4, Atom('H'): 4})}
+		self.assertEqual(test_dict, cpd_dict)
+
+	def test_network_dict(self):
+		net_dict = graph.make_network_dict(self.native, self.mm, subset=None, method='fpp', element=None, excluded_reactions=[])
+		test_dict = {self.rxn1 : ([(Compound(u'fum_c', u'c'), Compound(u'mal_L_c', u'c')), (Compound(u'h2o_c', u'c'),
+		                            Compound(u'mal_L_c', u'c'))], Direction.Both), self.rxn2 :
+									([(Compound(u'succ_c', u'c'), Compound(u'fum_c', u'c')), (Compound(u'q8_c', u'c'),
+									Compound(u'q8h2_c', u'c')), (Compound(u'succ_c', u'c'), Compound(u'q8h2_c', u'c'))],
+									Direction.Right)}
+		self.assertEqual(net_dict, test_dict)
+
+	def test_reaction_dir_for(self):
+		self.assertTrue(graph.dir_value(Direction.Forward) == 'forward')
+
+	def test_reaction_dir_rev(self):
+		self.assertTrue(graph.dir_value(Direction.Reverse) == 'back')
+
+	def test_reaction_dir_both(self):
+		self.assertTrue(graph.dir_value(Direction.Both) == 'both')
+
+
+class TestMakeNetworks(unittest.TestCase):
+	def setUp(self):
+		self.native_model = NativeModel()
+		self.rxn1 = ReactionEntry({
+			'id': 'rxn1', 'equation': parse_reaction(
+				'fum_c[c] + h2o_c[c] <=> mal_L_c[c]')})
+		self.atp = CompoundEntry({
+			'id': 'atp', 'formula': 'C10H16N5O13P3'})
+		self.adp = CompoundEntry({
+			'id': 'adp', 'formula': 'C10H15N5O10P2'})
+		self.glc = CompoundEntry({
+			'id': 'glc', 'formula': 'C6H12O6'})
+		self.g6p = CompoundEntry({
+			'id': 'g6p', 'formula': 'C6H13O9P'})
+		self.f6p = CompoundEntry({
+			'id': 'f6p', 'formula': 'C6H13O9P'})
+		self.rxn1 = ReactionEntry({
+			'id': 'rxn1', 'equation': parse_reaction(
+				'atp + glc => adp + g6p')})
+		self.rxn2 = ReactionEntry({
+			'id': 'rxn2', 'equation': parse_reaction(
+				'g6p <=> f6p')})
+		self.native_model.compounds.add_entry(self.atp)
+		self.native_model.compounds.add_entry(self.adp)
+		self.native_model.compounds.add_entry(self.g6p)
+		self.native_model.compounds.add_entry(self.glc)
+		self.native_model.compounds.add_entry(self.f6p)
+		self.native_model.reactions.add_entry(self.rxn1)
+		self.native_model.reactions.add_entry(self.rxn2)
+		self.mm = self.native_model.create_metabolic_model()
+		self.node_atp = graph.Node({'id': 'atp', 'entry':Compound('atp')})
+		self.node_adp = graph.Node({'id': 'adp', 'entry': Compound('adp')})
+		self.node_g6p = graph.Node({'id': 'g6p', 'entry': Compound('g6p')})
+		self.node_glc = graph.Node({'id': 'glc', 'entry': Compound('glc')})
+		self.node_f6p = graph.Node({'id': 'f6p', 'entry': Compound('f6p')})
+		self.edge_1 = graph.Edge(self.node_glc, self.node_g6p, props={'id':'g6p_glc_forward', 'dir':'forward'})
+		self.edge_2 = graph.Edge(self.node_g6p, self.node_f6p, props={'id': 'f6p_g6p_both', 'dir': 'both'})
+		self.edge_3 = graph.Edge(self.node_atp, self.node_adp, props={'id': 'adp_atp_forward', 'dir': 'forward'})
+		self.edge_4 = graph.Edge(self.node_atp, self.node_adp, props={'id': 'adp_atp_forward', 'dir': 'forward'})
+		self.edge_5 = graph.Edge(self.node_atp, self.node_g6p, props={'id': 'atp_g6p_forward', 'dir': 'forward'})
+		self.edge_6 = graph.Edge(self.node_glc, self.node_adp, props={'id': 'adp_glc_forward', 'dir':'forward'})
+
+	def test_compound_graph(self):
+		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
+		                                   excluded_reactions=[])
+		compound_graph = graph.make_compound_graph(net_dict)
+		self.assertTrue(all(i in compound_graph.nodes for i in [self.node_atp, self.node_adp, self.node_g6p, self.node_glc, self.node_f6p]))
+		self.assertTrue(all(i in compound_graph.edges for i in [self.edge_1, self.edge_2, self.edge_3, self.edge_4, self.edge_5]))
+		self.assertTrue(self.edge_6 not in compound_graph.edges)
+
+	def test_compound_graph_filter(self):
+		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element='C',
+		                                   excluded_reactions=[])
+		compound_graph = graph.make_compound_graph(net_dict)
+		self.assertTrue(all(i in compound_graph.nodes for i in [self.node_atp, self.node_adp, self.node_g6p, self.node_glc, self.node_f6p]))
+		self.assertTrue(all(i in compound_graph.edges for i in [self.edge_1, self.edge_2, self.edge_3, self.edge_4]))
+		self.assertTrue(self.edge_5 not in compound_graph.edges)
+		self.assertTrue(self.edge_6 not in compound_graph.edges)
+
+
+	def test_compound_graph_subset(self):
+		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=['rxn1'], method='fpp', element=None,
+		                                   excluded_reactions=[])
+		compound_graph = graph.make_compound_graph(net_dict)
+		self.assertTrue(all(i in compound_graph.nodes for i in [self.node_atp, self.node_adp, self.node_g6p, self.node_glc]))
+		self.assertTrue(self.node_f6p not in compound_graph.nodes)
+		self.assertTrue(all(i in compound_graph.edges for i in [self.edge_1, self.edge_3, self.edge_4, self.edge_5]))
+		self.assertTrue(self.edge_2 not in compound_graph.edges)
+		self.assertTrue(self.edge_6 not in compound_graph.edges)
+
+	def test_compound_graph_exclude(self):
+		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
+		                                   excluded_reactions=['rxn2'])
+		compound_graph = graph.make_compound_graph(net_dict)
+		self.assertTrue(all(i in compound_graph.nodes for i in [self.node_atp, self.node_adp, self.node_g6p, self.node_glc]))
+		self.assertTrue(self.node_f6p not in compound_graph.nodes)
+		self.assertTrue(all(i in compound_graph.edges for i in [self.edge_1, self.edge_3, self.edge_4, self.edge_5]))
+		self.assertTrue(self.edge_2 not in compound_graph.edges)
+		self.assertTrue(self.edge_6 not in compound_graph.edges)
+
+	def test_compound_graph_nofpp(self):
+		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='no-fpp', element=None,
+		                                   excluded_reactions=[])
+		compound_graph = graph.make_compound_graph(net_dict)
+		self.assertTrue(all(i in compound_graph.nodes for i in [self.node_f6p, self.node_g6p, self.node_glc, self.node_adp, self.node_atp]))
+		self.assertTrue(all(i in compound_graph.edges for i in [self.edge_1, self.edge_2, self.edge_3, self.edge_4, self.edge_5, self.edge_6]))
+
+	def test_make_cpair_dict_combine_0(self):
+		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
+		                                   excluded_reactions=[])
+		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
+		test_dict = defaultdict(lambda: defaultdict(list))
+		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_2']
+		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_2']
+		test_dict[(Compound('g6p'), Compound('f6p'))]['both'] = ['rxn2_1']
+
+		test_new_id = {u'rxn2_1':self.rxn2, u'rxn1_2': self.rxn1, u'rxn1_1': self.rxn1}
+
+		self.assertEqual(cpairs, test_dict)
+		self.assertEqual(new_id, test_new_id)
+
+	def test_make_cpair_dict_combine_1(self):
+		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
+		                                   excluded_reactions=[])
+		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 1)
+		test_dict = defaultdict(lambda: defaultdict(list))
+		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('g6p'), Compound('f6p'))]['both'] = ['rxn2_1']
+
+		test_new_id = {u'rxn2_1':self.rxn2, u'rxn1_1': self.rxn1}
+
+		self.assertEqual(cpairs, test_dict)
+		self.assertEqual(new_id, test_new_id)
+
+	def test_make_cpair_dict_combine_2(self):
+		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
+		                                   excluded_reactions=[])
+		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 2)
+		test_dict = defaultdict(lambda: defaultdict(list))
+		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('g6p'), Compound('f6p'))]['both'] = ['rxn2_1']
+
+		test_new_id = {u'rxn2_1':self.rxn2, u'rxn1_1': self.rxn1}
+
+		self.assertEqual(cpairs, test_dict)
+		self.assertEqual(new_id, test_new_id)
+
+	def test_make_cpair_dict_nofpp(self):
+		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='no-fpp', element=None,
+		                                   excluded_reactions=[])
+		cpairs, new_id = graph.make_cpair_dict(net_dict, 'no-fpp', 0)
+		test_dict = defaultdict(lambda: defaultdict(list))
+		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1']
+		test_dict[(Compound('glc'), Compound('adp'))]['forward'] = ['rxn1']
+		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1']
+		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1']
+		test_dict[(Compound('g6p'), Compound('f6p'))]['both'] = ['rxn2']
+
+		test_new_id = {u'rxn2':self.rxn2, u'rxn1': self.rxn1}
+
+		self.assertEqual(cpairs, test_dict)
+		self.assertEqual(new_id, test_new_id)
+
+	def test_cpair_dict_duplicate_cpair_both(self):
+		rxn3 = ReactionEntry({
+			'id': 'rxn3', 'equation': parse_reaction(
+				'f6p <=> g6p')})
+		nm = self.native_model
+		nm.reactions.add_entry(rxn3)
+		mm = self.native_model.create_metabolic_model()
+
+		net_dict = graph.make_network_dict(nm, mm, subset=None, method='fpp', element=None,
+		                                   excluded_reactions=[])
+		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
+		test_dict = defaultdict(lambda: defaultdict(list))
+		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_2']
+		test_dict[(Compound('f6p'), Compound('g6p'))]['both'] = ['rxn2_1', 'rxn3_1']
+		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_2']
+
+		test_new_id = {u'rxn2_1': self.rxn2, u'rxn1_2': self.rxn1, u'rxn1_1': self.rxn1, 'rxn3_1': rxn3}
+
+		self.assertEqual(cpairs, test_dict)
+		self.assertEqual(new_id, test_new_id)
+
+	def test_cpair_dict_duplicate_cpair_rev(self):
+		rxn3 = ReactionEntry({
+			'id': 'rxn3', 'equation': parse_reaction(
+				'g6p => f6p')})
+		nm = self.native_model
+		nm.reactions.add_entry(rxn3)
+		mm = self.native_model.create_metabolic_model()
+
+		net_dict = graph.make_network_dict(nm, mm, subset=None, method='fpp', element=None,
+		                                   excluded_reactions=[])
+		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
+		test_dict = defaultdict(lambda: defaultdict(list))
+		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_2']
+		test_dict[(Compound('g6p'), Compound('f6p'))]['both'] = ['rxn2_1']
+		test_dict[(Compound('g6p'), Compound('f6p'))]['forward'] = ['rxn3_1']
+		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_2']
+
+		test_new_id = {u'rxn2_1': self.rxn2, u'rxn1_2': self.rxn1, u'rxn1_1': self.rxn1, 'rxn3_1': rxn3}
+
+		self.assertEqual(cpairs, test_dict)
+		self.assertEqual(new_id, test_new_id)
+
+	def test_cpair_dict_duplicate_for(self):
+		rxn3 = ReactionEntry({
+			'id': 'rxn3', 'equation': parse_reaction(
+				'f6p => g6p')})
+		nm = self.native_model
+		nm.reactions.add_entry(rxn3)
+		mm = self.native_model.create_metabolic_model()
+
+		net_dict = graph.make_network_dict(nm, mm, subset=None, method='fpp', element=None,
+		                                   excluded_reactions=[])
+		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
+		test_dict = defaultdict(lambda: defaultdict(list))
+		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_2']
+		test_dict[(Compound('f6p'), Compound('g6p'))]['both'] = ['rxn2_1']
+		test_dict[(Compound('f6p'), Compound('g6p'))]['forward'] = ['rxn3_1']
+		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_2']
+
+		test_new_id = {u'rxn2_1': self.rxn2, u'rxn1_2': self.rxn1, u'rxn1_1': self.rxn1, 'rxn3_1': rxn3}
+
+		self.assertEqual(cpairs, test_dict)
+		self.assertEqual(new_id, test_new_id)
 
 
 class TestEdges(unittest.TestCase):
