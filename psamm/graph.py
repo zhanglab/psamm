@@ -74,16 +74,19 @@ class Graph(Entity):
         """
         self._nodes.add(node)
         self._nodes_id[node.props['id']] = node
-        # if 'type' in node.props:
-        #     self.set_original_id(node)
-        # else:
-        #     self._nodes_original_id[node.props['id']].append(node)
+        if 'type' in node.props:
+            self.set_original_id(node)
+        else:
+            self._nodes_original_id[node.props['id']].append(node)
 
     def set_original_id(self, node):
         if node.props['type'] == 'cpd':
-            original_id_string = text_type(node.props['original_id'])
+            original_id_string = ','.join([c.id for c in node.props['entry']])
         else:
-            original_id_string = ','.join(node.props['original_id'])
+            if node.props['type'] == 'Ex_rxn':
+                original_id_string = node.props['id']
+            else:
+                original_id_string = ','.join([r.id for r in node.props['entry']])
         self._nodes_original_id[original_id_string].append(node)
 
     def get_node(self, node_id):
@@ -437,7 +440,6 @@ def write_network_dict(network_dict):
             print('{}\t{}\t{}\t{}'.format(key.id, c1, c2, dir_value(dir)))
 
 
-
 def make_cpair_dict(filter_dict, args_method, args_combine):
     """Create a mapping from compound pair to a defaultdict containing
     lists of reactions for the forward, reverse, and both directions.
@@ -689,18 +691,17 @@ def make_compound_graph(network_dictionary):
     for reaction, (cpair_list, dir) in iteritems(network_dictionary):
         for (c1, c2) in cpair_list:
             if c1 not in compound_nodes:
-                g.add_node(Node({'id': c1.name, 'entry': c1}))
+                g.add_node(Node({'id': text_type(c1), 'entry': c1}))
                 compound_nodes.append(c1)
             if c2 not in compound_nodes:
-                g.add_node(Node({'id': c2.name, 'entry': c2}))
+                g.add_node(Node({'id': text_type(c2), 'entry': c2}))
                 compound_nodes.append(c2)
             cpair_sorted = sorted([c1.name, c2.name])
-            edge = Edge(g.get_node(c1.name), g.get_node(c2.name), props={'id': '{}_{}_{}'.format(
+            edge = Edge(g.get_node(text_type(c1)), g.get_node(text_type(c2)), props={'id': '{}_{}_{}'.format(
                 cpair_sorted[0], cpair_sorted[1], dir_value(dir)), 'dir':dir_value(dir)})
             if edge.props['id'] not in edge_list:
                 g.add_edge(edge)
                 edge_list.append(edge.props['id'])
-            print(edge_list)
     return g
 
 

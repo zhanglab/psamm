@@ -127,7 +127,6 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                 for row in csv.reader(f, delimiter=str(u'\t')):
                     recolor_dict[row[0]] = row[1]
         g = add_node_props(g, recolor_dict)
-
         g = add_node_label(g, self._args.cpd_detail, self._args.rxn_detail)
         bio_cpds_sub = set()
         bio_cpds_pro = set()
@@ -229,7 +228,7 @@ def rxnset_for_vis(mm, subset_file, exclude):
                 rxn_set.add(value)
             else:
                 raise ValueError('{} is in subset file but is '
-                                 'not a compound or reaction id'.format(value))
+                                 'not a compound or reaction ID'.format(value))
 
         if all(i > 0 for i in [len(cpd_set), len(rxn_set)]):
             raise ValueError('Subset file is a mixture of reactions and '
@@ -338,7 +337,6 @@ def add_node_props(g, recolor_dict):
         else:
             if node.props['type'] not in ['bio_rxn', 'Ex_rxn']:
                 print('invalid nodes:', type(node.props['entry']), node.props['entry'])
-
     for r_id in recolor_dict:
         if r_id in g.nodes_original_id_dict:
             for node in g.nodes_original_id_dict[r_id]:
@@ -359,7 +357,10 @@ def add_node_label(g, cpd_detail, rxn_detail):
             e.g. detail = [['id', genes', 'equation']].
     """
     for node in g.nodes:
-        node.props['label'] = '\n'.join(obj.id for obj in node.props['entry'])
+        if node.props['type'] == 'cpd':
+            node.props['label'] = node.props['id']
+        elif node.props['type'] == 'rxn':
+            node.props['label'] = '\n'.join(obj.id for obj in node.props['entry'])
 
         # update node label based on what users provide in command line
         if cpd_detail is not None:
@@ -368,7 +369,7 @@ def add_node_label(g, cpd_detail, rxn_detail):
                 'ascii', 'backslashreplace')).decode('ascii')) for value
                                   in cpd_detail[0] if value != 'id' and value in node.props['entry'][0].properties)
                 if 'id' in cpd_detail[0]:
-                    label = '{}\n{}'.format(node.props['entry'][0].properties['id'], pre_label)
+                    label = '{}\n{}'.format(node.props['id'], pre_label)
                 else:
                     label = pre_label
                 node.props['label'] = label
