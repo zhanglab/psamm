@@ -270,9 +270,10 @@ class Importer(BaseImporter):
             if 'grRules' in doc.dtype.names:
                 if len(doc['grRules'][0, 0][i][0]) > 0:
                     genes = doc['grRules'][0, 0][i][0][0]
-                    properties['genes'] = self._try_parse_gene_association(
-                        properties['id'], genes
-                    )
+                    if isinstance(genes, str):
+                        properties['genes'] = self._try_parse_gene_association(
+                            properties['id'], genes
+                        )
 
             # parse subsystem
             if 'subSystems' in doc.dtype.names:
