@@ -27,6 +27,7 @@ import yaml
 
 from ..command import Command
 from ..expression import boolean
+from psamm.datasource.native import ModelWriter
 logger = logging.getLogger(__name__)
 
 
@@ -62,7 +63,14 @@ class PsammotateCommand(Command):
             tdict = i
         for i in model_loader(self, tdict):
             trans_genes_dict = i
-        print_yaml(self, trans_genes_dict)
+        # print_yaml(self, trans_genes_dict)
+        homolo_reactions = list()
+        for r in self._model.reactions:
+            if trans_genes_dict[r][2]:
+                r.properties['genes'] = trans_genes_dict[r][1]
+                homolo_reactions.append(r)
+        with open('homolo_reactions.yaml', 'w') as o:
+            ModelWriter().write_reactions(o, homolo_reactions)
 
 
 def app_reader(app_file, query, template):
@@ -171,7 +179,7 @@ def model_loader(self, translation_dict):
             # print('wp3_genes', entry.genes)
             if entry.genes is None:
                 target_model_reactions.append(entry.id)
-                translated_genes[entry] = ['None', 'True', 'True']
+                translated_genes[entry] = [None, None, True]
                 print('{}\t{}\t{}\t{}\t{}'.format(
                     entry.id, entry.genes, 'None', 'True', 'True'))
 
@@ -193,10 +201,6 @@ def model_loader(self, translation_dict):
                         genes = re.sub(r'\b' + g + r'\b',
                                        '-', genes)
                 # genes = remove_gap(genes)
-                # e = boolean.Expression(genes)
-                # print('wp2', genes)
-                # e_1 = e.substitute(lambda v: target_genes_l.get(v.symbol, v))
-                # print('wp2evaluation', e_1, e_1.value)
                 print('{}\t{}\t{}\t{}\t{}'.format(
                     entry.id, entry.genes, genes, e_1, e_1.value))
                 translated_genes[entry] = [genes_1, genes, e_1.value]
@@ -204,7 +208,9 @@ def model_loader(self, translation_dict):
 
 
 def get_gene_list(genes):
-    gene_list = re.sub(r'[,\(\)(or)(and)\']*', '', genes)
+    gene_list = re.sub(r'[,()\']*', '', genes)
+    gene_list = re.sub(r'\band\b', '', gene_list)
+    gene_list = re.sub(r'\bor\b', '', gene_list)
     gene_list = re.split(r'\s+', gene_list)  # Transfer string to list
     gene_list = frozenset(gene_list)
     return gene_list
