@@ -121,16 +121,6 @@ class TestGraph(unittest.TestCase):
 		self.assertEqual(self.g.nodes_id_dict, {'A': self.node1,
 		                                        'B': self.node2})
 
-	def test_node_original_id_dict(self):
-		self.g.add_node(self.node4)
-		self.g.add_node(self.node5)
-		self.g.set_original_id(self.node4)
-		self.g.set_original_id(self.node5)
-		d = defaultdict(list)
-		d['A,B'].append(self.node4)
-		d['cpd_E'].append(self.node5)
-		self.assertEqual(self.g.nodes_original_id_dict, d)
-
 	def test_default_edge_props(self):
 		self.g._default_edge_props['style'] = 'dashed'
 		d = {'style': 'dashed'}
@@ -735,6 +725,13 @@ class TestMakeNetworks(unittest.TestCase):
 
 		self.assertEqual(cpairs, test_dict)
 		self.assertEqual(new_id, test_new_id)
+
+	def test_node_original_id_dict(self):
+		g = graph.Graph()
+		g.add_node(self.node_atp)
+		d = defaultdict(list)
+		d['atp'].append(self.node_atp)
+		self.assertEqual(g.nodes_original_id_dict, d)
 
 
 class TestEdges(unittest.TestCase):
