@@ -647,17 +647,13 @@ image format:
 
 
 While the ``vis`` function in `PSAMM` uses `FindPrimaryPairs` for graph simplification by
-default, the command is also able to run using no graph simplification (``no-fpp``), or by
-providing an input file containing prediction results in the format produced by the
-``primarypairs`` command.
+default, the command is also able to run using no graph simplification (``no-fpp``).
 
 This can be done through using the ``--method`` argument:
 
 .. code-block:: shell
 
     $ psamm-model vis --method no-fpp
-    or
-    $ psamm-model vis --method {path to file}
 
 The resulting graphs can be further simplified to only show element transfers that contain
 a specified element through the ``--element`` argument. When using this option any
@@ -749,35 +745,24 @@ This file can be used to color the nodes on the graph through the ``--color`` op
     $ psamm-model vis --color {path to color table}
 
 
-The default graph images generated through the `vis` command will show condensed reaction nodes
-that contain multiple reactions that all have the same reactant/product pairs. This might be
-seen when multiple reactions that all involve ATP and ADP are present in the model. In these nodes
-only the reaction IDs will be shown and only the default colors can be used. If the user wants to
-split these condensed nodes up into individual reaction nodes the ``--split-map`` option can be used:
+By default only one reaction presents in one reaction node in the final network image. Users can condense
+multiple reaction nodes into one through ``--combine`` option (the condensation is based on the reactant/product
+pairs connected to the reaction nodes), to reduce the number of nodes and make image clearer. This option has
+three choices: 0,1,2. By default it is 0, ``--combine 1`` will condense the nodes that represent the same reaction
+and connect the same reactant/product pairs, ``--combine 2`` will condense the nodes that represent different
+reactions but connect the same reactant/product pairs.
 
 .. code-block:: shell
 
-    $ psamm-model vis --split-map
+    $ psamm-model vis --combine 1
+    or
+    $ psamm-model vis --combine 2
 
 .. note::
 
-    The ``--split-map`` option can not be used with the ``--no-fpp`` option. The ``--no-fpp`` graphs
+    The ``--combine`` option can not be used with the ``--no-fpp`` option. The ``--no-fpp`` graphs
     do not contain condensed reaction nodes.
 
-
-
-The ``--fba`` option can be used to run ``fba`` on the model to maximize the biomass reaction and then
-adjust the edge widths in the final graph based on the flux of the reactions in the model. By default
-the biomass reaction specified in the ``model.yaml`` file will be maximized during the ``fba`` simulation.
-Any other reaction can be maximized through the use of the ``--objective`` argument. The final edge
-widths shown on the graph will be scaled relative to each other based on the reaction fluxes, with
-thicker edges representing larger fluxes:
-
-.. code-block:: shell
-
-    $ psamm-model vis --fba
-    or
-    $ psamm-model vis --fba --objective {reaction id}
 
 The final graph image can also be modified to show the reactions and metabolites in different compartments
 based on the compartment information provided in the model's reactions. This can be done through using the
@@ -786,6 +771,16 @@ based on the compartment information provided in the model's reactions. This can
 .. code-block:: shell
 
     $ psamm-model vis --compartment
+
+Users can specify name of output through  ``--output`` option. By default, output will be named as
+"reactions.dot", "reactions.nodes.tsv", "reactions.edges.tsv", but if running the following command:
+
+.. code-block:: shell
+
+    $ psamm-model vis --output Ecolicore
+
+Then output will be named as "Ecolicore.dot", "Ecolicore.nodes.tsv", "Ecolicore.edges.tsv".
+
 
 The image file produced from the ``vis`` will be automatically sized by the `Graphviz` programs
 used to generate the image file. If a specific size is desired the ``--image-size`` argument can be
