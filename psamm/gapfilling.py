@@ -199,7 +199,7 @@ def create_extended_model(model, db_penalty=None, ex_penalty=None,
         'Using artificial exchange reactions for compartment: {}...'.format(
             extra_compartment))
     ex_added = add_all_exchange_reactions(
-        model_extended, extra_compartment, allow_duplicates=True)
+        model_extended, extra_compartment, allow_duplicates=False)
 
     # Add transport reactions to extended model
     boundaries = model.compartment_boundaries
@@ -220,10 +220,16 @@ def create_extended_model(model, db_penalty=None, ex_penalty=None,
     weights = {}
     if db_penalty is not None:
         weights.update((rxnid, db_penalty) for rxnid in db_added)
+    else:
+        weights.update((rxnid, 1) for rxnid in db_added)
     if tp_penalty is not None:
         weights.update((rxnid, tp_penalty) for rxnid in tp_added)
+    else:
+        weights.update((rxnid, 1) for rxnid in tp_added)
     if ex_penalty is not None:
         weights.update((rxnid, ex_penalty) for rxnid in ex_added)
+    else:
+        weights.update((rxnid, 1) for rxnid in ex_added)
 
     if penalties is not None:
         for rxnid, penalty in iteritems(penalties):
