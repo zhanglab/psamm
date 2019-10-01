@@ -41,7 +41,7 @@ will need to go into the tutorial-part-4 folder located in the psamm-tutorial fo
     (psamm-env) $ cd <PATH>/tutorial-part-4/
 
 Once in this folder you should see a folder called E_coli_yaml. Inside of this folder
-are all of the files that will be needed to run the commands in this tutorial. Inside of
+are all files that will be needed to run the commands in this tutorial. Inside of
 this folder there will be a directory called E_coli_yaml/ that contains the E. coli
 core model, and a directory called additional_files/ that contains some additional
 input files that will be used in the visualization portion of the tutorial.
@@ -263,7 +263,7 @@ The basic ``vis`` command can be run through the following command:
 
    (psamm-env) $ psamm-model vis
 
-The basic visualization relies on the `FindPrimaryPairs` algorithm to predict
+By default, ``vis`` relies on the `FindPrimaryPairs` algorithm to predict
 element transfer in metabolic network. This algorithm requires certain
 reactions such as biomass reactions and some artificial reactions to be
 excluded from the algorithm's calculations in order to work efficiently. This
@@ -276,8 +276,9 @@ In this version of the E. coli core model, the biomass reaction is defined in
 the `model.yaml` file, so that it will be excluded automatically from FPP
 calculation when running ``vis`` command on this model.
 
-Running the command above will export three files: 'reaction.dot',
-'reactions.edges.tsv', 'reactions.nodes.tsv'.
+By default, running the command above will export three files: 'reaction.dot',
+'reactions.edges.tsv', 'reactions.nodes.tsv'. Users can specify the file name
+through ``--output`` argument
 
 The first file, 'reactions.dot', contains a text based representation of the
 network graph in the 'dot' language. This graph language is used primarily by
@@ -342,7 +343,7 @@ These commands will generate an image file called 'reactions.dot.pdf'. This
 image file is the representation of what was in the 'reactions.dot' file. This
 graph will look like:
 
-.. image:: 6_basic_visual.png
+.. image:: 01-entireEcolicore.dot.png
 
 In this default version of the graph there are two sets of nodes: ovular orange
 nodes representing metabolites and rectangular green nodes representing reactions.
@@ -492,7 +493,7 @@ The input file subset_mannitol_pathway looks like this:
 
 This subset image will look like the following:
 
-.. image:: 15_subset_mannitol_pathway.png
+.. image:: 05.1-subset_mannitol_pathway.dot.png
 
 In this image only the reactions directly listed in the subset file and any associated
 exchange reactions are included in the final image.
@@ -518,7 +519,7 @@ command:
 This will generate an image like the following that only shows the reactions that
 contain the pyruvate metabolite:
 
-.. image:: 16_subset_pyr_image.png
+.. image:: 06.1-subset_pyr_c0.dot.png
 
 
 Highlight Reactions and Metabolites in the Network
@@ -550,11 +551,12 @@ utilization pathway highlighted, use the following command:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --color ../additional_files/color_mannitol_pathway --image pdf
+   (psamm-env) $ psamm-model vis --image pdf --color ../additional_files/color_mannitol_pathway
+   --combine 2 --output 11-color
 
 The resulting image file should look like the following:
 
-.. image:: 19_recolor_mannitol.png
+.. image:: 11-color.dot.png
 
 Coloring of specific nodes like this can make it easy to locate or highlight
 specific pathways especially in larger models.
@@ -574,13 +576,12 @@ metabolites and the ID and equation for reactions the following command can be u
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --subset ../additional_files/subset_mannitol_pathway
-   --cpd-detail id name formula --rxn-detail id genes equation --image pdf
+   (psamm-env) $ psamm-model vis --image pdf --subset ../additional_files/subset_mannitol_pathway
+   --combine 2 --cpd-detail id name formula --rxn-detail id name equation
 
 The image generated will look like this:
 
-
-.. image:: 17_detail.png
+.. image:: 08-detail.dot.png
 
 For these options if a detail is provided that is not a property of the reaction
 or compound then that property will be skipped and not included on those nodes. For
@@ -601,16 +602,26 @@ pair connected to those reaction nodes. It has three levels: 0, 1 and 2. 0 is th
 version, no any condensation; Level 1 condenses reaction nodes that represent the same reaction
 and have a common reactant or product connected. Level 2 condenses reaction nodes that represent
 different reactions but have the same reactant/product pairs, as well as the reaction direction
-(This is often seen on reactant/product pairs like ATP/ADP and NADH/NADH). When these nodes are
-condensed, they won't have the any changes shown on the final image when the ``--color``,
+(This is often seen on reactant/product pairs like ATP/ADP and NADH/NADH). In addition, when these
+nodes are condensed, they won't have the any changes shown on the final image when the ``--color``,
 ``--rxn-detail``, or ``--cpd-detail`` arguments applied. An example of this can be seen with the
 following command which will condense reaction nodes:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --color ../additional_files/color_mannitol_pathway --combine 1 --image pdf
+   (psamm-env) $ psamm-model --model ../E_coli_yaml/model.yaml vis --image pdf
+   --subset ../additional_files/4combine1.tsv --combine 1 --output 03-PDHPDL_combine1
 
-.. image:: 20_recolor_split.png
+Then the image will looks like this compared to the image generated from default setting:
+.. image:: 03-final_PDHPDL_combine1.png
+
+.. code-block:: shell
+
+   (psamm-env) $ psamm-model --model ../E_coli_yaml/model.yaml vis --subset ../additional_files/4combine1.tsv
+   --combine 2  --image pdf
+
+.. image:: 02-final_ME_showCombine2.png
+
 
 Remove Specific Reactant Product Pairs
 ________________________________________
@@ -644,7 +655,7 @@ reaction nodes connecting ATP and ADP have been removed from the graph. While th
 not make a huge difference on a small model like this, on larger models this can help during
 the process of generating neater final images.
 
-.. image:: hide_edges.png
+.. image:: 12.final-HideEdges_atpadp.png
 
 Adjust Image Size
 ____________________
@@ -662,9 +673,9 @@ Specify File Name
 ____________________
 
 Name of final image file generated through the ``vis`` command can be specified through
-``--output`` argument. This argument is followed by a string and this string will be the
-name of output files (without the file extension). The following command can be used to
-generate an image named "Ecolicore.dot.pdf":
+``--output`` option, this option should followed by a string and that string is the
+name of output files (without the file extension). The following command will export
+4 files: "Ecolicore.dot", "Ecolicore.dot.pdf", "Ecolicore.nodes.tsv", "Ecolicore.edges.tsv":
 
 .. code-block:: shell
 
@@ -674,7 +685,7 @@ generate an image named "Ecolicore.dot.pdf":
 Change Pair Prediction Methods
 ________________________________
 
-By default, ``vis`` function in `PSAMM` will apply the `FPP` algorithm. but it can also work without
+By default, `vis` function in `PSAMM` will apply the `FPP` algorithm. but it can also work without
 pair prediction (``no-fpp``). The graph will generate edges only based on the reaction equations,
 do not considering element transfer. There will tend to be many more connections in the network
 image if users use this option, especially for metabolites like ATP, H2O, and H+. This option can
@@ -685,10 +696,12 @@ be applied through the following command:
    (psamm-env) $ psamm-model vis --method no-fpp
 
 
+.. image:: 10-no_fpp.png
+
+
 .. note::
 
    The ``--method no-fpp`` and ``--combine`` arguments cannot be used together. The
    ``--combine`` option work only for `FPP` method.
 
 
-.. image:: 10_no_fpp.png
