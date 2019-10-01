@@ -440,7 +440,7 @@ def write_network_dict(network_dict):
             print('{}\t{}\t{}\t{}'.format(key.id, c1, c2, dir_value(dir)))
 
 
-def make_cpair_dict(filter_dict, args_method, args_combine):
+def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges):
     """Create a mapping from compound pair to a defaultdict containing
     lists of reactions for the forward, reverse, and both directions.
 
@@ -456,11 +456,11 @@ def make_cpair_dict(filter_dict, args_method, args_combine):
     rxn_count = Counter()
     cpair_dict = defaultdict(lambda: defaultdict(list))
 
-    def make_mature_cpair_dict(cpair_dict):
+    def make_mature_cpair_dict(cpair_dict, hide):
         new_cpair_dict = {}
         cpair_list = []
         for (c1, c2), rxns in sorted(iteritems(cpair_dict)):
-            if (c1, c2) not in cpair_list:
+            if (c1, c2) not in cpair_list and (text_type(c1), text_type(c2)) not in hide:
                 new_rxns = rxns
                 if (c2, c1) in cpair_dict:
                     if len(cpair_dict[(c2, c1)]['forward']) > 0:
@@ -553,7 +553,7 @@ def make_cpair_dict(filter_dict, args_method, args_combine):
                 else:
                     cpair_dict[(c1, c2)]['both'].append(r_id)
 
-    rxns_sorted_cpair_dict = make_mature_cpair_dict(cpair_dict)
+    rxns_sorted_cpair_dict = make_mature_cpair_dict(cpair_dict, hide_edges)
 
     return rxns_sorted_cpair_dict, new_id_mapping
 

@@ -114,8 +114,14 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         for r in self._model.reactions:
             model_reaction_entries[r.id] = r
 
+        hide_edges = []
+        if self._args.hide_edges is not None:
+            for row in csv.reader(self._args.hide_edges, delimiter=str('\t')):
+                hide_edges.append((row[0], row[1]))
+                hide_edges.append((row[1], row[0]))
+
         cpair_dict, new_id_mapping = graph.make_cpair_dict(
-            filter_dict, self._args.method, self._args.combine)
+            filter_dict, self._args.method, self._args.combine, hide_edges)
 
         g = graph.make_bipartite_graph_object(
             cpair_dict, new_id_mapping, self._args.method, self._args.combine,
@@ -210,7 +216,7 @@ def rxnset_for_vis(mm, subset_file, exclude):
     """
     all_cpds = set()
     for cpd in mm.compounds:
-        all_cpds.add(cpd.name)
+        all_cpds.add(str(cpd))
     if subset_file is None:
         if len(exclude) == 0:
             final_rxn_set = set(mm.reactions)
@@ -237,7 +243,7 @@ def rxnset_for_vis(mm, subset_file, exclude):
             if len(cpd_set) > 0:
                 for rx in mm.reactions:
                     rxn = mm.get_reaction(rx)
-                    if any(str(c.name) in cpd_set for (c, _) in rxn.compounds):
+                    if any(str(c) in cpd_set for (c, _) in rxn.compounds):
                         final_rxn_set.add(rx)
             elif len(rxn_set) > 0:
                 final_rxn_set = rxn_set
