@@ -46,20 +46,30 @@ class PsammotateCommand(Command):
         parser.add_argument(
             '--template', type=int,
             help=('The column of the RBH file where the template model '
-                  'genes are listed')
+                  'genes are listed, starts from 1')
         )
         parser.add_argument(
             '--target', type=int,
             help=('The column of the RBH file where the target '
-                  'model genes are listed')
+                  'model genes are listed, starts from 1')
+        )
+        parser.add_argument(
+            '--prefix', type=str, default='homolo_reactions',
+            help=('The prefix of output YAML file, '
+                  '(default: homolo_reactions)')
+        )
+        parser.add_argument(
+            '--ignore-na', action='store_true',
+            help=('Ignore the reactions that do not have gene association. '
+                  '(default: retain these reactions in new model)')
         )
         super(PsammotateCommand, cls).init_parser(parser)
 
     def run(self):
         """Run psammotate command"""
         # print(self._args.rbh)
-        for i in app_reader(self._args.rbh, self._args.target,
-                            self._args.template):
+        for i in app_reader(self._args.rbh, self._args.target - 1,
+                            self._args.template - 1):
             tdict = i
         for i in model_loader(self, tdict):
             trans_genes_dict = i
@@ -69,7 +79,7 @@ class PsammotateCommand(Command):
             if trans_genes_dict[r][2]:
                 r.properties['genes'] = trans_genes_dict[r][1]
                 homolo_reactions.append(r)
-        with open('homolo_reactions.yaml', 'w') as o:
+        with open(self._args.prefix + '.yaml', 'w') as o:
             ModelWriter().write_reactions(o, homolo_reactions)
 
 
@@ -179,9 +189,11 @@ def model_loader(self, translation_dict):
             # print('wp3_genes', entry.genes)
             if entry.genes is None:
                 target_model_reactions.append(entry.id)
-                translated_genes[entry] = [None, None, True]
+                translated_genes[entry] = [None, None,
+                                           not self._args.ignore_na]
                 print('{}\t{}\t{}\t{}\t{}'.format(
-                    entry.id, entry.genes, 'None', 'True', 'True'))
+                    entry.id, entry.genes, 'None',
+                    not self._args.ignore_na, not self._args.ignore_na))
 
             if entry.genes is not None:
                 genes = re.sub(r'\?', '', entry.genes)
