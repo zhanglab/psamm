@@ -752,8 +752,8 @@ def add_reaction_constraints(self, problem, mm, exclude_lumps, exclude_unknown, 
 		for row in csv.reader(scaled_compounds, delimiter=str('\t')):
 			dgf_scaling[row[0]] = Decimal(row[1])
 
-	# R = Decimal(8.3144621 / 1000) # kJ/mol
-	R = Decimal(1.9858775 / 1000) # kcal/mol
+	R = Decimal(8.3144621 / 1000) # kJ/mol
+	# R = Decimal(1.9858775 / 1000) # kcal/mol
 
 	# T = Decimal(303.15)
 	# T = Decimal(293.15) # 20 C
