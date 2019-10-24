@@ -50,8 +50,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
     def init_parser(cls, parser):
         parser.add_argument(
             '--method', type=text_type, default='fpp',
-            help='Compound pair prediction method,'
-                 'choices=[fpp, no-fpp]')
+            help='Compound pair prediction method',
+            choices=['fpp', 'no-fpp'])
         parser.add_argument(
             '--exclude', metavar='reaction', type=text_type, default=[],
             action=FilePrefixAppendAction,
@@ -101,7 +101,12 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
     def run(self):
         """Run visualization command."""
 
-        vis_rxns = rxnset_for_vis(self._mm, self._args.subset, self._args.exclude)
+        vis_rxns = rxnset_for_vis(
+            self._mm, self._args.subset, self._args.exclude)
+
+        # Set element to NoneType if specified by commandline parameters
+        if self._args.element.lower() == 'none':
+            self._args.element = None
 
         exclude_for_fpp = [self._model.biomass_reaction] + self._args.exclude
         filter_dict = graph.make_network_dict(
@@ -164,7 +169,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
                 continue
 
         if self._args.method == 'no-fpp' and self._args.combine != 0:
-            logger.warning('--combine option is not compatible with no-fpp method')
+            logger.warning(
+                '--combine option is not compatible with no-fpp method')
 
         hw = self._args.image_size.split(',')
         width = hw[0]
@@ -221,7 +227,8 @@ def rxnset_for_vis(mm, subset_file, exclude):
         if len(exclude) == 0:
             final_rxn_set = set(mm.reactions)
         else:
-            final_rxn_set = set([rxn for rxn in mm.reactions if rxn not in exclude])
+            final_rxn_set = set(
+                [rxn for rxn in mm.reactions if rxn not in exclude])
     else:
         final_rxn_set = set()
         cpd_set = set()
@@ -331,7 +338,8 @@ def add_node_props(g, recolor_dict):
         recolor_dict: dict of rxn_id/cpd_id[compartment] : hex color code.
     return: a graph object that contains a set of node with defined color.
     """
-    cpd_types = ['cpd', 'cpd_biomass_substrate', 'cpd_biomass_product', 'cpd_exchange']
+    cpd_types = ['cpd', 'cpd_biomass_substrate',
+                 'cpd_biomass_product', 'cpd_exchange']
     for node in g.nodes:
         node.props['style'] = 'filled'
         if node.props['type'] in cpd_types:
@@ -342,7 +350,8 @@ def add_node_props(g, recolor_dict):
             node.props['shape'] = 'box'
         else:
             if node.props['type'] not in ['bio_rxn', 'Ex_rxn']:
-                print('invalid nodes:', type(node.props['entry']), node.props['entry'])
+                print('invalid nodes:', type(
+                    node.props['entry']), node.props['entry'])
     for r_id in recolor_dict:
         if r_id in g.nodes_original_id_dict:
             for node in g.nodes_original_id_dict[r_id]:
@@ -366,14 +375,15 @@ def add_node_label(g, cpd_detail, rxn_detail):
         if node.props['type'] == 'cpd':
             node.props['label'] = node.props['id']
         elif node.props['type'] == 'rxn':
-            node.props['label'] = '\n'.join(obj.id for obj in node.props['entry'])
+            node.props['label'] = '\n'.join(
+                obj.id for obj in node.props['entry'])
 
         # update node label based on what users provide in command line
         if cpd_detail is not None:
             if node.props['type'] == 'cpd':
                 pre_label = '\n'.join(((node.props['entry'][0].properties.get(value).encode(
-                'ascii', 'backslashreplace')).decode('ascii')) for value
-                                  in cpd_detail[0] if value != 'id' and value in node.props['entry'][0].properties)
+                    'ascii', 'backslashreplace')).decode('ascii')) for value
+                    in cpd_detail[0] if value != 'id' and value in node.props['entry'][0].properties)
                 if 'id' in cpd_detail[0]:
                     label = '{}\n{}'.format(node.props['id'], pre_label)
                 else:
@@ -383,10 +393,11 @@ def add_node_label(g, cpd_detail, rxn_detail):
             if node.props['type'] == 'rxn':
                 if len(node.props['entry']) == 1:
                     pre_label = '\n'.join((str(node.props['entry'][0].properties.get(value)).encode(
-                    'ascii', 'backslashreplace').decode('ascii')) for value in rxn_detail[0]
-                                          if value != 'id' and value in node.props['entry'][0].properties)
+                        'ascii', 'backslashreplace').decode('ascii')) for value in rxn_detail[0]
+                        if value != 'id' and value in node.props['entry'][0].properties)
                     if 'id' in rxn_detail[0]:
-                        label = '{}\n{}'.format(node.props['entry'][0].properties['id'], pre_label)
+                        label = '{}\n{}'.format(
+                            node.props['entry'][0].properties['id'], pre_label)
                     else:
                         label = pre_label
                     node.props['label'] = label
