@@ -402,7 +402,7 @@ def make_network_dict(nm, mm, subset=None, method='fpp', element=None, excluded_
         for rxn_id, fpp_pairs in iteritems(fpp_dict):
             compound_pairs = []
             for cpd_pair, transfer in iteritems(fpp_pairs[0]):
-                if element is None:
+                if element is None or element == 'none':
                     compound_pairs.append(cpd_pair)
                 else:
                     if any(Atom(element) in k for k in transfer):
@@ -415,7 +415,7 @@ def make_network_dict(nm, mm, subset=None, method='fpp', element=None, excluded_
             compound_pairs = []
             for substrate in reaction.equation.left:
                 for product in reaction.equation.right:
-                    if element is None:
+                    if element is None or element == 'none':
                         compound_pairs.append((substrate[0], product[0]))
                     else:
                         if Atom(element) in compound_formula[substrate[0].name] and Atom(element) in compound_formula[product[0].name]:
