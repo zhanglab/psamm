@@ -82,7 +82,7 @@ class TestMakeSubset(unittest.TestCase):
     def test3_subset_one_compound1(self):
         path = os.path.join(tempfile.mkdtemp(), 'subset')
         with open(path, 'w') as f:
-            f.write('{}'.format('mal_L'))
+            f.write('{}'.format('mal_L[c]'))
         sub_file = open(path, 'r')
         subset = vis.rxnset_for_vis(self.mm, sub_file, self.exclude)
         sub_file.close()
@@ -91,7 +91,7 @@ class TestMakeSubset(unittest.TestCase):
     def test4_subset_one_compound2(self):
         path = os.path.join(tempfile.mkdtemp(), 'subset')
         with open(path, 'w') as f:
-            f.write('{}'.format('fum'))
+            f.write('{}'.format('fum[c]'))
         sub_file = open(path, 'r')
         subset = vis.rxnset_for_vis(self.mm, sub_file, self.exclude)
         sub_file.close()
@@ -100,7 +100,7 @@ class TestMakeSubset(unittest.TestCase):
     def test5_subset_compound3(self):
         path = os.path.join(tempfile.mkdtemp(), 'subset')
         with open(path, 'w') as f:
-            f.write('{}'.format('h2o'))
+            f.write('{}'.format('h2o[c]'))
         sub_file = open(path, 'r')
         subset = vis.rxnset_for_vis(self.mm, sub_file, self.exclude)
         sub_file.close()

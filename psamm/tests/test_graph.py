@@ -31,6 +31,14 @@ from psamm.formula import Formula, Atom, ParseError
 
 class TestGraph(unittest.TestCase):
 	def setUp(self):
+		self.fum = CompoundEntry({
+			'id': 'fum_c', 'formula': 'C4H2O4'})
+		self.rxn1 = ReactionEntry({
+			'id': 'rxn1', 'equation': parse_reaction(
+				'fum_c[c] + h2o_c[c] <=> mal_L_c[c]')})
+		self.rxn2 = ReactionEntry({
+			'id': 'rxn2', 'equation': parse_reaction(
+				'fum_c[c] + h2o_c[c] <=> mal_L_c[c]')})
 		self.g = graph.Graph()
 		self.node1 = graph.Node({'id': 'A'})
 		self.node2 = graph.Node({'id': 'B', 'color': 'blue'})
@@ -39,9 +47,18 @@ class TestGraph(unittest.TestCase):
 		            'original_id': ['A', 'B'], 'type': 'rxn'})
 		self.node5 = graph.Node({'id': 'E',
 		            'original_id': 'cpd_E', 'type': 'cpd'})
+		self.node6 = graph.Node({'id': 'Ex_e',
+		            'type': 'Ex_rxn'})
+		self.node7 = graph.Node({'id': 'Ex_e',
+		            'type': 'cpd', 'entry':[self.fum]})
+		self.node8 = graph.Node({'id': 'rxn1',
+		            'type': 'cpd', 'entry':[self.rxn1]})
+		self.node9 = graph.Node({'id': 'rxn1_rxn2',
+		            'type': 'cpd', 'entry':[self.rxn1, self.rxn2]})
 		self.edge1_2 = graph.Edge(self.node1, self.node2)
 		self.edge2_3 = graph.Edge(self.node2, self.node3,
 		                          props={'id': '2_3'})
+
 
 	def test_add_node(self):
 		self.g.add_node(self.node1)
@@ -56,6 +73,30 @@ class TestGraph(unittest.TestCase):
 		self.g.add_node(self.node2)
 		self.assertTrue(all(i in self.g.nodes
 		                    for i in [self.node1, self.node2]))
+
+	def test_original_id_EX(self):
+		self.g.add_node(self.node6)
+		nd = defaultdict(list)
+		nd['Ex_e'].append(self.node6)
+		self.assertTrue(self.g._nodes_original_id == nd)
+
+	def test_original_id_cpd(self):
+		self.g.add_node(self.node7)
+		nd = defaultdict(list)
+		nd[self.fum.id].append(self.node7)
+		self.assertTrue(self.g._nodes_original_id == nd)
+
+	def test_original_id_rxn(self):
+		self.g.add_node(self.node8)
+		nd = defaultdict(list)
+		nd[self.rxn1.id].append(self.node8)
+		self.assertTrue(self.g._nodes_original_id == nd)
+
+	def test_original_id_rxn(self):
+		self.g.add_node(self.node9)
+		nd = defaultdict(list)
+		nd['rxn1,rxn2'].append(self.node9)
+		self.assertEqual(self.g._nodes_original_id, nd)
 
 	def test_node_count(self):
 		self.g.add_node(self.node1)
@@ -162,7 +203,7 @@ class TestGraph(unittest.TestCase):
 		self.assertEqual(read_file, ['id\tcolor\tlabel\n',
 		                             'B\tblue\tB\n', 'C\tred\tC\n'])
 
-	def write_edges_tables(self):
+	def test_write_edges_tables(self):
 		self.g.add_node(self.node2)
 		self.g.add_node(self.node3)
 		self.g.add_edge(self.edge2_3)
@@ -497,6 +538,19 @@ class TestOther(unittest.TestCase):
 		                            Compound(u'mal_L_c', u'c'))], Direction.Both), self.rxn2 :
 									([(Compound(u'succ_c', u'c'), Compound(u'fum_c', u'c')), (Compound(u'q8_c', u'c'),
 									Compound(u'q8h2_c', u'c')), (Compound(u'succ_c', u'c'), Compound(u'q8h2_c', u'c'))],
+									Direction.Right)}
+		self.assertEqual(net_dict, test_dict)
+
+	def test_network_dict_nofpp(self):
+		net_dict = graph.make_network_dict(self.native, self.mm, subset=None, method='no-fpp', element=None, excluded_reactions=[])
+		test_dict = {self.rxn1 : ([(Compound(u'fum_c', u'c'), Compound(u'mal_L_c', u'c')),
+									(Compound(u'h2o_c', u'c'), Compound(u'mal_L_c', u'c'))],
+									Direction.Both), self.rxn2 :
+									([(Compound(u'q8_c', u'c'), Compound(u'fum_c', u'c')),
+									(Compound(u'q8_c', u'c'),Compound(u'q8h2_c', u'c')),
+									(Compound(u'succ_c', u'c'), Compound(u'fum_c', u'c')),
+									(Compound(u'succ_c', u'c'), Compound(u'q8h2_c', u'c')),
+									],
 									Direction.Right)}
 		self.assertEqual(net_dict, test_dict)
 

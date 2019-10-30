@@ -440,7 +440,7 @@ def write_network_dict(network_dict):
             print('{}\t{}\t{}\t{}'.format(key.id, c1, c2, dir_value(dir)))
 
 
-def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges):
+def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges=[]):
     """Create a mapping from compound pair to a defaultdict containing
     lists of reactions for the forward, reverse, and both directions.
 
