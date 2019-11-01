@@ -638,7 +638,7 @@ contains a list of reaction IDs:
 The vis command will only produce the files described above by default. Graph image generating
 software can be used to convert these files to actual images. If the program `Graphviz` is
 installed on the computer then that program can be used within `PSAMM` to generate the image file
-directly. This can be done by using the ``--imgae`` argument followed by any `Graphviz` supported
+directly. This can be done by using the ``--image`` argument followed by any `Graphviz` supported
 image format:
 
 .. code-block:: shell
@@ -708,8 +708,6 @@ This file can then be used with the ``vis`` command through the ``--hide-edges``
     $ psamm-model vis --hide-edges {path to edges file}
 
 
-
-
 Graph Image Customization
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -745,23 +743,22 @@ This file can be used to color the nodes on the graph through the ``--color`` op
     $ psamm-model vis --color {path to color table}
 
 
-By default only one reaction presents in one reaction node in the final network image. Users can condense
-multiple reaction nodes into one through ``--combine`` option (the condensation is based on the reactant/product
-pairs connected to the reaction nodes), to reduce the number of nodes and make image clearer. This option has
-three choices: 0,1,2. By default it is 0, ``--combine 1`` will condense the nodes that represent the same reaction
-and connect the same reactant/product pairs, ``--combine 2`` will condense the nodes that represent different
-reactions but connect the same reactant/product pairs.
+The graph image can be simplified through the use of the ``--combine`` option.
+The deafault option for this is combine level 0. The graph generated from using
+combine level 0 will have one reaction node for each reactant product pair within
+a reaction. This can result in having many sets of substrates/reaction/product nodes
+within the graph image, depending on how many substrates and products are present
+in a metabolic reaction. Using the combine level 1 option will condense the reaction
+nodes down so that there is only one reaction node per reaction, with each reaction
+node having connectiosn to all reactants and products of that reaction. The combine level
+2 option will condense the graph in a different way. With this option the graph is condensed
+based on shared reactant/product pairs between different reactions. If two separate
+reactions contain a common reactant/product pair, for example ATP and ADP, then
+the nodes for those condensed into one combined node.
 
 .. code-block:: shell
 
-    $ psamm-model vis --combine 1
-    or
-    $ psamm-model vis --combine 2
-
-.. note::
-
-    The ``--combine`` option can not be used with the ``--no-fpp`` option. The ``--no-fpp`` graphs
-    do not contain condensed reaction nodes.
+    $ psamm-model vis --combine {0,1,2}
 
 
 The final graph image can also be modified to show the reactions and metabolites in different compartments
