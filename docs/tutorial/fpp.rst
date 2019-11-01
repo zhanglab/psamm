@@ -552,7 +552,7 @@ utilization pathway highlighted, use the following command:
 .. code-block:: shell
 
    (psamm-env) $ psamm-model vis --image pdf --color ../additional_files/color_mannitol_pathway
-   --combine 2 --output 11-color
+   --combine 2
 
 The resulting image file should look like the following:
 
@@ -583,10 +583,9 @@ The image generated will look like this:
 
 .. image:: 08-detail.dot.png
 
-For these options if a detail is provided that is not a property of the reaction
-or compound then that property will be skipped and not included on those nodes. For
-example if the formula property is given to the ``--rxn-detail`` option then that
-property will be skipped.
+For these options, if a required detail is not included in the model, that property will be skipped
+and not shown on those nodes. For example, if "formula" is followed by ``--rxn-detail``, the Vis will skip
+"formula" when preparing label for reaction nodes.
 
 
 Other Visualization Options
@@ -610,14 +609,14 @@ following command which will condense reaction nodes:
 .. code-block:: shell
 
    (psamm-env) $ psamm-model --model ../E_coli_yaml/model.yaml vis --image pdf
-   --subset ../additional_files/4combine1.tsv --combine 1 --output 03-PDHPDL_combine1
+   --subset ../additional_files/4combine1.tsv --combine 1
 
 Then the image will looks like this compared to the image generated from default setting:
 .. image:: 03-final_PDHPDL_combine1.png
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model --model ../E_coli_yaml/model.yaml vis --subset ../additional_files/4combine1.tsv
+   (psamm-env) $ psamm-model --model ../E_coli_yaml/model.yaml vis --subset ../additional_files/4combine2.tsv
    --combine 2  --image pdf
 
 .. image:: 02-final_ME_showCombine2.png
