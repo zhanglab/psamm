@@ -656,9 +656,9 @@ class TestMakeNetworks(unittest.TestCase):
 		                                   excluded_reactions=[])
 		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
 		test_dict = defaultdict(lambda: defaultdict(list))
-		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1_1']
-		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_2']
-		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_2']
+		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1_2']
 		test_dict[(Compound('g6p'), Compound('f6p'))]['both'] = ['rxn2_1']
 
 		test_new_id = {u'rxn2_1':self.rxn2, u'rxn1_2': self.rxn1, u'rxn1_1': self.rxn1}
@@ -724,13 +724,12 @@ class TestMakeNetworks(unittest.TestCase):
 		                                   excluded_reactions=[])
 		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
 		test_dict = defaultdict(lambda: defaultdict(list))
-		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1_1']
-		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_2']
+		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1_2']
 		test_dict[(Compound('f6p'), Compound('g6p'))]['both'] = ['rxn2_1', 'rxn3_1']
-		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_2']
 
 		test_new_id = {u'rxn2_1': self.rxn2, u'rxn1_2': self.rxn1, u'rxn1_1': self.rxn1, 'rxn3_1': rxn3}
-
 		self.assertEqual(cpairs, test_dict)
 		self.assertEqual(new_id, test_new_id)
 
@@ -746,13 +745,13 @@ class TestMakeNetworks(unittest.TestCase):
 		                                   excluded_reactions=[])
 		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
 		test_dict = defaultdict(lambda: defaultdict(list))
-		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1_1']
-		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_2']
+		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1_2']
 		test_dict[(Compound('g6p'), Compound('f6p'))]['both'] = ['rxn2_1']
 		test_dict[(Compound('g6p'), Compound('f6p'))]['forward'] = ['rxn3_1']
-		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_2']
 
-		test_new_id = {u'rxn2_1': self.rxn2, u'rxn1_2': self.rxn1, u'rxn1_1': self.rxn1, 'rxn3_1': rxn3}
+		test_new_id = {u'rxn1_1': self.rxn1, u'rxn1_2': self.rxn1, u'rxn2_1': self.rxn2, 'rxn3_1': rxn3}
 
 		self.assertEqual(cpairs, test_dict)
 		self.assertEqual(new_id, test_new_id)
@@ -769,11 +768,11 @@ class TestMakeNetworks(unittest.TestCase):
 		                                   excluded_reactions=[])
 		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
 		test_dict = defaultdict(lambda: defaultdict(list))
-		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1_1']
-		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_2']
+		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_1']
+		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1_2']
 		test_dict[(Compound('f6p'), Compound('g6p'))]['both'] = ['rxn2_1']
 		test_dict[(Compound('f6p'), Compound('g6p'))]['forward'] = ['rxn3_1']
-		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_2']
 
 		test_new_id = {u'rxn2_1': self.rxn2, u'rxn1_2': self.rxn1, u'rxn1_1': self.rxn1, 'rxn3_1': rxn3}
 
