@@ -599,12 +599,44 @@ class TestMakeNetworks(unittest.TestCase):
 		self.node_g6p = graph.Node({'id': 'g6p', 'entry': Compound('g6p')})
 		self.node_glc = graph.Node({'id': 'glc', 'entry': Compound('glc')})
 		self.node_f6p = graph.Node({'id': 'f6p', 'entry': Compound('f6p')})
-		self.edge_1 = graph.Edge(self.node_glc, self.node_g6p, props={'id':'g6p_glc_forward', 'dir':'forward'})
+		self.edge_1 = graph.Edge(self.node_glc, self.node_g6p, props={'id':'g6p_glc_forward', 'dir': 'forward'})
 		self.edge_2 = graph.Edge(self.node_g6p, self.node_f6p, props={'id': 'f6p_g6p_both', 'dir': 'both'})
 		self.edge_3 = graph.Edge(self.node_atp, self.node_adp, props={'id': 'adp_atp_forward', 'dir': 'forward'})
 		self.edge_4 = graph.Edge(self.node_atp, self.node_adp, props={'id': 'adp_atp_forward', 'dir': 'forward'})
 		self.edge_5 = graph.Edge(self.node_atp, self.node_g6p, props={'id': 'atp_g6p_forward', 'dir': 'forward'})
-		self.edge_6 = graph.Edge(self.node_glc, self.node_adp, props={'id': 'adp_glc_forward', 'dir':'forward'})
+		self.edge_6 = graph.Edge(self.node_glc, self.node_adp, props={'id': 'adp_glc_forward', 'dir': 'forward'})
+
+		self.model_compound_entries = {}
+		for cpd in self.native_model.compounds:
+			self.model_compound_entries[cpd.id] = cpd
+		self.node_atp_bip = graph.Node({'id': 'atp', 'entry': [self.model_compound_entries['atp']], 'compartment': None, 'type': 'cpd'})
+		self.node_adp_bip = graph.Node({'id': 'adp', 'entry': [self.model_compound_entries['adp']], 'compartment': None, 'type': 'cpd'})
+		self.node_g6p_bip = graph.Node({'id': 'g6p', 'entry': [self.model_compound_entries['g6p']], 'compartment': None, 'type': 'cpd'})
+		self.node_glc_bip = graph.Node({'id': 'glc', 'entry': [self.model_compound_entries['glc']], 'compartment': None, 'type': 'cpd'})
+		self.node_f6p_bip = graph.Node({'id': 'f6p', 'entry': [self.model_compound_entries['f6p']], 'compartment': None, 'type': 'cpd'})
+		self.node_rxn1_1 = graph.Node({'id': 'rxn1_1', 'entry': [self.rxn1], 'compartment': None, 'type': 'rxn'})
+		self.node_rxn1_2 = graph.Node({'id': 'rxn1_2', 'entry': [self.rxn1], 'compartment': None, 'type': 'rxn'})
+		self.node_rxn2_1 = graph.Node({'id': 'rxn2_1', 'entry': [self.rxn2], 'compartment': None, 'type': 'rxn'})
+		self.edge_bip_1 = graph.Edge(self.node_atp_bip, self.node_rxn1_1, props={'dir': 'forward'})
+		self.edge_bip_2 = graph.Edge(self.node_rxn1_1, self.node_adp_bip, props={'dir': 'forward'})
+		self.edge_bip_3 = graph.Edge(self.node_atp_bip, self.node_rxn1_1, props={'dir': 'forward'})
+		self.edge_bip_4 = graph.Edge(self.node_rxn1_1, self.node_g6p_bip, props={'dir': 'forward'})
+		self.edge_bip_5 = graph.Edge(self.node_glc_bip, self.node_rxn1_2, props={'dir': 'forward'})
+		self.edge_bip_6 = graph.Edge(self.node_rxn1_2, self.node_g6p_bip, props={'dir': 'forward'})
+		self.edge_bip_7 = graph.Edge(self.node_g6p_bip, self.node_rxn2_1, props={'dir': 'both'})
+		self.edge_bip_8 = graph.Edge(self.node_rxn2_1, self.node_f6p_bip, props={'dir': 'both'})
+		self.node_list = [
+			self.node_atp_bip, self.node_adp_bip, self.node_g6p_bip, self.node_glc_bip, self.node_f6p_bip,
+			self.node_rxn1_1, self.node_rxn1_2, self.node_rxn2_1]
+		self.edge_list = [
+				self.edge_bip_1, self.edge_bip_2, self.edge_bip_3, self.edge_bip_4, self.edge_bip_5, self.edge_bip_6,
+				self.edge_bip_7, self.edge_bip_8]
+		# self.edge_bip_5 = graph.Edge(self.node_atp_bip, self.node_g6p_bip, props={'dir': 'forward'})
+		# self.edge_bip_6 = graph.Edge(self.node_glc_bip, self.node_adp_bip, props={'dir': 'forward'})
+
+		self.model_compound_entries = {}
+		for cpd in self.native_model.compounds:
+			self.model_compound_entries[cpd.id] = cpd
 
 	def test_compound_graph(self):
 		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
@@ -785,6 +817,99 @@ class TestMakeNetworks(unittest.TestCase):
 		d = defaultdict(list)
 		d['atp'].append(self.node_atp)
 		self.assertEqual(g.nodes_original_id_dict, d)
+
+	def test_bipartite_graph(self):
+		# self.native_model.default_compartment = 'c'
+		# print(self.native_model.default_compartment)
+		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
+										   excluded_reactions=[])
+		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries)
+
+		self.assertTrue(all(i in bipartite_graph.nodes for i in self.node_list))
+		self.assertTrue(all(i in self.node_list for i in bipartite_graph.nodes))
+		self.assertTrue(all(i in bipartite_graph.edges for i in self.edge_list))
+		self.assertTrue(all(i in self.edge_list for i in bipartite_graph.edges))
+
+	def test_bipartite_graph_filter(self):
+		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element='C',
+										   excluded_reactions=[])
+		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries)
+		edge_list = [self.edge_bip_1, self.edge_bip_2, self.edge_bip_5, self.edge_bip_6, self.edge_bip_7, self.edge_bip_8]
+		self.assertTrue(all(i in bipartite_graph.nodes for i in self.node_list))
+		self.assertTrue(all(i in bipartite_graph.edges for i in edge_list))
+		self.assertTrue(all(i in self.node_list for i in bipartite_graph.nodes))
+		self.assertTrue(all(i in edge_list for i in bipartite_graph.edges))
+
+	def test_bipartite_graph_filter2(self):
+		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element='P',
+										   excluded_reactions=[])
+		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries)
+		node_list = [i for i in self.node_list if i not in [self.node_glc_bip, self.node_rxn1_2]]
+		edge_list = [self.edge_bip_1, self.edge_bip_2, self.edge_bip_3, self.edge_bip_4, self.edge_bip_7, self.edge_bip_8]
+		self.assertTrue(all(i in bipartite_graph.nodes for i in node_list))
+		self.assertTrue(all(i in bipartite_graph.edges for i in edge_list))
+		self.assertTrue(all(i in node_list for i in bipartite_graph.nodes))
+		self.assertTrue(all(i in edge_list for i in bipartite_graph.edges))
+
+	def test_bipartite_graph_subset(self):
+		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=['rxn1'], method='fpp', element=None,
+										   excluded_reactions=[])
+		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries)
+		node_list = [i for i in self.node_list if i not in [self.node_f6p_bip, self.node_rxn2_1]]
+		edge_list = [self.edge_bip_1, self.edge_bip_2, self.edge_bip_3, self.edge_bip_4, self.edge_bip_5, self.edge_bip_6]
+		self.assertTrue(all(i in bipartite_graph.nodes for i in node_list))
+		self.assertTrue(all(i in bipartite_graph.edges for i in edge_list))
+		self.assertTrue(all(i in node_list for i in bipartite_graph.nodes))
+		self.assertTrue(all(i in edge_list for i in bipartite_graph.edges))
+
+	def test_bipartite_graph_subset2(self):
+		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=['rxn2'], method='fpp', element=None,
+										   excluded_reactions=[])
+		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries)
+		node_list = [self.node_g6p_bip, self.node_f6p_bip, self.node_rxn2_1]
+		edge_list = [self.edge_bip_7, self.edge_bip_8]
+		self.assertTrue(all(i in bipartite_graph.nodes for i in node_list))
+		self.assertTrue(all(i in bipartite_graph.edges for i in edge_list))
+		self.assertTrue(all(i in node_list for i in bipartite_graph.nodes))
+		self.assertTrue(all(i in edge_list for i in bipartite_graph.edges))
+
+	def test_bipartite_graph_exclude(self):
+		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
+										   excluded_reactions=['rxn2'])
+		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries)
+		node_list = [i for i in self.node_list if i not in [self.node_f6p_bip, self.node_rxn2_1]]
+		edge_list = [self.edge_bip_1, self.edge_bip_2, self.edge_bip_3, self.edge_bip_4, self.edge_bip_5, self.edge_bip_6]
+		self.assertTrue(all(i in bipartite_graph.nodes for i in node_list))
+		self.assertTrue(all(i in bipartite_graph.edges for i in edge_list))
+		self.assertTrue(all(i in node_list for i in bipartite_graph.nodes))
+		self.assertTrue(all(i in edge_list for i in bipartite_graph.edges))
+
+	def test_bipartite_graph_nofpp(self):
+		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='no-fpp', element=None,
+										   excluded_reactions=[])
+		cpairs, new_id = graph.make_cpair_dict(net_dict, 'no-fpp', 0)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'no-fpp', 0, self.model_compound_entries)
+		node_rxn1 = graph.Node({'id': 'rxn1', 'entry': [self.rxn1], 'compartment': None, 'type': 'rxn'})
+		node_rxn2 = graph.Node({'id': 'rxn2', 'entry': [self.rxn2], 'compartment': None, 'type': 'rxn'})
+		edge_bip_1 = graph.Edge(self.node_atp_bip, node_rxn1, props={'dir': 'forward'})
+		edge_bip_2 = graph.Edge(self.node_glc_bip, node_rxn1, props={'dir': 'forward'})
+		edge_bip_3 = graph.Edge(node_rxn1, self.node_adp_bip, props={'dir': 'forward'})
+		edge_bip_4 = graph.Edge(node_rxn1, self.node_g6p_bip, props={'dir': 'forward'})
+		edge_bip_5 = graph.Edge(self.node_g6p_bip, node_rxn2, props={'dir': 'both'})
+		edge_bip_6 = graph.Edge(node_rxn2, self.node_f6p_bip, props={'dir': 'both'})
+		node_list = [self.node_atp_bip, self.node_adp_bip, self.node_g6p_bip, self.node_glc_bip, self.node_f6p_bip,
+					 node_rxn1, node_rxn2]
+		edge_list = [edge_bip_1, edge_bip_2, edge_bip_3, edge_bip_4, edge_bip_5, edge_bip_6]
+		self.assertTrue(all(i in bipartite_graph.nodes for i in node_list))
+		self.assertTrue(all(i in bipartite_graph.edges for i in edge_list))
+		self.assertTrue(all(i in node_list for i in bipartite_graph.nodes))
+		self.assertTrue(all(i in edge_list for i in bipartite_graph.edges))
 
 
 class TestEdges(unittest.TestCase):

@@ -494,7 +494,7 @@ def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges=[]):
                 rxn_mixcpairs = defaultdict(list)
                 for (c1, c2) in sorted(cpairs_dir[0]):
                     sub_pro[c1].append(c2)
-                for k1, v1 in iteritems(sub_pro):
+                for k1, v1 in sorted(iteritems(sub_pro)):
                     if k1 not in have_visited:
                         rxn_count[rxn] += 1
                         have_visited.add(k1)
