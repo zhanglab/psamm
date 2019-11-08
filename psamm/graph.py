@@ -383,9 +383,17 @@ def make_network_dict(nm, mm, subset=None, method='fpp', element=None, excluded_
     compound_formula = get_compound_dict(nm)
 
     if subset is not None:
-        testing_list = [rxn for rxn in nm.reactions if rxn.id not in excluded_reactions and rxn.id in subset and rxn.id in mm.reactions]
+        testing_list = []
+        for rxn in nm.reactions:
+            if rxn.id in mm.reactions:
+                if rxn.id in subset:
+                    if rxn.id not in excluded_reactions:
+                        testing_list.append(rxn)
+                    else:
+                        logger.warning('Reaction {} is in the subset and exclude file. Reactionw will be excluded.'.format(rxn.id))
     else:
-        testing_list = [rxn for rxn in nm.reactions if rxn.id not in excluded_reactions and rxn.id in mm.reactions]
+        testing_list = [rxn for rxn in nm.reactions if rxn.id in mm.reactions and rxn.id not in excluded_reactions]
+
 
     reaction_data = {}
     for rxn in testing_list:
