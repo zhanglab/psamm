@@ -350,7 +350,7 @@ def add_node_props(g, recolor_dict):
             node.props['shape'] = 'box'
         else:
             if node.props['type'] not in ['bio_rxn', 'Ex_rxn']:
-                print('invalid nodes:', type(
+                logger.error('invalid nodes:', type(
                     node.props['entry']), node.props['entry'])
     for r_id in recolor_dict:
         if r_id in g.nodes_original_id_dict:
