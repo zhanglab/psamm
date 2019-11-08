@@ -416,7 +416,7 @@ def make_network_dict(nm, mm, subset=None, method='fpp', element=None, excluded_
                     if any(Atom(element) in k for k in transfer):
                         compound_pairs.append(cpd_pair)
             (rxn_entry, rxn_dir) = reaction_data[rxn_id]
-            full_pairs_dict[rxn_entry] = (compound_pairs, rxn_dir)
+            full_pairs_dict[rxn_entry] = (sorted(compound_pairs), rxn_dir)
 
     elif method == 'no-fpp':
         for reaction in testing_list:
@@ -428,7 +428,7 @@ def make_network_dict(nm, mm, subset=None, method='fpp', element=None, excluded_
                     else:
                         if Atom(element) in compound_formula[substrate[0].name] and Atom(element) in compound_formula[product[0].name]:
                             compound_pairs.append((substrate[0], product[0]))
-            full_pairs_dict[reaction] = (compound_pairs, reaction.equation.direction)
+            full_pairs_dict[reaction] = (sorted(compound_pairs), reaction.equation.direction)
     return full_pairs_dict
 
 

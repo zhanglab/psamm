@@ -536,8 +536,9 @@ class TestOther(unittest.TestCase):
 		net_dict = graph.make_network_dict(self.native, self.mm, subset=None, method='fpp', element=None, excluded_reactions=[])
 		test_dict = {self.rxn1 : ([(Compound(u'fum_c', u'c'), Compound(u'mal_L_c', u'c')), (Compound(u'h2o_c', u'c'),
 		                            Compound(u'mal_L_c', u'c'))], Direction.Both), self.rxn2 :
-									([(Compound(u'succ_c', u'c'), Compound(u'fum_c', u'c')), (Compound(u'q8_c', u'c'),
-									Compound(u'q8h2_c', u'c')), (Compound(u'succ_c', u'c'), Compound(u'q8h2_c', u'c'))],
+									([(Compound(u'q8_c', u'c'),Compound(u'q8h2_c', u'c')),
+									(Compound(u'succ_c', u'c'), Compound(u'fum_c', u'c')),
+									(Compound(u'succ_c', u'c'), Compound(u'q8h2_c', u'c'))],
 									Direction.Right)}
 		self.assertEqual(net_dict, test_dict)
 
@@ -567,9 +568,6 @@ class TestOther(unittest.TestCase):
 class TestMakeNetworks(unittest.TestCase):
 	def setUp(self):
 		self.native_model = NativeModel()
-		self.rxn1 = ReactionEntry({
-			'id': 'rxn1', 'equation': parse_reaction(
-				'fum_c[c] + h2o_c[c] <=> mal_L_c[c]')})
 		self.atp = CompoundEntry({
 			'id': 'atp', 'formula': 'C10H16N5O13P3'})
 		self.adp = CompoundEntry({
