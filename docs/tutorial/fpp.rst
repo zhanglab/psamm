@@ -251,8 +251,8 @@ of nodes, with one set representing the metabolites in the model, and the other 
 representing reactions. These nodes are connected through edges that are determined
 based on element transfer patters predicted through using the `FindPrimaryPairs`
 algorithm. The ``vis`` command provides multiple options to customize the graph
-representation of the metabolism, including customizing node labels, changing
-node colors, etc.
+representation of the metabolism, including changing network perspectives, customizing
+node labels, changing node colors, etc.
 
 Basic Network Visualization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -264,51 +264,34 @@ The basic ``vis`` command can be run through the following command:
    (psamm-env) $ psamm-model vis
 
 By default, ``vis`` relies on the `FindPrimaryPairs` algorithm to predict
-element transfer in metabolic network. This algorithm requires certain
+elements transferred in metabolic network. This algorithm requires certain
 reactions such as biomass reactions and some artificial reactions to be
 excluded from the algorithm's calculations in order to work efficiently. This
-can be done through the ``--exclude`` option. By default the biomass reaction
-defined in `model.yaml` file will be excluded from the `FPP` calculation,
-but will still be shown on the final network image. For more information of
-excluded reactions, see :ref:`exclude-fpp`.
+can be done through the ``--exclude`` option. In  ``vis`` function, by default
+the biomass reaction defined in `model.yaml` file will be excluded from the
+`FPP` calculation automatically, but will still be shown on the final network
+image. For more information of excluded reactions, see :ref:`exclude-fpp`.
 
 In this version of the E. coli core model, the biomass reaction is defined in
-the `model.yaml` file, so that it will be excluded automatically from FPP
-calculation when running ``vis`` command on this model.
+the `model.yaml` file, it was excluded automatically from FPP
+calculation when running ``vis`` command on this model, so ``--exclude`` isn't
+required in command.
 
 By default, running the command above will export three files: 'reaction.dot',
-'reactions.edges.tsv', 'reactions.nodes.tsv'. Users can specify the file name
-through ``--output`` argument
+'reactions.nodes.tsv' and 'reactions.edges.tsv'. The first file, 'reactions.dot',
+contains a text based representation of the network graph in the 'dot' language.
+This graph language is used primarily by the `Graphviz` program to generate
+network images. This graph format contains information of nodes and edges
+in the graph along with details related to the size, colors, and shapes
+that will be used in the final network image. The 'reactions.nodes.tsv' and
+'reactions.edges.tsv' files are tab separated tables that contain the same
+information as the `dot` based graph does, but in a more generic table based
+format that can be used with other graph analysis and visualization software
+like `Cytoscape`.
 
-The first file, 'reactions.dot', contains a text based representation of the
-network graph in the 'dot' language. This graph language is used primarily by
-the `Graphviz` program to generate network images. This graph format contains
-information on the nodes and edges in the graph along with details related to
-the size, colors, and shapes that will be used in the final network image.
-
-The 'reactions.nodes.tsv', and 'reactions.edges.tsv' files are tab separated
-tables that contain the same information as the `dot` based graph does, but
-in a more generic table based format that can be used with other graph
-analysis and visualization software like `Cytoscape`.
-
-The 'reactions.edges.tsv' file contains the information related to the
-structure of the graph. Each line in this table represents one edge in
-the graph and contains the source of that edge, destination of that edge,
-and the direction of the edge (forward, back, or both). This file will
-look like the following:
-
-.. code-block:: shell
-
-   source	target	dir
-   CS_3	cit_c[c]	forward
-   f6p_c[c]	Biomass_Ecoli_core_w_GAM_5	forward
-   ALCD2x_1	acald_c[c]	both
-   ...
-
-The 'reactions.nodes.tsv' file will contain all of the information related
-to what appears on the nodes in the graph. In this representation of the
-graph there both reaction nodes and compound nodes. This file will look
-like the following:
+File 'reactions.nodes.tsv' contains all of the information that define the
+graph nodes, including both reaction and compound nodes. It looks like the
+following:
 
 .. code-block:: shell
 
@@ -319,56 +302,77 @@ like the following:
    6pgc_c[c]	c	#ffd8bf	ellipse	filled	cpd	6pgc_c[c]
    ....
 
+File 'reactions.edges.tsv' contains information related to the structure of
+the graph. Each line in this table represents one edge in the graph and contains
+the source, destination and direction (forward, back, or both) of the edge. It
+looks like the following:
+
+.. code-block:: shell
+
+   source	target	dir
+   CS_3	cit_c[c]	forward
+   f6p_c[c]	Biomass_Ecoli_core_w_GAM_5	forward
+   ALCD2x_1	acald_c[c]	both
+   ...
+
 
 Generate Images from Text-based Graphs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Images can be generated from the 'reactions.dot' file by using the `Graphviz`
 program. For the best representations of the metabolic network using the `dot`
-layout is recommended. The image file can be generated as a `PDF` file by using
-the following `Graphviz` program command:
+layout is recommended. `Graphviz` support multiple inmage formates, such as PDF,
+PNG, JPEG, etc. The image file can be generated as a `PDF` file by using the
+following `Graphviz` program command:
 
 .. code-block:: shell
 
    (psamm-env) $ dot -O -Tpdf reactions.dot
 
-This can also be done at the same time as the `vis` command step by adding the
-``--image`` option with an image format (pdf, svg, eps, etc.) to the command:
+This can also be done at the same time in running `vis` command by adding an
+``--image`` option followed by image format (pdf, svg, eps, etc.) to the command:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --image pdf
+   (psamm-env) $ psamm-model vis --image png
 
-These commands will generate an image file called 'reactions.dot.pdf'. This
-image file is the representation of what was in the 'reactions.dot' file. This
-graph will look like:
+These two commands both generate an image file named 'reactions.dot.pdf'. It is
+image representation of what in the 'reactions.dot'. This graph will look like:
 
-.. image:: 01-entireEcolicore.dot.png
+.. image:: 01-entireEcoli.dot.png
 
-In this default version of the graph there are two sets of nodes: ovular orange
-nodes representing metabolites and rectangular green nodes representing reactions.
-These nodes are connected by edges that will show the direction of the reaction
-in the original metabolic model. This graph also contains some reaction nodes that
-have multiple reaction IDs. These represent reactions that contain common
-reactant/product pairs such as ATP/ADP and have the same reaction direction.
+In this default version of network image, there are two sets of nodes: oval orange
+nodes represent metabolites and rectangular green nodes represent reactions.
+These nodes are connected by edges with direction, edge direction indicates reaction
+direction.
 
-The rest of the tutorial will deal with how to alter this graph representation from
-this default format to show different aspects of the metabolism and customize the look
-and content of the graph. For these sections, the mannitol utilization pathway that has
-been added and used in the previous tutorial sections will be used as an example.
+In addition, `PSAMM-Vis` allows users to customize name of resulting files via
+``--output`` option followed by a string. For example, running the following command:
+
+.. code-block:: shell
+
+   (psamm-env) $ psamm-model vis --output MyOutput
+
+Then the 3 resulting file will be named "MyOutput.dot", "MyOutput.nodes.tsv" and
+"MyOutput.edges.tsv"
+
+The rest of the tutorial will deal with how to modify the default version of network
+image to show different aspects of the metabolism and customize the node properties.
+For these sections, the mannitol utilization pathway that has been added and used in
+the previous tutorial sections will be used as an example.
 
 Represent Different Element Flows
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-By default the ``vis`` command will produce a graph that shows the carbon transfers
+By default the ``vis`` command generates a graph that shows the carbon (C) transfer
 in the metabolic network. In the ``primarypairs`` tutorial section above the element
 transfers in the `ACKr` reaction were examined to see how the `FPP` algorithm would
-predict element transfer patterns. The ``vis`` command will use the information in
-these element transfer predictions to filter the graph that is made to only show
-certain edges. In the case of the `ACKr` reaction, if the element being shown is
-carbon then only the 'Acetate -> Acetyl-Phosphate' and 'ATP -> ADP' edges would
-be shown in the final graph. The 'ATP -> Acetyl-Phosphate' edge will not be shown
-in the draft becuase that element transfer only contains phosphate and oxygen.
+predict element transfer patterns. The ``vis`` command will use these element transfer
+predictions to filter edges in network image, only edges that transfer specific element
+will be shown. In the case of the `ACKr` reaction, if element carbon is required to be
+shown, then only edges of 'Acetate -> Acetyl-Phosphate' and 'ATP -> ADP' would present
+in the final graph. The 'ATP -> Acetyl-Phosphate' edge will disappear, because ATP
+doesn't transfer carbon to Acetyl-Phosphate.
 
 ===========================         ===========================
 Reactant/Product Pair               Element Transfer
@@ -381,8 +385,8 @@ Acetate -> ADP                      None
 
 This type of element filtering can provide different views of the metabolic
 network by showing how metabolic pathways transfer different elements through
-the reactions. The mannitol utilization pathway that was added to the model
-contains a multiple step pathway that converts extracellular mannitol to
+those reactions. The mannitol utilization pathway, which was added to the model,
+contains a multiple-step pathway that converts extracellular mannitol to
 fructose 6-phosphate. This pathway also involves multiple phosphorylation
 and dephosphorylation steps. The ``--element`` argument can be added to the
 the ``vis`` command to filter this pathway to show the transfer patterns
@@ -390,18 +394,48 @@ of the phosphorous in the pathway:
 
 .. code-block:: shell
 
-   (psamm-model) $ psamm-model vis --element P --image pdf
+   (psamm-model) $ psamm-model vis --element P --image png
 
-The resulting 'reactions.dot.pdf' file will contain the phosphorous transfer
+The resulting 'reactions.dot.png' file will contain the phosphorous transfer
 network of the E. coli core model.
 
-If the mannitol utilization pathway is examined more closely it will be seen
-that the transfers are different from the original and involve transfers
-between metabolites like phosphate (pi[c]) that are typically filtered out of
+If the mannitol utilization pathway is examined more closely, it will be seen
+that the transfers are different from the original one, and it contains transfers
+between metabolites like phosphate (pi[c]), which are typically filtered out of
 the carbon only graph.
 
-.. image:: element-transfers.png
+.. image:: 02-elementP.dot.png
 
+Condense Reaction Nodes and Edges
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default the ``vis`` command assigns only one reaction to each reaction node.
+Besides, it allows users to condense multiple reaction nodes into one node
+through ``--combine`` option, in order to reduce the number of nodes and edges,
+making the image clearer. The condensation is based on reactant/product pairs.
+It has three levels: 0, 1 and 2. 0 is the default level, no any condensation;
+Level 1 is used to condense nodes that represent the same reaction and have a
+common reactant or product connected. Level 2 is used to condense nodes that
+represent different reactions but connected to the same reactant/product pair
+with the same direction (This is often seen on reactant/product pairs like
+ATP/ADP and NADH/NADH). In addition, when these nodes are condensed, they won't
+have any change shown on the final network image when applying ``--color``,
+``--rxn-detail``, or ``--cpd-detail`` options (these options will be explained
+later). An example of this can be seen with the following command:
+
+.. code-block:: shell
+
+   (psamm-env) $ psamm-model vis --combine 1 --image png
+
+Then the image will looks like this compared to the image generated from default setting:
+
+.. image::  04-combine1.dot.png
+
+.. code-block:: shell
+
+   (psamm-env) $ psamm-model vis --combine 2 --image png --output 04-combine2
+
+.. image:: 04-combine2.dot.png
 
 Show Cellular Compartments
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -445,41 +479,43 @@ be used to generate an image that shows the compartment information of the model
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --compartment --image pdf
+   (psamm-env) $ psamm-model vis --compartment --image png
 
-This command will produce an different dot file called 'reactions_compartment.dot'
-and a new image file 'reactions_compartment.dot.pdf'. The 'reactions_compartment.dot.pdf'
-image will look like this:
+The resulting file 'reactions.dot.png' will look like this:
 
-.. image:: 13_compartmentalized.dot.png
+.. image:: 03-cpt.dot.png
 
-In this image there will be two compartments that are labeled with
-'Compartment: e' and 'Compartment: c'. The E. coli core model is
-relatively small, meaning that the compartment
-organization is simple, but the ``vis`` command can handle more complex
-models as well. For example the following image was made using a toy model
-to show a more complex compartments organization.
+In this image there are two compartments that are labeled with
+'Compartment: e' and 'Compartment: c'. The E. coli core model is relatively
+small, meaning that compartment organization is simple, but ``vis`` command
+can handle more complex models as well. For example, the following image was
+made using a toy model to show a more complex compartments organization. to
+do this running the following command:
 
-.. image:: 14_toy_compartment.png
+.. code-block:: shell
 
+   (psamm-env) $ psamm-model --model <PATH>/tutorial-part-4/additional_files/toy_model_cpt/toy_model.yaml vis --image png --compartment
+
+The resulting network image "reactions.dot.png" looks like:
+
+.. image:: 03-cptToy.dot.png
 
 Visualize Reactions and Pathways of Interest
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In some situations it might be better to only visualize a subset of a larger
 model so that smaller subsystems can be examined in more detail. This can
-be done through the ``--subset`` argument. this argument will take an input
-of a single column file where each line contains either a reaction ID or
-a metabolite ID. The whole file can only contain reaction IDs or metabolite
-IDs and cannot be a mix of both in the same subset file.
+be done through the ``--subset`` option. This option takes an input of a single
+column file, where each line contains either a reaction ID or a metabolite ID.
+The whole file can only contain reaction IDs or metabolite IDs and cannot be
+a mix of both in the same subset file.
 
-To use this command to make a subset of the reactions from the model that
-are involved in the mannitol utilization pathway the following command can
-be used:
+To show the usage of this option, a subset of reactions involved in mannitol
+utilization pathway were visualized through the following command:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --subset ../additional_files/subset_mannitol_pathway --image pdf
+   (psamm-env) $ psamm-model vis --subset ../additional_files/subset_mannitol_pathway --image png
 
 The input file subset_mannitol_pathway looks like this:
 
@@ -491,18 +527,17 @@ The input file subset_mannitol_pathway looks like this:
    MANNII1PPHOS
    FRUKIN
 
-This subset image will look like the following:
+This resulting image "reactions.dot.png" looks like:
 
-.. image:: 05.1-subset_mannitol_pathway.dot.png
+.. image::  05-subsetRxn.dot.png
 
-In this image only the reactions directly listed in the subset file and any associated
-exchange reactions are included in the final image.
+This image only contains reactions listed in the subset file and any associated
+exchange reactions.
 
-The other option for using the subset argument is to provide a list of metabolite IDs.
-This option will generate an image containing all of the reactions that the given
-metabolites are involved in. For example the following subset file could be used to
-generate a network image that contains all of the reactions involving pyruvate in
-this model.
+The other usage for using the subset argument is to provide a list of metabolite IDs.
+This option will generate an image containing all of the reactions that contains any
+of given metabolites in their equation. For example the following subset file could
+be used to generate a network image of all reactions that contains pyruvate .
 
 .. code-block:: shell
 
@@ -514,26 +549,25 @@ command:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --subset ../additional_files/subset_pyruvate_list --image pdf
+   (psamm-env) $ psamm-model vis --subset <PATH>/tutorial-part-4/additional_files/subset_pyruvate_list --image png
 
 This will generate an image like the following that only shows the reactions that
 contain the pyruvate metabolite:
 
-.. image:: 06.1-subset_pyr_c0.dot.png
-
+.. image:: 05-subsetCpd.dot.png
 
 Highlight Reactions and Metabolites in the Network
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The ``--subset`` argument can be used to show only a specific part of the network.
-When this is done the context of those reactions that are shown is often lost
-and it can be hard to tell where that pathway fits withing the larger metabolism.
-A different way to highlight a set of reactions without using the ``--subset``
-option is to change the color of a set of nodes through the ``--color`` argument.
+The ``--subset`` option can be used to show only a specific part of the network.
+When this is done the context of those reactions is often lost and it can be hard
+to tell where that pathway fits withing the larger metabolism. A different way to
+highlight a set of reactions without using the ``--subset`` option is to change
+the color of a set of nodes through the ``--color`` option.
 
-This argument can be used to change the color of the reaction or metabolite nodes
-on the final graph, making it easy to highlight certain pathways while still
-maintaining the larger metabolic context. This ``--color`` argument will take a
+This option can be used to change the color of the reaction or metabolite nodes
+on the final network image, making it easy to highlight certain pathways while still
+maintaining the larger metabolic context. This ``--color`` option will take a
 two column file that contains reaction or metabolite IDs in the first column and
 hex color codes in the second column. A color file that can be used to color
 all of the mannitol utilization pathway reactions purple would look like the following:
@@ -551,102 +585,77 @@ utilization pathway highlighted, use the following command:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --image pdf --color ../additional_files/color_mannitol_pathway
-   --combine 2
+   (psamm-env) $ psamm-model vis --color <PATH>/tutorial-part-4/additional_files/color_mannitol_pathway --image png --combine 2
 
 The resulting image file should look like the following:
 
-.. image:: 11-color.dot.png
+.. image::  06-colorC2.dot.png
 
 Coloring of specific nodes like this can make it easy to locate or highlight
 specific pathways especially in larger models.
 
+.. note::
+
+    Reaction node that represents multiple reactions won't be recolored even if
+    it contains one or more reactions that are in input table for recolor.
 
 Modify Node Labels in Network Images
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-By default only the reaction IDs or metabolite IDs are shown on the nodes in the
+By default only the reaction IDs or metabolite IDs are shown on the nodes in
 final network images. These labels can be modified to include any additional
-information defined in the compounds or reactions file through the use of the
-``--cpd-detail`` and ``--rxn-detail`` arguments. These arguments can be
-followed by a space separated list of properties such as id, name,
-equation, and formula which will be included on the node labels in the final image.
-To apply these options to the model to show the ID, names, and formulas for the
-metabolites and the ID and equation for reactions the following command can be used:
+information defined in the compounds or reactions YAML file through the use
+of the ``--cpd-detail`` and ``--rxn-detail`` options. These options are
+followed by a space separated list of metabolite or reaction property names,
+such as id, name, equation and formula. The required properties will present
+on the node labels in network image. For example, to show metabolite ID, name,
+and formula, as well as reaction ID and equation, running the following command:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --image pdf --subset ../additional_files/subset_mannitol_pathway
-   --combine 2 --cpd-detail id name formula --rxn-detail id name equation
+   (psamm-env) $ psamm-model vis --subset ../additional_files/detail_PDH.tsv --cpd-detail id name formula --rxn-detail id equation --image png --combine 1
 
-The image generated will look like this:
+The image generated looks like this:
 
-.. image:: 08-detail.dot.png
+.. image:: 07-detailC1.dot.png
 
-For these options, if a required detail is not included in the model, that property will be skipped
-and not shown on those nodes. For example, if "formula" is followed by ``--rxn-detail``, the Vis will skip
-"formula" when preparing label for reaction nodes.
+.. note::
+
+    For these two options, if a required detail is not included in the model, that
+    property will be skipped and not shown on those nodes. For example, if "formula"
+    is followed by ``--rxn-detail``, the ``vis`` will skip "formula" when preparing
+    label for reaction nodes.
 
 
 Other Visualization Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Condense Reaction Nodes
-_________________________
-
-By default the vis command will assign only one reaction to a reaction node. However,
-it also allow users to condense multiple reaction nodes into one node in order to reduce
-the number of nodes and make the image clearer. The condensation is based on reactant/product
-pair connected to those reaction nodes. It has three levels: 0, 1 and 2. 0 is the default
-version, no any condensation; Level 1 condenses reaction nodes that represent the same reaction
-and have a common reactant or product connected. Level 2 condenses reaction nodes that represent
-different reactions but have the same reactant/product pairs, as well as the reaction direction
-(This is often seen on reactant/product pairs like ATP/ADP and NADH/NADH). In addition, when these
-nodes are condensed, they won't have the any changes shown on the final image when the ``--color``,
-``--rxn-detail``, or ``--cpd-detail`` arguments applied. An example of this can be seen with the
-following command which will condense reaction nodes:
-
-.. code-block:: shell
-
-   (psamm-env) $ psamm-model --model ../E_coli_yaml/model.yaml vis --image pdf
-   --subset ../additional_files/4combine1.tsv --combine 1
-
-Then the image will looks like this compared to the image generated from default setting:
-.. image:: 03-final_PDHPDL_combine1.png
-
-.. code-block:: shell
-
-   (psamm-env) $ psamm-model --model ../E_coli_yaml/model.yaml vis --subset ../additional_files/4combine2.tsv
-   --combine 2  --image pdf
-
-.. image:: 02-final_ME_showCombine2.png
-
-
 Remove Specific Reactant Product Pairs
 ________________________________________
 
 Larger scale models may have some reactant/product pairs that occur many times
-in different reactions. These often involve currency metabolites like ATP, ADP, NAD,
-and NADH. Due to the number of times that these pairs occur across the network they
-can cause some parts of the graph to look messy. While making the condensed reaction
-nodes helps with this problem, there may be cases where it would be better to
-hide these edges in the final result. To do this the ``--hide-edges`` argument can
-be used. This argument takes a two column file where each row contains metabolite IDs
-where the edges between them will be hidden.
+in different reactions. These often involve currency metabolites like ATP, ADP,
+NAD and NADH. Due to the large number of times these pairs occur across the
+network, they may cause some parts of the graph to look messy or form "hairball".
+While making the condensed reaction nodes helps with this problem, there may be
+cases where it would be better to hide these edges in the final result. To do this
+the ``--hide-edges`` option can be used. This option takes a two column file where
+each row contains two metabolite IDs separated by tab, edges between them will be
+hidden in final network image.
 
-To hide the edges between ATP and ADP in the E. coli core model the input file would
-look like the following:
+For example, to hide the edges between ATP and ADP in the E. coli core model, the
+input file would look like the following:
 
 .. code-block:: shell
 
    atp_c[c] adp_c[c]
 
-Then the following command could be run to generate a pathway image that hides the
+Then the following command could be run to generate a network image that hides the
 edges between ATP and ADP.
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --hide-edges ../additional_files/hide_edges_list --image pdf
+   (psamm-env) $ psamm-model vis --hide-edges ../additional_files/hide_edges_list --image png
 
 When comparing this image (left) to the image without hiding the ATP/ADP edges (right)
 it can be seen that some of the larger
@@ -654,53 +663,61 @@ reaction nodes connecting ATP and ADP have been removed from the graph. While th
 not make a huge difference on a small model like this, on larger models this can help during
 the process of generating neater final images.
 
-.. image:: 12.final-HideEdges_atpadp.png
+.. image:: 08-hideEdges.dot.png
 
 Adjust Image Size
 ____________________
 
-The size of the final image file that is produced through the ``vis`` command can
-be adjusted through the ``--image-size`` argument. This argument will take the width
-and height (in inches) separated by a comma. The following command can be used to
-generate an image that is 8.5 inches x 11 inches:
+The size of the final network image generated through the ``vis`` command can
+be adjusted through the ``--image-size`` option. This option takes the width
+and height (in inches) separated by a comma. The following command is an example
+that generate an image of 8.5 inches x 11 inches:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --image pdf --image-size 8.5,11
+   (psamm-env) $ psamm-model vis --image-size 8.5,11 --image png --combine 2
+
+The resulting image looks like:
+
+.. image:: 09-imagesizeC2.dot.png
 
 Specify File Name
 ____________________
 
-Name of final image file generated through the ``vis`` command can be specified through
-``--output`` option, this option should followed by a string and that string is the
-name of output files (without the file extension). The following command will export
-4 files: "Ecolicore.dot", "Ecolicore.dot.pdf", "Ecolicore.nodes.tsv", "Ecolicore.edges.tsv":
+``vis`` command allows users to specify the name of resulting file through
+``--output`` option, this option should followed by a string and that string
+is the name of output files (without the file extension). For example, the
+following command will export 4 files: "Ecolicore.dot", "Ecolicore.dot.png",
+"Ecolicore.nodes.tsv" and "Ecolicore.edges.tsv":
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --image pdf --output Ecolicore
-
+   (psamm-env) $ psamm-model vis --image png --output Ecolicore
 
 Change Pair Prediction Methods
 ________________________________
 
-By default, `vis` function in `PSAMM` will apply the `FPP` algorithm. but it can also work without
-pair prediction (``no-fpp``). The graph will generate edges only based on the reaction equations,
-do not considering element transfer. There will tend to be many more connections in the network
-image if users use this option, especially for metabolites like ATP, H2O, and H+. This option can
-be applied through the following command:
+By default, `vis` function in `PSAMM` applies `FPP` algorithm to predict
+reactant/product pairs. But it can also work without pair prediction (``no-fpp``).
+With presence of ``no-fpp``, each reactant will be paired with all products in a
+reaction, without considering element transferred between reactant and product.
+There will tend to be many more connections in the network image if users use this
+option, especially for metabolites like ATP, H2O, and H+. To do this running the
+following command:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --method no-fpp
+   (psamm-env) $ psamm-model vis --method no-fpp --image png
 
 
-.. image:: 10-no_fpp.png
-
+.. image:: 10-nofpp.dot.png
 
 .. note::
 
-   The ``--method no-fpp`` and ``--combine`` arguments cannot be used together. The
-   ``--combine`` option work only for `FPP` method.
+   The ``--method no-fpp`` and ``--combine`` options cannot be used together.
+   ``--combine`` option only works for `FPP` method.
+
+
+
 
 
