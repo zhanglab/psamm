@@ -101,6 +101,7 @@ class Importer(BaseImporter):
                         and len(model_doc.dtype) > 1):
                     raise ModelLoadError('Incorrect format')
         model = native.NativeModel()
+        model.name = name
         self._compartments_from_compound = set()
         self._origid_compound = dict()
         model.compounds.update(self._read_compounds(model_doc))
@@ -109,13 +110,16 @@ class Importer(BaseImporter):
         # Add model level compartment information
         if all(var in model_doc.dtype.names for var in ['comps', 'compNames']):
             model.compartments.update(self._read_compartments(model_doc))
+            self._boundary_compartment = None
+            for comp in model.compartments:
+                if comp.name.lower() == 'boundary':  # has boundary compartment
+                    self._boundary_compartment = comp.id
+            model.compartments.discard(self._boundary_compartment)
 
         for reaction, lower, upper in self._read_reactions(model_doc):
             model.reactions.add_entry(reaction)
             if lower is not None and upper is not None:
                 model.limits[reaction.id] = reaction.id, lower, upper
-
-        model.name = name
 
         biomass_reaction = None
         objective_reactions = set()
@@ -137,33 +141,19 @@ class Importer(BaseImporter):
 
         model.biomass_reaction = biomass_reaction
 
-        # Set compartment in reaction compounds
-        for reaction in model.reactions:
-            equation = reaction.equation
-            if equation is None:
-                continue
-
-            # Translate compartments in reaction
-            left = ((self._origid_compound[c.name], v) for
-                    c, v in equation.left)
-            right = ((self._origid_compound[c.name], v) for
-                     c, v in equation.right)
-            reaction.properties['equation'] = Reaction(
-                equation.direction, left, right)
-
         return model
 
     def _read_compartments(self, doc):
         for i in range(len(doc['comps'][0, 0])):
-            compartment = doc['comps'][0, 0][i][0][0]
-            name = doc['compNames'][0, 0][i][0][0]
-        yield CompartmentEntry(dict(id=compartment, name=name))
+            compartment = str(doc['comps'][0, 0][i][0][0])
+            name = str(doc['compNames'][0, 0][i][0][0])
+            yield CompartmentEntry(dict(id=compartment, name=name))
 
     def _read_compounds(self, doc):
         for i in range(len(doc['mets'][0, 0])):
             properties = dict()
             id = doc['mets'][0, 0][i][0][0]
-            match = re.search(r'\[[0-9a-zA-Z]+\]$', id)
+            match = re.search(r'\[[0-9a-zA-Z]+\]$', id)  # e.g. h2o[c]
             uniqid = id
             compartment = None
             if match is not None:  # compartment information in id
@@ -172,7 +162,7 @@ class Importer(BaseImporter):
                     CompartmentEntry(dict(id=compartment, name='')))
                 uniqid = re.sub(r'\[[0-9a-zA-Z]+\]$', '', id)
             else:
-                match = re.search(r'_[0-9a-zA-Z]+$', id)
+                match = re.search(r'_[0-9a-zA-Z]+$', id)  # e.g. h2o_c
                 if match is not None:  # compartment information in id
                     compartment = match.group().strip('_')
                     self._compartments_from_compound.add(
@@ -180,12 +170,20 @@ class Importer(BaseImporter):
                             dict(id=compartment, name='')))
                     uniqid = re.sub(r'_[0-9a-zA-Z]+$', '', id)
                 else:
-                    match = re.search(r'\([0-9a-zA-Z]+\)$', id)
+                    match = re.search(r'\([0-9a-zA-Z]+\)$', id)  # e.g. h2o(c)
                     if match is not None:  # compartment information in id
                         compartment = match.group().strip('()')
                         self._compartments_from_compound.add(
                             CompartmentEntry(dict(id=compartment, name='')))
                         uniqid = re.sub(r'\([0-9a-zA-Z]+\)$', '', id)
+                    else:
+                        match = re.search(r'[0-9][a-z]$', id)  # e.g. cpd100c
+                        if match is not None:
+                            compartment = str(match.group()[1])
+                            self._compartments_from_compound.add(
+                                CompartmentEntry(
+                                    dict(id=compartment, name='')))
+                            uniqid = id[:len(id) - 1]
             properties['id'] = uniqid
             self._origid_compound[id] = Compound(uniqid, compartment)
             for dtype in doc.dtype.names:
@@ -228,8 +226,9 @@ class Importer(BaseImporter):
                 if dtype.startswith('rxn') and dtype != 'rxns':
                     # reaction related dtypes
                     if dtype == 'rxnNames':
-                        properties['name'] = str(
-                            doc['rxnNames'][0, 0][i][0][0])
+                        if len(doc['rxnNames'][0, 0][i][0]) > 0:
+                            properties['name'] = str(
+                                doc['rxnNames'][0, 0][i][0][0])
                     else:  # other dtypes
                         value = doc[dtype][0, 0][i][0]
                         if isinstance(value, np.ndarray):
@@ -258,9 +257,15 @@ class Importer(BaseImporter):
                 # incase it's an ndarray
                 rows = np.flatnonzero(doc['S'][0, 0][:, i])
             for j in rows:
+                cpd = self._origid_compound.get(
+                    doc['mets'][0, 0][j][0][0]
+                )
+                if cpd.compartment == self._boundary_compartment:
+                    # skip compound that is out of boundary
+                    continue
                 compounds.append(
                     (
-                        Compound(doc['mets'][0, 0][j][0][0]),  # compound id
+                        cpd,  # compound id
                         float(doc['S'][0, 0][j, i])  # stochiometry
                     )
                 )
