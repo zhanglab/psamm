@@ -404,7 +404,7 @@ def flux_randomization(model, threshold, tfba, solver):
     optimize = {}
     for reaction_id in model.reactions:
         if model.is_reversible(reaction_id):
-            optimize[reaction_id] = 2*random.random() - 1.0
+            optimize[reaction_id] = 2 * random.random() - 1.0
         else:
             optimize[reaction_id] = random.random()
 
