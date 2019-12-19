@@ -16,24 +16,22 @@
 # Copyright 2015-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2019       Jing Wang <jingwang89@uri.edu>
 
-"""Importer for the COBRApy JSON format."""
+"""Importer for the COBRApy MAT format."""
 
-import os
-import glob
-import logging
-import decimal
-
-from scipy.io import loadmat
-import numpy as np
-import re
-
-from psamm.reaction import Reaction, Compound, Direction
-from psamm.datasource import native
+from psamm.importer import Importer as BaseImporter, ModelLoadError
 from psamm.datasource.entry import (DictCompoundEntry as CompoundEntry,
                                     DictReactionEntry as ReactionEntry,
                                     DictCompartmentEntry as CompartmentEntry)
+from psamm.datasource import native
+from psamm.reaction import Reaction, Compound, Direction
+import re
+import numpy as np
+from scipy.io import loadmat
+import decimal
+import logging
+import glob
+import os
 
-from psamm.importer import Importer as BaseImporter, ModelLoadError
 
 logger = logging.getLogger(__name__)
 
@@ -107,10 +105,10 @@ class Importer(BaseImporter):
         model.compounds.update(self._read_compounds(model_doc))
         model.compartments.update(self._compartments_from_compound)
 
+        self._boundary_compartment = None
         # Add model level compartment information
         if all(var in model_doc.dtype.names for var in ['comps', 'compNames']):
             model.compartments.update(self._read_compartments(model_doc))
-            self._boundary_compartment = None
             for comp in model.compartments:
                 if comp.name.lower() == 'boundary':  # has boundary compartment
                     self._boundary_compartment = comp.id
@@ -275,7 +273,7 @@ class Importer(BaseImporter):
             if 'grRules' in doc.dtype.names:
                 if len(doc['grRules'][0, 0][i][0]) > 0:
                     genes = doc['grRules'][0, 0][i][0][0]
-                    if isinstance(genes, str):
+                    if isinstance(genes, np.unicode_):
                         properties['genes'] = self._try_parse_gene_association(
                             properties['id'], genes
                         )
