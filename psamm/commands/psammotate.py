@@ -204,7 +204,7 @@ def model_loader(self, translation_dict):
                 # print('%s\t%s' % (entry.id, entry.genes))
                 genes_1 = entry.genes
                 gene_list = get_gene_list(genes)
-                print(gene_list)
+                # print(gene_list)
                 for g in gene_list:
                     if g in new_translation_dict:
                         genes = re.sub(r'\b' + g + r'\b',
