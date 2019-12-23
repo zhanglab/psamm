@@ -46,23 +46,19 @@ class PsammotateCommand(Command):
         parser.add_argument(
             '--template', type=int,
             help=('The column of the RBH file where the template model '
-                  'genes are listed, starts from 1')
-        )
+                  'genes are listed, starts from 1'))
         parser.add_argument(
             '--target', type=int,
             help=('The column of the RBH file where the target '
-                  'model genes are listed, starts from 1')
-        )
+                  'model genes are listed, starts from 1'))
         parser.add_argument(
             '--prefix', type=str, default='homolo_reactions',
             help=('The prefix of output YAML file, '
-                  '(default: homolo_reactions)')
-        )
+                  '(default: homolo_reactions)'))
         parser.add_argument(
             '--ignore-na', action='store_true',
             help=('Ignore the reactions that do not have gene association. '
-                  '(default: retain these reactions in new model)')
-        )
+                  '(default: retain these reactions in new model)'))
         super(PsammotateCommand, cls).init_parser(parser)
 
     def run(self):
@@ -199,8 +195,8 @@ def model_loader(self, translation_dict):
                 genes = re.sub(r'\?', '', entry.genes)
                 e = boolean.Expression(genes)
                 e_1 = e.substitute(
-                    lambda v: new_translation_dict.get(v.symbol, '-')
-                    != '-')
+                    lambda v: new_translation_dict.get(
+                        v.symbol, '-') != '-')
                 # print('%s\t%s' % (entry.id, entry.genes))
                 genes_1 = entry.genes
                 gene_list = get_gene_list(genes)
