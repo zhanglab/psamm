@@ -218,3 +218,7 @@ class TestRandomSparse(unittest.TestCase):
             flux_threshold=100)
 
         self.assertTrue((essential, deleted) in expected)
+
+
+if __name__ == '__main__':
+    unittest.main()

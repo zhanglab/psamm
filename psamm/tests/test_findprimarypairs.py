@@ -100,3 +100,7 @@ class TestFindPrimaryPairs(unittest.TestCase):
             ((Compound('a', 'c'), 1), (Compound('c', 'c'), 1)):
                 Formula.parse('H'),
         })
+
+
+if __name__ == '__main__':
+    unittest.main()

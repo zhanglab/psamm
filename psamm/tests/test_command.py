@@ -696,3 +696,7 @@ class TestSBMLCommandMain(unittest.TestCase, BaseCommandTest):
 
     def test_run_fba(self):
         self.run_solver_command(FluxBalanceCommand)
+
+
+if __name__ == '__main__':
+    unittest.main()

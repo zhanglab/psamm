@@ -399,3 +399,7 @@ class TestBiGGImportMain(unittest.TestCase):
     "reaction_count": 2382}]}''')
 
         importer.main_bigg(['list'], urlopen=mock_urlopen)
+
+
+if __name__ == '__main__':
+    unittest.main()

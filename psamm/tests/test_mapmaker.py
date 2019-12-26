@@ -142,3 +142,7 @@ class TestMapMaker(unittest.TestCase):
             (Compound('r5p', 'c'), Compound('s7p', 'c')):
                 Formula.parse('C2O2'),
         }, solutions)
+
+
+if __name__ == '__main__':
+    unittest.main()

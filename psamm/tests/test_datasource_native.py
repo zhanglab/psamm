@@ -873,3 +873,7 @@ class TestNativeModelWriter(unittest.TestCase):
                 'equation': 'c1[c] => (2) c2[c]'
             }
         ])
+
+
+if __name__ == '__main__':
+    unittest.main()

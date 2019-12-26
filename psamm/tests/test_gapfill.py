@@ -93,3 +93,7 @@ class TestGapfind(unittest.TestCase):
         with self.assertRaises(GapFillError):
             gapfill(self.model, core, blocked, exclude, self.solver,
                     epsilon=0.1)
+
+
+if __name__ == '__main__':
+    unittest.main()

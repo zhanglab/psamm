@@ -172,3 +172,7 @@ class TestMetNet(unittest.TestCase):
             Direction.Both,
             [(Compound('3pg', 'c'), 1), (Compound('atp', 'c'), 1)],
             [(Compound('13dpg', 'c'), 1), (Compound('adp', 'c'), 1)]))
+
+
+if __name__ == '__main__':
+    unittest.main()

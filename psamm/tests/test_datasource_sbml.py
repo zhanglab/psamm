@@ -1158,3 +1158,7 @@ class TestMergeEquivalentCompounds(unittest.TestCase):
         self.assertEqual(
             model.exchange[new_exchange_compound],
             (new_exchange_compound, 'EX_g6p_e', -10, 0))
+
+
+if __name__ == '__main__':
+    unittest.main()
