@@ -84,8 +84,6 @@ def app_reader(app_file, query, template):
 	and the number of the template genome which the user wishes to use to
 	create the new model from.
 	'''
-
-	new_list = {}
 	trans_dict = defaultdict(list)
 	# Check what csv.reader in Python 3 takes (byte string or unicode string)
 	for x, row in enumerate(csv.reader(app_file, delimiter='\t')):
@@ -189,6 +187,7 @@ def remove_gap(string):
 		prev = string
 		string = re.sub(r'or - or', 'or', string)
 		string = re.sub(r' or -', '', string)
+		string = re.sub(r'\(-\)', '-', string)
 		string = re.sub(r'- or ', '', string)
 		string = re.sub(r'\(\)', '', string)
 		string = re.sub(r'\'\'', '', string)
