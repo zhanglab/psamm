@@ -13,8 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2017  Keith Dufault-Thompson <keitht547@uri.edu>
-# Copyright 2019    Jing Wang <jingwang89@uri.edu>
+# Copyright 2020 Keith Dufault-Thompson <keitht547@uri.edu>
+# Copyright 2019 Jing Wang <jingwang89@uri.edu>
 
 from __future__ import print_function
 from collections import defaultdict
