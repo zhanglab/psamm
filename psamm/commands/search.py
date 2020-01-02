@@ -49,6 +49,16 @@ class SearchCommand(Command):
             '--name', '-n', dest='name', metavar='name',
             action=FilePrefixAppendAction, type=text_type, default=[],
             help='Name of compound')
+        parser_compound.add_argument(
+            '--props', '-c', dest='props', metavar='props',
+            action=FilePrefixAppendAction, type=str, default=[],
+            help='Comma-separated list of compound properties, such as '
+                 'compound formula, compound charge, molecular weight...')
+        parser_compound.add_argument(
+            '--match-type', '-m', dest='match_type', metavar='match_type',
+            type=str, choices=['exact', 'vague'], default='exact',
+            help='chose the map type when using --props to find compound. '
+                 'exact means completely match, vague means partially match')
 
         # Reaction subcommand
         parser_reaction = subparsers.add_parser(
@@ -62,6 +72,17 @@ class SearchCommand(Command):
             '--compound', '-c', dest='compound', metavar='compound',
             action=FilePrefixAppendAction, type=str, default=[],
             help='Comma-separated list of compound IDs')
+        parser_reaction.add_argument(
+            '--props', '-p', dest='props', metavar='props',
+            action=FilePrefixAppendAction, type=str, default=[],
+            help='Comma-separated list of reaction properties, such as '
+                 'reaction name, ec number, pathway or subsystem name or '
+                 'gene association')
+        parser_reaction.add_argument(
+            '--match-type', '-m', dest='match_type', metavar='match_type',
+            type=str, choices=['exact', 'vague'], default='exact',
+            help='chose the map type when using --props to find reaction. '
+                 'exact means completely match, vague means partially match')
 
     def run(self):
         """Run search command."""
@@ -91,6 +112,23 @@ class SearchCommand(Command):
                        for n in self._args.name):
                     selected_compounds.add(compound)
                     continue
+
+            # find compounds that contains any of given properties
+            if len(self._args.props) > 0:
+                props = set()
+                if self._args.match_type == 'exact':
+                    for property_list in self._args.props:
+                        for property in property_list.split(','):
+                            props.add(property)
+                    if any(prop in props for prop in compound.properties.values()):
+                        selected_compounds.add(compound)
+                        continue
+                elif self._args.match_type == 'vague':
+                    for property_list in self._args.props:
+                        for property in property_list.split(','):
+                            props.add(property)
+                    if any(prop in ','.join(compound.properties.values()) for prop in props):
+                        selected_compounds.add(compound)
 
         # Show results
         for compound in selected_compounds:
@@ -132,6 +170,24 @@ class SearchCommand(Command):
                 if any(c.issubset(compounds) for c in search_compounds):
                     selected_reactions.add(reaction)
                     continue
+
+            if len(self._args.props) > 0:
+                props = set()
+                reaction_prop_list = [reaction.properties[key] for key in
+                                      reaction.properties if key != 'equation']
+                if self._args.match_type == 'exact':
+                    for property_list in self._args.props:
+                        for property in property_list.split(','):
+                            props.add(property)
+                    if any(prop in props for prop in reaction_prop_list):
+                        selected_reactions.add(reaction)
+                        continue
+                elif self._args.match_type == 'vague':
+                    for property_list in self._args.props:
+                        for property in property_list.split(','):
+                            props.add(property)
+                    if any(prop in ','.join(reaction_prop_list) for prop in props):
+                        selected_reactions.add(reaction)
 
         # Show results
         for reaction in selected_reactions:
