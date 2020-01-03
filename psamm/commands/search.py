@@ -56,7 +56,7 @@ class SearchCommand(Command):
                  'compound formula, compound charge, molecular weight...')
         parser_compound.add_argument(
             '--match-type', '-m', dest='match_type', metavar='match_type',
-            type=str, choices=['exact', 'vague'], default='exact',
+            type=str, choices=['exact', 'vague'], default='vague',
             help='chose the map type when using --props to find compound. '
                  'exact means completely match, vague means partially match')
 
