@@ -119,15 +119,15 @@ class SearchCommand(Command):
                 if self._args.match_type == 'exact':
                     for property_list in self._args.props:
                         for property in property_list.split(','):
-                            props.add(property)
-                    if any(prop in props for prop in compound.properties.values()):
+                            props.add(property.lower())
+                    if any(prop.lower() in props for prop in compound.properties.values()):
                         selected_compounds.add(compound)
                         continue
                 elif self._args.match_type == 'vague':
                     for property_list in self._args.props:
                         for property in property_list.split(','):
-                            props.add(property)
-                    if any(prop in ','.join(compound.properties.values()) for prop in props):
+                            props.add(property.lower())
+                    if any(prop in (','.join(compound.properties.values()).lower()) for prop in props):
                         selected_compounds.add(compound)
 
         # Show results
@@ -173,19 +173,19 @@ class SearchCommand(Command):
 
             if len(self._args.props) > 0:
                 props = set()
-                reaction_prop_list = [reaction.properties[key] for key in
+                reaction_prop_list = [reaction.properties[key].lower() for key in
                                       reaction.properties if key != 'equation']
                 if self._args.match_type == 'exact':
                     for property_list in self._args.props:
                         for property in property_list.split(','):
-                            props.add(property)
+                            props.add(property.lower())
                     if any(prop in props for prop in reaction_prop_list):
                         selected_reactions.add(reaction)
                         continue
                 elif self._args.match_type == 'vague':
                     for property_list in self._args.props:
                         for property in property_list.split(','):
-                            props.add(property)
+                            props.add(property.lower())
                     if any(prop in ','.join(reaction_prop_list) for prop in props):
                         selected_reactions.add(reaction)
 
