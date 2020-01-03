@@ -115,19 +115,30 @@ class SearchCommand(Command):
 
             # find compounds that contains any of given properties
             if len(self._args.props) > 0:
+
+                # prepare s list of all compound properties
+                compound_prop_list = []
+                for cpd_property in compound.properties.values():
+                    if isinstance(cpd_property, list):
+                        for i in cpd_property:
+                            compound_prop_list.append(str(i).lower())
+                    else:
+                        compound_prop_list.append(str(cpd_property).lower())
+
+                # find compound entry based on given property argument
                 props = set()
                 if self._args.match_type == 'exact':
                     for property_list in self._args.props:
                         for property in property_list.split(','):
                             props.add(property.lower())
-                    if any(prop.lower() in props for prop in compound.properties.values()):
+                    if any(prop in props for prop in compound_prop_list):
                         selected_compounds.add(compound)
                         continue
                 elif self._args.match_type == 'vague':
                     for property_list in self._args.props:
                         for property in property_list.split(','):
                             props.add(property.lower())
-                    if any(prop in (','.join(compound.properties.values()).lower()) for prop in props):
+                    if any(prop in ('|'.join(compound_prop_list)) for prop in props):
                         selected_compounds.add(compound)
 
         # Show results
@@ -173,8 +184,20 @@ class SearchCommand(Command):
 
             if len(self._args.props) > 0:
                 props = set()
-                reaction_prop_list = [reaction.properties[key].lower() for key in
-                                      reaction.properties if key != 'equation']
+
+                # prepare s list of all reaction properties except reaction equation
+                raw_reaction_prop_list = [
+                    reaction.properties[key] for key in reaction.properties
+                    if key != 'equation']
+                reaction_prop_list = []
+                for rxn_property in raw_reaction_prop_list:
+                    if isinstance(rxn_property, list):
+                        for i in rxn_property:
+                            reaction_prop_list.append(str(i).lower())
+                    else:
+                        reaction_prop_list.append(str(rxn_property).lower())
+
+                # find reaction based on given property argument
                 if self._args.match_type == 'exact':
                     for property_list in self._args.props:
                         for property in property_list.split(','):
@@ -186,7 +209,7 @@ class SearchCommand(Command):
                     for property_list in self._args.props:
                         for property in property_list.split(','):
                             props.add(property.lower())
-                    if any(prop in ','.join(reaction_prop_list) for prop in props):
+                    if any(prop in '|'.join(reaction_prop_list) for prop in props):
                         selected_reactions.add(reaction)
 
         # Show results
