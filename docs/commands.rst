@@ -144,8 +144,8 @@ objective flux or by giving an defined flux value.
 
 The FVA command can also be run as parallel processes to speed up simulations
 done on larger models. This can be done using the ``--parallel`` option. Either
-a specific number of parallel jobs can be given or 0 can be given to automatically
-detect and use the maximum number of parallel processes.
+a specific number of parallel jobs can be given or 0 can be given to
+automatically detect and use the maximum number of parallel processes.
 
 Robustness (``robustness``)
 ---------------------------
@@ -181,10 +181,11 @@ It is also possible to print out the flux of all reactions for each step in
 the robustness simulation instead of just printing the varying reaction flux.
 This can be done through using the ``--all-reaction-fluxes`` option.
 
-The Robustness command can also be run as parallel processes to speed up simulations
-done on larger models. This can be done using the ``--parallel`` option. Either
-a specific number of parallel jobs can be given or 0 can be given to automatically
-detect and use the maximum number of parallel processes.
+The Robustness command can also be run as parallel processes to speed up
+simulations done on larger models. This can be done using the
+``--parallel`` option. Either a specific number of parallel jobs can
+be given or 0 can be given to automatically detect and use the maximum
+number of parallel processes.
 
 Random sparse network (``randomsparse``)
 ----------------------------------------
@@ -550,8 +551,8 @@ minimal solution.
 
     $ psamm-model fastgapfill --penalty penalty.tsv
 
-The penalty file provided should be a tab separated table that contains reaction IDs
-and assigned penalty values in two columns:
+The penalty file provided should be a tab separated table that contains
+reaction IDs and assigned penalty values in two columns:
 
 .. code-block:: shell
 
@@ -561,12 +562,13 @@ and assigned penalty values in two columns:
     ....
 
 In addition to setting penalty values directly through the ``--penalty`` argument,
-default penalties for all other database reactions can be set through the ``--db-penalty``
-argument. Reactions that do not have penalty values explicitly set through
-the ``--penalty`` argument will be assigned this penalty value. Similarly penalty values can be
-assigned for new exchange reactions and artificial transport reactions through the
-``--ex-penalty`` and ``--tp-penalty`` arguments. An example using all three of these
-arguments can be seen here:
+default penalties for all other database reactions can be set through the
+``--db-penalty`` argument. Reactions that do not have penalty values
+explicitly set through the ``--penalty`` argument will be assigned
+this penalty value. Similarly penalty values can be assigned for new
+exchange reactions and artificial transport reactions through the
+``--ex-penalty`` and ``--tp-penalty`` arguments. An example using
+all three of these arguments can be seen here:
 
 .. code-block:: shell
 
@@ -593,11 +595,12 @@ reactant and product. The fourth column contains the predicted transfer of
 elements.
 
 The ``primarypairs`` command will run slowly on models that contain artificial
-reactions such as biomass reactions or condensed biosynthesis reactions. Because
-the reactant/product pair prediciton in these reactions is not as biologically
-meaningful these reactions can be excluded through the ``--exclude`` option. This
-option can be used to either give reaction IDs to exclude or to give an input file
-containing a list of reactions IDs to exclude:
+reactions such as biomass reactions or condensed biosynthesis reactions.
+Because the reactant/product pair prediciton in these reactions is
+not as biologically meaningful these reactions can be excluded through
+the ``--exclude`` option. This option can be used to either give reaction
+IDs to exclude or to give an input file containing a list of reactions
+IDs to exclude:
 
 .. code-block:: shell
 
@@ -611,9 +614,10 @@ PSAMM-Vis (``vis``)
 Models can be visualized through the use of `PSAMM-vis` as implemented in the
 ``vis`` command in `PSAMM`. This command can use
 the `FindPrimaryPairs` algorithm to help generate images of full models
-or subsets of models. The output of this command will consist of a graph file in the `dot`
-language, ``reactions.dot``, and two files called ``reactions.nodes.tsv`` and
-``reactions.edges.tsv`` that contain the network data in a tsv format.
+or subsets of models. The output of this command will consist of a graph
+file in the `dot` language, ``reactions.dot``, and two files
+called ``reactions.nodes.tsv`` and ``reactions.edges.tsv`` that contain
+the network data in a tsv format.
 
 To run the ``vis`` command the following command can be used:
 
@@ -624,30 +628,33 @@ To run the ``vis`` command the following command can be used:
 Basic Graph Generation
 ~~~~~~~~~~~~~~~~~~~~~~
 
-By default the vis command uses the `FindPrimaryPairs` algorithm to simplify the graph
-that is produced. This algorithm runs much faster if certain types of artificial reactions
-are not considered when doing the reactant/product pair prediction. These reactions often
-represent Biomass production or condensed biosynthesis processes. To exclude these reactions
-the ``vis`` command can be run with the ``--exlcude`` option to provide an input file that
-contains a list of reaction IDs:
+By default the vis command uses the `FindPrimaryPairs` algorithm to
+simplify the graph that is produced. This algorithm runs much faster
+if certain types of artificial reactions are not considered when doing
+the reactant/product pair prediction. These reactions often represent
+Biomass production or condensed biosynthesis processes. To exclude
+these reactions the ``vis`` command can be run with the ``--exlcude``
+option to provide an input file that contains a list of reaction IDs:
 
 .. code-block:: shell
 
     $ psamm-model vis --exlcude @{path to file}
 
-The vis command will only produce the files described above by default. Graph image generating
-software can be used to convert these files to actual images. If the program `Graphviz` is
-installed on the computer then that program can be used within `PSAMM` to generate the image file
-directly. This can be done by using the ``--image`` argument followed by any `Graphviz` supported
-image format:
+The vis command will only produce the files described above by default.
+Graph image generating software can be used to convert these files to
+actual images. If the program `Graphviz` is installed on the computer
+then that program can be used within `PSAMM` to generate the image file
+directly. This can be done by using the ``--image`` argument followed
+by any `Graphviz` supported image format:
 
 .. code-block:: shell
 
     $ psamm-model vis --image {format (pdf, eps, svg, etc.)}
 
 
-While the ``vis`` function in `PSAMM` uses `FindPrimaryPairs` for graph simplification by
-default, the command is also able to run using no graph simplification (``no-fpp``).
+While the ``vis`` function in `PSAMM` uses `FindPrimaryPairs` for graph
+simplification by default, the command is also able to run using no
+graph simplification (``no-fpp``).
 
 This can be done through using the ``--method`` argument:
 
@@ -655,18 +662,20 @@ This can be done through using the ``--method`` argument:
 
     $ psamm-model vis --method no-fpp
 
-The resulting graphs can be further simplified to only show element transfers that contain
-a specified element through the ``--element`` argument. When using this option any
-reactant\product pairs that do not transfer the specified element will not be shown on the graph.
-To use this option the following command can be used:
+The resulting graphs can be further simplified to only show element
+transfers that contain a specified element through the ``--element`` argument.
+When using this option any reactant\product pairs that do not transfer
+the specified element will not be shown on the graph. To use this option the
+following command can be used:
 
 .. code-block:: shell
 
     $ psamm-model vis --element {Atomic Symbol}
 
-Additionally the final graphs created through the ``vis`` command can be subsetted to only show a
-specified set of reactions from the larger model. This can be done using the ``--subset`` argument
-to provide a file containing a single column list of either reaction IDs or metabolite IDs.
+Additionally the final graphs created through the ``vis`` command can be
+subsetted to only show a specified set of reactions from the larger model.
+This can be done using the ``--subset`` argument to provide a file containing
+a single column list of either reaction IDs or metabolite IDs.
 
 .. code-block:: shell
 
@@ -689,10 +698,11 @@ Or:
     cpd_2[c]
 
 
-Further modification can be done to the graph image to selectively hide certain edges
-in the final graph. This can be use to hide edges between paris of metabolites that
-might have many connections in the final graph images. Typical examples of these
-pairs include ATP and ADP, NAD and NADH, etc. To use this option first a tab separated
+Further modification can be done to the graph image to selectively
+hide certain edges in the final graph. This can be use to hide edges
+between paris of metabolites that might have many connections in the
+final graph images. Typical examples of these pairs include ATP and
+ADP, NAD and NADH, etc. To use this option first a tab separated
 table containing the metabolite pairs to hide must be made:
 
 .. code-block:: shell
@@ -701,7 +711,8 @@ table containing the metabolite pairs to hide must be made:
     h2o[c]  h[c]
     nad[c]  nadh[c]
 
-This file can then be used with the ``vis`` command through the ``--hide-edges`` argument:
+This file can then be used with the ``vis`` command through
+the ``--hide-edges`` argument:
 
 .. code-block:: shell
 
@@ -711,23 +722,26 @@ This file can then be used with the ``vis`` command through the ``--hide-edges``
 Graph Image Customization
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-By default the reaction and metabolite nodes in a graph will only show the reaction or
-metabolite IDs, but the final graphs output by the command can be customized to
-include additional reaction metabolite information that is present in the model.
-This additional information will be shown directly on the reaction or metabolite
-nodes in the graph. This can be done through using the ``--rxn-detail`` and
-``--cpd-detail`` options. These options can be used followed by a space separated list
-of properties to include. For example the following could be run to show additional
-information on both sets of nodes:
+By default the reaction and metabolite nodes in a graph will only
+show the reaction or metabolite IDs, but the final graphs output by the command
+can be customized to include additional reaction metabolite information
+that is present in the model. This additional information will be shown
+directly on the reaction or metabolite nodes in the graph.
+This can be done through using the ``--rxn-detail`` and ``--cpd-detail``
+options. These options can be used followed by a space separated list
+of properties to include. For example the following could be run to
+show additional information on both sets of nodes:
 
 .. code-block:: shell
 
-    $ psamm-model vis --cpd-detail id formula charge --rxn-detail id name equation
+    $ psamm-model vis --cpd-detail id formula charge \
+      --rxn-detail id name equation
 
 
-The reaction and metabolite nodes can be further customized by specifying which colors
-they should be filled in with on the final graph image. This can be done by first
-creating a two column file of reaction or metabolite IDs and hex color codes:
+The reaction and metabolite nodes can be further customized by
+specifying which colors they should be filled in with on the final
+graph image. This can be done by first creating a two column file of
+reaction or metabolite IDs and hex color codes:
 
 .. code-block:: shell
 
@@ -736,7 +750,8 @@ creating a two column file of reaction or metabolite IDs and hex color codes:
     FUM #c4a0ef
     ....
 
-This file can be used to color the nodes on the graph through the ``--color`` option:
+This file can be used to color the nodes on the graph
+through the ``--color`` option:
 
 .. code-block:: shell
 
@@ -745,44 +760,51 @@ This file can be used to color the nodes on the graph through the ``--color`` op
 
 The graph image can be simplified through the use of the ``--combine`` option.
 The deafault option for this is combine level 0. The graph generated from using
-combine level 0 will have one reaction node for each reactant product pair within
-a reaction. This can result in having many sets of substrates/reaction/product nodes
-within the graph image, depending on how many substrates and products are present
-in a metabolic reaction. Using the combine level 1 option will condense the reaction
-nodes down so that there is only one reaction node per reaction, with each reaction
-node having connectiosn to all reactants and products of that reaction. The combine level
-2 option will condense the graph in a different way. With this option the graph is condensed
-based on shared reactant/product pairs between different reactions. If two separate
-reactions contain a common reactant/product pair, for example ATP and ADP, then
-the nodes for those condensed into one combined node.
+combine level 0 will have one reaction node for each reactant product
+pair within a reaction. This can result in having many sets of
+substrates/reaction/product nodes within the graph image, depending on how
+many substrates and products are present in a metabolic reaction. Using
+the combine level 1 option will condense the reaction nodes down so that
+there is only one reaction node per reaction, with each reaction node having
+connectiosn to all reactants and products of that reaction. The combine level
+2 option will condense the graph in a different way. With this option
+the graph is condensed based on shared reactant/product pairs between
+different reactions. If two separate reactions contain a common
+reactant/product pair, for example ATP and ADP, then the nodes for those
+condensed into one combined node.
 
 .. code-block:: shell
 
     $ psamm-model vis --combine {0,1,2}
 
 
-The final graph image can also be modified to show the reactions and metabolites in different compartments
-based on the compartment information provided in the model's reactions. This can be done through using the
+The final graph image can also be modified to show the reactions and
+metabolites in different compartments based on the compartment information
+provided in the model's reactions. This can be done through using the
 ``--compartment`` option:
 
 .. code-block:: shell
 
     $ psamm-model vis --compartment
 
-Users can specify name of output through  ``--output`` option. By default, output will be named as
-"reactions.dot", "reactions.nodes.tsv", "reactions.edges.tsv", but if running the following command:
+Users can specify name of output through  ``--output`` option. By default,
+output will be named "reactions.dot", "reactions.nodes.tsv",
+"reactions.edges.tsv":
 
 .. code-block:: shell
 
     $ psamm-model vis --output Ecolicore
 
-Then output will be named as "Ecolicore.dot", "Ecolicore.nodes.tsv", "Ecolicore.edges.tsv".
+The output files will be named "Ecolicore.dot", "Ecolicore.nodes.tsv",
+"Ecolicore.edges.tsv".
 
 
-The image file produced from the ``vis`` will be automatically sized by the `Graphviz` programs
-used to generate the image file. If a specific size is desired the ``--image-size`` argument can be
-used to supple a width and height in inches that the final image file should be. For example to generate
-a graph that will be made into a 5" width by 10" height image the following command can be used:
+The image file produced from the ``vis`` will be automatically sized by
+the `Graphviz` programs used to generate the image file. If a specific
+size is desired the ``--image-size`` argument can be used to supple a
+width and height in inches that the final image file should be. For
+example to generate a graph that will be made into a 5" width by 10"
+height image the following command can be used:
 
 .. code-block:: shell
 
@@ -853,13 +875,14 @@ compounds.
 
 PSAMM-SBML-Model
 ----------------
-`PSAMM` normally takes a model in the `YAML` format as input. To deal with models
-that are in the `SBML` `PSAMM` includes various programs that allow users to convert
-these models to the `YAML` format. One additional option for dealing with models in
-the `SBML` format is using the `psamm-sbml-model` function. This function can be
-used to run any command normally accessed through `psamm-model` but with an `SBML`
-model as the input. To use this command the `SBML` model file needs to be specified
-first followed by the commands:
+`PSAMM` normally takes a model in the `YAML` format as input. To deal with
+models that are in the `SBML` `PSAMM` includes various programs that allow
+users to convert these models to the `YAML` format. One additional option
+for dealing with models in the `SBML` format is using the `psamm-sbml-model`
+function. This function can be used to run any command normally accessed
+through `psamm-model` but with an `SBML` model as the input. To use this
+command the `SBML` model file needs to be specified first followed
+by the commands:
 
 .. code-block:: shell
 
