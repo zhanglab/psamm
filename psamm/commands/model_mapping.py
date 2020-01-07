@@ -21,127 +21,19 @@
 """Generate a common model for two distinct metabolic models."""
 
 from __future__ import print_function, division
-from future.utils import itervalues
 
-import re
-from collections import namedtuple
 from builtins import object, input
 import operator
 from itertools import product
 import time
 import sys
 
-from psamm.formula import Formula
 import psamm.bayesian as bayesian
 import psamm.translate_id as tr_id
 import psamm.manual_curation as curation
 from psamm.util import mkdir_p
 from psamm.datasource.native import ModelReader
 from psamm.command import Command
-
-
-CompoundEntry = namedtuple(
-    'CompoundEntry',
-    ['id', 'name', 'formula', 'charge', 'kegg', 'cas'])
-
-ReactionEntry = namedtuple(
-    'ReactionEntry',
-    ['id', 'name', 'genes', 'equation', 'subsystem', 'ec'])
-
-
-class MetabolicModel(object):
-    def __init__(self, name, compounds, reactions):
-        self._name = name
-        self._read_compounds(compounds)
-        self._read_reactions(reactions)
-
-        self._genes = set()
-        for r in itervalues(self._reactions):
-            if r.genes is not None:
-                self._genes.update(r.genes)
-
-    def _read_compounds(self, it):
-        self._compounds = {}
-        for compound in it:
-            formula = getattr(compound, 'formula', None)
-            if formula is not None:
-                formula = Formula.parse(formula)
-            else:
-                formula = None
-
-            if 'kegg' in compound.properties:
-                compound_kegg = compound.properties['kegg']
-            else:
-                compound_kegg = None
-
-            compound_id = compound.id
-            entry = CompoundEntry(
-                id=compound_id, name=getattr(compound, 'name', None),
-                formula=formula, charge=getattr(compound, 'charge', None),
-                kegg=compound_kegg,
-                cas=getattr(compound, 'cas', None))
-            self._compounds[compound_id] = entry
-
-    def _read_reactions(self, it):
-        self._reactions = {}
-        for reaction in it:
-            genes = getattr(reaction, 'genes', None)
-            if genes is not None:
-                # Delete operators in string
-                genes = re.sub(r'[,()\']*', '', genes)
-                genes = re.sub(r'\band\b', '', genes)
-                genes = re.sub(r'\bor\b', '', genes)
-                genes = re.split(r'\s+', genes)  # Transfer string to list
-                genes = frozenset(genes)
-            else:
-                genes = None
-
-            reaction_id = reaction.id
-            equation = getattr(reaction, 'equation', None)
-            entry = ReactionEntry(
-                id=reaction_id, name=getattr(reaction, 'name', None),
-                genes=genes, equation=equation,
-                subsystem=getattr(reaction, 'subsystem', None),
-                ec=getattr(reaction, 'ec', None))
-            self._reactions[reaction_id] = entry
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def reactions(self):
-        return self._reactions
-
-    @property
-    def compounds(self):
-        return self._compounds
-
-    @property
-    def genes(self):
-        return self._genes
-
-    def print_summary(self):
-        """Print model summary"""
-        print('Model: {}'.format(self.name))
-        print('- Compounds: {}'.format(len(self.compounds)))
-        print('- Reactions: {}'.format(len(self.reactions)))
-        print('- Genes: {}'.format(len(self.genes)))
-
-    def check_reaction_compounds(self):
-        """Check that reaction compounds are defined in the model"""
-        print('Checking model: {}'.format(self.name))
-        consistent = True
-        for reaction in itervalues(self.reactions):
-            if reaction.equation is not None:
-                for compound, value in reaction.equation.compounds:
-                    if compound.name not in self.compounds:
-                        print((
-                            '{} in reaction {} '
-                            'is not in compound list').format(
-                                compound.name, reaction.id))
-                        consistent = False
-        return consistent
 
 
 def read_mapping_file(f):
@@ -362,14 +254,14 @@ class ModelMappingCommand(Command):
     def _model_mapping(self):
         """Run model mapping"""
         # Parse models
-        model1 = ModelReader.reader_from_path(self._args.model)
-        model2 = ModelReader.reader_from_path(self._args.dest_model)
+        model1 = ModelReader.reader_from_path(
+            self._args.model).create_model()
+        model2 = ModelReader.reader_from_path(
+            self._args.dest_model).create_model()
 
         # Read model into internal format
-        model1 = MetabolicModel(
-            model1.name, model1.parse_compounds(), model1.parse_reactions())
-        model2 = MetabolicModel(
-            model2.name, model2.parse_compounds(), model2.parse_reactions())
+        model1 = bayesian.MappingModel(model1)
+        model2 = bayesian.MappingModel(model2)
 
         # Model summaries
         model1.print_summary()
@@ -426,20 +318,6 @@ class ModelMappingCommand(Command):
                                 cpd_bayes_pred,
                                 actual_compound_mapping)
 
-        # Write out classifier results
-
-        # if (actual_compound_mapping is not None):
-        #     for c1, c2 in product(cpd_bayes_pred.model1.compounds,
-        #                           cpd_bayes_pred.model2.compounds):
-        #         maps = (c1 in actual_compound_mapping and
-        #                 actual_compound_mapping[c1] is not None and
-        #                 c2 in actual_compound_mapping[c1])
-        #         p = cpd_bayes_pred.map(c1, c2)
-        #         if (p > self._args.threshold_compound and not maps):
-        #             print('Incorrect map: {}\t{}\t{}'.format(c2, c1, p))
-        #         if (p <= self._args.threshold_compound and maps):
-        #             print('Incorrect unmap: {}\t{}\t{}'.format(c2, c1, p))
-
         # Parse and output raw mapping
         if self._args.raw:
             cpd_bayes_pred.get_raw_map().to_csv(
@@ -474,20 +352,6 @@ class ModelMappingCommand(Command):
                                 rxn_bayes_pred.model2.reactions,
                                 rxn_bayes_pred,
                                 actual_reaction_mapping)
-
-        # Write out classifier results
-
-        # if (actual_reaction_mapping is not None):
-        #     for r1, r2 in product(rxn_bayes_pred.model1.reactions,
-        #                         rxn_bayes_pred.model2.reactions):
-        #         maps = (r1 in actual_reaction_mapping and
-        #                 actual_reaction_mapping[r1] is not None and
-        #                 r2 in actual_reaction_mapping[r1])
-        #         p = rxn_bayes_pred.map(r1, r2)
-        #         if (p > self._args.threshold_reaction and not maps):
-        #             print('Incorrect map: {}\t{}\t{}'.format(r2, r1, p))
-        #         if (p <= self._args.threshold_reaction and maps):
-        #             print('Incorrect unmap: {}\t{}\t{}'.format(r2, r1, p))
 
         # Parse and output raw mapping
         if self._args.raw:

@@ -124,9 +124,4 @@ def levenshtein(s1, s2):
 
 def jaccard(s1, s2):
     """Jaccard similarity function."""
-    return len(s1 & s2) / len(s1 | s2)
-
-
-def genlogistic(t, a, k, b, v, q, m):
-    """Generalised logistic function."""
-    return a + (k - a) / (1.0 + q * np.exp(-b * (t - m))) ** (1.0 / v)
+    return len(set(s1) & set(s2)) / len(set(s1) | set(s2))

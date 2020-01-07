@@ -25,18 +25,141 @@ from itertools import product
 from multiprocessing import Pool
 import operator
 import sys
+import re
+from collections import namedtuple
 
 import numpy as np
 import pandas as pd
 
 import psamm.bayesian_util as util
+from psamm.formula import Formula
 from functools import reduce
 
 
-class BayesianCompoundPredictor(object):
-    """Predict model compound mappings based on a Bayesian model."""
+CompoundEntry = namedtuple(
+    'CompoundEntry',
+    ['id', 'name', 'formula', 'charge', 'kegg', 'cas'])
 
-    def __init__(self, model1, model2, nproc, outpath, log, kegg):
+ReactionEntry = namedtuple(
+    'ReactionEntry',
+    ['id', 'name', 'genes', 'equation', 'subsystem', 'ec'])
+
+
+class MappingModel(object):
+    """Generate the internal structure for model mapping.
+
+    Args:
+        model: :class:`psamm.datasource.native.NativeModel`
+    """
+
+    def __init__(self, model):
+        self._name = model.name
+        self._read_compounds(model.compounds)
+        self._read_reactions(model.reactions)
+
+        self._genes = set()
+        for r in itervalues(self._reactions):
+            if r.genes is not None:
+                self._genes.update(r.genes)
+
+    def _read_compounds(self, it):
+        self._compounds = {}
+        for compound in it:
+            formula = getattr(compound, 'formula', None)
+            if formula is not None:
+                formula = Formula.parse(formula)
+            else:
+                formula = None
+
+            if 'kegg' in compound.properties:
+                compound_kegg = compound.properties['kegg']
+            else:
+                compound_kegg = None
+
+            compound_id = compound.id
+            entry = CompoundEntry(
+                id=compound_id, name=getattr(compound, 'name', None),
+                formula=formula, charge=getattr(compound, 'charge', None),
+                kegg=compound_kegg,
+                cas=getattr(compound, 'cas', None))
+            self._compounds[compound_id] = entry
+
+    def _read_reactions(self, it):
+        self._reactions = {}
+        for reaction in it:
+            genes = getattr(reaction, 'genes', None)
+            if genes is not None:
+                # Delete operators in string
+                genes = re.sub(r'[,()\']*', '', genes)
+                genes = re.sub(r'\band\b', '', genes)
+                genes = re.sub(r'\bor\b', '', genes)
+                genes = re.split(r'\s+', genes)  # Transfer string to list
+                genes = frozenset(genes)
+            else:
+                genes = None
+
+            reaction_id = reaction.id
+            equation = getattr(reaction, 'equation', None)
+            entry = ReactionEntry(
+                id=reaction_id, name=getattr(reaction, 'name', None),
+                genes=genes, equation=equation,
+                subsystem=getattr(reaction, 'subsystem', None),
+                ec=getattr(reaction, 'ec', None))
+            self._reactions[reaction_id] = entry
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def reactions(self):
+        return self._reactions
+
+    @property
+    def compounds(self):
+        return self._compounds
+
+    @property
+    def genes(self):
+        return self._genes
+
+    def print_summary(self):
+        """Print model summary"""
+        print('Model: {}'.format(self.name))
+        print('- Compounds: {}'.format(len(self.compounds)))
+        print('- Reactions: {}'.format(len(self.reactions)))
+        print('- Genes: {}'.format(len(self.genes)))
+
+    def check_reaction_compounds(self):
+        """Check that reaction compounds are defined in the model"""
+        print('Checking model: {}'.format(self.name))
+        consistent = True
+        for reaction in itervalues(self.reactions):
+            if reaction.equation is not None:
+                for compound, value in reaction.equation.compounds:
+                    if compound.name not in self.compounds:
+                        print((
+                            '{} in reaction {} '
+                            'is not in compound list').format(
+                                compound.name, reaction.id))
+                        consistent = False
+        return consistent
+
+
+class BayesianCompoundPredictor(object):
+    """Predict model compound mappings based on a Bayesian model.
+
+    Args:
+        model1: :class:`psamm.bayesian.MappingModel`.
+        model2: :class:`psamm.bayesian.MappingModel`.
+        nproc: number of processes used for mapping.
+        outpath: the path to output the detailed log file.
+        log: whether to output log file of the p_match and p_no_match.
+        kegg: whether to compare the KEGG id.
+    """
+
+    def __init__(self, model1, model2, nproc=1,
+                 outpath='.', log=False, kegg=False):
         self._model1 = model1
         self._model2 = model2
         self._column_list = [
@@ -63,8 +186,9 @@ class BayesianCompoundPredictor(object):
         })
         return compound_result
 
-    def get_best_map(self, threshold_compound):
-        """Return pandas.DataFrame style of best mapping for each query."""
+    def get_best_map(self, threshold_compound=0):
+        """Return :class:`pandas.DataFrame` style of best mapping for each
+        query."""
         raw_map = self.get_raw_map()
         query = [i for i, j in raw_map.index.values]
         # use rank instead of idxmax to output multiple top-hitts
@@ -75,11 +199,27 @@ class BayesianCompoundPredictor(object):
             'p >= @threshold_compound', inplace=True)
         return compound_best
 
+    def get_cpd_pred(self, threshold_compound=0):
+        """Return the cpd_pred used for reaction mapping."""
+        return self.get_best_map(threshold_compound).loc[:, 'p']
+
 
 class BayesianReactionPredictor(object):
-    """Predict model reaction mappings based on a Bayesian model."""
+    """Predict model reaction mappings based on a Bayesian model.
 
-    def __init__(self, model1, model2, cpd_pred, nproc, outpath, log, gene):
+    Args:
+        model1: :class:`psamm.bayesian.MappingModel`.
+        model2: :class:`psamm.bayesian.MappingModel`.
+        cpd_pred: :class:`pandas.Series` with compound pairs as index,
+                  compound mapping score as value.
+        nproc: number of processes used for mapping.
+        outpath: the path to output the detailed log file.
+        log: whether to output log file of the p_match and p_no_match.
+        gene: whether to compare the gene association.
+    """
+
+    def __init__(self, model1, model2, cpd_pred, nproc=1,
+                 outpath='.', log=False, gene=False):
         self._model1 = model1
         self._model2 = model2
         self._column_list = ['p', 'p_id', 'p_name', 'p_equation', 'p_genes']
@@ -106,7 +246,7 @@ class BayesianReactionPredictor(object):
         })
         return reaction_result
 
-    def get_best_map(self, threshold_reaction):
+    def get_best_map(self, threshold_reaction=0):
         """Return pandas.DataFrame style of best mapping for each query."""
         raw_map = self.get_raw_map()
         query = [i for i, j in raw_map.index.values]
