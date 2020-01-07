@@ -384,7 +384,7 @@ class ModelMappingCommand(Command):
         for rmap in curator.reaction_map.iterrows():
             # skip already curated reactions
             if (curator.reaction_checked(rmap[0])
-                    or curator.reaction_checked(rmap[0][0])):
+                    or curator.reaction_ignored(rmap[0][0])):
                 continue
             # check the compound mapping in current reaction
             compounds = curation.search_reaction(model1, [rmap[0][0]])
@@ -395,7 +395,7 @@ class ModelMappingCommand(Command):
                     if (cmap is None
                             or cmap[0] not in dest_compounds
                             or curator.compound_checked((compound, cmap[0]))
-                            or curator.compound_checked(compound)):
+                            or curator.compound_ignored(compound)):
                         continue
                     print(cmap[1])
                     print('\n')

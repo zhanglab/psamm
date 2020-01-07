@@ -27,6 +27,28 @@ standard_library.install_aliases()
 
 
 class Curator(object):
+    """Parse and save mapping files during manual curation.
+
+    Use :meth:`.add_mapping` to add new curated pairs. Save current progress
+    into files by :meth:`.save`.
+
+    Besides the curated mapping files, the :class:`Curator` will also store
+    false mappings into `.false` files, and compounds and reactions
+    to be ignored can be stored
+    in `.ignore` files. For example, if the `curated_compound_map_file` is set
+    to `curated_compound_mapping.tsv`, then the false mappings will be stored
+    in `curated_compound_mapping.tsv.false`, and the pairs to be ignored
+    should be stored in `curated_compound_mapping.tsv.ignore`.
+
+    If the curated files already exist, the :class:`Curator` will consider them
+    as the previous progress, then append new curation results.
+
+    Args:
+        compound_map_file: .tsv file of compound mapping result
+        reaction_map_file: .tsv file of reaction mapping result
+        curated_compound_map_file: .tsv file of curated compound mapping result
+        curated_reaction_map_file: .tsv file of curated reaction mapping result
+    """
 
     def __init__(self,
                  compound_map_file, reaction_map_file,
@@ -56,16 +78,39 @@ class Curator(object):
         self.ignore_reaction = read_ignore(self.ignore_reaction_file)
 
     def reaction_checked(self, id):
+        """Return True if reaction pair has been checked.
+
+        Args:
+            id: one reaction id or a tuple of id pair
+        """
         return (id in self.curated_reaction_map.index or
-                id in self.false_reaction_map.index or
-                id in self.ignore_reaction)
+                id in self.false_reaction_map.index)
+
+    def reaction_ignored(self, id):
+        """Return True if reaction id is in ignore list."""
+        return id in self.ignore_reaction
 
     def compound_checked(self, id):
+        """Return True if compound pair has been checked.
+
+        Args:
+            id: one compound id or a tuple of id pair
+        """
         return (id in self.curated_compound_map.index or
-                id in self.false_compound_map.index or
-                id in self.ignore_compound)
+                id in self.false_compound_map.index)
+
+    def compound_ignored(self, id):
+        """Return True if compound id is in ignore list."""
+        return id in self.ignore_compound
 
     def add_mapping(self, id, type, correct):
+        """Add new mapping result to curated list.
+
+        Args:
+            id: tuple of id pair
+            type: 'c' for compound mapping, 'r' for reaction mapping
+            correct: True if the mapping pair is correct
+        """
         if type == 'c':
             if correct:
                 self.curated_compound_map = add_mapping(
@@ -90,12 +135,19 @@ class Curator(object):
                 )
 
     def add_ignore(self, id, type):
+        """Add id to ignore list.
+
+        Args:
+            id: id to be ignored
+            type: 'c' for compound mapping, 'r' for reaction mapping
+        """
         if type == 'c':
             self.ignore_compound.append(id)
         if type == 'r':
             self.ignore_reaction.append(id)
 
     def save(self):
+        """Save current curator to files."""
         if len(self.curated_compound_map) > 0:
             self.curated_compound_map.to_csv(
                 self.curated_compound_map_file, sep='\t'
@@ -148,7 +200,7 @@ def read_ignore(file):
 def write_ignore(ignore, file):
     with open(file, 'w') as o:
         for i in ignore:
-            o.write('%s\n' % i)
+            o.write('%s\n' % str(i))
 
 
 def filter_search_term(s):
@@ -156,6 +208,11 @@ def filter_search_term(s):
 
 
 def search_compound(model, id):
+    """Search a set of compounds, then print detailed properties.
+
+    Args:
+        id: a list of compound ids
+    """
     selected_compounds = set()
 
     for compound in model.compounds:
@@ -176,6 +233,11 @@ def search_compound(model, id):
 
 
 def search_reaction(model, id):
+    """Search a set of reactions, then print detailed properties.
+
+    Args:
+        id: a list of reaction ids
+    """
     selected_reactions = set()
 
     # Prepare translation table from compound id to name
