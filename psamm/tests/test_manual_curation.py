@@ -140,7 +140,8 @@ class TestSearch(unittest.TestCase):
         curation.search_compound(self._model, ['C', 'Z'])
 
     def test_search_reaction(self):
-        curation.search_reaction(self._model, ['rxn_1', 'test'])
+        cpds = curation.search_reaction(self._model, ['rxn_1', 'test'])
+        self.assertListEqual(next(cpds), ['A', 'B'])
 
     def test_filter_search_term(self):
         self.assertEqual(curation.filter_search_term('Test-(tes)_t'),

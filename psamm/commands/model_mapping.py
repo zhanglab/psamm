@@ -388,7 +388,9 @@ class ModelMappingCommand(Command):
                 continue
             # check the compound mapping in current reaction
             compounds = curation.search_reaction(model1, [rmap[0][0]])
+            compounds = [c for c in next(compounds)]
             dest_compounds = curation.search_reaction(model2, [rmap[0][1]])
+            dest_compounds = [c for c in next(dest_compounds)]
             print('Below are the compound mapping involved:\n')
             for compound in compounds:
                 for cmap in curator.compound_map.loc[compound].iterrows():

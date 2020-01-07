@@ -233,7 +233,9 @@ def search_compound(model, id):
 
 
 def search_reaction(model, id):
-    """Search a set of reactions, then print detailed properties.
+    """Search a set of reactions, print detailed properties, then return a
+    generator. Each item in the generator is a list of compounds in the
+    corresponding reaction.
 
     Args:
         id: a list of reaction ids
@@ -268,4 +270,4 @@ def search_reaction(model, id):
         if reaction.filemark is not None:
             print('Defined in {}'.format(reaction.filemark))
         print('\n')
-        return [c.name for c, v in reaction.equation.compounds]
+        yield [c.name for c, v in reaction.equation.compounds]
