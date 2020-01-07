@@ -23,7 +23,6 @@ from builtins import range
 
 import re
 from itertools import product
-import numpy as np
 
 from psamm.formula import Atom
 
