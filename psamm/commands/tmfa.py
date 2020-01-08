@@ -70,6 +70,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		parser.add_argument('--water', type=str, help='water compound ID without compartment (cpd_h2o, C00001)')
 		parser.add_argument('--proton-in', type=str, help='id of proton compound with compartment (in the cell)')
 		parser.add_argument('--proton-out', type=str, help='id of proton compound with compartment (outside of the cell)')
+		parser.add_argument('--single-solution', type=str, choices=['fba', 'l1min','random'], help='get a single TMFA solution', default=None)
 		super(TMFACommand, cls).init_parser(parser)
 
 	def run(self):
@@ -77,9 +78,6 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		solver = self._get_solver()
 		objective = self._get_objective()
 		mm = self._mm
-
-
-
 
 		# Parse exclude file provided through command line.
 		base_exclude_list = []
@@ -308,83 +306,124 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 			prob.add_linear_constraints(v(self._get_objective()) == max_biomass)
 			logger.info('Set biomass based on max biomass to {}'.format(max_biomass))
 
-		rand_reactions = [m for m in mm_irreversible.reactions]
-		random.shuffle(rand_reactions)
-		for step, reaction in enumerate(sorted(rand_reactions)):
-			logger.info('Testing Reaction {}/{}'.format(step, len(rand_reactions)))
-			min_flux = get_var_bound(v(reaction), lp.ObjectiveSense.Minimize)
-			max_flux = get_var_bound(v(reaction), lp.ObjectiveSense.Maximize)
-			print('Flux\t{}\t{}\t{}'.format(reaction, min_flux, max_flux))
-			if reaction not in exclude_unkown_list:
-				min_dgr = get_var_bound(dgri(reaction), lp.ObjectiveSense.Minimize)
-				max_dgr = get_var_bound(dgri(reaction), lp.ObjectiveSense.Maximize)
-				min_zi = get_var_bound(zi(reaction), lp.ObjectiveSense.Minimize)
-				max_zi = get_var_bound(zi(reaction), lp.ObjectiveSense.Maximize)
-				print('DGR\t{}\t{}\t{}'.format(reaction, min_dgr, max_dgr))
-				print('Zi\t{}\t{}\t{}'.format(reaction, min_zi, max_zi))
-			else:
-				print('DGR\t{}\t{}\t{}'.format(reaction, 'NA', 'NA'))
-				print('Zi\t{}\t{}\t{}'.format(reaction, 'NA', 'NA'))
-		for step, cpd in enumerate(sorted(cp_list)):
-			logger.info('Testing Compound {}\{}'.format(step, len(cp_list)))
-			min_cpd = get_var_bound(xij(cpd), lp.ObjectiveSense.Minimize)
-			max_cpd = get_var_bound(xij(cpd), lp.ObjectiveSense.Maximize)
-			print('CONC\t{}\t{}\t{}'.format(cpd, min_cpd, max_cpd))
+		if self._args.single_solution is not None:
+			print_fba(self, prob, mm_irreversible, cp_list)
+		else:
+			rand_reactions = [m for m in mm_irreversible.reactions]
+			random.shuffle(rand_reactions)
+			for step, reaction in enumerate(sorted(rand_reactions)):
+				logger.info('Testing Reaction {}/{}'.format(step, len(rand_reactions)))
+				min_flux = get_var_bound(v(reaction), lp.ObjectiveSense.Minimize)
+				max_flux = get_var_bound(v(reaction), lp.ObjectiveSense.Maximize)
+				print('Flux\t{}\t{}\t{}'.format(reaction, min_flux, max_flux))
+				if reaction not in exclude_unkown_list:
+					min_dgr = get_var_bound(dgri(reaction), lp.ObjectiveSense.Minimize)
+					max_dgr = get_var_bound(dgri(reaction), lp.ObjectiveSense.Maximize)
+					min_zi = get_var_bound(zi(reaction), lp.ObjectiveSense.Minimize)
+					max_zi = get_var_bound(zi(reaction), lp.ObjectiveSense.Maximize)
+					print('DGR\t{}\t{}\t{}'.format(reaction, min_dgr, max_dgr))
+					print('Zi\t{}\t{}\t{}'.format(reaction, min_zi, max_zi))
+				else:
+					print('DGR\t{}\t{}\t{}'.format(reaction, 'NA', 'NA'))
+					print('Zi\t{}\t{}\t{}'.format(reaction, 'NA', 'NA'))
+			for step, cpd in enumerate(sorted(cp_list)):
+				logger.info('Testing Compound {}\{}'.format(step, len(cp_list)))
+				min_cpd = get_var_bound(xij(cpd), lp.ObjectiveSense.Minimize)
+				max_cpd = get_var_bound(xij(cpd), lp.ObjectiveSense.Maximize)
+				print('CONC\t{}\t{}\t{}'.format(cpd, min_cpd, max_cpd))
 
-		if self._args.verbose:
-			index_dict_vars = {}
-			for i, j in prob._variables.iteritems():
-				index_dict_vars[j] = str(i)
-			for key, value in index_dict_vars.iteritems():
-				print('## LP variable name, lp var lower bound, lp var upper bound, var type')
-				print(value, key, prob.cplex.variables.get_lower_bounds(key),
-				      prob.cplex.variables.get_upper_bounds(key),
-				      prob.cplex.variables.get_types(key))
+			if self._args.verbose:
+				index_dict_vars = {}
+				for i, j in prob._variables.iteritems():
+					index_dict_vars[j] = str(i)
+				for key, value in index_dict_vars.iteritems():
+					print('## LP variable name, lp var lower bound, lp var upper bound, var type')
+					print(value, key, prob.cplex.variables.get_lower_bounds(key),
+					      prob.cplex.variables.get_upper_bounds(key),
+					      prob.cplex.variables.get_types(key))
 
-			for i in prob.cplex.linear_constraints.get_names():
-				linear_constraint = prob.cplex.linear_constraints.get_rows(i)
-				vars = linear_constraint.ind
-				tmp_vars = []
-				for var in vars:
-					tmp_vars.append(index_dict_vars[var])
-				print('## Raw sparse pair from cplex')
-				print(linear_constraint)
-				print('## lhs variables, coefficients')
-				print(tmp_vars, linear_constraint.val)
-				print('## rhs value')
-				print(TMFA_Problem.prob.cplex.linear_constraints.get_rhs(i))
-				print('## rhs equation sense (L = less than or equal to, G = greater than or equal to, E = equal to')
-				print(TMFA_Problem.prob.cplex.linear_constraints.get_senses(i))
-				print('condensed LP constraint')
-				equation = []
-				for j in range(0, len(vars), 1):
-					equation.append('{}*{}'.format(tmp_vars[j], linear_constraint.val[j]))
-				sense = prob.cplex.linear_constraints.get_senses(i)
-				if sense == 'L':
-					sign = '<='
-				elif sense == 'G':
-					sign = '>='
-				elif sense == 'E':
-					sign = '=='
-				print('{} {} {}'.format(' + '.join(equation), sign,
-				                        prob.cplex.linear_constraints.get_rhs(i)))
-				print('-------------------------------------------------------------------')
-
-
-
-
-
-
-
-
-
-
-
+				for i in prob.cplex.linear_constraints.get_names():
+					linear_constraint = prob.cplex.linear_constraints.get_rows(i)
+					vars = linear_constraint.ind
+					tmp_vars = []
+					for var in vars:
+						tmp_vars.append(index_dict_vars[var])
+					print('## Raw sparse pair from cplex')
+					print(linear_constraint)
+					print('## lhs variables, coefficients')
+					print(tmp_vars, linear_constraint.val)
+					print('## rhs value')
+					print(TMFA_Problem.prob.cplex.linear_constraints.get_rhs(i))
+					print('## rhs equation sense (L = less than or equal to, G = greater than or equal to, E = equal to')
+					print(TMFA_Problem.prob.cplex.linear_constraints.get_senses(i))
+					print('condensed LP constraint')
+					equation = []
+					for j in range(0, len(vars), 1):
+						equation.append('{}*{}'.format(tmp_vars[j], linear_constraint.val[j]))
+					sense = prob.cplex.linear_constraints.get_senses(i)
+					if sense == 'L':
+						sign = '<='
+					elif sense == 'G':
+						sign = '>='
+					elif sense == 'E':
+						sign = '=='
+					print('{} {} {}'.format(' + '.join(equation), sign,
+					                        prob.cplex.linear_constraints.get_rhs(i)))
+					print('-------------------------------------------------------------------')
 		quit()
 
+def print_fba(self, prob, mm, cp_list):
+	prob.set_objective(self._v(self._get_objective()))
+	result = prob.solve_unchecked(lp.ObjectiveSense.Maximize)
+	if not result.success:
+		logger.error('Solution not optimal: {}'.format(result.status))
+		quit()
+	if self._args.single_solution == 'fba':
+		for rxn in mm.reactions:
+			print('Flux\t{}\t{}'.format(rxn, result.get_value(self._v(rxn))))
+			print('DGR\t{}\t{}'.format(rxn, result.get_value(self._dgri(rxn))))
+			print('Zi\t{}\t{}'.format(rxn, result.get_value(self._zi(rxn))))
+		for cp in cp_list:
+			print('CPD\t{}\t{}'.format(cp, result.get_value(self._xij(cp))))
+	elif self._args.single_solution == 'l1min':
+		self._z = prob.namespace(mm.reactions, lower=0)
+		z = self._z.set(mm.reactions)
+		v = self._v.set(mm.reactions)
+		prob.add_linear_constraints(z >= v, v >= -z)
 
+		objective = self._z.expr(
+			(reaction_id, -1)
+			for reaction_id in mm.reactions)
+		prob.set_objective(objective)
+		result = prob.solve_unchecked(lp.ObjectiveSense.Maximize)
+		if not result.success:
+			logger.error('Solution not optimal: {}'.format(result.status))
+			quit()
+		for rxn in mm.reactions:
+			print('Flux\t{}\t{}'.format(rxn, result.get_value(self._v(rxn))))
+			print('DGR\t{}\t{}'.format(rxn, result.get_value(self._dgri(rxn))))
+			print('Zi\t{}\t{}'.format(rxn, result.get_value(self._zi(rxn))))
+		for cp in cp_list:
+			print('CPD\t{}\t{}'.format(cp, result.get_value(self._xij(cp))))
+		print(result.get_value(objective))
+	elif self._args.single_solution == 'random':
+		optimize = None
+		for rxn_id in mm.reactions:
+			if optimize is None:
+				optimize = self._v(rxn_id) * random.random()
+			else:
+				optimize += self._v(rxn_id) * random.random()
+		prob.add_linear_constraints(self._v(self._get_objective()) == result.get_value(self._v(self._get_objective())))
 
+		prob.set_objective(optimize)
 
+		result = prob.solve_unchecked()
+		for rxn in mm.reactions:
+			print('Flux\t{}\t{}'.format(rxn, result.get_value(self._v(rxn))))
+			print('DGR\t{}\t{}'.format(rxn, result.get_value(self._dgri(rxn))))
+			print('Zi\t{}\t{}'.format(rxn, result.get_value(self._zi(rxn))))
+		for cp in cp_list:
+			print('CPD\t{}\t{}'.format(cp, result.get_value(self._xij(cp))))
 
 
 def lump_parser(lump_file):
