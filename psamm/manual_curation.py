@@ -1,6 +1,3 @@
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
 # This file is part of PSAMM.
 #
 # PSAMM is free software: you can redistribute it and/or modify
@@ -19,6 +16,9 @@ from __future__ import absolute_import
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2018-2019  Jing Wang <wjingsjtu@gmail.com>
 
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 import errno
 import pandas as pd
 import re
