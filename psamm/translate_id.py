@@ -27,6 +27,7 @@ import csv
 import logging
 from psamm.datasource.native import NativeModel
 from psamm.importer import write_yaml_model
+from psamm.util import mkdir_p
 
 
 def read_mapping(mapping):
@@ -47,16 +48,22 @@ def translate_id(id, mapping):
 
 
 class TranslatedModel(NativeModel):
-    """A NativeModel with translated ids based on reference model.
+    """A :class:`NativeModel` with translated ids based on reference model.
 
-    The compound_map and reaction_map are two :class:`dict` that use original
-    id as key and new id as value.
-    Use :meth:`write_model` to output yaml files.
+    The compound_map, reaction_map and compartment_map are three `dict`
+    that use original id as key and new id as value.
+    Use :meth:`.write_model` to output yaml files.
     """
-    def __init__(self, compound_map, reaction_map, ref_model):
+
+    def __init__(self, ref_model,
+                 compound_map, reaction_map, compartment_map=None):
         super().__init__()
         self._cpd_mapping_id = compound_map
         self._rxn_mapping_id = reaction_map
+        if compartment_map is None:
+            self._compartment_mapping_id = dict()
+        else:
+            self._compartment_mapping_id = compartment_map
 
         # initial a logger
         self._logger = logging.getLogger(__name__)
@@ -64,14 +71,19 @@ class TranslatedModel(NativeModel):
         # inherit properties
         self._properties = ref_model._properties
         self.version_string = 'model mapped from: %s' % self.version_string
-        self._compartment_boundaries = ref_model.compartment_boundaries
-        self._compartments = ref_model.compartments
+        self.biomass_reaction = translate_id(
+            ref_model.biomass_reaction, self.rxn_mapping_id)
 
         # translate ids
+        self._translate_compartment(ref_model)
         self._translate_compounds(ref_model)
         self._translate_reactions(ref_model)
         self._translate_exchange(ref_model)
         self._translate_limits(ref_model)
+
+    @property
+    def compartment_mapping_id(self):
+        return self._compartment_mapping_id
 
     @property
     def cpd_mapping_id(self):
@@ -80,6 +92,23 @@ class TranslatedModel(NativeModel):
     @property
     def rxn_mapping_id(self):
         return self._rxn_mapping_id
+
+    def _translate_compartment(self, ref_model):
+        """Translate compartment ids."""
+        # change compartments
+        for comp in ref_model.compartments:
+            new_id = translate_id(comp.id, self.compartment_mapping_id)
+            comp.properties['id'] = new_id
+            comp.properties['original_id'] = [comp.id]
+            comp = comp.__class__(comp.properties, filemark=comp.filemark)
+            self.compartments.add_entry(comp)
+        # change comparment_boundaries
+        for c1, c2 in ref_model.compartment_boundaries:
+            c1 = translate_id(c1, self.compartment_mapping_id)
+            c2 = translate_id(c2, self.compartment_mapping_id)
+            self.compartment_boundaries.add((c1, c2))
+        self.extracellular_compartment = translate_id(
+            ref_model.extracellular_compartment, self.compartment_mapping_id)
 
     def _translate_compounds(self, ref_model):
         """Translate compound ids and corresponding exchange reactions."""
@@ -103,18 +132,28 @@ class TranslatedModel(NativeModel):
         return translate_id(id, self.cpd_mapping_id)
 
     def _translate_reactions(self, ref_model):
-        """Translate reaction ids, equations and limits."""
+        """Translate reaction ids and equations."""
 
         for rxn in ref_model.reactions:
             new_id = translate_id(rxn.id, self.rxn_mapping_id)
             if new_id not in self.reactions:  # do not duplicate reactions
                 rxn.properties['id'] = new_id
                 rxn.properties['original_id'] = rxn.id
-                rxn.equation = rxn.equation.translated_compounds(
-                    self._compound_trans)
+                compounds = list()
+                for cpd, v in rxn.equation.compounds:
+                    cpd = cpd.translate(self._compound_trans)
+                    cpd = cpd.in_compartment(
+                        translate_id(cpd.compartment,
+                                     self.compartment_mapping_id)
+                    )
+                    compounds.append((cpd, v))
+                rxn.equation = rxn.equation.__class__(
+                    rxn.equation.direction, compounds
+                )
                 # test whether the same compound occurs at both sides
-                compound_common = set(rxn.equation.left).intersection(
-                    set(rxn.equation.right))
+                compound_left = set((c for c, _ in rxn.equation.left))
+                compound_right = set((c for c, _ in rxn.equation.right))
+                compound_common = compound_left.intersection(compound_right)
                 if len(compound_common) > 0:
                     self._logger.error((
                         'Reaction %s will have '
@@ -136,9 +175,11 @@ class TranslatedModel(NativeModel):
         # cpd is :class:`Compound(name, compartment)`
         for cpd in ref_model.exchange:
             new_cpd = cpd.translate(self._compound_trans)
+            new_cpd = new_cpd.in_compartment(self.extracellular_compartment)
             if new_cpd not in self.exchange:  # do not duplicate exchange
                 lower, upper = ref_model.exchange[cpd][2:]
-                name = 'EX_%s(e)' % new_cpd.name
+                name = 'EX_%s(%s)' % (new_cpd.name,
+                                      self.extracellular_compartment)
                 self.exchange[new_cpd] = (new_cpd, name, lower, upper)
             else:
                 self._logger.error(
@@ -165,4 +206,5 @@ class TranslatedModel(NativeModel):
 
     def write_model(self, dest, **kwargs):
         """Output model into YAML files."""
+        mkdir_p(dest)
         write_yaml_model(self, dest, **kwargs)

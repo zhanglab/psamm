@@ -235,6 +235,11 @@ class ModelMappingCommand(Command):
                 'Tab-delimited table, the first two columns store the '
                 'original and target ids'))
         parser_t.add_argument(
+            '--compartment-map', type=str, required=False,
+            help=(
+                'Tab-delimited table, the first two columns store the '
+                'original and target ids'))
+        parser_t.add_argument(
             '-o', '--outpath', type=str,
             action='store', default='.',
             help=(
@@ -487,11 +492,18 @@ class ModelMappingCommand(Command):
         # read mapping files
         cpd_mapping_id = tr_id.read_mapping(self._args.compound_map)
         rxn_mapping_id = tr_id.read_mapping(self._args.reaction_map)
+        if self._args.compartment_map is not None:
+            compartment_mapping_id = tr_id.read_mapping(
+                self._args.compartment_map)
+        else:
+            compartment_mapping_id = None
 
         # make output model
         out_nm = tr_id.TranslatedModel(
+            self._model,
             cpd_mapping_id,
             rxn_mapping_id,
-            self._model)
+            compartment_mapping_id
+        )
 
         out_nm.write_model(dest=self._args.outpath, split_subsystem=False)
