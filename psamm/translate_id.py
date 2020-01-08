@@ -31,13 +31,13 @@ from psamm.util import mkdir_p
 
 
 def read_mapping(mapping):
-    mapping_file = open(mapping, mode='rU')
-    mapping_id = {}
-    for row in csv.reader(mapping_file, delimiter='\t'):
-        if row[1] == '':
-            continue
-        else:
-            mapping_id[row[0]] = row[1]
+    with open(mapping) as mapping_file:
+        mapping_id = {}
+        for row in csv.reader(mapping_file, delimiter='\t'):
+            if row[1] == '':
+                continue
+            else:
+                mapping_id[row[0]] = row[1]
     return(mapping_id)
 
 
