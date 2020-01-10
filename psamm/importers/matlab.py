@@ -286,7 +286,7 @@ class Importer(BaseImporter):
                     if isinstance(doc['subSystems'][0, 0][i][0][0], str):
                         properties['subsystem'] = str(
                             doc['subSystems'][0, 0][i][0][0])
-                    elif doc['subSystems'][0, 0][i][0][0][0].size > 0:
+                    elif len(doc['subSystems'][0, 0][i][0][0][0]) > 0:
                         properties['subsystem'] = str(
                             doc['subSystems'][0, 0][i][0][0][0][0])
 
