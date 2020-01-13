@@ -26,7 +26,6 @@ from collections import defaultdict, Counter
 from six import text_type
 from ..command import (LoopRemovalMixin, ObjectiveMixin, SolverCommandMixin,
                        MetabolicMixin, Command, FilePrefixAppendAction)
-from ..reaction import Direction
 from .. import graph
 
 try:
@@ -142,7 +141,8 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         bio_cpds_sub = set()
         bio_cpds_pro = set()
         if self._model.biomass_reaction in vis_rxns:
-            nm_biomass_rxn = model_reaction_entries[self._model.biomass_reaction]
+            nm_biomass_rxn = \
+                model_reaction_entries[self._model.biomass_reaction]
             g = add_biomass_rxns(g, nm_biomass_rxn)
             for cpd, _ in nm_biomass_rxn.equation.left:
                 bio_cpds_sub.add(text_type(cpd))
@@ -381,9 +381,13 @@ def add_node_label(g, cpd_detail, rxn_detail):
         # update node label based on what users provide in command line
         if cpd_detail is not None:
             if node.props['type'] == 'cpd':
-                pre_label = '\n'.join(((node.props['entry'][0].properties.get(value).encode(
-                    'ascii', 'backslashreplace')).decode('ascii')) for value
-                    in cpd_detail[0] if value != 'id' and value in node.props['entry'][0].properties)
+                pre_label = '\n'.join(
+                    ((node.props['entry'][0].properties.get(value).encode(
+                        'ascii', 'backslashreplace')).decode('ascii')) for
+                    value
+                    in cpd_detail[0] if
+                    value != 'id' and value in node.props['entry'][
+                        0].properties)
                 if 'id' in cpd_detail[0]:
                     label = '{}\n{}'.format(node.props['id'], pre_label)
                 else:
@@ -392,9 +396,12 @@ def add_node_label(g, cpd_detail, rxn_detail):
         if rxn_detail is not None:
             if node.props['type'] == 'rxn':
                 if len(node.props['entry']) == 1:
-                    pre_label = '\n'.join((str(node.props['entry'][0].properties.get(value)).encode(
-                        'ascii', 'backslashreplace').decode('ascii')) for value in rxn_detail[0]
-                        if value != 'id' and value in node.props['entry'][0].properties)
+                    pre_label = '\n'.join(
+                        (str(node.props['entry'][0].properties.get(value)
+                             ).encode('ascii', 'backslashreplace').decode(
+                            'ascii')) for value in rxn_detail[0] if
+                        value != 'id' and value in
+                        node.props['entry'][0].properties)
                     if 'id' in rxn_detail[0]:
                         label = '{}\n{}'.format(
                             node.props['entry'][0].properties['id'], pre_label)
