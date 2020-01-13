@@ -24,6 +24,8 @@ from six import text_type
 from ..command import Command, FilePrefixAppendAction
 from ..datasource.reaction import parse_compound
 
+from psamm.expression import boolean
+
 
 def filter_search_term(s):
     return re.sub(r'[^a-z0-9]+', '', s.lower())
@@ -51,8 +53,8 @@ class SearchCommand(Command):
             help='Name of compound')
         parser_compound.add_argument(
             '--props', '-c', dest='props', metavar='props',
-            action=FilePrefixAppendAction, type=str, default=[],
-            help='Comma-separated list of compound properties, such as '
+            nargs='+', type=str, default=None,
+            help='Space-separated list of compound properties, such as '
                  'compound formula, compound charge, molecular weight...')
         parser_compound.add_argument(
             '--match-type', '-m', dest='match_type', metavar='match_type',
@@ -74,8 +76,8 @@ class SearchCommand(Command):
             help='Comma-separated list of compound IDs')
         parser_reaction.add_argument(
             '--props', '-p', dest='props', metavar='props',
-            action=FilePrefixAppendAction, type=str, default=[],
-            help='Comma-separated list of reaction properties, such as '
+            nargs='+', type=str, default=None,
+            help='Space-separated list of reaction properties, such as '
                  'reaction name, ec number, pathway or subsystem name or '
                  'gene association')
         parser_reaction.add_argument(
@@ -93,9 +95,17 @@ class SearchCommand(Command):
         elif which_command == 'reaction':
             self._search_reaction()
 
+        for reaction in self._model.reactions:
+            print(reaction)
+            if reaction.genes is not None:
+                e = boolean.Expression(reaction.genes)
+                # e_1 = e.substitute(lambda v: target_genes_l.get(v.symbol, v))
+                print(e)
+                print(reaction.genes)
+
     def _search_compound(self):
         selected_compounds = set()
-
+        print(self._args.props)
         for compound in self._model.compounds:
             if len(self._args.id) > 0:
                 if any(c == compound.id for c in self._args.id):
@@ -114,7 +124,7 @@ class SearchCommand(Command):
                     continue
 
             # find compounds that contains any of given properties
-            if len(self._args.props) > 0:
+            if self._args.props is not None:
 
                 # prepare s list of all compound properties
                 compound_prop_list = []
@@ -128,9 +138,8 @@ class SearchCommand(Command):
                 # find compound entry based on given property argument
                 props = set()
                 if self._args.match_type == 'exact':
-                    for property_list in self._args.props:
-                        for property in property_list.split(','):
-                            props.add(property.lower())
+                    for property in self._args.props:
+                        props.add(property.lower())
                     if any(prop in props for prop in compound_prop_list):
                         selected_compounds.add(compound)
                         continue
@@ -138,7 +147,8 @@ class SearchCommand(Command):
                     for property_list in self._args.props:
                         for property in property_list.split(','):
                             props.add(property.lower())
-                    if any(prop in ('|'.join(compound_prop_list)) for prop in props):
+                    if any(prop in ('|'.join(compound_prop_list)) for
+                           prop in props):
                         selected_compounds.add(compound)
 
         # Show results
@@ -153,7 +163,7 @@ class SearchCommand(Command):
 
     def _search_reaction(self):
         selected_reactions = set()
-
+        print(self._args.props)
         # Prepare translation table from compound id to name
         compound_name = {}
         for compound in self._model.compounds:
@@ -182,10 +192,11 @@ class SearchCommand(Command):
                     selected_reactions.add(reaction)
                     continue
 
-            if len(self._args.props) > 0:
+            if self._args.props is not None:
                 props = set()
 
-                # prepare s list of all reaction properties except reaction equation
+                # prepare s list of all reaction properties
+                # except reaction equation
                 raw_reaction_prop_list = [
                     reaction.properties[key] for key in reaction.properties
                     if key != 'equation']
@@ -199,17 +210,17 @@ class SearchCommand(Command):
 
                 # find reaction based on given property argument
                 if self._args.match_type == 'exact':
-                    for property_list in self._args.props:
-                        for property in property_list.split(','):
-                            props.add(property.lower())
+                    for property in self._args.props:
+                        props.add(property.lower())
                     if any(prop in props for prop in reaction_prop_list):
                         selected_reactions.add(reaction)
                         continue
                 elif self._args.match_type == 'vague':
-                    for property_list in self._args.props:
-                        for property in property_list.split(','):
-                            props.add(property.lower())
-                    if any(prop in '|'.join(reaction_prop_list) for prop in props):
+                    for property in self._args.props:
+                        props.add(property.lower())
+                    print(props)
+                    if any(prop in '|'.join(reaction_prop_list) for
+                           prop in props):
                         selected_reactions.add(reaction)
 
         # Show results
