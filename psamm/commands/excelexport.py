@@ -101,12 +101,11 @@ class ExcelExportCommand(Command):
                 text_type(i.id in model_compounds))
 
         gene_sheet = workbook.add_worksheet(name='Genes')
-        gene_sheet.write_string(0,0,'Gene')
-        gene_sheet.write_string(0,1,'Reaction_List')
+        gene_sheet.write_string(0, 0, 'Gene')
+        gene_sheet.write_string(0, 1, 'Reaction_List')
         for x, i in enumerate(sorted(gene_rxn)):
-            gene_sheet.write_string(x+1,0,i)
-            gene_sheet.write_string(x+1,1,'|'.join(gene_rxn.get(i)))
-
+            gene_sheet.write_string(x+1, 0, i)
+            gene_sheet.write_string(x+1, 1, '|'.join(gene_rxn.get(i)))
 
         exchange_sheet = workbook.add_worksheet(name='Exchange')
 
