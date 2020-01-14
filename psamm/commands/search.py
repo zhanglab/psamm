@@ -82,7 +82,7 @@ class SearchCommand(Command):
                  'gene association')
         parser_reaction.add_argument(
             '--match-type', '-m', dest='match_type', metavar='match_type',
-            type=str, choices=['exact', 'vague'], default='exact',
+            type=str, choices=['exact', 'vague'], default='vague',
             help='chose the map type when using --props to find reaction. '
                  'exact means completely match, vague means partially match')
 
@@ -95,17 +95,8 @@ class SearchCommand(Command):
         elif which_command == 'reaction':
             self._search_reaction()
 
-        for reaction in self._model.reactions:
-            print(reaction)
-            if reaction.genes is not None:
-                e = boolean.Expression(reaction.genes)
-                # e_1 = e.substitute(lambda v: target_genes_l.get(v.symbol, v))
-                print(e)
-                print(reaction.genes)
-
     def _search_compound(self):
         selected_compounds = set()
-        print(self._args.props)
         for compound in self._model.compounds:
             if len(self._args.id) > 0:
                 if any(c == compound.id for c in self._args.id):
