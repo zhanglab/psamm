@@ -154,7 +154,7 @@ class SearchCommand(Command):
 
     def _search_reaction(self):
         selected_reactions = set()
-        print(self._args.props)
+
         # Prepare translation table from compound id to name
         compound_name = {}
         for compound in self._model.compounds:
@@ -209,7 +209,6 @@ class SearchCommand(Command):
                 elif self._args.match_type == 'vague':
                     for property in self._args.props:
                         props.add(property.lower())
-                    print(props)
                     if any(prop in '|'.join(reaction_prop_list) for
                            prop in props):
                         selected_reactions.add(reaction)
