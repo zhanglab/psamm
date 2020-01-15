@@ -231,7 +231,7 @@ Pair Prediction Methods
 
 Two reactant/product pair prediction algorithms are implemented in the `PSAMM` ``primarypairs`` command.
 The default algorithm is the `FindPrimaryPairs` algorithm. The other algorithm that is
-implemented is the `Mapmaker` algorithm. These algorithm can be chosen through the ``--method`` argument.
+implemented is the `Mapmaker` algorithm. These algorithms can be chosen through the ``--method`` argument.
 
 .. code-block:: shell
 
@@ -248,7 +248,7 @@ text-based YAML models to graph-based representations of the metabolism.
 The graph-based representation contains two sets
 of nodes, with one set representing the metabolites in the model, and the other set
 representing reactions. These nodes are connected through edges that are determined
-based on element transfer patters predicted through using the `FindPrimaryPairs`
+based on element transfer patterns predicted through using the `FindPrimaryPairs`
 algorithm. The ``vis`` command provides multiple options to customize the graph
 representation of the metabolism, including changing network perspectives, customizing
 node labels, changing node colors, etc.
@@ -266,10 +266,10 @@ By default, ``vis`` relies on the `FindPrimaryPairs` algorithm to predict
 elements transferred in metabolic network. This algorithm requires certain
 reactions such as biomass reactions and some artificial reactions to be
 excluded from the algorithm's calculations in order to work efficiently. This
-can be done through the ``--exclude`` option. In ``vis`` function, by default
-the biomass reaction defined in `model.yaml` file will be excluded from the
-`FPP` calculation automatically, but will still be shown on the final network
-image. For more information of excluded reactions, see :ref:`exclude-fpp`.
+can be done through the ``--exclude`` option. In ``vis`` function, the biomass
+reaction defined in `model.yaml` file will be excluded from the `FPP` calculation
+automatically, but will still be shown on the final network image. For more
+information of excluded reactions, see :ref:`exclude-fpp`.
 
 In this version of the E. coli core model, the biomass reaction is defined in
 the `model.yaml` file, it was excluded automatically from FPP
@@ -320,7 +320,7 @@ Generate Images from Text-based Graphs
 
 Images can be generated from the 'reactions.dot' file by using the `Graphviz`
 program. For the best representations of the metabolic network using the `dot`
-layout is recommended. `Graphviz` support multiple inmage formates, such as PDF,
+layout is recommended. `Graphviz` support multiple image formats, such as PDF,
 PNG, JPEG, etc. The image file can be generated as a `PDF` file by using the
 following `Graphviz` program command:
 
@@ -352,7 +352,7 @@ In addition, `PSAMM-Vis` allows users to customize name of resulting files via
 
    (psamm-env) $ psamm-model vis --output MyOutput
 
-Then the 3 resulting file will be named "MyOutput.dot", "MyOutput.nodes.tsv" and
+Then the 3 resulting files will be named "MyOutput.dot", "MyOutput.nodes.tsv" and
 "MyOutput.edges.tsv"
 
 The rest of the tutorial will deal with how to modify the default version of network
@@ -389,13 +389,13 @@ contains a multiple-step pathway that converts extracellular mannitol to
 fructose 6-phosphate. This pathway also involves multiple phosphorylation
 and dephosphorylation steps. The ``--element`` argument can be added to the
 the ``vis`` command to filter this pathway to show the transfer patterns
-of the phosphorous in the pathway:
+of the phosphorus in the pathway:
 
 .. code-block:: shell
 
    (psamm-model) $ psamm-model vis --element P --image png
 
-The resulting 'reactions.dot.png' file will contain the phosphorous transfer
+The resulting 'reactions.dot.png' file will contain the phosphorus transfer
 network of the E. coli core model.
 
 If the mannitol utilization pathway is examined more closely, it will be seen
@@ -441,14 +441,14 @@ Show Cellular Compartments
 
 GEMs often contain some representations of cellular compartments. At the most
 basic level this might just include an intracellular and extracellular compartment,
-but in more complex models additional compartments such as the periplasm in bacteria
-or the mitochondria in eukaryotes can be included to represent more complex metabolic
+but in more complex models, additional compartments, such as periplasm in bacteria
+or mitochondria in eukaryotes, need to be included to represent more complex metabolic
 processes. `PSAMM-Vis` can show these compartments in the final image through
 the use of the ``--compartment`` argument. If the compartment information is not
-defined in the model.yaml file then the the command will attempt to
+defined in the model.yaml file, then, the command will attempt to
 automatically detect the organization of the compartments by examining the reaction
 equations in the model. This process cannot always accurately predict the compartment
-organization though. To overcome this problem it is better to define the compartment
+organization though. To overcome this problem, it is better to define the compartment
 organization in the model.yaml file. This can be done by adding a new ``compartments``
 sections into the model.yaml file like so:
 
@@ -502,7 +502,7 @@ The resulting network image "reactions.dot.png" looks like:
 Visualize Reactions and Pathways of Interest
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In some situations it might be better to only visualize a subset of a larger
+In some situations, it might be better to only visualize a subset of a larger
 model so that smaller subsystems can be examined in more detail. This can
 be done through the ``--subset`` option. This option takes an input of a single
 column file, where each line contains either a reaction ID or a metabolite ID.
@@ -510,7 +510,7 @@ The whole file can only contain reaction IDs or metabolite IDs and cannot be
 a mix of both in the same subset file.
 
 To show the usage of this option, a subset of reactions involved in mannitol
-utilization pathway were visualized through the following command:
+utilization pathway was visualized through the following command:
 
 .. code-block:: shell
 
@@ -535,8 +535,8 @@ exchange reactions.
 
 The other usage for using the subset argument is to provide a list of metabolite IDs.
 This option will generate an image containing all of the reactions that contains any
-of given metabolites in their equation. For example the following subset file could
-be used to generate a network image of all reactions that contains pyruvate .
+of given metabolites in their equation. For example, the following subset file could
+be used to generate a network image of all reactions that contains pyruvate.
 
 .. code-block:: shell
 
@@ -559,8 +559,8 @@ Highlight Reactions and Metabolites in the Network
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``--subset`` option can be used to show only a specific part of the network.
-When this is done the context of those reactions is often lost and it can be hard
-to tell where that pathway fits withing the larger metabolism. A different way to
+When this is done, the context of those reactions is often lost and it can be hard
+to tell where that pathway fits within the larger metabolism. A different way to
 highlight a set of reactions without using the ``--subset`` option is to change
 the color of a set of nodes through the ``--color`` option.
 
@@ -638,7 +638,7 @@ NAD and NADH. Due to the large number of times these pairs occur across the
 network, they may cause some parts of the graph to look messy or form "hairball".
 While making the condensed reaction nodes helps with this problem, there may be
 cases where it would be better to hide these edges in the final result. To do this
-the ``--hide-edges`` option can be used. This option takes a two column file where
+the ``--hide-edges`` option can be used. This option takes a two-column file where
 each row contains two metabolite IDs separated by tab, edges between them will be
 hidden in final network image.
 
@@ -684,7 +684,7 @@ Specify File Name
 ____________________
 
 ``vis`` command allows users to specify the name of resulting file through
-``--output`` option, this option should followed by a string and that string
+``--output`` option, this option should be followed by a string and that string
 is the name of output files (without the file extension). For example, the
 following command will export 4 files: "Ecolicore.dot", "Ecolicore.dot.png",
 "Ecolicore.nodes.tsv" and "Ecolicore.edges.tsv":
@@ -701,7 +701,7 @@ reactant/product pairs. But it can also work without pair prediction (``no-fpp``
 With presence of ``no-fpp``, each reactant will be paired with all products in a
 reaction, without considering element transferred between reactant and product.
 There will tend to be many more connections in the network image if users use this
-option, especially for metabolites like ATP, H2O, and H+. To do this running the
+option, especially for metabolites like ATP, H2O, and H+. To do this, running the
 following command:
 
 .. code-block:: shell

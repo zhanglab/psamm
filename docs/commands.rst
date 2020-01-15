@@ -11,7 +11,7 @@ The tools that can be applied to metabolic models are run through the
 
 This program allows you to specify a metabolic model and a command to apply to
 the given model. The available commands can be seen using the help command
-given above, and are also described in more details below.
+given above, and are also described in more detail below.
 
 To run the program with a model, use the following command:
 
@@ -47,9 +47,9 @@ with the QSopt_ex solver, the option ``--solver name=qsoptex`` can be added:
     $ psamm-model fba --solver name=qsoptex
 
 The ``--solver`` option can also be used to specify additional options for the
-solver in use. For example, the Cplex solver recognizes the ``threads``
-option which can be used to adjust the maximum number of threads that Cplex
-will use internally (by default, Cplex will use as many threads as there are
+solver in use. For example, the CPLEX solver recognizes the ``threads``
+option which can be used to adjust the maximum number of threads that CPLEX
+will use internally (by default, CPLEX will use as many threads as there are
 cores on the computer):
 
 .. code-block:: shell
@@ -79,8 +79,8 @@ or with a specific reaction:
 
 By default, this performs a standard FBA and the result is output as
 tab-separated values with the reaction ID, the reaction flux and the reaction
-equation. If the parameter ``--loop-removal`` is given, the flux of the
-internal reactions is further constrained to remove internal loops
+equation. If the parameter ``--loop-removal`` is given, the fluxes of the
+internal reactions are further constrained to remove internal loops
 [Schilling00]_. Loop removal is more time-consuming and under normal
 circumstances the biomass reaction flux will *not* change in response to the
 loop removal (only internal reaction fluxes may change). The ``--loop-removal``
@@ -92,7 +92,7 @@ example, the following command performs an FBA with thermodynamic constraints:
 
     $ psamm-model fba --loop-removal=tfba
 
-By default the output of the FBA command will only display reactions which
+By default, the output of the FBA command will only display reactions which
 have non-zero fluxes. This can be overridden with the ``--all-reactions``
 option to display all reactions even if they have flux values of zero.
 
@@ -126,7 +126,7 @@ If the parameter ``--loop-removal=tfba`` is given, additional thermodynamic
 constraints will be imposed when evaluating model fluxes. This automatically
 removes internal flux loops [Schilling00]_ but is much more time-consuming.
 
-By default FVA is performed with the objective reaction (either the biomass
+By default, FVA is performed with the objective reaction (either the biomass
 reaction or reaction given through the ``--objective`` option) fixed at its
 maximum value. It is also possible allow this reaction flux to vary by a
 specified amount through the ``--thershold`` option. When this option is
@@ -134,7 +134,7 @@ used the variability results will show the possible flux ranges when the
 objective reaction is greater than or equal to the threshold value.
 
 The threshold can be specified by either giving a percentage of the maximum
-objective flux or by giving an defined flux value.
+objective flux or by giving a defined flux value.
 
 .. code-block:: shell
 
@@ -205,7 +205,7 @@ threshold. The tolerance can be specified as a relative value (as above) or as
 an absolute flux. Aggregating the results from multiple random sparse networks
 allows classifying reactions as essential, semi-essential or non-essential.
 
-By default the randomsparse command will perform the deletions on reactions
+By default, the randomsparse command will perform the deletions on reactions
 in the model. The ``--type`` option can be used to change this deletion to
 act on the genes in the model or to act on only the set of exchange reactions.
 The gene deletion option will remove a gene from a network and then assess
@@ -383,7 +383,7 @@ The output has now changed and the remaining residual has been shifted to
 another reaction. This iterative procedure can be continued until all
 stoichiometric inconsistencies have been corrected. In this example the
 `IR00149` reaction also had a missing `H+` for the reaction to balance. After
-fixing this error the model is consistent and the `H+` compounds can be
+fixing this error, the model is consistent and the `H+` compounds can be
 assigned a non-zero mass::
 
     $ psamm-model masscheck
@@ -565,7 +565,7 @@ In addition to setting penalty values directly through the ``--penalty`` argumen
 default penalties for all other database reactions can be set through the
 ``--db-penalty`` argument. Reactions that do not have penalty values
 explicitly set through the ``--penalty`` argument will be assigned
-this penalty value. Similarly penalty values can be assigned for new
+this penalty value. Similarly, penalty values can be assigned for new
 exchange reactions and artificial transport reactions through the
 ``--ex-penalty`` and ``--tp-penalty`` arguments. An example using
 all three of these arguments can be seen here:
@@ -596,7 +596,7 @@ elements.
 
 The ``primarypairs`` command will run slowly on models that contain artificial
 reactions such as biomass reactions or condensed biosynthesis reactions.
-Because the reactant/product pair prediciton in these reactions is
+Because the reactant/product pair prediction in these reactions is
 not as biologically meaningful these reactions can be excluded through
 the ``--exclude`` option. This option can be used to either give reaction
 IDs to exclude or to give an input file containing a list of reactions
@@ -617,7 +617,7 @@ the `FindPrimaryPairs` algorithm to help generate images of full models
 or subsets of models. The output of this command will consist of a graph
 file in the `dot` language, ``reactions.dot``, and two files
 called ``reactions.nodes.tsv`` and ``reactions.edges.tsv`` that contain
-the network data in a tsv format.
+the network data in TSV format.
 
 To run the ``vis`` command the following command can be used:
 
@@ -628,23 +628,23 @@ To run the ``vis`` command the following command can be used:
 Basic Graph Generation
 ~~~~~~~~~~~~~~~~~~~~~~
 
-By default the vis command uses the `FindPrimaryPairs` algorithm to
+By default, the vis command uses the `FindPrimaryPairs` algorithm to
 simplify the graph that is produced. This algorithm runs much faster
 if certain types of artificial reactions are not considered when doing
 the reactant/product pair prediction. These reactions often represent
 Biomass production or condensed biosynthesis processes. To exclude
-these reactions the ``vis`` command can be run with the ``--exlcude``
+these reactions the ``vis`` command can be run with the ``--exclude``
 option to provide an input file that contains a list of reaction IDs:
 
 .. code-block:: shell
 
     $ psamm-model vis --exlcude @{path to file}
 
-The vis command will only produce the files described above by default.
-Graph image generating software can be used to convert these files to
-actual images. If the program `Graphviz` is installed on the computer
-then that program can be used within `PSAMM` to generate the image file
-directly. This can be done by using the ``--image`` argument followed
+Running this command, `PSAMM-vis` only produce three files described above.
+Graph image generating softwares can convert these files to
+actual images. If the program `Graphviz` is installed on the computer,
+then this program can be used within `PSAMM` to generate the network image
+directly. This can be done by adding the ``--image`` argument followed
 by any `Graphviz` supported image format:
 
 .. code-block:: shell
@@ -664,7 +664,7 @@ This can be done through using the ``--method`` argument:
 
 The resulting graphs can be further simplified to only show element
 transfers that contain a specified element through the ``--element`` argument.
-When using this option any reactant\product pairs that do not transfer
+When using this option any reactant/product pairs that do not transfer
 the specified element will not be shown on the graph. To use this option the
 following command can be used:
 
@@ -672,10 +672,11 @@ following command can be used:
 
     $ psamm-model vis --element {Atomic Symbol}
 
-Additionally the final graphs created through the ``vis`` command can be
-subsetted to only show a specified set of reactions from the larger model.
-This can be done using the ``--subset`` argument to provide a file containing
-a single column list of either reaction IDs or metabolite IDs.
+Additionally, the final graphs created through ``vis`` command can only show
+a specified subset of reactions from the larger model. This can be done using
+``--subset`` argument to provide a file containing a single column list of
+either reaction IDs or metabolite IDs (but not the mix of reaction and
+compound IDs).
 
 .. code-block:: shell
 
@@ -699,7 +700,7 @@ Or:
 
 
 Further modification can be done to the graph image to selectively
-hide certain edges in the final graph. This can be use to hide edges
+hide certain edges in the final graph. This can be used to hide edges
 between paris of metabolites that might have many connections in the
 final graph images. Typical examples of these pairs include ATP and
 ADP, NAD and NADH, etc. To use this option first a tab separated
@@ -722,15 +723,15 @@ the ``--hide-edges`` argument:
 Graph Image Customization
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-By default the reaction and metabolite nodes in a graph will only
+By default, the reaction and metabolite nodes in a graph will only
 show the reaction or metabolite IDs, but the final graphs output by the command
 can be customized to include additional reaction metabolite information
 that is present in the model. This additional information will be shown
 directly on the reaction or metabolite nodes in the graph.
 This can be done through using the ``--rxn-detail`` and ``--cpd-detail``
 options. These options can be used followed by a space separated list
-of properties to include. For example the following could be run to
-show additional information on both sets of nodes:
+of properties to include. For example, the following command could be used to
+show additional information of reactions and compounds:
 
 .. code-block:: shell
 
@@ -738,10 +739,9 @@ show additional information on both sets of nodes:
       --rxn-detail id name equation
 
 
-The reaction and metabolite nodes can be further customized by
-specifying which colors they should be filled in with on the final
-graph image. This can be done by first creating a two column file of
-reaction or metabolite IDs and hex color codes:
+The reaction and metabolite nodes can be further customized by specifying the
+filling color of nodes. This can be done by providing a two-column file that
+contains reaction or metabolite IDs (with compartment) and hex color codes:
 
 .. code-block:: shell
 
@@ -759,18 +759,18 @@ through the ``--color`` option:
 
 
 The graph image can be simplified through the use of the ``--combine`` option.
-The deafault option for this is combine level 0. The graph generated from using
+By default, the combine level is 0. The graph generated from using
 combine level 0 will have one reaction node for each reactant product
 pair within a reaction. This can result in having many sets of
 substrates/reaction/product nodes within the graph image, depending on how
 many substrates and products are present in a metabolic reaction. Using
 the combine level 1 option will condense the reaction nodes down so that
 there is only one reaction node per reaction, with each reaction node having
-connectiosn to all reactants and products of that reaction. The combine level
+connections to all reactants and products of that reaction. The combine level
 2 option will condense the graph in a different way. With this option
 the graph is condensed based on shared reactant/product pairs between
 different reactions. If two separate reactions contain a common
-reactant/product pair, for example ATP and ADP, then the nodes for those
+reactant/product pair, such as ATP/ADP pair, then the nodes for those
 condensed into one combined node.
 
 .. code-block:: shell
@@ -869,7 +869,7 @@ To search for a reaction use
 
 Use the ``--id`` option to search for a reaction with a specific identifier.
 The ``--compound`` option can be used to search for reactions that include a
-specific compound. If more that one compound identifier is given
+specific compound. If more than one compound identifier is given
 (comma-separated) this will find reactions that include all of the given
 compounds.
 
