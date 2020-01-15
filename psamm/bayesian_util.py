@@ -36,9 +36,14 @@ def name_equals(name1, name2):
     """Return True if the two names are considered equal."""
     if name1 is None or name2 is None:
         return False
+    # remove special chars, translate to lower case
     pattern = r'[^a-zA-Z0-9]'
     name1 = re.sub(pattern, '', name1.lower())
     name2 = re.sub(pattern, '', name2.lower())
+    # unify Coenzyme A and CoA
+    pattern = r'coenzymea'
+    name1 = re.sub(pattern, 'coa', name1.lower())
+    name2 = re.sub(pattern, 'coa', name2.lower())
     return (name1 == name2)
 
 

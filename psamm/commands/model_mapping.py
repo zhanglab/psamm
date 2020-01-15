@@ -195,6 +195,15 @@ class ModelMappingCommand(Command):
                 'Output log file of the p_match and p_no_match '
                 'for each feature, '
                 'may be very big with large models'))
+        parser_mm.add_argument(
+            '--compartment-map-file', type=str,
+            help=(
+                'A tab delimited file (.tsv) listing the compartment ids of '
+                'query model in the first column, and the corresponding '
+                'compartment ids of dest model in the second column. Required '
+                'if the compartment ids in the two models are not consistent.'
+            )
+        )
 
         # manual curation subcommand
         parser_c = subparsers.add_parser(
@@ -285,6 +294,14 @@ class ModelMappingCommand(Command):
             with open(self._args.reaction_map, 'r') as f:
                 actual_reaction_mapping = dict(read_mapping_file(f))
 
+        # Load compartment mapping
+        compartment_map = {}
+        if self._args.compartment_map_file is not None:
+            with open(self._args.compartment_map_file, 'r') as f:
+                for row in f:
+                    source, target = row.strip().split()
+                    compartment_map[source] = target
+
         # Check models
         if (
             not (
@@ -341,7 +358,8 @@ class ModelMappingCommand(Command):
         rxn_bayes_pred = bayesian.BayesianReactionPredictor(
             model1, model2, compound_best.loc[:, 'p'],
             self._args.nproc, self._args.outpath,
-            log=self._args.log, gene=self._args.map_reaction_gene)
+            log=self._args.log, gene=self._args.map_reaction_gene,
+            compartment_map=compartment_map)
         print(
             'It took %s seconds to calculate reaction mapping...'
             % (time.time() - t))
@@ -442,21 +460,31 @@ class ModelMappingCommand(Command):
             print('Here is the reaction mapping:')
             print(rmap[1])
             print('\n')
-            curation.search_reaction(model1, [rmap[0][0]])
-            curation.search_reaction(model2, [rmap[0][1]])
+            _ = next(curation.search_reaction(model1, [rmap[0][0]]))
+            _ = next(curation.search_reaction(model2, [rmap[0][1]]))
             print(('These two reactions have the following curated compound '
                    'pairs:\n'))
             count = 0
+            compounds_curated = set()
+            dest_compounds_curated = set()
             for compound in compounds:
                 if compound in curator.curated_compound_map.index:
                     for cmap in curator.curated_compound_map.loc[
                             compound].iterrows():
                         if cmap[0] in dest_compounds:
                             print(compound, cmap[0], cmap[1]['p'])
+                            compounds_curated.add(compound)
+                            dest_compounds_curated.add(cmap[0])
                             count += 1
             print('\n')
-            print('%i compounds in %s, ' % (len(compounds), rmap[0][0]))
-            print('%i compounds in %s\n' % (len(dest_compounds), rmap[0][1]))
+            print('%i compounds in %s' % (len(compounds), rmap[0][0]))
+            unpaired = set(compounds) - compounds_curated
+            if len(unpaired) > 0:
+                print('Unpaired compounds: %s\n' % ', '.join(unpaired))
+            print('%i compounds in %s' % (len(dest_compounds), rmap[0][1]))
+            unpaired = set(dest_compounds) - dest_compounds_curated
+            if len(unpaired) > 0:
+                print('Unpaired compounds: %s\n' % ', '.join(unpaired))
             print('%i curated compound pairs\n' % count)
             ask = ''
             # waiting for legal curation input

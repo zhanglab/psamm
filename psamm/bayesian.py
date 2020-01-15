@@ -216,16 +216,18 @@ class BayesianReactionPredictor(object):
         outpath: the path to output the detailed log file.
         log: whether to output log file of the p_match and p_no_match.
         gene: whether to compare the gene association.
+        compartment_map: dictionary mapping compartment id in the query model
+                         to the id in the target model.
     """
 
     def __init__(self, model1, model2, cpd_pred, nproc=1,
-                 outpath='.', log=False, gene=False):
+                 outpath='.', log=False, gene=False, compartment_map={}):
         self._model1 = model1
         self._model2 = model2
         self._column_list = ['p', 'p_id', 'p_name', 'p_equation', 'p_genes']
         self._reaction_map_p = map_model_reactions(
             self._model1, self._model2, cpd_pred, nproc, outpath,
-            log=log, gene=gene)
+            log=log, gene=gene, compartment_map=compartment_map)
 
     @property
     def model1(self):
@@ -398,16 +400,18 @@ def reaction_name_likelihood(r1, r2, reaction_prior, reaction_name_marg):
 
 
 def reaction_equation_mapping_approx_max_likelihood(
-        cpd_set1, cpd_set2, cpd_pred):
+        cpd_set1, cpd_set2, cpd_pred, compartment_map={}):
     """Calculate equation likelihood based on compound mapping."""
     p_match = 0.0
     p_no_match = 0.0
 
     # get the possible best-match pairs
     pair_list = [
-        (c1, c2)
+        (c1.name, c2.name)
         for c1, c2 in product(cpd_set1, cpd_set2)
-        if (c1, c2) in cpd_pred.index]
+        if ((c1.name, c2.name) in cpd_pred.index
+            and (compartment_map.get(c1.compartment, c1.compartment)
+                 == c2.compartment))]
     # get the p value for (c1, c2) pairs, high possibility first
     cpd_pred = (cpd_pred.loc[pair_list]
                 .sort_values(ascending=False))
@@ -434,19 +438,21 @@ def reaction_equation_mapping_approx_max_likelihood(
     return p_match, p_no_match
 
 
-def reaction_equation_compound_mapping_likelihood(r1, r2, cpd_pred):
+def reaction_equation_compound_mapping_likelihood(r1, r2, cpd_pred,
+                                                  compartment_map={}):
     if r1.equation is None or r2.equation is None:
         # p value of observing undefined equation
         # it is independent of the condition of match or not
         p_match = 1
         p_no_match = 1
     else:
-        p_match, p_no_match = get_best_p_value_set(r1, r2, cpd_pred)
+        p_match, p_no_match = get_best_p_value_set(r1, r2, cpd_pred,
+                                                   compartment_map)
 
     return p_match, p_no_match
 
 
-def get_best_p_value_set(r1, r2, cpd_pred):
+def get_best_p_value_set(r1, r2, cpd_pred, compartment_map):
     """Assume equations may have reversed direction, report best mapping p."""
     cpd_set1_left = get_cpd_set(r1.equation, left=True)
     cpd_set1_right = get_cpd_set(r1.equation, left=False)
@@ -456,11 +462,11 @@ def get_best_p_value_set(r1, r2, cpd_pred):
     # assume equations have the same direction
     p_forward_match, p_forward_no_match = merge_partial_p_set(
         cpd_set1_left, cpd_set2_left, cpd_pred,
-        cpd_set1_right, cpd_set2_right)
+        cpd_set1_right, cpd_set2_right, compartment_map)
     # assume equations have the reversed direction
     p_reverse_match, p_reverse_no_match = merge_partial_p_set(
         cpd_set1_left, cpd_set2_right, cpd_pred,
-        cpd_set1_right, cpd_set2_left)
+        cpd_set1_right, cpd_set2_left, compartment_map)
 
     # maintain the direction with better p values
     if (p_forward_match / p_forward_no_match
@@ -475,7 +481,7 @@ def get_best_p_value_set(r1, r2, cpd_pred):
 
 
 def merge_partial_p_set(cpd_set1_left, cpd_set2_left, cpd_pred,
-                        cpd_set1_right, cpd_set2_right):
+                        cpd_set1_right, cpd_set2_right, compartment_map):
     """Merge the left hand side and right hand side p values together.
 
     The compound mapping is done separately on left hand side and
@@ -484,10 +490,10 @@ def merge_partial_p_set(cpd_set1_left, cpd_set2_left, cpd_pred,
     """
     p_set_left = \
         reaction_equation_mapping_approx_max_likelihood(
-            cpd_set1_left, cpd_set2_left, cpd_pred)
+            cpd_set1_left, cpd_set2_left, cpd_pred, compartment_map)
     p_set_right = \
         reaction_equation_mapping_approx_max_likelihood(
-            cpd_set1_right, cpd_set2_right, cpd_pred)
+            cpd_set1_right, cpd_set2_right, cpd_pred, compartment_map)
     p_match = p_set_left[0] * p_set_right[0]
     p_no_match = p_set_left[1] * p_set_right[1]
     return p_match, p_no_match
@@ -500,7 +506,7 @@ def get_cpd_set(equation, left=True):
         coef = -1
     # pick compounds at one side only
     cpd_set = set(
-        compound.name
+        compound
         for compound, value in equation.compounds
         if coef * value < 0)
     return cpd_set
@@ -571,7 +577,8 @@ def parallel_equel(tasks):
     return func(*params)
 
 
-def map_model_compounds(model1, model2, nproc, outpath, log, kegg):
+def map_model_compounds(model1, model2, nproc=1, outpath='.',
+                        log=False, kegg=False):
     """Map compounds of two models."""
     compound_pairs = len(model1.compounds) * len(model2.compounds)
 
@@ -734,7 +741,8 @@ def map_model_compounds(model1, model2, nproc, outpath, log, kegg):
             bayes_posterior(compound_prior, compound_kegg_likelihoods))
 
 
-def map_model_reactions(model1, model2, cpd_pred, nproc, outpath, log, gene):
+def map_model_reactions(model1, model2, cpd_pred, nproc=1, outpath='.',
+                        log=False, gene=False, compartment_map={}):
     """Map reactions of two models."""
     # Mapping of reactions
     reaction_pairs = len(model1.reactions) * len(model2.reactions)
@@ -789,7 +797,7 @@ def map_model_reactions(model1, model2, cpd_pred, nproc, outpath, log, gene):
     reaction_equation_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.reactions, model2.reactions,
         reaction_equation_compound_mapping_likelihood,
-        (cpd_pred, ))
+        (cpd_pred, compartment_map))
 
     # Reaction genes
     # For each gene, the marginal probability of observing that gene

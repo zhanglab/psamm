@@ -81,7 +81,7 @@ class TestBayesianPredictor(unittest.TestCase):
                 '    genes: gene1 and gene2 or gene3',
                 '  - id: rnx_2',
                 '    equation: B2[c] => C[e]',
-                '    genes: gene5 and gene7',
+                '    genes: gene5 and gene6',
                 '  - id: rxn_3',
                 '    name: rxn_3',
                 '    equation: A[e] <=> (6) C[e] + (6) D4[c]',
@@ -93,7 +93,7 @@ class TestBayesianPredictor(unittest.TestCase):
                 '    formula: C6H11O6',
                 '    charge: 0',
                 '  - id: B2',
-                '    name: -B()',
+                '    name: -B ()',
                 '    formula: O2',
                 '    charge: 1',
                 '    kegg: C00010',
@@ -134,6 +134,8 @@ class TestBayesianPredictor(unittest.TestCase):
         self.assertIsInstance(p.get_cpd_pred(), pd.Series)
         self.assertLess(best_map.loc[('B', 'B2'), 'p_id'],
                         best_map.loc[('A', 'A'), 'p_id'])
+        self.assertIn(('A', 'A'), best_map.index)
+        self.assertIn(('B', 'B2'), best_map.index)
         self.assertIn(('C', 'C'), best_map.index)
         self.assertIn(('D', 'D4'), best_map.index)
 
