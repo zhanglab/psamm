@@ -330,6 +330,20 @@ class TestBayesianPredictor(unittest.TestCase):
             cpd_pred
         )
         self.assertEqual(m, un)
+        eq2 = parse_reaction('A1[s] + C1[s] + B1[s] => D1[s]')
+        m, un = bayesian.reaction_equation_compound_mapping_likelihood(
+            ReactionEntry({'id': 'r1', 'equation': eq1}),
+            ReactionEntry({'id': 'r2', 'equation': eq2}),
+            cpd_pred
+        )
+        self.assertLess(m, un)
+        m, un = bayesian.reaction_equation_compound_mapping_likelihood(
+            ReactionEntry({'id': 'r1', 'equation': eq1}),
+            ReactionEntry({'id': 'r2', 'equation': eq2}),
+            cpd_pred,
+            {'c': 's'}
+        )
+        self.assertGreater(m, un)
 
 
 class Test_bayesian_util(unittest.TestCase):

@@ -412,6 +412,11 @@ def reaction_equation_mapping_approx_max_likelihood(
         if ((c1.name, c2.name) in cpd_pred.index
             and (compartment_map.get(c1.compartment, c1.compartment)
                  == c2.compartment))]
+
+    # remove the compartment information
+    cpd_set1 = [c.name for c in cpd_set1]
+    cpd_set2 = [c.name for c in cpd_set2]
+
     # get the p value for (c1, c2) pairs, high possibility first
     cpd_pred = (cpd_pred.loc[pair_list]
                 .sort_values(ascending=False))
