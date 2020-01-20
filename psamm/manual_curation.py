@@ -270,4 +270,4 @@ def search_reaction(model, id):
         if reaction.filemark is not None:
             print('Defined in {}'.format(reaction.filemark))
         print('\n')
-        yield [c.name for c, v in reaction.equation.compounds]
+        yield [c for c, v in reaction.equation.compounds]

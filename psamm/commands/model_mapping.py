@@ -34,6 +34,7 @@ import psamm.manual_curation as curation
 from psamm.util import mkdir_p
 from psamm.datasource.native import ModelReader
 from psamm.command import Command
+from psamm.datasource.reaction import Compound
 
 
 def read_mapping_file(f):
@@ -228,6 +229,15 @@ class ModelMappingCommand(Command):
             help=(
                 'File to store curated reaction mapping, if file exists, '
                 'resume previous curation'))
+        parser_c.add_argument(
+            '--compartment-map', type=str,
+            help=(
+                'A tab delimited file (.tsv) listing the compartment ids of '
+                'query model in the first column, and the corresponding '
+                'compartment ids of dest model in the second column. Required '
+                'if the compartment ids in the two models are not consistent.'
+            )
+        )
 
         # translate id subcommand
         parser_t = subparsers.add_parser(
@@ -401,6 +411,14 @@ class ModelMappingCommand(Command):
             self._args.compound_map, self._args.reaction_map,
             self._args.curated_compound_map, self._args.curated_reaction_map)
 
+        # read commpartment map
+        compartment_map = {}
+        if self._args.compartment_map is not None:
+            with open(self._args.compartment_map) as f:
+                for row in f:
+                    old, new = row.strip().split()
+                    compartment_map[old] = new
+
         print('Starting to do manual curation...\n')
         print('Type "stop" to stop\n')
         # iterate through reaction mapping
@@ -411,9 +429,9 @@ class ModelMappingCommand(Command):
                 continue
             # check the compound mapping in current reaction
             compounds = curation.search_reaction(model1, [rmap[0][0]])
-            compounds = [c for c in next(compounds)]
+            compounds = [c.name for c in next(compounds)]
             dest_compounds = curation.search_reaction(model2, [rmap[0][1]])
-            dest_compounds = [c for c in next(dest_compounds)]
+            dest_compounds = [c.name for c in next(dest_compounds)]
             print('Below are the compound mapping involved:\n')
             for compound in compounds:
                 for cmap in curator.compound_map.loc[compound].iterrows():
@@ -460,31 +478,39 @@ class ModelMappingCommand(Command):
             print('Here is the reaction mapping:')
             print(rmap[1])
             print('\n')
-            _ = next(curation.search_reaction(model1, [rmap[0][0]]))
-            _ = next(curation.search_reaction(model2, [rmap[0][1]]))
+            compounds = curation.search_reaction(model1, [rmap[0][0]])
+            compounds = [c for c in next(compounds)]
+            dest_compounds = curation.search_reaction(model2, [rmap[0][1]])
+            dest_compounds = [c for c in next(dest_compounds)]
             print(('These two reactions have the following curated compound '
                    'pairs:\n'))
             count = 0
             compounds_curated = set()
             dest_compounds_curated = set()
             for compound in compounds:
-                if compound in curator.curated_compound_map.index:
+                if compound.name in curator.curated_compound_map.index:
                     for cmap in curator.curated_compound_map.loc[
-                            compound].iterrows():
-                        if cmap[0] in dest_compounds:
-                            print(compound, cmap[0], cmap[1]['p'])
+                            compound.name].iterrows():
+                        compartment = compartment_map.get(
+                            compound.compartment, compound.compartment
+                        )
+                        dest_compound = Compound(cmap[0], compartment)
+                        if dest_compound in dest_compounds:
+                            print(compound, dest_compound, cmap[1]['p'])
                             compounds_curated.add(compound)
-                            dest_compounds_curated.add(cmap[0])
+                            dest_compounds_curated.add(dest_compound)
                             count += 1
             print('\n')
             print('%i compounds in %s' % (len(compounds), rmap[0][0]))
             unpaired = set(compounds) - compounds_curated
             if len(unpaired) > 0:
-                print('Unpaired compounds: %s\n' % ', '.join(unpaired))
+                print('Unpaired compounds: %s\n' % ', '.join(
+                    [str(c) for c in unpaired]))
             print('%i compounds in %s' % (len(dest_compounds), rmap[0][1]))
             unpaired = set(dest_compounds) - dest_compounds_curated
             if len(unpaired) > 0:
-                print('Unpaired compounds: %s\n' % ', '.join(unpaired))
+                print('Unpaired compounds: %s\n' % ', '.join(
+                    [str(c) for c in unpaired]))
             print('%i curated compound pairs\n' % count)
             ask = ''
             # waiting for legal curation input

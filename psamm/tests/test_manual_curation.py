@@ -24,6 +24,7 @@ import os
 
 from psamm import manual_curation as curation
 from psamm.datasource.native import ModelReader
+from psamm.datasource.reaction import Compound
 
 
 class TestCurator(unittest.TestCase):
@@ -160,7 +161,9 @@ class TestSearch(unittest.TestCase):
 
     def test_search_reaction(self):
         cpds = curation.search_reaction(self._model, ['rxn_1', 'test'])
-        self.assertListEqual(next(cpds), ['A', 'B'])
+        self.assertListEqual(
+            next(cpds),
+            [Compound('A', 'e'), Compound('B', 'c')])
 
     def test_filter_search_term(self):
         self.assertEqual(curation.filter_search_term('Test-(tes)_t'),
