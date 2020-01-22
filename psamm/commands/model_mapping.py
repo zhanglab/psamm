@@ -238,6 +238,9 @@ class ModelMappingCommand(Command):
                 'if the compartment ids in the two models are not consistent.'
             )
         )
+        parser_c.add_argument(
+            '--compound-only', action='store_true',
+            help='Set to only curate compound maps.')
 
         # translate id subcommand
         parser_t = subparsers.add_parser(
@@ -419,6 +422,12 @@ class ModelMappingCommand(Command):
                     old, new = row.strip().split()
                     compartment_map[old] = new
 
+        if self._args.compound_only:
+            self._curate_compound(curator, model1, model2)
+        else:
+            self._curate_reaction(curator, model1, model2, compartment_map)
+
+    def _curate_reaction(self, curator, model1, model2, compartment_map):
         print('Starting to do manual curation...\n')
         print('Type "stop" to stop\n')
         # iterate through reaction mapping
@@ -516,7 +525,7 @@ class ModelMappingCommand(Command):
             # waiting for legal curation input
             while ask not in ['y', 'n', 'stop']:
                 ask = input(
-                    ('True reaction match? (y/n/save/stop, '
+                    ('True reaction match? (y/n/ignore/save/stop, '
                      'type ignore to ignore this reaction in future, '
                      'type save to save current progress, '
                      'type stop to save and exit): ')
@@ -537,6 +546,46 @@ class ModelMappingCommand(Command):
                     curator.save()
             print('\n', '=' * 50, '\n')
         curator.save()
+
+    def _curate_compound(self, curator, model1, model2):
+        for cmap in curator.compound_map.iterrows():
+            if (curator.compound_checked(cmap[0])
+                    or curator.compound_ignored(cmap[0][0])):
+                continue
+            print(cmap[1])
+            print('\n')
+            curation.search_compound(model1, [cmap[0][0]])
+            curation.search_compound(model2, [cmap[0][1]])
+            # waiting for legal curation input
+            while True:
+                ask = input(
+                    ('True compound match? (y/n/ignore/save/stop, '
+                     'type ignore to ignore this compound in future, '
+                     'type save to save current progress, '
+                     'type stop to save and exit): '))
+                if ask.lower() == 'n':
+                    curator.add_mapping(
+                        cmap[0],
+                        'c',
+                        False
+                    )
+                    break
+                if ask.lower() == 'y':
+                    curator.add_mapping(
+                        cmap[0],
+                        'c',
+                        True
+                    )
+                    break
+                if ask.lower() == 'ignore':
+                    curator.add_ignore(cmap[0][0], 'c')
+                    break
+                if ask.lower() == 'stop':
+                    curator.save()
+                    exit(0)
+                if ask.lower() == 'save':
+                    curator.save()
+            print('\n', '=' * 50, '\n')
 
     def _translate_id(self):
         """Translate ids"""
