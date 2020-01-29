@@ -25,6 +25,7 @@ import logging
 from six import text_type, string_types, integer_types, itervalues
 
 from ..command import Command
+from ..expression import boolean
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ class ExportTableCommand(Command):
         parser.add_argument(
             'export', metavar='export_type',
             choices=['reactions', 'compounds', 'medium', 'exchange', 'limits',
-                     'metadata'],
+                     'metadata', 'genes'],
             help='Type of model data to export')
 
     def run(self):
@@ -79,6 +80,8 @@ class ExportTableCommand(Command):
             self._limits_export()
         elif export_type == 'metadata':
             self._metadata_export()
+        elif export_type == 'genes':
+            self._gene_export()
 
     def _reaction_export(self):
         property_set = set()
@@ -153,3 +156,24 @@ class ExportTableCommand(Command):
         if self._model.version_string is not None:
             print('Model version\t{}'.format(
                 _encode_value(self._model.version_string)))
+
+    def _gene_export(self):
+        gene_assoc = {}
+
+        for reaction in self._model.reactions:
+            assoc = None
+            if reaction.genes is None:
+                continue
+            elif isinstance(reaction.genes, string_types):
+                assoc = boolean.Expression(reaction.genes)
+            else:
+                variables = [boolean.Variable(g) for g in reaction.genes]
+                assoc = boolean.Expression(boolean.And(*variables))
+
+            for gene in assoc.variables:
+                if gene not in gene_assoc:
+                    gene_assoc[gene] = []
+                gene_assoc[gene].append(reaction.id)
+
+        for gene, reaction in gene_assoc.items():
+            print('{}\t{}'.format(str(gene), ('#'.join([_encode_value(value) for value in reaction]))))
