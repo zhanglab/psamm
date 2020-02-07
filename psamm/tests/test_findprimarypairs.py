@@ -23,6 +23,7 @@ from psamm.reaction import Compound
 from psamm.datasource.reaction import parse_reaction
 from itertools import permutations
 
+
 class TestFindPrimaryPairs(unittest.TestCase):
     def test_default_weight(self):
         self.assertEqual(findprimarypairs.element_weight(Atom.C), 1)
@@ -81,7 +82,6 @@ class TestFindPrimaryPairs(unittest.TestCase):
                 Formula.parse('C10H10')
         })
         self.assertEqual(ambig, ambig if ambig in all_perm else set())
-
 
     def test_predict_compound_pairs_unbalanced(self):
         """Test prediction of (non-sense) unbalanced reaction."""
