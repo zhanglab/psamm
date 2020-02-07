@@ -22,6 +22,7 @@ import re
 import json
 import logging
 
+from collections import defaultdict
 from six import text_type, string_types, integer_types, itervalues
 
 from ..command import Command
@@ -158,7 +159,7 @@ class ExportTableCommand(Command):
                 _encode_value(self._model.version_string)))
 
     def _gene_export(self):
-        gene_assoc = {}
+        gene_assoc = defaultdict(list)
 
         for reaction in self._model.reactions:
             assoc = None
@@ -171,8 +172,6 @@ class ExportTableCommand(Command):
                 assoc = boolean.Expression(boolean.And(*variables))
 
             for gene in assoc.variables:
-                if gene not in gene_assoc:
-                    gene_assoc[gene] = []
                 gene_assoc[gene].append(reaction.id)
 
         for gene, reaction in gene_assoc.items():
