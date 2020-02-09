@@ -93,6 +93,7 @@ setup(
         gapcheck = psamm.commands.gapcheck:GapCheckCommand
         gapfill = psamm.commands.gapfill:GapFillCommand
         genedelete = psamm.commands.genedelete:GeneDeletionCommand
+        gimme = psamm.commands.gimme:GimmeCommand
         masscheck = psamm.commands.masscheck:MassConsistencyCommand
         primarypairs = psamm.commands.primarypairs:PrimaryPairsCommand
         randomsparse = psamm.commands.randomsparse:RandomSparseNetworkCommand
