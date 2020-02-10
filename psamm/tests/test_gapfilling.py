@@ -131,10 +131,8 @@ class TestCreateExtendedModel(unittest.TestCase):
             'TP_B[c]_B[e]',
             'TP_C[c]_C[e]',
             'TP_D[c]_D[e]',
-            'EX_A[e]',
             'EX_B[e]',
             'EX_C[e]',
-            'EX_D[e]'
         ])
 
         expected_weights = {
@@ -144,10 +142,8 @@ class TestCreateExtendedModel(unittest.TestCase):
             'TP_B[c]_B[e]': 3.0,
             'TP_C[c]_C[e]': 3.0,
             'TP_D[c]_D[e]': 3.0,
-            'EX_A[e]': 2.0,
             'EX_B[e]': 2.0,
-            'EX_C[e]': 2.0,
-            'EX_D[e]': 2.0
+            'EX_C[e]': 2.0
         }
         penalties = {'rxn_3': 5.6}
 
