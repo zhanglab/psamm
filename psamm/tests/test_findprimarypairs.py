@@ -21,6 +21,7 @@ from psamm import findprimarypairs
 from psamm.formula import Formula, Atom, Radical
 from psamm.reaction import Compound
 from psamm.datasource.reaction import parse_reaction
+from itertools import permutations
 
 
 class TestFindPrimaryPairs(unittest.TestCase):
@@ -39,9 +40,9 @@ class TestFindPrimaryPairs(unittest.TestCase):
             'adp': Formula.parse('C10H12N5O10P2'),
             'glc-D': Formula.parse('C6H12O6'),
             'g6p': Formula.parse('C6H11O9P'),
-            'h': Formula.parse('H'),
+            'h': Formula.parse('H')
         }
-        transfer, balance = findprimarypairs.predict_compound_pairs(
+        transfer, balance, ambiguous_pairs = findprimarypairs.predict_compound_pairs(
             reaction, formulas)
 
         self.assertEqual(balance, {})
@@ -53,8 +54,34 @@ class TestFindPrimaryPairs(unittest.TestCase):
             ((Compound('atp', 'c'), 1), (Compound('g6p', 'c'), 1)):
                 Formula.parse('O3P'),
             ((Compound('glc-D', 'c'), 1), (Compound('h', 'c'), 1)):
-                Formula.parse('H'),
+                Formula.parse('H')
         })
+        self.assertEqual(ambiguous_pairs, set())
+
+    def test_predict_compound_pairs_ambig(self):
+        """Test prediction of (non-sense) ambiguous reaction."""
+        reaction = parse_reaction(
+            'a[c] + b[c] => c[c] + d[c]')
+        formulas = {
+            'a': Formula.parse('C10H10'),
+            'b': Formula.parse('C10H10'),
+            'c': Formula.parse('C10H10'),
+            'd': Formula.parse('C10H10')
+        }
+        transfer, balance, ambiguous_pairs = findprimarypairs.predict_compound_pairs(
+            reaction, formulas)
+
+        all_perm = set(set(permutations(list(ambiguous_pairs)[0])))
+        ambig = list(ambiguous_pairs)[0]
+
+        self.assertEqual(balance, {})
+        self.assertEqual(transfer, {
+            ((Compound('b', 'c'), 1), (Compound('d', 'c'), 1)):
+                Formula.parse('C10H10'),
+            ((Compound('a', 'c'), 1), (Compound('c', 'c'), 1)):
+                Formula.parse('C10H10')
+        })
+        self.assertEqual(ambig, ambig if ambig in all_perm else set())
 
     def test_predict_compound_pairs_unbalanced(self):
         """Test prediction of (non-sense) unbalanced reaction."""
@@ -63,9 +90,9 @@ class TestFindPrimaryPairs(unittest.TestCase):
         formulas = {
             'a': Formula.parse('C10H12'),
             'b': Formula.parse('C9H11'),
-            'c': Formula.parse('CO2'),
+            'c': Formula.parse('CO2')
         }
-        transfer, balance = findprimarypairs.predict_compound_pairs(
+        transfer, balance, ambiguous_pairs = findprimarypairs.predict_compound_pairs(
             reaction, formulas)
 
         self.assertEqual(balance, {
@@ -78,6 +105,7 @@ class TestFindPrimaryPairs(unittest.TestCase):
             ((Compound('a', 'c'), 1), (Compound('c', 'c'), 1)):
                 Formula.parse('C'),
         })
+        self.assertEqual(ambiguous_pairs, set())
 
     def test_predict_compound_pairs_multiple(self):
         """Test prediction of reaction with multiple instances."""
@@ -88,7 +116,7 @@ class TestFindPrimaryPairs(unittest.TestCase):
             'b': Formula.parse('C5H6O3'),
             'c': Formula.parse('H'),
         }
-        transfer, balance = findprimarypairs.predict_compound_pairs(
+        transfer, balance, ambiguous_pairs = findprimarypairs.predict_compound_pairs(
             reaction, formulas)
 
         self.assertEqual(balance, {})
@@ -98,9 +126,6 @@ class TestFindPrimaryPairs(unittest.TestCase):
             ((Compound('a', 'c'), 1), (Compound('b', 'c'), 2)):
                 Formula.parse('C5H6O3'),
             ((Compound('a', 'c'), 1), (Compound('c', 'c'), 1)):
-                Formula.parse('H'),
+                Formula.parse('H')
         })
-
-
-if __name__ == '__main__':
-    unittest.main()
+        self.assertEqual(ambiguous_pairs, set())
