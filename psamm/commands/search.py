@@ -24,6 +24,8 @@ from six import text_type
 from ..command import Command, FilePrefixAppendAction
 from ..datasource.reaction import parse_compound
 
+from psamm.expression import boolean
+
 
 def filter_search_term(s):
     return re.sub(r'[^a-z0-9]+', '', s.lower())
@@ -49,6 +51,16 @@ class SearchCommand(Command):
             '--name', '-n', dest='name', metavar='name',
             action=FilePrefixAppendAction, type=text_type, default=[],
             help='Name of compound')
+        parser_compound.add_argument(
+            '--props', '-c', dest='props', metavar='props',
+            nargs='+', type=str, default=None,
+            help='Space-separated list of compound properties, such as '
+                 'compound formula, compound charge, molecular weight...')
+        parser_compound.add_argument(
+            '--match-type', '-m', dest='match_type', metavar='match_type',
+            type=str, choices=['exact', 'vague'], default='vague',
+            help='chose the map type when using --props to find compound. '
+                 'exact means completely match, vague means partially match')
 
         # Reaction subcommand
         parser_reaction = subparsers.add_parser(
@@ -62,6 +74,17 @@ class SearchCommand(Command):
             '--compound', '-c', dest='compound', metavar='compound',
             action=FilePrefixAppendAction, type=str, default=[],
             help='Comma-separated list of compound IDs')
+        parser_reaction.add_argument(
+            '--props', '-p', dest='props', metavar='props',
+            nargs='+', type=str, default=None,
+            help='Space-separated list of reaction properties, such as '
+                 'reaction name, ec number, pathway or subsystem name or '
+                 'gene association')
+        parser_reaction.add_argument(
+            '--match-type', '-m', dest='match_type', metavar='match_type',
+            type=str, choices=['exact', 'vague'], default='vague',
+            help='chose the map type when using --props to find reaction. '
+                 'exact means completely match, vague means partially match')
 
     def run(self):
         """Run search command."""
@@ -74,7 +97,6 @@ class SearchCommand(Command):
 
     def _search_compound(self):
         selected_compounds = set()
-
         for compound in self._model.compounds:
             if len(self._args.id) > 0:
                 if any(c == compound.id for c in self._args.id):
@@ -91,6 +113,34 @@ class SearchCommand(Command):
                        for n in self._args.name):
                     selected_compounds.add(compound)
                     continue
+
+            # find compounds that contains any of given properties
+            if self._args.props is not None:
+
+                # prepare s list of all compound properties
+                compound_prop_list = []
+                for cpd_property in compound.properties.values():
+                    if isinstance(cpd_property, list):
+                        for i in cpd_property:
+                            compound_prop_list.append(str(i).lower())
+                    else:
+                        compound_prop_list.append(str(cpd_property).lower())
+
+                # find compound entry based on given property argument
+                props = set()
+                if self._args.match_type == 'exact':
+                    for property in self._args.props:
+                        props.add(property.lower())
+                    if any(prop in props for prop in compound_prop_list):
+                        selected_compounds.add(compound)
+                        continue
+                elif self._args.match_type == 'vague':
+                    for property_list in self._args.props:
+                        for property in property_list.split(','):
+                            props.add(property.lower())
+                    if any(prop in ('|'.join(compound_prop_list)) for
+                           prop in props):
+                        selected_compounds.add(compound)
 
         # Show results
         for compound in selected_compounds:
@@ -132,6 +182,36 @@ class SearchCommand(Command):
                 if any(c.issubset(compounds) for c in search_compounds):
                     selected_reactions.add(reaction)
                     continue
+
+            if self._args.props is not None:
+                props = set()
+
+                # prepare s list of all reaction properties
+                # except reaction equation
+                raw_reaction_prop_list = [
+                    reaction.properties[key] for key in reaction.properties
+                    if key != 'equation']
+                reaction_prop_list = []
+                for rxn_property in raw_reaction_prop_list:
+                    if isinstance(rxn_property, list):
+                        for i in rxn_property:
+                            reaction_prop_list.append(str(i).lower())
+                    else:
+                        reaction_prop_list.append(str(rxn_property).lower())
+
+                # find reaction based on given property argument
+                if self._args.match_type == 'exact':
+                    for property in self._args.props:
+                        props.add(property.lower())
+                    if any(prop in props for prop in reaction_prop_list):
+                        selected_reactions.add(reaction)
+                        continue
+                elif self._args.match_type == 'vague':
+                    for property in self._args.props:
+                        props.add(property.lower())
+                    if any(prop in '|'.join(reaction_prop_list) for
+                           prop in props):
+                        selected_reactions.add(reaction)
 
         # Show results
         for reaction in selected_reactions:
