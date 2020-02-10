@@ -84,6 +84,23 @@ class GimmeCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
 
 
 def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc, split_rxns, transcript_values, threshold):
+    """Formulates and Solves a GIMME model.
+
+    Implementation of the GIMME algorith (Becker and Pallson 2008).
+    Accepts an irreversible metabolic model, LP problem, and GIMME specific
+    data. Will add in relevent GIMME constraints to the LP problem and
+    generates a contextualized model based on the media constraints and the
+    transcriptome data provided.
+
+    Args:
+        problem: :class:`FluxBalanceProblem` to solve.
+        mm: An irreversible metabolic model.
+        biomass: Biomass reaction ID.
+        reversible_gene_assoc: A dictionary of gene IDs from make_irreversible.
+        split_rxns: A set of tuples of reaction IDs from make_irreversible.
+        transcript_values: A dictionary returned from parse_transcriptome_file.
+        threshold: A threshold that the biomass flux needs to stay above.
+    """
 	ci_dict = {}
 	for reaction in mm.reactions:
 		problem.prob.define('zi_{}'.format(reaction), types=lp.VariableType.Binary)
@@ -168,6 +185,18 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc, split_rxns,
 
 
 def parse_transcriptome_file(f, threshold):
+    """Parses a file containing a gene to expression mapping.
+
+    Parses a tab separated two column table. The first column contains gene
+    IDs while the second column contains expression values. Will compare the
+    expression values to the given threshold and return a dict with any
+    genes that fall under the expression threshold, and the amount that they
+    fall under the threshold.
+
+    Args:
+        f: a file containing a two column gene to expression table.
+        threshold: Expression threshold value.
+    """
 	threshold_value = {}
 	for row in csv.reader(f, delimiter=str('\t')):
 		try:
@@ -183,6 +212,20 @@ def parse_transcriptome_file(f, threshold):
 
 
 def get_rxn_value(root, gene_dict):
+        """Gets overall expression value for a reaction gene association.
+
+        Recursive funciton designed to parse a gene expression and return
+        an expression value to use in the GIMME algorithm. This function is
+        designed to return the value directly if the expression only has
+        one gene. If the expression has multiple genes related by 'OR'
+        associations, then it will return the highest of the set of values.
+        If the genes are associated with 'AND' logic then the function
+        will return the lowest of the set of values.
+
+        Args:
+            root: object of boolean.Expression()._root
+            gene_dict: dict of gene expression from parse_transcriptome_file
+        """
 	if type(root) == boolean.Variable:
 		return gene_dict.get(root.symbol)
 	elif type(root) is boolean.And:
