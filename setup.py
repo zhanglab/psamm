@@ -107,7 +107,7 @@ setup(
         psammotate = psamm.commands.psammotate:PsammotateCommand
         modelmapping = psamm.commands.model_mapping:ModelMappingCommand
         vis = psamm.commands.vis:VisualizationCommand
-        
+
         [psamm.importer]
         JSON = psamm.importers.cobrajson:Importer
         SBML = psamm.importers.sbml:NonstrictImporter
@@ -122,7 +122,7 @@ setup(
         'six',
         'xlsxwriter',
         'numpy',
-        'scipy'
+        'scipy',
         'future',
         'pandas'
     ],
