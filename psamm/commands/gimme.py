@@ -23,6 +23,7 @@ import logging
 import csv
 from ..lpsolver import lp, cplex
 
+from six import iteritems
 from ..expression import boolean
 from ..lpsolver.lp import Expression, ObjectiveSense
 from ..fluxanalysis import FluxBalanceProblem
@@ -114,7 +115,7 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc, split_rxns,
 			problem.prob.add_linear_constraints(
 				problem.get_flux_var(biomass) >= threshold)
 
-	for key, value in ci_dict.iteritems():
+	for key, value in iteritems(ci_dict):
 		gimme_objective += problem.get_flux_var(key) * value
 	problem.prob.define('gimme_objective', types=lp.VariableType.Continuous)
 	obj = problem.prob.var('gimme_objective')
@@ -132,7 +133,7 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc, split_rxns,
 	used_above = 0
 	off_below = 0
 	off_above = 0
-	final_model = []
+	final_model = set()
 	original_reaction_set = set()
 	for reaction in mm.reactions:
 		if mm.is_exchange(reaction):
@@ -153,16 +154,16 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc, split_rxns,
 			if reaction in below_threshold_ids:
 				used_below += 1
 				used_below_list.append(reaction)
-				final_model.append(reaction)
+				final_model.add(reaction)
 			else:
 				used_above += 1
-				final_model.append(reaction)
+				final_model.add(reaction)
 		else:
 			if reaction in below_threshold_ids:
 				off_below += 1
 			else:
 				off_above += 1
-				final_model.append(reaction)
+				final_model.add(reaction)
 	return final_model, below_threshold_ids, problem.prob.result.get_value(obj)
 
 
@@ -217,7 +218,7 @@ def make_irreversible(mm, gene_dict, exclude_list=[],
         exclude_list: list of reactions to exclude in TMFA simulation
         all_reversible: if True make all reactions in model reversible.
     """
-	split_reversible = []
+	split_reversible = set()
 	mm_irrev = mm.copy()
 	lumped_rxns = []
 	new_lump_rxn_dict = {}
@@ -244,7 +245,7 @@ def make_irreversible(mm, gene_dict, exclude_list=[],
 					mm_irrev.database.set_reaction(r2_id, r2)
 					mm_irrev.add_reaction(r_id)
 					mm_irrev.add_reaction(r2_id)
-					split_reversible.append((r_id, r2_id))
+					split_reversible.add((r_id, r2_id))
 					reversible_gene_dict[r_id] = gene_dict.get(rxn)
 					reversible_gene_dict[r2_id] = gene_dict.get(rxn)
 			elif reaction.direction == Direction.Both:
@@ -253,7 +254,7 @@ def make_irreversible(mm, gene_dict, exclude_list=[],
 				mm_irrev.database.set_reaction(r2_id, r2)
 				mm_irrev.add_reaction(r_id)
 				mm_irrev.add_reaction(r2_id)
-				split_reversible.append((r_id, r2_id))
+				split_reversible.add((r_id, r2_id))
 				reversible_gene_dict[r_id] = gene_dict.get(rxn)
 				reversible_gene_dict[r2_id] = gene_dict.get(rxn)
 			if upper == lower:
