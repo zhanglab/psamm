@@ -11,9 +11,9 @@ The tools that can be applied to metabolic models are run through the
 
 This program allows you to specify a metabolic model and a command to apply to
 the given model. The available commands can be seen using the help command
-given above, and are also described in more details below.
+given above, and are also described in more detail below.
 
-To run the program with a model, use
+To run the program with a model, use the following command:
 
 .. code-block:: shell
 
@@ -37,7 +37,7 @@ Linear programming solver
 -------------------------
 
 Many of the commands described below use a linear programming (LP) solver in
-order to perform the analysis. These commands all take an option `--solver`
+order to perform the analysis. These commands all take an option ``--solver``
 which can be used to select which solver to use and to specify additional
 options for the LP solver. For example, in order to run the ``fba`` command
 with the QSopt_ex solver, the option ``--solver name=qsoptex`` can be added:
@@ -47,9 +47,9 @@ with the QSopt_ex solver, the option ``--solver name=qsoptex`` can be added:
     $ psamm-model fba --solver name=qsoptex
 
 The ``--solver`` option can also be used to specify additional options for the
-solver in use. For example, the Cplex solver recognizes the ``threads``
-option which can be used to adjust the maximum number of threads that Cplex
-will use internally (by default, Cplex will use as many threads as there are
+solver in use. For example, the CPLEX solver recognizes the ``threads``
+option which can be used to adjust the maximum number of threads that CPLEX
+will use internally (by default, CPLEX will use as many threads as there are
 cores on the computer):
 
 .. code-block:: shell
@@ -79,8 +79,8 @@ or with a specific reaction:
 
 By default, this performs a standard FBA and the result is output as
 tab-separated values with the reaction ID, the reaction flux and the reaction
-equation. If the parameter ``--loop-removal`` is given, the flux of the
-internal reactions is further constrained to remove internal loops
+equation. If the parameter ``--loop-removal`` is given, the fluxes of the
+internal reactions are further constrained to remove internal loops
 [Schilling00]_. Loop removal is more time-consuming and under normal
 circumstances the biomass reaction flux will *not* change in response to the
 loop removal (only internal reaction fluxes may change). The ``--loop-removal``
@@ -91,6 +91,14 @@ example, the following command performs an FBA with thermodynamic constraints:
 .. code-block:: shell
 
     $ psamm-model fba --loop-removal=tfba
+
+By default, the output of the FBA command will only display reactions which
+have non-zero fluxes. This can be overridden with the ``--all-reactions``
+option to display all reactions even if they have flux values of zero.
+
+.. code-block:: shell
+
+    $ psamm-model fba --all-reactions
 
 Flux variability analysis (``fva``)
 -----------------------------------
@@ -114,9 +122,30 @@ In this example the ``PPCK`` reaction has a minimum flux of zero and maximum
 flux of 135.3 units. The ``PTAr`` reaction has a minimum flux of 62.3 and a
 maximum of 1000 units.
 
-If the parameter ``--loop-removal=tfba`` is given, additonal thermodynamic
+If the parameter ``--loop-removal=tfba`` is given, additional thermodynamic
 constraints will be imposed when evaluating model fluxes. This automatically
 removes internal flux loops [Schilling00]_ but is much more time-consuming.
+
+By default, FVA is performed with the objective reaction (either the biomass
+reaction or reaction given through the ``--objective`` option) fixed at its
+maximum value. It is also possible allow this reaction flux to vary by a
+specified amount through the ``--thershold`` option. When this option is
+used the variability results will show the possible flux ranges when the
+objective reaction is greater than or equal to the threshold value.
+
+The threshold can be specified by either giving a percentage of the maximum
+objective flux or by giving a defined flux value.
+
+.. code-block:: shell
+
+    $ psamm-model fva --threshold 90%
+    or
+    $ psamm-model fva --threshold 1.2
+
+The FVA command can also be run as parallel processes to speed up simulations
+done on larger models. This can be done using the ``--parallel`` option. Either
+a specific number of parallel jobs can be given or 0 can be given to
+automatically detect and use the maximum number of parallel processes.
 
 Robustness (``robustness``)
 ---------------------------
@@ -148,6 +177,16 @@ If the parameter ``--loop-removal`` is given, additional constraints on the
 model can be imposed that remove internal flux loops. See the section on the
 :ref:`commands-fba` command for more information on this option.
 
+It is also possible to print out the flux of all reactions for each step in
+the robustness simulation instead of just printing the varying reaction flux.
+This can be done through using the ``--all-reaction-fluxes`` option.
+
+The Robustness command can also be run as parallel processes to speed up
+simulations done on larger models. This can be done using the
+``--parallel`` option. Either a specific number of parallel jobs can
+be given or 0 can be given to automatically detect and use the maximum
+number of parallel processes.
+
 Random sparse network (``randomsparse``)
 ----------------------------------------
 
@@ -166,9 +205,20 @@ threshold. The tolerance can be specified as a relative value (as above) or as
 an absolute flux. Aggregating the results from multiple random sparse networks
 allows classifying reactions as essential, semi-essential or non-essential.
 
-If the option ``--exchange`` is given, the model will only try to delete
-exchange reactions. This can be used to provide putative minimal media for
-the model.
+By default, the randomsparse command will perform the deletions on reactions
+in the model. The ``--type`` option can be used to change this deletion to
+act on the genes in the model or to act on only the set of exchange reactions.
+The gene deletion option will remove a gene from a network and then assess
+which reactions would be affected by that gene loss based on the provided
+gene associations. The exchange reaction deletion will only delete reactions
+from the set of exchange reactions in the model and can be used to generate
+a putative minimal media for the model.
+
+.. code-block:: shell
+
+    $ psamm-model randomsparse --type genes 95%
+    or
+    $ psamm-model randomsparse --type exchange 95%
 
 The output of the command is a tab-separated list of reaction IDs and a value
 indicating whether the reaction was eliminated (``0`` when eliminated, ``1``
@@ -333,7 +383,7 @@ The output has now changed and the remaining residual has been shifted to
 another reaction. This iterative procedure can be continued until all
 stoichiometric inconsistencies have been corrected. In this example the
 `IR00149` reaction also had a missing `H+` for the reaction to balance. After
-fixing this error the model is consistent and the `H+` compounds can be
+fixing this error, the model is consistent and the `H+` compounds can be
 assigned a non-zero mass::
 
     $ psamm-model masscheck
@@ -385,6 +435,8 @@ If the parameter ``--loop-removal=tfba`` is given, additional thermodynamic
 constraints are imposed when considering whether reactions can take a non-zero
 flux. This automatically removes internal flux loops but is also much more
 time-consuming.
+
+Some reactions could
 
 Reaction duplicates check (``duplicatescheck``)
 -----------------------------------------------
@@ -499,13 +551,37 @@ minimal solution.
 
     $ psamm-model fastgapfill --penalty penalty.tsv
 
+The penalty file provided should be a tab separated table that contains
+reaction IDs and assigned penalty values in two columns:
+
+.. code-block:: shell
+
+    RXN1    10
+    RXN2    15
+    RXN3    20
+    ....
+
+In addition to setting penalty values directly through the ``--penalty`` argument,
+default penalties for all other database reactions can be set through the
+``--db-penalty`` argument. Reactions that do not have penalty values
+explicitly set through the ``--penalty`` argument will be assigned
+this penalty value. Similarly, penalty values can be assigned for new
+exchange reactions and artificial transport reactions through the
+``--ex-penalty`` and ``--tp-penalty`` arguments. An example using
+all three of these arguments can be seen here:
+
+.. code-block:: shell
+
+    $ psamm-model fastgapfill --db-penalty 100 --tp-penalty 1000 --ex-penalty 150
+
+
 Predict primary pairs (``primarypairs``)
 ----------------------------------------------------------------------
 
 This command is used to predict element-transferring reactant/product pairs
 in the reactions of the model. This can be used to determine the flow of
 elements through reactions. Two methods for predicting the pairs are available:
-FindPrimaryPairs (``fpp``) [Steffensen17]_ and
+`FindPrimaryPairs` (``fpp``) [Steffensen17]_ and
 MapMaker (``mapmaker``) [Tervo16]_. The ``--method`` option can used to select
 which prediction method to use:
 
@@ -517,6 +593,224 @@ The result is reported as a table of four columns. The first column is the
 reactions ID, the second and third columns contain the compound ID of the
 reactant and product. The fourth column contains the predicted transfer of
 elements.
+
+The ``primarypairs`` command will run slowly on models that contain artificial
+reactions such as biomass reactions or condensed biosynthesis reactions.
+Because the reactant/product pair prediction in these reactions is
+not as biologically meaningful these reactions can be excluded through
+the ``--exclude`` option. This option can be used to either give reaction
+IDs to exclude or to give an input file containing a list of reactions
+IDs to exclude:
+
+.. code-block:: shell
+
+    $ psamm-model primarypairs --exclude BiomassReaction
+    or
+    $ psamm-model primarypairs --exclude @./exclude.tsv
+
+PSAMM-Vis (``vis``)
+-----------------------------
+
+Models can be visualized through the use of `PSAMM-vis` as implemented in the
+``vis`` command in `PSAMM`. This command can use
+the `FindPrimaryPairs` algorithm to help generate images of full models
+or subsets of models. The output of this command will consist of a graph
+file in the `dot` language, ``reactions.dot``, and two files
+called ``reactions.nodes.tsv`` and ``reactions.edges.tsv`` that contain
+the network data in TSV format.
+
+To run the ``vis`` command the following command can be used:
+
+.. code-block:: shell
+
+    $ psamm-model vis
+
+Basic Graph Generation
+~~~~~~~~~~~~~~~~~~~~~~
+
+By default, the vis command uses the `FindPrimaryPairs` algorithm to
+simplify the graph that is produced. This algorithm runs much faster
+if certain types of artificial reactions are not considered when doing
+the reactant/product pair prediction. These reactions often represent
+Biomass production or condensed biosynthesis processes. To exclude
+these reactions the ``vis`` command can be run with the ``--exclude``
+option to provide an input file that contains a list of reaction IDs:
+
+.. code-block:: shell
+
+    $ psamm-model vis --exlcude @{path to file}
+
+Running this command, `PSAMM-vis` only produce three files described above.
+Graph image generating softwares can convert these files to
+actual images. If the program `Graphviz` is installed on the computer,
+then this program can be used within `PSAMM` to generate the network image
+directly. This can be done by adding the ``--image`` argument followed
+by any `Graphviz` supported image format:
+
+.. code-block:: shell
+
+    $ psamm-model vis --image {format (pdf, eps, svg, etc.)}
+
+
+While the ``vis`` function in `PSAMM` uses `FindPrimaryPairs` for graph
+simplification by default, the command is also able to run using no
+graph simplification (``no-fpp``).
+
+This can be done through using the ``--method`` argument:
+
+.. code-block:: shell
+
+    $ psamm-model vis --method no-fpp
+
+The resulting graphs can be further simplified to only show element
+transfers that contain a specified element through the ``--element`` argument.
+When using this option any reactant/product pairs that do not transfer
+the specified element will not be shown on the graph. To use this option the
+following command can be used:
+
+.. code-block:: shell
+
+    $ psamm-model vis --element {Atomic Symbol}
+
+Additionally, the final graphs created through ``vis`` command can only show
+a specified subset of reactions from the larger model. This can be done using
+``--subset`` argument to provide a file containing a single column list of
+either reaction IDs or metabolite IDs (but not the mix of reaction and
+compound IDs).
+
+.. code-block:: shell
+
+    $ psamm-model vis --subset {path to file}
+
+And example of this file would be:
+
+.. code-block:: shell
+
+    rxn_1
+    rxn_2
+    rxn_4
+
+Or:
+
+.. code-block:: shell
+
+    cpd_1[c]
+    cpd_1[e]
+    cpd_2[c]
+
+
+Further modification can be done to the graph image to selectively
+hide certain edges in the final graph. This can be used to hide edges
+between paris of metabolites that might have many connections in the
+final graph images. Typical examples of these pairs include ATP and
+ADP, NAD and NADH, etc. To use this option first a tab separated
+table containing the metabolite pairs to hide must be made:
+
+.. code-block:: shell
+
+    atp[c]  adp[c]
+    h2o[c]  h[c]
+    nad[c]  nadh[c]
+
+This file can then be used with the ``vis`` command through
+the ``--hide-edges`` argument:
+
+.. code-block:: shell
+
+    $ psamm-model vis --hide-edges {path to edges file}
+
+
+Graph Image Customization
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default, the reaction and metabolite nodes in a graph will only
+show the reaction or metabolite IDs, but the final graphs output by the command
+can be customized to include additional reaction metabolite information
+that is present in the model. This additional information will be shown
+directly on the reaction or metabolite nodes in the graph.
+This can be done through using the ``--rxn-detail`` and ``--cpd-detail``
+options. These options can be used followed by a space separated list
+of properties to include. For example, the following command could be used to
+show additional information of reactions and compounds:
+
+.. code-block:: shell
+
+    $ psamm-model vis --cpd-detail id formula charge \
+      --rxn-detail id name equation
+
+
+The reaction and metabolite nodes can be further customized by specifying the
+filling color of nodes. This can be done by providing a two-column file that
+contains reaction or metabolite IDs (with compartment) and hex color codes:
+
+.. code-block:: shell
+
+    ACONTa  #c4a0ef
+    succ[c] #10ea88
+    FUM #c4a0ef
+    ....
+
+This file can be used to color the nodes on the graph
+through the ``--color`` option:
+
+.. code-block:: shell
+
+    $ psamm-model vis --color {path to color table}
+
+
+The graph image can be simplified through the use of the ``--combine`` option.
+By default, the combine level is 0. The graph generated from using
+combine level 0 will have one reaction node for each reactant product
+pair within a reaction. This can result in having many sets of
+substrates/reaction/product nodes within the graph image, depending on how
+many substrates and products are present in a metabolic reaction. Using
+the combine level 1 option will condense the reaction nodes down so that
+there is only one reaction node per reaction, with each reaction node having
+connections to all reactants and products of that reaction. The combine level
+2 option will condense the graph in a different way. With this option
+the graph is condensed based on shared reactant/product pairs between
+different reactions. If two separate reactions contain a common
+reactant/product pair, such as ATP/ADP pair, then the nodes for those
+condensed into one combined node.
+
+.. code-block:: shell
+
+    $ psamm-model vis --combine {0,1,2}
+
+
+The final graph image can also be modified to show the reactions and
+metabolites in different compartments based on the compartment information
+provided in the model's reactions. This can be done through using the
+``--compartment`` option:
+
+.. code-block:: shell
+
+    $ psamm-model vis --compartment
+
+Users can specify name of output through  ``--output`` option. By default,
+output will be named "reactions.dot", "reactions.nodes.tsv",
+"reactions.edges.tsv":
+
+.. code-block:: shell
+
+    $ psamm-model vis --output Ecolicore
+
+The output files will be named "Ecolicore.dot", "Ecolicore.nodes.tsv",
+"Ecolicore.edges.tsv".
+
+
+The image file produced from the ``vis`` will be automatically sized by
+the `Graphviz` programs used to generate the image file. If a specific
+size is desired the ``--image-size`` argument can be used to supple a
+width and height in inches that the final image file should be. For
+example to generate a graph that will be made into a 5" width by 10"
+height image the following command can be used:
+
+.. code-block:: shell
+
+    $ psamm-model vis --image-size 5,10
+
+
 
 SBML Export (``sbmlexport``)
 ----------------------------
@@ -575,9 +869,24 @@ To search for a reaction use
 
 Use the ``--id`` option to search for a reaction with a specific identifier.
 The ``--compound`` option can be used to search for reactions that include a
-specific compound. If more that one compound identifier is given
+specific compound. If more than one compound identifier is given
 (comma-separated) this will find reactions that include all of the given
 compounds.
+
+PSAMM-SBML-Model
+----------------
+`PSAMM` normally takes a model in the `YAML` format as input. To deal with
+models that are in the `SBML` `PSAMM` includes various programs that allow
+users to convert these models to the `YAML` format. One additional option
+for dealing with models in the `SBML` format is using the `psamm-sbml-model`
+function. This function can be used to run any command normally accessed
+through `psamm-model` but with an `SBML` model as the input. To use this
+command the `SBML` model file needs to be specified first followed
+by the commands:
+
+.. code-block:: shell
+
+    $ psamm-sbml-model {model.xml} fba
 
 Console (``console``)
 ---------------------
