@@ -407,6 +407,7 @@ class TestBiGGImportMain(unittest.TestCase):
         importer.main_bigg(['list'], urlopen=mock_urlopen)
 
 
+<<<<<<< HEAD
 class TestMatlabImporter(unittest.TestCase):
     def setUp(self):
         self.dest = tempfile.mkdtemp()
@@ -546,3 +547,7 @@ class TestMatlabImporter(unittest.TestCase):
                           '--source', os.path.join(self.dest, 'model1.mat'),
                           '--dest', output_dir,
                       ])
+=======
+if __name__ == '__main__':
+    unittest.main()
+>>>>>>> psammotate-jwang

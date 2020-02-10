@@ -113,3 +113,7 @@ class TestDictEntries(unittest.TestCase):
         self.assertIsInstance(e, entry.CompartmentEntry)
         self.assertEqual(e.id, 'c')
         self.assertEqual(e.name, 'Cytosol')
+
+
+if __name__ == '__main__':
+    unittest.main()

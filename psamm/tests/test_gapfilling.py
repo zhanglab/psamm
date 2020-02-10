@@ -159,3 +159,7 @@ class TestCreateExtendedModel(unittest.TestCase):
             penalties=penalties)
         self.assertEqual(set(model_extended.reactions), expected_reactions)
         self.assertEqual(weights, expected_weights)
+
+
+if __name__ == '__main__':
+    unittest.main()

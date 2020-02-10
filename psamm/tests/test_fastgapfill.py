@@ -51,3 +51,7 @@ class TestFastGapFill(unittest.TestCase):
         self.assertEqual(
             set(induced),
             {'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4'})
+
+
+if __name__ == '__main__':
+    unittest.main()

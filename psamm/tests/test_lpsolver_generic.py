@@ -92,3 +92,7 @@ class TestListSolversCommand(unittest.TestCase):
                 generic.list_solvers([])
         else:
             generic.list_solvers([])
+
+
+if __name__ == '__main__':
+    unittest.main()

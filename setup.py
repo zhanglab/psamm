@@ -100,6 +100,7 @@ setup(
         sbmlexport = psamm.commands.sbmlexport:SBMLExport
         search = psamm.commands.search:SearchCommand
         tableexport = psamm.commands.tableexport:ExportTableCommand
+        psammotate = psamm.commands.psammotate:PsammotateCommand
 
         [psamm.importer]
         JSON = psamm.importers.cobrajson:Importer

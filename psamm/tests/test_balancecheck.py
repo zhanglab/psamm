@@ -121,3 +121,7 @@ class TestBalanceCheckWithReaction(unittest.TestCase):
         }
         result = balancecheck.reaction_formula(reaction, compound_formula)
         self.assertIsNone(result)
+
+
+if __name__ == '__main__':
+    unittest.main()
