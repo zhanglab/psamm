@@ -14,9 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
-# Copyright 2018-2018  Ke Zhang <kzhang@my.uri.edu>
-# Copyright 2015-2018  Keith Dufault-Thompson <keitht547@uri.edu>
+# Copyright 2018-2020  Ke Zhang <kzhang@my.uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@uri.edu>
 
 from __future__ import unicode_literals
 

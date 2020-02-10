@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2015-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 from __future__ import unicode_literals
 
@@ -180,7 +181,8 @@ class PrimaryPairsCommand(SolverCommandMixin, Command):
         reaction_pairs = [(r.id, r.equation) for r in reactions]
         ambig = self._args.ambiguous
         prediction, _ = findprimarypairs.predict_compound_pairs_iterated(
-            reaction_pairs, compound_formula, ambig, element_weight=element_weight)
+            reaction_pairs, compound_formula,
+            ambig, element_weight=element_weight)
 
         for reaction_id, _ in reaction_pairs:
             if reaction_id not in prediction:
@@ -218,13 +220,13 @@ class PrimaryPairsCommand(SolverCommandMixin, Command):
                     reaction.id))
                 continue
 
-            for (c1, c2), form in sorted(iteritems(random.sample(transfer, 1)[0])):
+            for (c1, c2), form in sorted(
+                    iteritems(random.sample(transfer, 1)[0])):
                 yield reaction.id, c1, c2, form
         if self._args.ambiguous:
             for rxn_ambig in ambiguous:
-                logger.info('Ambiguous Transfers in Reaction: {}'.format(rxn_ambig))
-
-
+                logger.info('Ambiguous Transfers '
+                            'in Reaction: {}'.format(rxn_ambig))
 
 
 def _parse_weights(weight_args, default_weight=0.6):

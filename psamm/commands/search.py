@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 from __future__ import print_function, unicode_literals
 
@@ -23,8 +24,6 @@ from six import text_type
 
 from ..command import Command, FilePrefixAppendAction
 from ..datasource.reaction import parse_compound
-
-from psamm.expression import boolean
 
 
 def filter_search_term(s):
@@ -54,8 +53,8 @@ class SearchCommand(Command):
         parser_compound.add_argument(
             '--props', '-c', dest='props', metavar='props',
             nargs='+', type=str, default=None,
-            help='Space-separated list of compound properties, such as '
-                 'compound formula, compound charge, molecular weight...')
+            help='Space-separated list of compound properties '
+                 'to search in')
         parser_compound.add_argument(
             '--match-type', '-m', dest='match_type', metavar='match_type',
             type=str, choices=['exact', 'vague'], default='vague',

@@ -13,8 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2020 Keith Dufault-Thompson <keitht547@uri.edu>
-# Copyright 2019 Jing Wang <jingwang89@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2019-2020 Jing Wang <jingwang89@uri.edu>
 
 from __future__ import print_function
 from collections import defaultdict
@@ -57,20 +57,32 @@ class PsammotateCommand(Command):
             '--ignore-na', action='store_true',
             help=('Ignore the reactions that do not have gene association. '
                   '(default: retain these reactions in new model)'))
+        parser.add_argument(
+            '--suffix', type=str, default=None,
+            help='Suffix to append to end of reaction IDs and compartments')
         super(PsammotateCommand, cls).init_parser(parser)
 
     def run(self):
         """Run psammotate command"""
+        if self._args.suffix:
+            if any(i in self._args.suffix for i in [' ', '|', ':', ';', ',']):
+                logger.error('Special character or space found '
+                             'in provided suffix')
         tdict = app_reader(self._args.rbh, self._args.target - 1,
                            self._args.template - 1)
         trans_genes_dict = model_loader(self._model,
-                                        self._args.ignore_na, tdict)
+                                        self._args.ignore_na, tdict,
+                                        self._args.suffix)
         homolo_reactions = list()
         for r in self._model.reactions:
             if r.id in self._model.model:
                 if trans_genes_dict[r][2]:
                     r.properties['genes'] = remove_gap(
                         str(trans_genes_dict[r][1]))
+                    if self._args.suffix:
+                        r.properties['id'] += '_{}'.format(self._args.suffix)
+                        for cpd, v in r.equation.compounds:
+                            cpd._compartment += '_{}'.format(self._args.suffix)
                     homolo_reactions.append(r)
         with open(self._args.prefix + '.yaml', 'w') as o:
             ModelWriter().write_reactions(o, homolo_reactions)
@@ -111,7 +123,7 @@ def app_reader(app_file, query, template):
     return trans_dict
 
 
-def model_loader(nm, ignore_na, translation_dict):
+def model_loader(nm, ignore_na, translation_dict, suffix=None):
     '''This function will translate genes in one model
     based on a gene to gene mapping dictionary.
 
@@ -146,8 +158,11 @@ def model_loader(nm, ignore_na, translation_dict):
                 target_model_reactions.append(entry.id)
                 translated_genes[entry] = [None, None,
                                            not ignore_na]
+                id = entry.id
+                if suffix is not None:
+                    id = id + '_{}'.format(suffix)
                 print('{}\t{}\t{}\t{}\t{}'.format(
-                    entry.id, entry.genes, 'None',
+                    id, entry.genes, 'None',
                     not ignore_na, not ignore_na))
             elif entry.genes is not None:
                 genes = re.sub(r'\?', '', entry.genes)
@@ -164,8 +179,11 @@ def model_loader(nm, ignore_na, translation_dict):
                     else:
                         genes = re.sub(r'\b' + g + r'\b',
                                        '-', genes)
+                id = entry.id
+                if suffix is not None:
+                    id = id + '_{}'.format(suffix)
                 print('{}\t{}\t{}\t{}\t{}'.format(
-                    entry.id, entry.genes, genes, e_1, e_1.value))
+                    id, entry.genes, genes, e_1, e_1.value))
                 translated_genes[entry] = [genes_1, genes, e_1.value]
     return translated_genes
 

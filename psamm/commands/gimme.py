@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2019-2019  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2019-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 """Implementation of Flux Balance Analysis."""
 
@@ -21,8 +21,8 @@ from __future__ import unicode_literals
 
 import logging
 import csv
-from ..lpsolver import lp, cplex
-
+from ..lpsolver import lp
+import argparse
 from six import iteritems
 from ..expression import boolean
 from ..lpsolver.lp import Expression, ObjectiveSense
@@ -36,16 +36,19 @@ logger = logging.getLogger(__name__)
 
 class GimmeCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
                    SolverCommandMixin, Command):
-    """Run flux balance analysis on the model."""
+    """Subset a metabolic model based on gene expression data."""
 
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--biomass-threshold', type=float, default=None)
+            '--biomass-threshold', type=float, default=None,
+            help='Threshold for biomass reaction flux')
         parser.add_argument(
-            '--expression-threshold', type=float)
+            '--expression-threshold', type=float,
+            help='Threshold for gene expression')
         parser.add_argument(
-            '--transcriptome-file', type=file)
+            '--transcriptome-file', type=argparse.FileType('r'),
+            help='Two column file of gene ID to expression')
         super(GimmeCommand, cls).init_parser(parser)
 
     def run(self):
@@ -61,8 +64,6 @@ class GimmeCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
             self._args.transcriptome_file,
             self._args.expression_threshold)
 
-        gene_dict = {}
-
         exchange_exclude = [rxn for rxn in mm.reactions
                             if mm.is_exchange(rxn)]
 
@@ -71,18 +72,21 @@ class GimmeCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
 
         p = FluxBalanceProblem(mm_irreversible, solver)
 
-        final_model, below_threshold_ids, incon_score = solve_gimme_problem(p,
-                        mm_irreversible, self._get_objective(),
-                        reversible_gene_assoc, split_rxns, threshold_value,
-                        self._args.biomass_threshold)
+        final_model, below_threshold_ids, incon_score \
+            = solve_gimme_problem(p, mm_irreversible,
+                                  self._get_objective(),
+                                  reversible_gene_assoc,
+                                  split_rxns, threshold_value,
+                                  self._args.biomass_threshold)
 
         for reaction in sorted(final_model):
             print(reaction)
 
+        used_below = str(len([x for x in
+                              below_threshold_ids if x in final_model]))
+        below = str(len(below_threshold_ids))
         logger.info('Used {} below threshold reacctions out of {} total '
-                    'below threshold reactions'.format(str(
-            len([x for x in below_threshold_ids if x in final_model])),
-            str(len(below_threshold_ids))))
+                    'below threshold reactions'.format(used_below, below))
         logger.info('Inconsistency Score: {}'.format(incon_score))
 
 
@@ -90,9 +94,9 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
                         split_rxns, transcript_values, threshold):
     """Formulates and Solves a GIMME model.
 
-    Implementation of the GIMME algorith (Becker and Pallson 2008).
+    Implementation of the GIMME algorithm (Becker and Pallson 2008).
     Accepts an irreversible metabolic model, LP problem, and GIMME specific
-    data. Will add in relevent GIMME constraints to the LP problem and
+    data. Will add in relevant GIMME constraints to the LP problem and
     generates a contextualized model based on the media constraints and the
     transcriptome data provided.
 
@@ -132,8 +136,9 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
     else:
         problem.maximize(biomass)
         if problem.get_flux(biomass) < threshold:
-            logger.warning('Input threshold greater than '
-            'maximum biomass: {}'.format(problem.get_flux(biomass)))
+            logger.warning('Input threshold '
+                           'greater than maximum '
+                           'biomass: {}'.format(problem.get_flux(biomass)))
         else:
             problem.prob.add_linear_constraints(
                 problem.get_flux_var(biomass) >= threshold)
@@ -213,15 +218,16 @@ def parse_transcriptome_file(f, threshold):
             elif float(row[1]) >= threshold:
                 continue
         except ValueError:
-            logger.warning('Invalid expression value provided: '
-            'gene: {} value: {}'.format(row[0], row[1]))
+            logger.warning('Invalid expression value '
+                           'provided: gene: {} '
+                           'value: {}'.format(row[0], row[1]))
     return threshold_value
 
 
 def get_rxn_value(root, gene_dict):
     """Gets overall expression value for a reaction gene association.
 
-    Recursive funciton designed to parse a gene expression and return
+    Recursive function designed to parse a gene expression and return
     an expression value to use in the GIMME algorithm. This function is
     designed to return the value directly if the expression only has
     one gene. If the expression has multiple genes related by 'OR'

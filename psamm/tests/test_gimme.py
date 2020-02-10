@@ -13,8 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2016-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
-# Copyright 2016  Chao liu <lcddzyx@gmail.com>
+# Copyright 2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
+
 
 import unittest
 
@@ -53,6 +54,10 @@ class TestAddReactions(unittest.TestCase):
             self._solver = generic.Solver()
         except generic.RequirementsError:
             self.skipTest('Unable to find an LP solver for tests')
+        try:
+            self.solver = generic.Solver(integer=True)
+        except generic.RequirementsError:
+            self.skipTest('Needs and integer programming solver')
 
     def test_reverse_model(self):
         test_associations = {

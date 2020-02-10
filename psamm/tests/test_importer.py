@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 from __future__ import unicode_literals
 
@@ -407,7 +408,6 @@ class TestBiGGImportMain(unittest.TestCase):
         importer.main_bigg(['list'], urlopen=mock_urlopen)
 
 
-<<<<<<< HEAD
 class TestMatlabImporter(unittest.TestCase):
     def setUp(self):
         self.dest = tempfile.mkdtemp()
@@ -512,7 +512,7 @@ class TestMatlabImporter(unittest.TestCase):
         model1['c'][0, 0][0][0] = 0
         model1['c'][0, 0][1][0] = 0
         model1['c'][0, 0][2][0] = 1
-        
+
         os.mkdir(os.path.join(self.dest, 'models'))
         savemat(os.path.join(self.dest, 'model1.mat'), {'model1': model1})
         savemat(os.path.join(self.dest, 'models', 'model1.mat'),
@@ -521,7 +521,7 @@ class TestMatlabImporter(unittest.TestCase):
         model2['c'][0, 0][1][0] = 1
         savemat(os.path.join(self.dest, 'models', 'model2.mat'),
                 {'model1': model1, 'model2': model2})
-        
+
 
     def tearDown(self):
         shutil.rmtree(self.dest)
@@ -547,7 +547,3 @@ class TestMatlabImporter(unittest.TestCase):
                           '--source', os.path.join(self.dest, 'model1.mat'),
                           '--dest', output_dir,
                       ])
-=======
-if __name__ == '__main__':
-    unittest.main()
->>>>>>> psammotate-jwang

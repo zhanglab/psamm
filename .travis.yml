@@ -1,5 +1,4 @@
 dist: trusty
-sudo: false
 language: python
 cache:
     directories:
@@ -31,7 +30,8 @@ install:
       fi
 
     - pip install tox coveralls
-
+    - pip install tox-travis
+    - pip install --upgrade six
 script: tox -v
 after_success: coveralls
 matrix:

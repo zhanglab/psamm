@@ -14,7 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2015-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
-# Copyright 2019       Jing Wang <jingwang89@uri.edu>
+# Copyright 2019-2020       Jing Wang <jingwang89@uri.edu>
 
 """Importer for the COBRApy MAT format."""
 

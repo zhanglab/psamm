@@ -14,6 +14,8 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2015-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2018-2020  Ke Zhang <kzhang@my.uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 from __future__ import division
 
@@ -23,8 +25,6 @@ from collections import Counter
 
 from six import iteritems
 from six.moves import reduce
-
-import random
 
 from .formula import Formula, Atom
 
@@ -153,8 +153,8 @@ class _CompoundInstance(object):
 
 
 def predict_compound_pairs_iterated(
-        reactions, formulas, ambiguous, prior=(1, 43), max_iterations=None,
-        element_weight=element_weight):
+        reactions, formulas, ambiguous=False, prior=(1, 43),
+        max_iterations=None, element_weight=element_weight):
     """Predict reaction pairs using iterated method.
 
     Returns a tuple containing a dictionary of predictions keyed by the
@@ -194,7 +194,6 @@ def predict_compound_pairs_iterated(
             spair = tuple(sorted([c1.name, c2.name]))
             possible_pairs[spair] += 1
             pair_reactions.setdefault(spair, set()).add(reaction_id)
-            #tie_breakers[reaction_id][spair] = random.random()
 
     final_ambiguous_reactions = {}
 
@@ -215,7 +214,8 @@ def predict_compound_pairs_iterated(
                     df = dict(formula.items())
                     if len(df) > 1 or Atom.H not in df:
                         all_hydrogen = False
-                logger.info('Ambiguous Transfers in Reaction: {}'.format(reaction))
+                logger.info('Ambiguous Transfers in Reaction: {}'.format(
+                    reaction))
 
             if all_hydrogen:
                 final_ambiguous_hydrogen += 1
@@ -223,7 +223,8 @@ def predict_compound_pairs_iterated(
         logger.info('{} reactions were decided with ambiguity'.format(
             final_ambiguous_count))
         logger.info('Only hydrogen in decision: {} vs non hydrogen: {}'.format(
-            final_ambiguous_hydrogen, final_ambiguous_count - final_ambiguous_hydrogen))
+            final_ambiguous_hydrogen,
+            final_ambiguous_count - final_ambiguous_hydrogen))
 
     next_reactions = set(reactions)
     pairs_predicted = None
@@ -340,14 +341,14 @@ def _match_greedily(reaction, compound_formula, score_func):
         (inst1, inst2), score = entry
         c1, c2 = inst1.compound, inst2.compound
         same_compound = c1.name == c2.name and c1.compartment != c2.compartment
-        key = tuple(sorted([c1.name, c2.name]))
         return same_compound, score, c1.name, c2.name
 
     transfer = {}
     while len(pairs) > 0:
         (inst1, inst2), _ = max(iteritems(pairs), key=inst_pair_sort_key)
         common = inst1.formula & inst2.formula
-        sorted_pairs = sorted(iteritems(pairs), key=inst_pair_sort_key, reverse=True)
+        sorted_pairs = sorted(iteritems(pairs),
+                              key=inst_pair_sort_key, reverse=True)
         max_sort_key = inst_pair_sort_key(sorted_pairs[0])
 
         ambiguous_entry = {(inst1.compound, inst2.compound, common)}

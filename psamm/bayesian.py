@@ -14,7 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
-# Copyright 2018-2019  Jing Wang <wjingsjtu@gmail.com>
+# Copyright 2018-2020  Jing Wang <wjingsjtu@gmail.com>
 
 """Calculate model mapping likelihood with bayesian."""
 from __future__ import print_function, division

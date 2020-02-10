@@ -13,14 +13,14 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 # Copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from __future__ import unicode_literals
 
 import logging
 
-from six import text_type, itervalues
+from six import text_type, itervalues, string_types
 from collections import defaultdict
 
 from ..command import Command
@@ -72,9 +72,17 @@ class ExcelExportCommand(Command):
             reaction_sheet.write_string(
                 x+1, len(property_list_sorted),
                 text_type(i.id in model_reactions))
-            if i.genes is not None:
-                genes = boolean.Expression(i.genes)
-                for j in genes.variables:
+            assoc = None
+            if i.genes is None:
+                continue
+            elif isinstance(i.genes, string_types):
+                assoc = boolean.Expression(i.genes)
+                for j in assoc.variables:
+                    gene_rxn[str(j)].append(i.id)
+            else:
+                variables = [boolean.Variable(g) for g in i.genes]
+                assoc = boolean.Expression(boolean.And(*variables))
+                for j in assoc.variables:
                     gene_rxn[str(j)].append(i.id)
 
         compound_sheet = workbook.add_worksheet(name='Compounds')

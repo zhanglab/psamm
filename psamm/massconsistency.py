@@ -15,6 +15,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 """Mass consistency analysis of metabolic databases
 
