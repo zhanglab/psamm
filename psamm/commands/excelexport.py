@@ -21,8 +21,10 @@ from __future__ import unicode_literals
 import logging
 
 from six import text_type, itervalues
+from collections import defaultdict
 
 from ..command import Command
+from ..expression import boolean
 
 try:
     import xlsxwriter
@@ -61,6 +63,7 @@ class ExcelExportCommand(Command):
         model_reactions = set(model.model)
         for z, i in enumerate(property_list_sorted + ['in_model']):
             reaction_sheet.write_string(0, z, text_type(i))
+        gene_rxn = defaultdict(list)
         for x, i in enumerate(model.reactions):
             for y, j in enumerate(property_list_sorted):
                 value = i.properties.get(j)
@@ -69,6 +72,10 @@ class ExcelExportCommand(Command):
             reaction_sheet.write_string(
                 x+1, len(property_list_sorted),
                 text_type(i.id in model_reactions))
+            if i.genes is not None:
+                genes = boolean.Expression(i.genes)
+                for j in genes.variables:
+                    gene_rxn[str(j)].append(i.id)
 
         compound_sheet = workbook.add_worksheet(name='Compounds')
 
@@ -92,6 +99,13 @@ class ExcelExportCommand(Command):
             compound_sheet.write_string(
                 x+1, len(compound_list_sorted),
                 text_type(i.id in model_compounds))
+
+        gene_sheet = workbook.add_worksheet(name='Genes')
+        gene_sheet.write_string(0, 0, 'Gene')
+        gene_sheet.write_string(0, 1, 'Reaction_List')
+        for x, i in enumerate(sorted(gene_rxn)):
+            gene_sheet.write_string(x+1, 0, i)
+            gene_sheet.write_string(x+1, 1, '#'.join(gene_rxn.get(i)))
 
         exchange_sheet = workbook.add_worksheet(name='Exchange')
 
