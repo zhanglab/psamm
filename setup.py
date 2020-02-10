@@ -105,6 +105,7 @@ setup(
         JSON = psamm.importers.cobrajson:Importer
         SBML = psamm.importers.sbml:NonstrictImporter
         SBML-strict = psamm.importers.sbml:StrictImporter
+        MATLAB = psamm.importers.matlab:Importer
     ''',
 
     test_suite='psamm.tests',
@@ -112,7 +113,9 @@ setup(
     install_requires=[
         'PyYAML~=3.11',
         'six',
-        'xlsxwriter'
+        'xlsxwriter',
+        'numpy',
+        'scipy'
     ],
     extras_require={
         'docs': ['sphinx', 'sphinx_rtd_theme', 'mock'],

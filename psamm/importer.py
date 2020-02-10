@@ -582,6 +582,9 @@ def main(importer_class=None, args=None):
                               ' compartments.'))
     parser.add_argument('--force', action='store_true',
                         help='Enable overwriting model files')
+    parser.add_argument('--model-name', type=str,
+                        help=('specify model name if multiple models '
+                              'are stored in the .mat file'))
 
     if importer_class is None:
         parser.add_argument(
@@ -647,7 +650,10 @@ def main(importer_class=None, args=None):
     importer = importer_class()
 
     try:
-        model = importer.import_model(args.source)
+        if importer.name == 'matlab' and args.model_name is not None:
+            model = importer.import_model(args.source, args.model_name)
+        else:
+            model = importer.import_model(args.source)
     except ModelLoadError as e:
         logger.error('Failed to load model!', exc_info=True)
         importer.help()
