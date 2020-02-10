@@ -23,12 +23,9 @@ from collections import Counter
 
 from six import iteritems
 from six.moves import reduce
-<<<<<<< HEAD
 
 import random
 
-=======
->>>>>>> vis-command-publication
 from .formula import Formula, Atom
 
 from fractions import gcd
