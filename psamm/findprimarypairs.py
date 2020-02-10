@@ -23,15 +23,15 @@ from collections import Counter
 
 from six import iteritems
 from six.moves import reduce
+<<<<<<< HEAD
 
 import random
 
+=======
+>>>>>>> vis-command-publication
 from .formula import Formula, Atom
 
-try:
-    from math import gcd
-except ImportError:
-    from fractions import gcd
+from fractions import gcd
 
 logger = logging.getLogger(__name__)
 

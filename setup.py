@@ -105,6 +105,8 @@ setup(
         tableexport = psamm.commands.tableexport:ExportTableCommand
         psammotate = psamm.commands.psammotate:PsammotateCommand
         modelmapping = psamm.commands.model_mapping:ModelMappingCommand
+        vis = psamm.commands.vis:VisualizationCommand
+        
         [psamm.importer]
         JSON = psamm.importers.cobrajson:Importer
         SBML = psamm.importers.sbml:NonstrictImporter
