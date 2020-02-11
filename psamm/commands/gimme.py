@@ -64,8 +64,6 @@ class GimmeCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
             self._args.transcriptome_file,
             self._args.expression_threshold)
 
-        gene_dict = {}
-
         exchange_exclude = [rxn for rxn in mm.reactions
                             if mm.is_exchange(rxn)]
 
@@ -74,18 +72,21 @@ class GimmeCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
 
         p = FluxBalanceProblem(mm_irreversible, solver)
 
-        final_model, below_threshold_ids, incon_score = solve_gimme_problem(p,
-                        mm_irreversible, self._get_objective(),
-                        reversible_gene_assoc, split_rxns, threshold_value,
-                        self._args.biomass_threshold)
+        final_model, below_threshold_ids, incon_score \
+            = solve_gimme_problem(p, mm_irreversible,
+                                  self._get_objective(),
+                                  reversible_gene_assoc,
+                                  split_rxns, threshold_value,
+                                  self._args.biomass_threshold)
 
         for reaction in sorted(final_model):
             print(reaction)
 
+        used_below = str(len([x for x in
+                              below_threshold_ids if x in final_model]))
+        below = str(len(below_threshold_ids))
         logger.info('Used {} below threshold reacctions out of {} total '
-                    'below threshold reactions'.format(str(
-            len([x for x in below_threshold_ids if x in final_model])),
-            str(len(below_threshold_ids))))
+                    'below threshold reactions'.format(used_below, below))
         logger.info('Inconsistency Score: {}'.format(incon_score))
 
 
@@ -135,8 +136,9 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
     else:
         problem.maximize(biomass)
         if problem.get_flux(biomass) < threshold:
-            logger.warning('Input threshold greater than '
-            'maximum biomass: {}'.format(problem.get_flux(biomass)))
+            logger.warning('Input threshold '
+                           'greater than maximum '
+                           'biomass: {}'.format(problem.get_flux(biomass)))
         else:
             problem.prob.add_linear_constraints(
                 problem.get_flux_var(biomass) >= threshold)
@@ -216,8 +218,9 @@ def parse_transcriptome_file(f, threshold):
             elif float(row[1]) >= threshold:
                 continue
         except ValueError:
-            logger.warning('Invalid expression value provided: '
-            'gene: {} value: {}'.format(row[0], row[1]))
+            logger.warning('Invalid expression value '
+                           'provided: gene: {} '
+                           'value: {}'.format(row[0], row[1]))
     return threshold_value
 
 

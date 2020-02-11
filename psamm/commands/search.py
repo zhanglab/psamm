@@ -24,8 +24,6 @@ from six import text_type
 from ..command import Command, FilePrefixAppendAction
 from ..datasource.reaction import parse_compound
 
-from psamm.expression import boolean
-
 
 def filter_search_term(s):
     return re.sub(r'[^a-z0-9]+', '', s.lower())

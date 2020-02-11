@@ -86,7 +86,8 @@ class Graph(Entity):
             if node.props['type'] == 'Ex_rxn':
                 original_id_string = node.props['id']
             else:
-                original_id_string = ','.join([r.id for r in node.props['entry']])
+                original_id_string = ','.join(
+                    [r.id for r in node.props['entry']])
         self._nodes_original_id[original_id_string].append(node)
 
     def get_node(self, node_id):
@@ -177,7 +178,8 @@ class Graph(Entity):
                 node.props['id'], _graphviz_prop_string(node.props)))
 
         for edge in sorted(self.edges, key=lambda k: (k.source.props['id'],
-                                    k.dest.props['id'], k.props.get('dir'))):
+                                                      k.dest.props['id'],
+                                                      k.props.get('dir'))):
             f.write(' "{}" -> "{}"[{}]\n'.format(
                 edge.source.props['id'], edge.dest.props['id'],
                 _graphviz_prop_string(edge.props)))
@@ -236,9 +238,11 @@ class Graph(Entity):
                 f.write(''.join(
                     [' subgraph cluster_{} '.format(edit_labels(vertex)),
                      '{\n  style=solid;\n  color=black;\n  penwidth=4;\n  '
-                     'fontsize=35;\n', '  label = "Compartment: {}"\n'.format
+                     'fontsize=35;\n',
+                     '  label = "Compartment: {}"\n'.format
                      (edit_labels(vertex))]))
-                for x in sorted(node_dict[vertex], key=lambda k: k.props['id']):
+                for x in sorted(node_dict[vertex],
+                                key=lambda k: k.props['id']):
                     f.write(' "{}"[{}]\n'.format(
                         x.props['id'], _graphviz_prop_string(x.props)))
             elif vertex != extracellular:
@@ -247,7 +251,8 @@ class Graph(Entity):
                      '{\n  style=dashed;\n  color=black;\n  penwidth=4;\n  '
                      'fontsize=35;\n', '  label = "Compartment: {}"\n'.format
                      (edit_labels(vertex))]))
-                for x in sorted(node_dict[vertex], key=lambda k: k.props['id']):
+                for x in sorted(node_dict[vertex],
+                                key=lambda k: k.props['id']):
                     f.write(' "{}"[{}]\n'.format(
                         x.props['id'], _graphviz_prop_string(x.props)))
             for neighbor in graph[vertex]:
@@ -259,8 +264,9 @@ class Graph(Entity):
         dfs_recursive(compartment_tree, extracellular, node_dicts,
                       extracellular, f)
 
-        for edge in sorted(self.edges,  key=lambda k: (k.source.props['id'],
-                                    k.dest.props['id'], k.props.get('dir'))):
+        for edge in sorted(self.edges, key=lambda k: (k.source.props['id'],
+                                                      k.dest.props['id'],
+                                                      k.props.get('dir'))):
             f.write(' "{}" -> "{}"[{}]\n'.format(
                 edge.source.props['id'], edge.dest.props['id'],
                 _graphviz_prop_string(edge.props)))
@@ -275,7 +281,6 @@ class Graph(Entity):
             f: An empty file.
         """
 
-        next_id = count(0)
         properties = set()
         for node in self.nodes:
             if 'label' not in node.props:
@@ -312,12 +317,13 @@ class Graph(Entity):
         header = ['source', 'target'] + properties
         f.write('\t'.join(header) + '\n')
         for edge in sorted(self.edges, key=lambda k: (edge.source.props['id'],
-                                edge.dest.props['id'], edge.props.get('dir'))):
+                                                      edge.dest.props['id'],
+                                                      edge.props.get('dir'))):
             f.write('{}\t{}\t{}\n'.format(
                 edge.source.props['id'], edge.dest.props['id'],
-                '\t'.join(text_type(edge.props.get(
-                    x.encode('ascii').decode('ascii')))
-                          for x in properties)))
+                '\t'.join(
+                    text_type(edge.props.get(x.encode('ascii').decode(
+                        'ascii'))) for x in properties)))
 
 
 class Node(Entity):
@@ -383,7 +389,8 @@ def get_compound_dict(model):
     return compound_formula
 
 
-def make_network_dict(nm, mm, subset=None, method='fpp', element=None, excluded_reactions=[]):
+def make_network_dict(nm, mm, subset=None, method='fpp',
+                      element=None, excluded_reactions=[]):
     compound_formula = get_compound_dict(nm)
 
     if subset is not None:
@@ -394,10 +401,13 @@ def make_network_dict(nm, mm, subset=None, method='fpp', element=None, excluded_
                     if rxn.id not in excluded_reactions:
                         testing_list.append(rxn)
                     else:
-                        logger.warning('Reaction {} is in the subset and exclude file. Reactionw will be excluded.'.format(rxn.id))
+                        logger.warning(
+                            'Reaction {} is in the subset and exclude file. '
+                            'Reactionw will be excluded.'.format(rxn.id))
     else:
-        testing_list = [rxn for rxn in nm.reactions if rxn.id in mm.reactions and rxn.id not in excluded_reactions]
-
+        testing_list = [rxn for rxn in nm.reactions if
+                        rxn.id in mm.reactions and rxn.id
+                        not in excluded_reactions]
 
     reaction_data = {}
     for rxn in testing_list:
@@ -430,9 +440,13 @@ def make_network_dict(nm, mm, subset=None, method='fpp', element=None, excluded_
                     if element is None:
                         compound_pairs.append((substrate[0], product[0]))
                     else:
-                        if Atom(element) in compound_formula[substrate[0].name] and Atom(element) in compound_formula[product[0].name]:
+                        if Atom(element) in \
+                                compound_formula[substrate[0].name] and \
+                                Atom(element) in \
+                                compound_formula[product[0].name]:
                             compound_pairs.append((substrate[0], product[0]))
-            full_pairs_dict[reaction] = (sorted(compound_pairs), reaction.equation.direction)
+            full_pairs_dict[reaction] = \
+                (sorted(compound_pairs), reaction.equation.direction)
     return full_pairs_dict
 
 
@@ -448,10 +462,10 @@ def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges=[]):
     lists of reactions for the forward, reverse, and both directions.
 
     Args:
-        filter_dict: A dictionary mapping reaction entry to compound pairs (inside
-            of the pairs there are cpd opbject, not cpd IDs)involved in this reaction.
-            Example: {rxn_entry: ([(c1, c3), (c1, c4), (c2, c4)], dir), ...}
-        args_method: Command line argument, a string, including 'fpp' and 'no-fpp'.
+        filter_dict: A dictionary mapping reaction entry to
+            compound pairs (inside of the pairs there are cpd
+            objects, not cpd IDs)
+        args_method: a string, including 'fpp' and 'no-fpp'.
         args_combine: combine level, default = 0, optional: 1 and 2.
     """
 
@@ -463,7 +477,8 @@ def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges=[]):
         new_cpair_dict = {}
         cpair_list = []
         for (c1, c2), rxns in sorted(iteritems(cpair_dict)):
-            if (c1, c2) not in cpair_list and (text_type(c1), text_type(c2)) not in hide:
+            if (c1, c2) not in cpair_list and (text_type(c1),
+                                               text_type(c2)) not in hide:
                 new_rxns = rxns
                 if (c2, c1) in cpair_dict:
                     if len(cpair_dict[(c2, c1)]['forward']) > 0:
@@ -493,7 +508,7 @@ def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges=[]):
         if args_combine == 0:
             for rxn, cpairs_dir in iteritems(filter_dict):
                 have_visited = set()
-                sub_pro = defaultdict(list)  # substrate map to a list of product
+                sub_pro = defaultdict(list)
                 rxn_mixcpairs = defaultdict(list)
                 for (c1, c2) in sorted(cpairs_dir[0]):
                     sub_pro[c1].append(c2)
@@ -511,7 +526,8 @@ def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges=[]):
                                     if v1 == v2:
                                         have_visited.add(k2)
                                         for vtest in v2:
-                                            rxn_mixcpairs[r_id].append((k2, vtest))
+                                            rxn_mixcpairs[r_id].append(
+                                                (k2, vtest))
                 for rxn_id, cpairs in iteritems(rxn_mixcpairs):
                     for (c1, c2) in cpairs:
                         if cpairs_dir[1] == Direction.Forward:
@@ -527,7 +543,8 @@ def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges=[]):
                     if c1 not in have_visited:
                         if c2 not in have_visited:
                             rxn_count[rxn] += 1
-                            rxn_id = str('{}_{}'.format(rxn.id, rxn_count[rxn]))
+                            rxn_id = str('{}_{}'.format(rxn.id,
+                                                        rxn_count[rxn]))
                             new_id_mapping[rxn_id] = rxn
                             have_visited.add(c1)
                             have_visited.add(c2)
@@ -561,38 +578,46 @@ def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges=[]):
     return rxns_sorted_cpair_dict, new_id_mapping
 
 
-def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method, args_combine,
-                                model_compound_entries):
+def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method,
+                                args_combine, model_compound_entries):
     """start from empty graph() and cpair dict to make a graph object that
     contains base nodes, nodes only have rxn/cpd ID and rxn/cpd entry info,
     rxn entry is replaced by a list of rxn IDs if multiple rxn present
     on one node.
 
     Args:
-        cpairs_dict: defaultdict of compound_pair: defaultdict of direction:
-            reaction list. e.g. {(c1, c2): {'forward":[rx1], 'both':[rx2}}.
+        cpairs_dict: defaultdict of compound_pair:
+            defaultdict of direction: reaction list.
+            e.g. {(c1, c2): {'forward":[rx1],
+            'both':[rx2}}.
         new_id_mapping: dictionary of rxn_id_suffix: rxn_id.
-        method: Command line argument, options=['fpp', 'no-fpp', file_path].
-        args_combine: Command line argument, could be 0, 1, 2. By default it is 0.
-        model_compound_entries: dict of cpd_id:compound_entry of native model.
-    return: A graph object that contains basic nodes and edges. only ID and rxn/cpd entry
-        are in node properties, no features like color, shape.
+        method: options=['fpp', 'no-fpp', file_path].
+        args_combine: Command line argument, could be 0, 1, 2.
+        model_compound_entries: dict of cpd_id:compound_entry.
+    return: A graph object that contains basic nodes and edges.
+        only ID and rxn/cpd entry are in node properties,
+        no features like color, shape.
     """
     g = Graph()
     g._default_node_props['fontname'] = 'Arial'
     g._default_node_props['fontsize'] = 12
 
-    def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, args_combine,
-                        model_compound_entries):
-        """Create compound and reaction nodes, adding them to empty graph object.
+    def add_graph_nodes(g, cpairs_dict, method, new_id_mapping,
+                        args_combine, model_compound_entries):
+        """Create compound and reaction nodes, adding them to
+            empty graph object.
 
         Args:
             g: An empty Graph object.
-            cpairs_dict: defaultdict of compound_pair: defaultdict of direction:
-                reaction list. e.g. {(c1, c2): {'forward":[rx1], 'both':[rx2}}.
-            method: Command line argument, options=['fpp', 'no-fpp', file_path].
+            cpairs_dict: defaultdict of compound_pair:
+                defaultdict of direction:
+                reaction list. e.g. {(c1, c2): {'forward":[rx1],
+                    'both':[rx2}}.
+            method: Command line argument,
+                options=['fpp', 'no-fpp', file_path].
             new_id_mapping: dictionary of rxn_id_suffix: rxn_id.
-            args_combine: Command line argument, could be 0, 1, 2. By default it is 0.
+            args_combine: Command line argument,
+                could be 0, 1, 2. By default it is 0.
             model_compound_entries: cpd id map to cpd entry of native model.
         return: A graph object that contains a set of nodes.
         """
@@ -641,32 +666,39 @@ def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method, args_combin
 
         Args:
             g: A graph object contains a set of nodes.
-            cpairs_dict: A defaultdict of compound_pair: defaultdict of direction:
-                reaction list. e.g. {(c1, c2): {'forward":[rx1], 'both':[rx2}}.
-            method: Command line argument, options=['fpp', 'no-fpp', file_path].
-            # split: Command line argument, True or False. By default split = False.
-            args_combine: Command line argument, an integer(could be 0, 1 or 2).
+            cpairs_dict: A defaultdict of compound_pair: defaultdict
+                of direction: reaction list. e.g. {(c1, c2):
+                {'forward":[rx1], 'both':[rx2}}.
+            method: Command line argument, options=
+                ['fpp', 'no-fpp', file_path].
+            # split: Command line argument, True or False.
+                By default split = False.
+            args_combine: Command line argument, an
+                integer(could be 0, 1 or 2).
         """
 
         edge_list = []
         for (c1, c2), value in iteritems(cpairs_dict):
             for direction, rlist in iteritems(value):
                 new_rlist = ','.join(rlist)
-                if args_combine == 0 or args_combine == 1 or method == 'no-fpp':
+                if args_combine == 0 or args_combine == 1 or \
+                        method == 'no-fpp':
                     for sub_rxn in rlist:
                         test1 = c1, sub_rxn
                         if test1 not in edge_list:
                             edge_list.append(test1)
                             g.add_edge(Edge(
                                 g.get_node(text_type(c1)),
-                                g.get_node(text_type(sub_rxn)), {'dir': direction}))
+                                g.get_node(text_type(sub_rxn)),
+                                {'dir': direction}))
 
                         test2 = c2, sub_rxn
                         if test2 not in edge_list:
                             edge_list.append(test2)
                             g.add_edge(Edge(
                                 g.get_node(text_type(sub_rxn)),
-                                g.get_node(text_type(c2)), {'dir': direction}))
+                                g.get_node(text_type(c2)),
+                                {'dir': direction}))
                 else:
                     test1 = c1, new_rlist
                     test2 = c2, new_rlist
@@ -674,7 +706,8 @@ def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method, args_combin
                         edge_list.append(test1)
                         g.add_edge(Edge(
                             g.get_node(text_type(c1)),
-                            g.get_node(text_type(new_rlist)), {'dir': direction}))
+                            g.get_node(text_type(new_rlist)),
+                            {'dir': direction}))
                     if test2 not in edge_list:
                         edge_list.append(test2)
                         g.add_edge(Edge(
@@ -682,7 +715,8 @@ def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method, args_combin
                             g.get_node(text_type(c2)), {'dir': direction}))
         return g
 
-    g = add_graph_nodes(g, cpairs_dict, method, new_id_mapping, args_combine, model_compound_entries)
+    g = add_graph_nodes(g, cpairs_dict, method, new_id_mapping,
+                        args_combine, model_compound_entries)
     g = add_edges(g, cpairs_dict, method, args_combine)
 
     return g
@@ -701,8 +735,11 @@ def make_compound_graph(network_dictionary):
                 g.add_node(Node({'id': text_type(c2), 'entry': c2}))
                 compound_nodes.append(c2)
             cpair_sorted = sorted([c1.name, c2.name])
-            edge = Edge(g.get_node(text_type(c1)), g.get_node(text_type(c2)), props={'id': '{}_{}_{}'.format(
-                cpair_sorted[0], cpair_sorted[1], dir_value(dir)), 'dir':dir_value(dir)})
+            edge = Edge(g.get_node(text_type(c1)),
+                        g.get_node(text_type(c2)),
+                        props={'id': '{}_{}_{}'.format(
+                            cpair_sorted[0], cpair_sorted[1],
+                            dir_value(dir)), 'dir': dir_value(dir)})
             if edge.props['id'] not in edge_list:
                 g.add_edge(edge)
                 edge_list.append(edge.props['id'])

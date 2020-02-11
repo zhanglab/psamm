@@ -177,4 +177,5 @@ class ExportTableCommand(Command):
                 gene_assoc[gene].append(reaction.id)
 
         for gene, reaction in gene_assoc.items():
-            print('{}\t{}'.format(str(gene), ('#'.join([_encode_value(value) for value in reaction]))))
+            print('{}\t{}'.format(str(gene), (
+                '#'.join([_encode_value(value) for value in reaction]))))

@@ -84,8 +84,6 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
                 rxnid, penalty = line.split(None, 1)
                 penalties[rxnid] = float(penalty)
 
-
-
         model_extended, weights = create_extended_model(
             self._model,
             db_penalty=self._args.db_penalty,
@@ -111,7 +109,8 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         for reaction_id in sorted(self._mm.reactions):
             rx = self._mm.get_reaction(reaction_id)
             rxt = rx.translated_compounds(compound_name)
-            print('{}\t{}\t{}\t{}'.format(reaction_id, 'Model', weights[reaction_id], rxt))
+            print('{}\t{}\t{}\t{}'.format(
+                reaction_id, 'Model', weights[reaction_id], rxt))
 
         for rxnid in sorted(induced, key=reaction_key):
             if self._mm.has_reaction(rxnid):
