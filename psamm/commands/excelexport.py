@@ -20,7 +20,7 @@ from __future__ import unicode_literals
 
 import logging
 
-from six import text_type, itervalues
+from six import text_type, itervalues, string_types
 from collections import defaultdict
 
 from ..command import Command
@@ -72,10 +72,18 @@ class ExcelExportCommand(Command):
             reaction_sheet.write_string(
                 x+1, len(property_list_sorted),
                 text_type(i.id in model_reactions))
-            if i.genes is not None:
-                genes = boolean.Expression(i.genes)
-                for j in genes.variables:
+
+            assoc = None
+            if reaction.genes is None:
+                continue
+            elif isinstance(reaction.genes, string_types):
+                assoc = boolean.Expression(reaction.genes)
+                for j in assoc.variables:
                     gene_rxn[str(j)].append(i.id)
+            else:
+                variables = [boolean.Variable(g) for g in reaction.genes]
+                assoc = boolean.Expression(boolean.And(*variables))
+                gene_rxn[str(j)].append(i.id)
 
         compound_sheet = workbook.add_worksheet(name='Compounds')
 

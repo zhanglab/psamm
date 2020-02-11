@@ -155,7 +155,7 @@ class _CompoundInstance(object):
 
 
 def predict_compound_pairs_iterated(
-        reactions, formulas, ambiguous, prior=(1, 43), max_iterations=None,
+        reactions, formulas, ambiguous=False, prior=(1, 43), max_iterations=None,
         element_weight=element_weight):
     """Predict reaction pairs using iterated method.
 

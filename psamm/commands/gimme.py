@@ -22,7 +22,7 @@ from __future__ import unicode_literals
 import logging
 import csv
 from ..lpsolver import lp, cplex
-
+import argparse
 from six import iteritems
 from ..expression import boolean
 from ..lpsolver.lp import Expression, ObjectiveSense
@@ -47,7 +47,7 @@ class GimmeCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
             '--expression-threshold', type=float,
             help='Threshold for gene expression')
         parser.add_argument(
-            '--transcriptome-file', type=file,
+            '--transcriptome-file', type=argparse.FileType('r'),
             help='Two column file of gene ID to expression')
         super(GimmeCommand, cls).init_parser(parser)
 
