@@ -25,6 +25,7 @@ import re
 from itertools import product
 
 from psamm.formula import Atom
+from psamm.expression.boolean import Expression
 
 
 def id_equals(id1, id2):
@@ -82,6 +83,33 @@ def formula_equals(f1, f2, charge1, charge2):
     formula2_neutral = calc_formula(f2, charge2, neutral=True)
 
     return (formula1 == formula2) or (formula1_neutral == formula2_neutral)
+
+
+def genes_equals(g1, g2, gene_map={}):
+    """Return True if the two gene association strings are considered equal.
+
+    Args:
+        g1, g2: gene association strings
+        gene_map: a dict that maps gene ids in g1 to gene ids in g2 if
+                  they have different naming system
+    """
+    if g1 is None or g2 is None:
+        return False
+
+    e1 = Expression(g1)
+    e2 = Expression(g2)
+
+    reverse_map = dict()
+    for k, v in gene_map.items():
+        reverse_map[v] = k
+
+    g_list = set([reverse_map.get(v.symbol, v.symbol) for v in e2.variables])
+    check1 = e1.substitute(lambda v: v.symbol in g_list)
+
+    g_list = set([gene_map.get(v.symbol, v.symbol) for v in e1.variables])
+    check2 = e2.substitute(lambda v: v.symbol in g_list)
+
+    return check1.value and check2.value
 
 
 def formula_exact(f1, f2):

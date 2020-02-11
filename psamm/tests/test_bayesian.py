@@ -283,18 +283,27 @@ class TestBayesianPredictor(unittest.TestCase):
 
     def test_reaction_genes_likelihood(self):
         match, unmatch = bayesian.reaction_genes_likelihood(
-            ReactionEntry({'id': 'r1', 'genes': {'g1', 'g2', 'g3'}}),
-            ReactionEntry({'id': 'r1', 'genes': {'g2', 'g1'}})
+            ReactionEntry({'id': 'r1', 'genes': 'g1 and g2 or g3'}),
+            ReactionEntry({'id': 'r1', 'genes': 'g2 and g1'}),
+            0.5, 0.5, 0.5
         )
         self.assertGreater(match, unmatch)
         match, unmatch = bayesian.reaction_genes_likelihood(
-            ReactionEntry({'id': 'r1', 'genes': {'g1', 'g2', 'g3'}}),
-            ReactionEntry({'id': 'r1', 'genes': {'g4', 'g5'}})
+            ReactionEntry({'id': 'r1', 'genes': 'g1 and g2 or g3'}),
+            ReactionEntry({'id': 'r1', 'genes': 'g2 and g4'}),
+            0.5, 0.5, 0.5
         )
         self.assertLess(match, unmatch)
         match, unmatch = bayesian.reaction_genes_likelihood(
+            ReactionEntry({'id': 'r1', 'genes': 'g1 and g2 or g3'}),
+            ReactionEntry({'id': 'r1', 'genes': 'g2 and g4'}),
+            0.5, 0.5, 0.5, {'g1': 'g4'}
+        )
+        self.assertGreater(match, unmatch)
+        match, unmatch = bayesian.reaction_genes_likelihood(
             ReactionEntry({'id': 'r1', 'genes': None}),
-            ReactionEntry({'id': 'r1', 'genes': {'g4', 'g5'}})
+            ReactionEntry({'id': 'r1', 'genes': 'g4 and g5'}),
+            0.5, 0.5, 0.5
         )
         self.assertEqual(match, unmatch)
 
@@ -381,3 +390,14 @@ class Test_bayesian_util(unittest.TestCase):
                 (pair, score),
                 (('kitten', 'sitting'), 3.0/7)
             )
+
+    def test_gene_equals(self):
+        g1 = '(A1 and B21) or (A12 and B2)'
+        g2 = 'A12 and B2'
+        g3 = 'A1 and B2'
+        g4 = '(C and D) or (E and F)'
+        gmap = {'A12': 'D', 'B2': 'C'}
+        self.assertTrue(util.genes_equals(g1, g2))
+        self.assertFalse(util.genes_equals(g1, g3))
+        self.assertFalse(util.genes_equals(g1, None))
+        self.assertTrue(util.genes_equals(g1, g4, gmap))

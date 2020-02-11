@@ -25,7 +25,6 @@ from itertools import product
 from multiprocessing import Pool
 import operator
 import sys
-import re
 from collections import namedtuple
 
 import numpy as np
@@ -88,16 +87,6 @@ class MappingModel(object):
         self._reactions = {}
         for reaction in it:
             genes = getattr(reaction, 'genes', None)
-            if genes is not None:
-                # Delete operators in string
-                genes = re.sub(r'[,()\']*', '', genes)
-                genes = re.sub(r'\band\b', '', genes)
-                genes = re.sub(r'\bor\b', '', genes)
-                genes = re.split(r'\s+', genes)  # Transfer string to list
-                genes = frozenset(genes)
-            else:
-                genes = None
-
             reaction_id = reaction.id
             equation = getattr(reaction, 'equation', None)
             entry = ReactionEntry(
@@ -218,16 +207,20 @@ class BayesianReactionPredictor(object):
         gene: whether to compare the gene association.
         compartment_map: dictionary mapping compartment id in the query model
                          to the id in the target model.
+        gene_map: dictionary mapping gene id in the query model to the id in
+                  the target model.
     """
 
     def __init__(self, model1, model2, cpd_pred, nproc=1,
-                 outpath='.', log=False, gene=False, compartment_map={}):
+                 outpath='.', log=False, gene=False,
+                 compartment_map={}, gene_map={}):
         self._model1 = model1
         self._model2 = model2
         self._column_list = ['p', 'p_id', 'p_name', 'p_equation', 'p_genes']
         self._reaction_map_p = map_model_reactions(
             self._model1, self._model2, cpd_pred, nproc, outpath,
-            log=log, gene=gene, compartment_map=compartment_map)
+            log=log, gene=gene, compartment_map=compartment_map,
+            gene_map=gene_map)
 
     @property
     def model1(self):
@@ -517,26 +510,23 @@ def get_cpd_set(equation, left=True):
     return cpd_set
 
 
-def reaction_genes_likelihood(r1, r2):
+def reaction_genes_likelihood(r1, r2, reaction_prior, reaction_genes_marg,
+                              reaction_genes_not_equal_marg, gene_map={}):
     if r1.genes is None or r2.genes is None:
-        # p value of observing undefined genes
-        # it is independent of the condition of match or not
         p_match = 1
         p_no_match = 1
+    elif util.genes_equals(r1.genes, r2.genes, gene_map):
+        p_match = 0.59
+        p_no_match = max(
+            0,
+            ((reaction_genes_marg - p_match * reaction_prior) /
+             (1.0 - reaction_prior)))
     else:
-        # calculating p_match
-        present = len(r1.genes & r2.genes)
-        differ = len(r1.genes ^ r2.genes)
-        # total = len(r1.genes | r2.genes)
-
-        p_present = 0.99
-        p_differ = 0.01
-        p_match = p_present**present * p_differ**differ
-
-        # calculating p_no_match
-        p_present = 0.10
-        p_differ = 0.90
-        p_no_match = p_present**present * p_differ**differ
+        p_match = 0.41
+        p_no_match = max(
+            0,
+            ((reaction_genes_not_equal_marg - p_match * reaction_prior) /
+             (1.0 - reaction_prior)))
 
     return p_match, p_no_match
 
@@ -747,7 +737,8 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
 
 
 def map_model_reactions(model1, model2, cpd_pred, nproc=1, outpath='.',
-                        log=False, gene=False, compartment_map={}):
+                        log=False, gene=False, compartment_map={},
+                        gene_map={}):
     """Map reactions of two models."""
     # Mapping of reactions
     reaction_pairs = len(model1.reactions) * len(model2.reactions)
@@ -810,11 +801,30 @@ def map_model_reactions(model1, model2, cpd_pred, nproc=1, outpath='.',
     # observing a pair of genes in two reactions given that the reaction
     # do _not_ match.
     if gene:
+        # Marginal probability of observing two reactions with
+        # equal gene associations.
+        tasks = ((util.genes_equals, (r1.genes, r2.genes))
+                 for r1, r2 in product(
+                     itervalues(model1.reactions),
+                     itervalues(model2.reactions)))
+        result = pool.map(parallel_equel, tasks, chunksize=chunksize)
+        reaction_genes_equal_marg = sum(result) / float(reaction_pairs)
+
+        # Marginal probability of observing two reactions with unequal
+        # gene associations.
+        reaction_genes_not_equal_marg = 1.0 - reaction_genes_equal_marg - (
+            sum(r1.genes is None or r2.genes is None
+                for r1, r2 in product(itervalues(model1.reactions),
+                                      itervalues(model2.reactions))) /
+            reaction_pairs)
+
         print('Calculating reaction genes likelihoods...')
         sys.stdout.flush()
         reaction_genes_likelihoods = pairwise_likelihood(
             pool, chunksize, model1.reactions, model2.reactions,
-            reaction_genes_likelihood, ())
+            reaction_genes_likelihood,
+            (reaction_prior, reaction_genes_equal_marg,
+             reaction_genes_not_equal_marg, gene_map))
     else:
         reaction_genes_likelihoods = pairwise_likelihood(
             pool, chunksize, model1.reactions, model2.reactions,

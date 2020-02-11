@@ -205,6 +205,15 @@ class ModelMappingCommand(Command):
                 'if the compartment ids in the two models are not consistent.'
             )
         )
+        parser_mm.add_argument(
+            '--gene-map-file', type=str,
+            help=(
+                'A tab delimited file (.tsv) listing the gene ids of '
+                'query model in the first column, and the corresponding '
+                'gene ids of dest model in the second column. Required '
+                'if the gene ids in the two models are not consistent.'
+            )
+        )
 
         # manual curation subcommand
         parser_c = subparsers.add_parser(
@@ -315,6 +324,14 @@ class ModelMappingCommand(Command):
                     source, target = row.strip().split()
                     compartment_map[source] = target
 
+        # Load gene mapping
+        gene_map = {}
+        if self._args.gene_map_file is not None:
+            with open(self._args.gene_map_file, 'r') as f:
+                for row in f:
+                    source, target = row.strip().split()
+                    gene_map[source] = target
+
         # Check models
         if (
             not (
@@ -372,7 +389,7 @@ class ModelMappingCommand(Command):
             model1, model2, compound_best.loc[:, 'p'],
             self._args.nproc, self._args.outpath,
             log=self._args.log, gene=self._args.map_reaction_gene,
-            compartment_map=compartment_map)
+            compartment_map=compartment_map, gene_map=gene_map)
         print(
             'It took %s seconds to calculate reaction mapping...'
             % (time.time() - t))
