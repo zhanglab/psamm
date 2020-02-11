@@ -46,11 +46,11 @@ matrix:
           python: '2.7'
 
         - env: TOXENV=py35-nosolver,coverage
-          python: '3.5.2'
+          python: '3.5'
         - env: TOXENV=py35-glpk,coverage
-          python: '3.5.2'
+          python: '3.5'
         - env: TOXENV=py35-qsoptex,coverage
-          python: '3.5.2'
+          python: '3.5'
 
         - env: TOXENV=py36-nosolver,coverage
           python: '3.6'
