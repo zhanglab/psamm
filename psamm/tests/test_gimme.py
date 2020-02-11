@@ -53,6 +53,10 @@ class TestAddReactions(unittest.TestCase):
             self._solver = generic.Solver()
         except generic.RequirementsError:
             self.skipTest('Unable to find an LP solver for tests')
+            try:
+                self.solver = generic.Solver(integer=True)
+            except generic.RequirementsError:
+                self.skipTest('Needs and integer programming solver')
 
     def test_reverse_model(self):
         test_associations = {
