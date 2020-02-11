@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 
 import logging
 import csv
-from ..lpsolver import lp, cplex
+from ..lpsolver import lp
 import argparse
 from six import iteritems
 from ..expression import boolean
