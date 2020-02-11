@@ -15,6 +15,8 @@
 #
 # Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
 # copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edi>
+# Copyright 2020 Christopher Powers <c-11060@my.uri.edu>
+# Copyright 2020 Elysha Sameth <esameth1@my.uri.edu>
 
 from __future__ import unicode_literals
 

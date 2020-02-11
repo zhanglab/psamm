@@ -15,6 +15,7 @@
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2016  Chao Liu <lcddzyx@gmail.com>
+# Copyright 2019 Christopher Powers <c-11060@my.uri.edu>
 
 """Functionality related to gap-filling in general.
 

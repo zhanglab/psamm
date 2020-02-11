@@ -54,8 +54,8 @@ class SearchCommand(Command):
         parser_compound.add_argument(
             '--props', '-c', dest='props', metavar='props',
             nargs='+', type=str, default=None,
-            help='Space-separated list of compound properties, such as '
-                 'compound formula, compound charge, molecular weight...')
+            help='Space-separated list of compound properties '
+                 'to search in')
         parser_compound.add_argument(
             '--match-type', '-m', dest='match_type', metavar='match_type',
             type=str, choices=['exact', 'vague'], default='vague',

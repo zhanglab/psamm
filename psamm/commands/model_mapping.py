@@ -37,104 +37,6 @@ from psamm.command import Command
 from psamm.datasource.reaction import Compound
 
 
-def read_mapping_file(f):
-    """Read a mapping file and yield source, target-set tuples"""
-    for line in f:
-        source, target = line.strip().split(None, 1)
-        if target == '-':
-            target_set = None
-        else:
-            target_set = set(s for s in target.split(','))
-        yield source, target_set
-
-
-class Confusion(object):
-    """Confusion matrix."""
-
-    def __init__(self, tp=0, tn=0, fp=0, fn=0):
-        self.tp, self.tn, self.fp, self.fn = tp, tn, fp, fn
-
-    @property
-    def positive(self):
-        return self.tp + self.fn
-
-    @property
-    def negative(self):
-        return self.fp + self.tn
-
-    @property
-    def total(self):
-        return self.tp + self.tn + self.fp + self.fn
-
-    @property
-    def tp_rate(self):
-        return self.tp if self.tp == 0 else self.tp / self.positive
-
-    @property
-    def fp_rate(self):
-        return self.fp if self.fp == 0 else self.fp / self.negative
-
-    @property
-    def specificity(self):
-        return self.tn if self.tn == 0 else self.tn / self.negative
-
-    @property
-    def precision(self):
-        return self.tp if self.tp == 0 else self.tp / (self.tp + self.fp)
-
-    @property
-    def accuracy(self):
-        return (self.tp + self.tn) / self.total
-
-    @property
-    def balanced_accuracy(self):
-        return (self.tp_rate + self.specificity) / 2.0
-
-    @property
-    def informedness(self):
-        return self.tp_rate + self.specificity - 1.0
-
-    def __repr__(self):
-        return 'Confusion(tp={}, tn={}, fp={}, fn={})'.format(
-            self.tp, self.tn, self.fp, self.fn)
-
-
-def evaluate_roc_points(model1, model2, predictor, actual):
-    """Return confusion matrix for each point on the ROC curve"""
-
-    # Count total positive and negative pairs
-    positive, negative = 0, 0
-    for e1, e2 in product(model1, model2):
-        correct = e1 in actual and actual[e1] is not None and e2 in actual[e1]
-        positive += correct
-        negative += not correct
-
-    tp, fp = 0, 0
-    p_prev = None
-    for pair, p in sorted((((e1, e2), predictor.map(e1, e2))
-                           for e1, e2 in product(model1, model2)),
-                          key=operator.itemgetter(1), reverse=True):
-        e1, e2 = pair
-        if p != p_prev:
-            yield p, Confusion(
-                tp=tp, fp=fp, fn=positive - tp, tn=negative - fp)
-            p_prev = p
-        correct = e1 in actual and actual[e1] is not None and e2 in actual[e1]
-        tp += correct
-        fp += not correct
-
-    cf = Confusion(tp=tp, fp=fp, fn=positive - tp, tn=negative - fp)
-    yield -float('inf'), cf
-
-
-def write_roc_curve(out_file, model1, model2, predictor, actual):
-    """Calculate ROC points and write them to file"""
-    for p, conf in evaluate_roc_points(model1, model2,
-                                       predictor, actual):
-        out_file.write('{}\t{}\t{}\t{}\t{}\n'.format(
-            p, conf.tp, conf.tn, conf.fp, conf.fn))
-
-
 class ModelMappingCommand(Command):
     """Generate a common model for two distinct metabolic models."""
 
@@ -610,3 +512,101 @@ class ModelMappingCommand(Command):
         )
 
         out_nm.write_model(dest=self._args.outpath, split_subsystem=False)
+
+
+def read_mapping_file(f):
+    """Read a mapping file and yield source, target-set tuples"""
+    for line in f:
+        source, target = line.strip().split(None, 1)
+        if target == '-':
+            target_set = None
+        else:
+            target_set = set(s for s in target.split(','))
+        yield source, target_set
+
+
+class Confusion(object):
+    """Confusion matrix."""
+
+    def __init__(self, tp=0, tn=0, fp=0, fn=0):
+        self.tp, self.tn, self.fp, self.fn = tp, tn, fp, fn
+
+    @property
+    def positive(self):
+        return self.tp + self.fn
+
+    @property
+    def negative(self):
+        return self.fp + self.tn
+
+    @property
+    def total(self):
+        return self.tp + self.tn + self.fp + self.fn
+
+    @property
+    def tp_rate(self):
+        return self.tp if self.tp == 0 else self.tp / self.positive
+
+    @property
+    def fp_rate(self):
+        return self.fp if self.fp == 0 else self.fp / self.negative
+
+    @property
+    def specificity(self):
+        return self.tn if self.tn == 0 else self.tn / self.negative
+
+    @property
+    def precision(self):
+        return self.tp if self.tp == 0 else self.tp / (self.tp + self.fp)
+
+    @property
+    def accuracy(self):
+        return (self.tp + self.tn) / self.total
+
+    @property
+    def balanced_accuracy(self):
+        return (self.tp_rate + self.specificity) / 2.0
+
+    @property
+    def informedness(self):
+        return self.tp_rate + self.specificity - 1.0
+
+    def __repr__(self):
+        return 'Confusion(tp={}, tn={}, fp={}, fn={})'.format(
+            self.tp, self.tn, self.fp, self.fn)
+
+
+def evaluate_roc_points(model1, model2, predictor, actual):
+    """Return confusion matrix for each point on the ROC curve"""
+
+    # Count total positive and negative pairs
+    positive, negative = 0, 0
+    for e1, e2 in product(model1, model2):
+        correct = e1 in actual and actual[e1] is not None and e2 in actual[e1]
+        positive += correct
+        negative += not correct
+
+    tp, fp = 0, 0
+    p_prev = None
+    for pair, p in sorted((((e1, e2), predictor.map(e1, e2))
+                           for e1, e2 in product(model1, model2)),
+                          key=operator.itemgetter(1), reverse=True):
+        e1, e2 = pair
+        if p != p_prev:
+            yield p, Confusion(
+                tp=tp, fp=fp, fn=positive - tp, tn=negative - fp)
+            p_prev = p
+        correct = e1 in actual and actual[e1] is not None and e2 in actual[e1]
+        tp += correct
+        fp += not correct
+
+    cf = Confusion(tp=tp, fp=fp, fn=positive - tp, tn=negative - fp)
+    yield -float('inf'), cf
+
+
+def write_roc_curve(out_file, model1, model2, predictor, actual):
+    """Calculate ROC points and write them to file"""
+    for p, conf in evaluate_roc_points(model1, model2,
+                                       predictor, actual):
+        out_file.write('{}\t{}\t{}\t{}\t{}\n'.format(
+            p, conf.tp, conf.tn, conf.fp, conf.fn))

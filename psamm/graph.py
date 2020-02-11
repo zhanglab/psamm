@@ -149,6 +149,7 @@ class Graph(Entity):
 
     def write_graphviz(self, f, width, height):
         """write the nodes and edges information into a dot file.
+
         Args:
             self: Graph entity, including nodes and edges entities.
             f: An empty file.
@@ -187,6 +188,7 @@ class Graph(Entity):
                                          extracellular, width, height):
         """Function to write compartmentalized version of dot file
         for graph.
+
         Args:
             self: Graph entity.
             f: An empty file.
@@ -267,6 +269,7 @@ class Graph(Entity):
 
     def write_nodes_tables(self, f):
         """write a table file (.tsv) that contains nodes information.
+
         Args:
             self: Graph entity.
             f: An empty file.
@@ -296,6 +299,7 @@ class Graph(Entity):
     def write_edges_tables(self, f):
         """ Write a tab separated table that contains edges information,
         including edge source, edge dest, and edge properties.
+
         Args:
             self: Graph entity.
             f: An empty TSV file.
@@ -433,15 +437,6 @@ def make_network_dict(nm, mm, subset=None, method='fpp', element=None, excluded_
 
 
 def write_network_dict(network_dict):
-
-    # def get_direction_string(dir):
-    #     if dir == Direction.Both:
-    #         return 'both'
-    #     elif dir == Direction.Reverse:
-    #         return 'reverse'
-    #     elif dir == Direction.Forward:
-    #         return 'forward'
-
     for key, value in sorted(iteritems(network_dict), key=lambda x: str(x)):
         (cpair_list, dir) = value
         for (c1, c2) in cpair_list:
@@ -572,6 +567,7 @@ def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method, args_combin
     contains base nodes, nodes only have rxn/cpd ID and rxn/cpd entry info,
     rxn entry is replaced by a list of rxn IDs if multiple rxn present
     on one node.
+
     Args:
         cpairs_dict: defaultdict of compound_pair: defaultdict of direction:
             reaction list. e.g. {(c1, c2): {'forward":[rx1], 'both':[rx2}}.
@@ -588,7 +584,7 @@ def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method, args_combin
 
     def add_graph_nodes(g, cpairs_dict, method, new_id_mapping, args_combine,
                         model_compound_entries):
-        """create compound and reaction nodes, adding them to empty graph object.
+        """Create compound and reaction nodes, adding them to empty graph object.
 
         Args:
             g: An empty Graph object.

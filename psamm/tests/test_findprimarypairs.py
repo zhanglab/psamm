@@ -14,6 +14,9 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2019  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2020 Elysha Sameth <esameth1@my.uri.edu>
+
 
 import unittest
 

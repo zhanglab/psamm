@@ -41,11 +41,14 @@ class GimmeCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--biomass-threshold', type=float, default=None)
+            '--biomass-threshold', type=float, default=None,
+            help='Threshold for biomass reaction flux')
         parser.add_argument(
-            '--expression-threshold', type=float)
+            '--expression-threshold', type=float,
+            help='Threshold for gene expression')
         parser.add_argument(
-            '--transcriptome-file', type=file)
+            '--transcriptome-file', type=file,
+            help='Two column file of gene ID to expression')
         super(GimmeCommand, cls).init_parser(parser)
 
     def run(self):
@@ -90,9 +93,9 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
                         split_rxns, transcript_values, threshold):
     """Formulates and Solves a GIMME model.
 
-    Implementation of the GIMME algorith (Becker and Pallson 2008).
+    Implementation of the GIMME algorithm (Becker and Pallson 2008).
     Accepts an irreversible metabolic model, LP problem, and GIMME specific
-    data. Will add in relevent GIMME constraints to the LP problem and
+    data. Will add in relevant GIMME constraints to the LP problem and
     generates a contextualized model based on the media constraints and the
     transcriptome data provided.
 
@@ -221,7 +224,7 @@ def parse_transcriptome_file(f, threshold):
 def get_rxn_value(root, gene_dict):
     """Gets overall expression value for a reaction gene association.
 
-    Recursive funciton designed to parse a gene expression and return
+    Recursive function designed to parse a gene expression and return
     an expression value to use in the GIMME algorithm. This function is
     designed to return the value directly if the expression only has
     one gene. If the expression has multiple genes related by 'OR'

@@ -54,46 +54,44 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         parser.add_argument(
             '--exclude', metavar='reaction', type=text_type, default=[],
             action=FilePrefixAppendAction,
-            help='Reaction(s) to exclude from metabolite pair '
-                 'prediction and final visualization of the model'
-                 '. (e.g. biomass reactions or biosynthesis reactions)')
+            help='Reaction(s) to exclude from metabolite pair prediction')
         parser.add_argument(
             '--element', type=text_type, default='C',
             help='Element transfer to show on the graph (C, N, O, S).')
         parser.add_argument(
             '--cpd-detail', type=text_type, default=None, action='append',
-            nargs='+', help='determine compound properties showed on nodes '
-                            'label, e.g. formula, name, charge)')
+            nargs='+', help='List of properties to include on '
+                            'compound nodes.')
         parser.add_argument(
             '--rxn-detail', type=text_type, default=None, action='append',
-            nargs='+', help='determine reaction properties showed on nodes '
-                            'label, e.g. genes, EC, equation)')
+            nargs='+', help='List of properties to include on reaction '
+                            'nodes.')
         parser.add_argument(
             '--subset', type=argparse.FileType('rU'), default=None,
-            help='Subset of reactions to include in graph '
-                 '(default=All reactions)')
+            help='File containing a subset of reactions to visualize')
         parser.add_argument(
             '--color', type=argparse.FileType('rU'), default=None, nargs='+',
-            help='Designate non-default colors for nodes in the graph')
+            help='File containing node color mappings')
         parser.add_argument(
             '--image', type=text_type, default=None,
-            help='Generate image file in designated format '
+            help='Image output file format '
                  '(e.g. pdf, png, eps)')
         parser.add_argument(
             '--hide-edges', type=argparse.FileType('rU'), default=None,
-            help='Remove edges between specific compound pair from network ')
+            help='File containing compound edges to exclude '
+                 'from visualization')
         parser.add_argument(
             '--combine', metavar='Combine Level', type=int, choices=range(3),
-            default=0, help='Combined reaction nodes in different two levels.')
+            default=0, help='Combined reaction nodes in three '
+                            'different levels.')
         parser.add_argument(
             '--compartment', action='store_true',
-            help='Generate visualization of the network with compartments '
-                 'shown.')
+            help='Include compartments in final visualization')
         parser.add_argument(
-            '--output', type=text_type, help='set output name.')
+            '--output', type=text_type, help='Output file name.')
         parser.add_argument(
             '--image-size', type=text_type, default='None,None',
-            help='Set width and height of the graph image. '
+            help='Set the width and height of the graph image. '
                  '(width,height)(inches)')
         super(VisualizationCommand, cls).init_parser(parser)
 
@@ -212,7 +210,7 @@ class VisualizationCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
 
 
 def rxnset_for_vis(mm, subset_file, exclude):
-    """create a collection of reaction IDs that need to be visualized.
+    """ Create a collection of reaction IDs that need to be visualized.
 
     Args:
         mm: Metabolic model, class 'psamm.metabolicmodel.MetabolicModel'.
@@ -259,7 +257,7 @@ def rxnset_for_vis(mm, subset_file, exclude):
 
 
 def add_biomass_rxns(g, nm_bio_reaction):
-    """Adds biomass reaction nodes and edges to a graph object.
+    """ Adds biomass reaction nodes and edges to a graph object.
 
     Args:
         g: Graph object.
@@ -299,7 +297,7 @@ def add_biomass_rxns(g, nm_bio_reaction):
 
 
 def add_exchange_rxns(g, rxn_id, reaction):
-    """Add exchange reaction nodes and edges to graph object.
+    """ Add exchange reaction nodes and edges to graph object.
 
     Args:
         g: A graph object that contains a set of nodes and some edges.
@@ -360,7 +358,7 @@ def add_node_props(g, recolor_dict):
 
 
 def add_node_label(g, cpd_detail, rxn_detail):
-    """ set label of nodes in graph object,
+    """ Set label of nodes in graph object,
 
     Args:
         g: A graph object, contain a set of nodes and a dictionary of edges.
