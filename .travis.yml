@@ -30,7 +30,7 @@ install:
       fi
 
     - pip install tox coveralls
-
+    - pip install tox-travis
 script: tox -v
 after_success: coveralls
 matrix:
