@@ -406,12 +406,12 @@ def reaction_equation_mapping_approx_max_likelihood(
     p_no_match = 0.0
 
     # get the possible best-match pairs
-    pair_list = [
+    pair_list = list(set(
         (c1.name, c2.name)
         for c1, c2 in product(cpd_set1, cpd_set2)
         if ((c1.name, c2.name) in cpd_pred.index
             and (compartment_map.get(c1.compartment, c1.compartment)
-                 == c2.compartment))]
+                 == c2.compartment))))
 
     # remove the compartment information
     cpd_set1 = [c.name for c in cpd_set1]
