@@ -14,7 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
-# Copyright 2018-2019  Jing Wang <wjingsjtu@gmail.com>
+# Copyright 2018-2020  Jing Wang <wjingsjtu@gmail.com>
 
 """Calculate model mapping likelihood with bayesian."""
 from __future__ import print_function, division
@@ -32,6 +32,7 @@ import pandas as pd
 
 import psamm.bayesian_util as util
 from psamm.formula import Formula
+from psamm.expression.boolean import Expression
 from functools import reduce
 
 
@@ -57,9 +58,12 @@ class MappingModel(object):
         self._read_reactions(model.reactions)
 
         self._genes = set()
+        self._has_gene = list()
         for r in itervalues(self._reactions):
             if r.genes is not None:
-                self._genes.update(r.genes)
+                self._has_gene.append(r.id)
+                e = Expression(r.genes)
+                self._genes.update([g.symbol for g in e.variables])
 
     def _read_compounds(self, it):
         self._compounds = {}
@@ -118,6 +122,8 @@ class MappingModel(object):
         print('- Compounds: {}'.format(len(self.compounds)))
         print('- Reactions: {}'.format(len(self.reactions)))
         print('- Genes: {}'.format(len(self.genes)))
+        print('- Reactions with gene association: {}'.format(
+            len(self._has_gene)))
 
     def check_reaction_compounds(self):
         """Check that reaction compounds are defined in the model"""
