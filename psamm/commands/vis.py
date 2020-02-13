@@ -42,7 +42,7 @@ ALT_COLOR = '#b3fcb8'
 
 class VisualizationCommand(MetabolicMixin,
                            Command, FilePrefixAppendAction):
-    """Run visualization command on the model."""
+    """Generate graphical representations of the model"""
 
     @classmethod
     def init_parser(cls, parser):
