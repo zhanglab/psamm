@@ -262,12 +262,12 @@ class BayesianReactionPredictor(object):
 
 def compound_id_likelihood(c1, c2, compound_prior, compound_id_marg):
     if util.id_equals(c1.id, c2.id):
-        p_match = 0.65
+        p_match = 0.4
         p_marg = compound_id_marg
         p_no_match = max(
             0, (p_marg - p_match * compound_prior) / (1.0 - compound_prior))
     else:
-        p_match = 0.35
+        p_match = 0.6
         p_marg = 1.0 - compound_id_marg
         p_no_match = max(
             0, (p_marg - p_match * compound_prior) / (1.0 - compound_prior))
@@ -366,13 +366,13 @@ def reaction_id_likelihood(
         r1, r2, reaction_prior,
         reaction_id_equal_marg, reaction_id_not_equal_marg):
     if util.id_equals(r1.id, r2.id):
-        p_match = 0.52
+        p_match = 0.30
         p_no_match = max(
             0,
             ((reaction_id_equal_marg - p_match * reaction_prior) /
              (1.0 - reaction_prior)))
     else:
-        p_match = 0.48
+        p_match = 0.7
         p_no_match = max(
             0,
             ((reaction_id_not_equal_marg - p_match * reaction_prior) /
@@ -383,13 +383,13 @@ def reaction_id_likelihood(
 
 def reaction_name_likelihood(r1, r2, reaction_prior, reaction_name_marg):
     if util.name_equals(r1.name, r2.name):
-        p_match = 0.59
+        p_match = 0.40
         p_no_match = max(
             0,
             ((reaction_name_marg - p_match * reaction_prior) /
              (1.0 - reaction_prior)))
     else:
-        p_match = 0.41
+        p_match = 0.60
         p_no_match = max(
             0,
             ((1.0 - reaction_name_marg - p_match * reaction_prior) /
@@ -522,13 +522,13 @@ def reaction_genes_likelihood(r1, r2, reaction_prior, reaction_genes_marg,
         p_match = 1
         p_no_match = 1
     elif util.genes_equals(r1.genes, r2.genes, gene_map):
-        p_match = 0.59
+        p_match = 0.4
         p_no_match = max(
             0,
             ((reaction_genes_marg - p_match * reaction_prior) /
              (1.0 - reaction_prior)))
     else:
-        p_match = 0.41
+        p_match = 0.6
         p_no_match = max(
             0,
             ((reaction_genes_not_equal_marg - p_match * reaction_prior) /
