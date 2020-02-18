@@ -51,15 +51,12 @@ class SearchCommand(Command):
             action=FilePrefixAppendAction, type=text_type, default=[],
             help='Name of compound')
         parser_compound.add_argument(
-            '--props', '-c', dest='props', metavar='props',
-            nargs='+', type=str, default=None,
-            help='Space-separated list of compound properties '
-                 'to search in')
+            '--key', dest='key', metavar='key',
+            type=str, default=None,
+            help='String to search for within compound properties. (case insensitive)')
         parser_compound.add_argument(
-            '--match-type', '-m', dest='match_type', metavar='match_type',
-            type=str, choices=['exact', 'vague'], default='vague',
-            help='chose the map type when using --props to find compound. '
-                 'exact means completely match, vague means partially match')
+            '--exact', action='store_true',
+	        help='Match full compound property')
 
         # Reaction subcommand
         parser_reaction = subparsers.add_parser(
@@ -74,16 +71,12 @@ class SearchCommand(Command):
             action=FilePrefixAppendAction, type=str, default=[],
             help='Comma-separated list of compound IDs')
         parser_reaction.add_argument(
-            '--props', '-p', dest='props', metavar='props',
-            nargs='+', type=str, default=None,
-            help='Space-separated list of reaction properties, such as '
-                 'reaction name, ec number, pathway or subsystem name or '
-                 'gene association')
+            '--key', dest='key', metavar='key',
+            type=str, default=None,
+            help='String to search for within reaction properties. (case insensitive)')
         parser_reaction.add_argument(
-            '--match-type', '-m', dest='match_type', metavar='match_type',
-            type=str, choices=['exact', 'vague'], default='vague',
-            help='chose the map type when using --props to find reaction. '
-                 'exact means completely match, vague means partially match')
+            '--exact', action='store_true',
+	        help='Match full reaction property')
 
     def run(self):
         """Run search command."""
@@ -114,7 +107,7 @@ class SearchCommand(Command):
                     continue
 
             # find compounds that contains any of given properties
-            if self._args.props is not None:
+            if self._args.key is not None:
 
                 # prepare s list of all compound properties
                 compound_prop_list = []
@@ -127,18 +120,11 @@ class SearchCommand(Command):
 
                 # find compound entry based on given property argument
                 props = set()
-                if self._args.match_type == 'exact':
-                    for property in self._args.props:
-                        props.add(property.lower())
-                    if any(prop in props for prop in compound_prop_list):
+                if self._args.exact:
+                    if self._args.key.lower() in compound_prop_list:
                         selected_compounds.add(compound)
-                        continue
-                elif self._args.match_type == 'vague':
-                    for property_list in self._args.props:
-                        for property in property_list.split(','):
-                            props.add(property.lower())
-                    if any(prop in ('|'.join(compound_prop_list)) for
-                           prop in props):
+                else:
+                    if self._args.key.lower() in ('|'.join(compound_prop_list)):
                         selected_compounds.add(compound)
 
         # Show results
@@ -182,7 +168,7 @@ class SearchCommand(Command):
                     selected_reactions.add(reaction)
                     continue
 
-            if self._args.props is not None:
+            if self._args.key is not None:
                 props = set()
 
                 # prepare s list of all reaction properties
@@ -199,14 +185,14 @@ class SearchCommand(Command):
                         reaction_prop_list.append(str(rxn_property).lower())
 
                 # find reaction based on given property argument
-                if self._args.match_type == 'exact':
-                    for property in self._args.props:
+                if self._args.exact:
+                    for property in self._args.key:
                         props.add(property.lower())
                     if any(prop in props for prop in reaction_prop_list):
                         selected_reactions.add(reaction)
                         continue
-                elif self._args.match_type == 'vague':
-                    for property in self._args.props:
+                else:
+                    for property in self._args.key:
                         props.add(property.lower())
                     if any(prop in '|'.join(reaction_prop_list) for
                            prop in props):
