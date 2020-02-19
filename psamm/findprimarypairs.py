@@ -209,16 +209,19 @@ def predict_compound_pairs_iterated(
                 final_ambiguous_count += 1
                 all_hydrogen = True
 
-            for pair in pairs:
-                for _, _, formula in pair:
-                    df = dict(formula.items())
-                    if len(df) > 1 or Atom.H not in df:
-                        all_hydrogen = False
-                logger.info('Ambiguous Transfers in Reaction: {}'.format(
-                    reaction))
+                for pair in pairs:
+                    for _, _, formula in pair:
+                        df = dict(formula.items())
+                        if len(df) > 1 or Atom.H not in df:
+                            all_hydrogen = False
 
-            if all_hydrogen:
-                final_ambiguous_hydrogen += 1
+                if all_hydrogen:
+                    final_ambiguous_hydrogen += 1
+                    logger.info('Ambiguous Hydrogen Transfers in Reaction: {}'.format(
+                        reaction))
+                else:
+                    logger.info('Ambiguous Non-Hydrogen Transfers in Reaction: {}'.format(
+                        reaction))
 
         logger.info('{} reactions were decided with ambiguity'.format(
             final_ambiguous_count))
