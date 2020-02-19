@@ -185,10 +185,12 @@ class SearchCommand(Command):
                 props = set()
 
                 # prepare s list of all reaction properties
-                # except reaction equation
                 raw_reaction_prop_list = [
-                    reaction.properties[key] for key in reaction.properties
-                    if key != 'equation']
+                    reaction.properties[key] for key in reaction.properties]
+                # trans_rxn = reaction.equation.translated_compounds(
+                #     lambda x: compound_name.get(x, x))
+                # print(trans_rxn)
+                # raw_reaction_prop_list.append(str(trans_rxn))
                 reaction_prop_list = []
                 for rxn_property in raw_reaction_prop_list:
                     if isinstance(rxn_property, list):
@@ -197,23 +199,20 @@ class SearchCommand(Command):
                     else:
                         reaction_prop_list.append(str(rxn_property).lower())
 
+
                 # find reaction based on given property argument
                 if self._args.exact:
-                    for property in self._args.key:
-                        props.add(property.lower())
-                    if any(prop in props for prop in reaction_prop_list):
+                    if self._args.key.lower() in reaction_prop_list:
                         selected_reactions.add(reaction)
                         continue
                 else:
-                    for property in self._args.key:
-                        props.add(property.lower())
-                    if any(prop in '|'.join(reaction_prop_list) for
-                           prop in props):
+                    if self._args.key.lower() in '|'.join(reaction_prop_list):
                         selected_reactions.add(reaction)
         if self._args.inmodel:
             final_reactions = [i for i in selected_reactions if i.id in self._mm.reactions]
         else:
             final_reactions = selected_reactions
+        print(final_reactions)
         # Show results
         for reaction in final_reactions:
             props = set(reaction.properties) - {'id', 'equation'}
