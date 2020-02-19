@@ -56,7 +56,10 @@ class SearchCommand(Command):
             help='String to search for within compound properties. (case insensitive)')
         parser_compound.add_argument(
             '--exact', action='store_true',
-	        help='Match full compound property')
+            help='Match full compound property')
+        parser_compound.add_argument(
+            '--inmodel', action='store_true',
+            help='Only search compounds in the model reactions')
 
         # Reaction subcommand
         parser_reaction = subparsers.add_parser(
@@ -76,11 +79,15 @@ class SearchCommand(Command):
             help='String to search for within reaction properties. (case insensitive)')
         parser_reaction.add_argument(
             '--exact', action='store_true',
-	        help='Match full reaction property')
+            help='Match full reaction property')
+        parser_reaction.add_argument(
+            '--inmodel', action='store_true',
+            help='Only search reactions in the model')
 
     def run(self):
         """Run search command."""
 
+        self._mm = self._model.create_metabolic_model()
         which_command = self._args.which
         if which_command == 'compound':
             self._search_compound()
@@ -128,7 +135,13 @@ class SearchCommand(Command):
                         selected_compounds.add(compound)
 
         # Show results
-        for compound in selected_compounds:
+        if self._args.inmodel:
+            model_compounds = set(x.name for x in self._mm.compounds)
+            final_compounds = [i for i in selected_compounds if i.id in model_compounds]
+        else:
+            final_compounds = selected_compounds
+
+        for compound in final_compounds:
             props = set(compound.properties) - {'id'}
             print('id: {}'.format(compound.id))
             for prop in sorted(props):
@@ -197,9 +210,12 @@ class SearchCommand(Command):
                     if any(prop in '|'.join(reaction_prop_list) for
                            prop in props):
                         selected_reactions.add(reaction)
-
+        if self._args.inmodel:
+            final_reactions = [i for i in selected_reactions if i.id in self._mm.reactions]
+        else:
+            final_reactions = selected_reactions
         # Show results
-        for reaction in selected_reactions:
+        for reaction in final_reactions:
             props = set(reaction.properties) - {'id', 'equation'}
             print('id: {}'.format(reaction.id))
             print('equation: {}'.format(
