@@ -22,6 +22,7 @@ import argparse
 import re
 import csv
 import logging
+from os import path
 
 from ..command import Command
 from ..expression import boolean
@@ -39,31 +40,37 @@ class PsammotateCommand(Command):
     def init_parser(cls, parser):
         parser.add_argument(
             '--rbh', metavar='file', type=argparse.FileType('r'),
-            help=('The homologous gene table file, generally '
-                  'from pan-genome analysis'))
+            help=('A two column mapping of genes from the template '
+                  'organism to the target organism.'))
         parser.add_argument(
             '--template', type=int,
             help=('The column of the RBH file where the template model '
-                  'genes are listed, starts from 1'))
+                  'genes are listed, starts from 1.'))
         parser.add_argument(
             '--target', type=int,
             help=('The column of the RBH file where the target '
-                  'model genes are listed, starts from 1'))
+                  'model genes are listed, starts from 1.'))
         parser.add_argument(
-            '--prefix', type=str, default='homolo_reactions',
+            '--output', type=str, default='homolo_reactions',
             help=('The prefix of output YAML file, '
-                  '(default: homolo_reactions)'))
+                  '(default: homolo_reactions).'))
         parser.add_argument(
             '--ignore-na', action='store_true',
             help=('Ignore the reactions that do not have gene association. '
-                  '(default: retain these reactions in new model)'))
+                  '(default: retain these reactions in new reactions file)'))
         parser.add_argument(
             '--suffix', type=str, default=None,
-            help='Suffix to append to end of reaction IDs and compartments')
+            help='Suffix to append to end of reaction IDs and compartments.')
         super(PsammotateCommand, cls).init_parser(parser)
 
     def run(self):
         """Run psammotate command"""
+        if path.exists('{}.yaml'.format(self._args.output)):
+            logger.warning('File {}.yaml already exists. '
+                           'Please choose a different file name '
+                           'throguh the --output option.'.format(
+                self._args.output))
+            quit()
         if self._args.suffix:
             if any(i in self._args.suffix for i in [' ', '|', ':', ';', ',']):
                 logger.error('Special character or space found '
@@ -84,7 +91,8 @@ class PsammotateCommand(Command):
                         for cpd, v in r.equation.compounds:
                             cpd._compartment += '_{}'.format(self._args.suffix)
                     homolo_reactions.append(r)
-        with open(self._args.prefix + '.yaml', 'w') as o:
+
+        with open(self._args.output + '.yaml', 'w') as o:
             ModelWriter().write_reactions(o, homolo_reactions)
 
 
@@ -152,6 +160,7 @@ def model_loader(nm, ignore_na, translation_dict, suffix=None):
             target_genes_l[i] = True
     mm = nm.create_metabolic_model()
     model_rxns = [i for i in mm.reactions]
+    print('ReactionID\tOriginal_Genes\tTranslated_Genes\tIn_final_model'.format())
     for entry in nm.reactions:
         if entry.id in model_rxns:
             if entry.genes is None:
@@ -161,9 +170,9 @@ def model_loader(nm, ignore_na, translation_dict, suffix=None):
                 id = entry.id
                 if suffix is not None:
                     id = id + '_{}'.format(suffix)
-                print('{}\t{}\t{}\t{}\t{}'.format(
+                print('{}\t{}\t{}\t{}'.format(
                     id, entry.genes, 'None',
-                    not ignore_na, not ignore_na))
+                    not ignore_na))
             elif entry.genes is not None:
                 genes = re.sub(r'\?', '', entry.genes)
                 e = boolean.Expression(genes)
@@ -182,8 +191,8 @@ def model_loader(nm, ignore_na, translation_dict, suffix=None):
                 id = entry.id
                 if suffix is not None:
                     id = id + '_{}'.format(suffix)
-                print('{}\t{}\t{}\t{}\t{}'.format(
-                    id, entry.genes, genes, e_1, e_1.value))
+                print('{}\t{}\t{}\t{}'.format(
+                    id, entry.genes, genes, e_1.value))
                 translated_genes[entry] = [genes_1, genes, e_1.value]
     return translated_genes
 
