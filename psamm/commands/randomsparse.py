@@ -47,7 +47,10 @@ class RandomSparseNetworkCommand(MetabolicMixin, LoopRemovalMixin,
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            'threshold', help='Threshold of max reaction flux',
+            'threshold', help='Threshold of objective reaction '
+                                'flux. Can be absolute flux value '
+                                '(0.25) or percentage of maximum '
+                                'biomass (50%)',
             type=util.MaybeRelative)
         parser.add_argument(
             '--type', help='Type of deletion to perform',

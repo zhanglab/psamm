@@ -30,6 +30,7 @@ from ..fluxanalysis import FluxBalanceProblem
 from ..reaction import Direction, Reaction
 from ..command import (LoopRemovalMixin, ObjectiveMixin, SolverCommandMixin,
                        MetabolicMixin, Command)
+from ..util import MaybeRelative
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +42,11 @@ class GimmeCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--biomass-threshold', type=float, default=None,
-            help='Threshold for biomass reaction flux')
+            '--biomass-threshold', help='Threshold of objective reaction '
+                                        'flux. Can be an absolute flux value '
+                                        '(0.25) or percentage of maximum '
+                                        'biomass (50%)',
+            type=MaybeRelative, default=MaybeRelative('100%'))
         parser.add_argument(
             '--expression-threshold', type=float,
             help='Threshold for gene expression')
@@ -129,19 +133,21 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
             problem.prob.var('zi_{}'.format(forward)) + problem.prob.var(
                 'zi_{}'.format(reverse)) <= 1)
 
-    if threshold is None:
-        problem.maximize(biomass)
-        problem.prob.add_linear_constraints(
-            problem.get_flux_var(biomass) >= problem.get_flux(biomass))
-    else:
-        problem.maximize(biomass)
-        if problem.get_flux(biomass) < threshold:
-            logger.warning('Input threshold '
-                           'greater than maximum '
-                           'biomass: {}'.format(problem.get_flux(biomass)))
-        else:
-            problem.prob.add_linear_constraints(
-                problem.get_flux_var(biomass) >= threshold)
+    threshold = threshold
+    problem.maximize(biomass)
+    if threshold.relative:
+        threshold.reference = problem.get_flux(biomass)
+
+    logger.info('Setting objective threshold to {}'.format(
+        threshold))
+
+    if problem.get_flux(biomass) < float(threshold):
+        logger.warning('Input threshold '
+                       'greater than maximum '
+                       'biomass: {}'.format(problem.get_flux(biomass)))
+        quit()
+    problem.prob.add_linear_constraints(
+        problem.get_flux_var(biomass) >= float(threshold))
 
     for key, value in iteritems(ci_dict):
         gimme_objective += problem.get_flux_var(key) * value
