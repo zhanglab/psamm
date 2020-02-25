@@ -35,7 +35,7 @@ from ..util import MaybeRelative
 logger = logging.getLogger(__name__)
 
 
-class GimmeCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
+class GimmeCommand(MetabolicMixin, ObjectiveMixin,
                    SolverCommandMixin, Command):
     """Subset a metabolic model based on gene expression data."""
 
@@ -70,7 +70,7 @@ class GimmeCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
 
         exchange_exclude = [rxn for rxn in mm.reactions
                             if mm.is_exchange(rxn)]
-
+        exchange_exclude.append(self._get_objective())
         mm_irreversible, reversible_gene_assoc, split_rxns = make_irreversible(
             mm, base_gene_dict, exclude_list=exchange_exclude)
 
@@ -234,12 +234,12 @@ def get_rxn_value(root, gene_dict):
     """Gets overall expression value for a reaction gene association.
 
     Recursive function designed to parse a gene expression and return
-    an expression value to use in the GIMME algorithm. This function is
+    a penalty value to use in the GIMME algorithm. This function is
     designed to return the value directly if the expression only has
     one gene. If the expression has multiple genes related by 'OR'
-    associations, then it will return the highest of the set of values.
+    associations, then it will return the highest lowest penalty value.
     If the genes are associated with 'AND' logic then the function
-    will return the lowest of the set of values.
+    will return the highest penalty value of the set of values.
 
     Args:
         root: object of boolean.Expression()._root
@@ -254,8 +254,7 @@ def get_rxn_value(root, gene_dict):
         if len(val_list) == 0:
             return None
         else:
-            return min(x for x in val_list if x is not None)
-        # get min value
+            return max(x for x in val_list if x is not None)
     elif type(root) is boolean.Or:
         val_list = [x for x in
                     [get_rxn_value(i, gene_dict)
@@ -264,7 +263,7 @@ def get_rxn_value(root, gene_dict):
 
             return None
         else:
-            return max(x for x in val_list if x is not None)
+            return min(x for x in val_list if x is not None)
 
 
 def make_irreversible(mm, gene_dict, exclude_list=[],
