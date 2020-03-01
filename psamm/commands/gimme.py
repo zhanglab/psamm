@@ -28,7 +28,7 @@ from ..expression import boolean
 from ..lpsolver.lp import Expression, ObjectiveSense
 from ..fluxanalysis import FluxBalanceProblem
 from ..reaction import Direction, Reaction
-from ..command import (LoopRemovalMixin, ObjectiveMixin, SolverCommandMixin,
+from ..command import (ObjectiveMixin, SolverCommandMixin,
                        MetabolicMixin, Command)
 from ..util import MaybeRelative
 
@@ -44,8 +44,7 @@ class GimmeCommand(MetabolicMixin, ObjectiveMixin,
         parser.add_argument(
             '--biomass-threshold', help='Threshold of objective reaction '
                                         'flux. Can be an absolute flux value '
-                                        '(0.25) or percentage of maximum '
-                                        'biomass (50%)',
+                                        'or percentage with percent sign.',
             type=MaybeRelative, default=MaybeRelative('100%'))
         parser.add_argument(
             '--expression-threshold', type=float,
@@ -53,6 +52,8 @@ class GimmeCommand(MetabolicMixin, ObjectiveMixin,
         parser.add_argument(
             '--transcriptome-file', type=argparse.FileType('r'),
             help='Two column file of gene ID to expression')
+        parser.add_argument('--detail', action='store_true',
+                            help='Show model statistics.')
         super(GimmeCommand, cls).init_parser(parser)
 
     def run(self):
@@ -76,22 +77,29 @@ class GimmeCommand(MetabolicMixin, ObjectiveMixin,
 
         p = FluxBalanceProblem(mm_irreversible, solver)
 
-        final_model, below_threshold_ids, incon_score \
-            = solve_gimme_problem(p, mm_irreversible,
-                                  self._get_objective(),
-                                  reversible_gene_assoc,
-                                  split_rxns, threshold_value,
-                                  self._args.biomass_threshold)
+        final_model, used_exchange, below_threshold_ids, \
+            incon_score, norm_incon_score = \
+            solve_gimme_problem(p, mm_irreversible,
+                                self._get_objective(),
+                                reversible_gene_assoc,
+                                split_rxns, threshold_value,
+                                self._args.biomass_threshold)
 
+        print('# internal Reactions')
         for reaction in sorted(final_model):
             print(reaction)
-
+        print('# Exchange Reactions')
+        for reaction in used_exchange:
+            print(reaction)
         used_below = str(len([x for x in
                               below_threshold_ids if x in final_model]))
         below = str(len(below_threshold_ids))
-        logger.info('Used {} below threshold reacctions out of {} total '
-                    'below threshold reactions'.format(used_below, below))
-        logger.info('Inconsistency Score: {}'.format(incon_score))
+        if self._args.detail:
+            logger.info('Used {} below threshold reactions out of {} total '
+                        'below threshold reactions'.format(used_below, below))
+            logger.info('Inconsistency Score: {}'.format(incon_score))
+            logger.info('Inconsistency / Sum of all fluxes: {}'.format(
+                norm_incon_score))
 
 
 def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
@@ -157,12 +165,14 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
     problem.prob.set_objective(obj)
     problem.prob.set_objective_sense(ObjectiveSense.Minimize)
     problem.prob.solve()
-    used_rxns = []
+    used_rxns = set()
+    sum_fluxes = 0
     for reaction in mm.reactions:
         if abs(problem.get_flux(reaction)) > 1e-12:
             original_id = reaction.replace('_forward', '')
             original_id = original_id.replace('_reverse', '')
-            used_rxns.append(original_id)
+            used_rxns.add(original_id)
+            sum_fluxes += problem.get_flux(reaction)
     used_below = 0
     used_above = 0
     off_below = 0
@@ -198,7 +208,11 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
             else:
                 off_above += 1
                 final_model.add(reaction)
-    return final_model, below_threshold_ids, problem.prob.result.get_value(obj)
+    used_exchange = used_rxns - original_reaction_set
+
+    return final_model, used_exchange, below_threshold_ids, \
+        problem.prob.result.get_value(obj), \
+        problem.prob.result.get_value(obj)/sum_fluxes
 
 
 def parse_transcriptome_file(f, threshold):
