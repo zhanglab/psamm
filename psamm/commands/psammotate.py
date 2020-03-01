@@ -68,8 +68,8 @@ class PsammotateCommand(Command):
         if path.exists('{}.yaml'.format(self._args.output)):
             logger.warning('File {}.yaml already exists. '
                            'Please choose a different file name '
-                           'throguh the --output option.'.format(
-                self._args.output))
+                           'through the --output '
+                           'option.'.format(self._args.output))
             quit()
         if self._args.suffix:
             if any(i in self._args.suffix for i in [' ', '|', ':', ';', ',']):
@@ -160,7 +160,7 @@ def model_loader(nm, ignore_na, translation_dict, suffix=None):
             target_genes_l[i] = True
     mm = nm.create_metabolic_model()
     model_rxns = [i for i in mm.reactions]
-    print('ReactionID\tOriginal_Genes\tTranslated_Genes\tIn_final_model'.format())
+    print('ReactionID\tOriginal_Genes\tTranslated_Genes\tIn_final_model')
     for entry in nm.reactions:
         if entry.id in model_rxns:
             if entry.genes is None:
