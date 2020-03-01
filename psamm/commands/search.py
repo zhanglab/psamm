@@ -53,7 +53,8 @@ class SearchCommand(Command):
         parser_compound.add_argument(
             '--key', dest='key', metavar='key',
             type=str, default=None,
-            help='String to search for within compound properties. (case insensitive)')
+            help='String to search for within compound '
+                 'properties. (case insensitive)')
         parser_compound.add_argument(
             '--exact', action='store_true',
             help='Match full compound property')
@@ -76,7 +77,8 @@ class SearchCommand(Command):
         parser_reaction.add_argument(
             '--key', dest='key', metavar='key',
             type=str, default=None,
-            help='String to search for within reaction properties. (case insensitive)')
+            help='String to search for within reaction '
+                 'properties. (case insensitive)')
         parser_reaction.add_argument(
             '--exact', action='store_true',
             help='Match full reaction property')
@@ -131,13 +133,15 @@ class SearchCommand(Command):
                     if self._args.key.lower() in compound_prop_list:
                         selected_compounds.add(compound)
                 else:
-                    if self._args.key.lower() in ('|'.join(compound_prop_list)):
+                    if self._args.key.lower() in \
+                            ('|'.join(compound_prop_list)):
                         selected_compounds.add(compound)
 
         # Show results
         if self._args.inmodel:
             model_compounds = set(x.name for x in self._mm.compounds)
-            final_compounds = [i for i in selected_compounds if i.id in model_compounds]
+            final_compounds = [i for i in selected_compounds
+                               if i.id in model_compounds]
         else:
             final_compounds = selected_compounds
 
@@ -199,7 +203,6 @@ class SearchCommand(Command):
                     else:
                         reaction_prop_list.append(str(rxn_property).lower())
 
-
                 # find reaction based on given property argument
                 if self._args.exact:
                     if self._args.key.lower() in reaction_prop_list:
@@ -209,7 +212,8 @@ class SearchCommand(Command):
                     if self._args.key.lower() in '|'.join(reaction_prop_list):
                         selected_reactions.add(reaction)
         if self._args.inmodel:
-            final_reactions = [i for i in selected_reactions if i.id in self._mm.reactions]
+            final_reactions = [i for i in selected_reactions
+                               if i.id in self._mm.reactions]
         else:
             final_reactions = selected_reactions
         print(final_reactions)
