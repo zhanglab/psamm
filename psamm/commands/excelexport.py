@@ -51,6 +51,18 @@ class ExcelExportCommand(Command):
                 ' ("pip install xlsxwriter")')
 
         workbook = xlsxwriter.Workbook(self._args.file)
+
+        model_info = workbook.add_worksheet(name='Model Info')
+
+        model_info.write(0, 0, ('Model Name: {}'.format(model.name)))
+        model_info.write(
+            1, 0, ('Biomass Reaction: {}'.format(model.biomass_reaction)))
+        model_info.write(
+            2, 0, ('Default Flux Limits: {}'.format(model.default_flux_limit)))
+        if model.version_string is not None:
+            model_info.write(
+                3, 0, ('Version: {}'.format(model.version_string)))
+
         reaction_sheet = workbook.add_worksheet(name='Reactions')
 
         property_set = set()
@@ -154,16 +166,5 @@ class ExcelExportCommand(Command):
             limits_sheet.write(x+1, 0, reaction_id)
             limits_sheet.write(x+1, 1, lower)
             limits_sheet.write(x+1, 2, upper)
-
-        model_info = workbook.add_worksheet(name='Model Info')
-
-        model_info.write(0, 0, ('Model Name: {}'.format(model.name)))
-        model_info.write(
-            1, 0, ('Biomass Reaction: {}'.format(model.biomass_reaction)))
-        model_info.write(
-            2, 0, ('Default Flux Limits: {}'.format(model.default_flux_limit)))
-        if model.version_string is not None:
-            model_info.write(
-                3, 0, ('Version: {}'.format(model.version_string)))
 
         workbook.close()

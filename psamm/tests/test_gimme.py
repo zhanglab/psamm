@@ -26,6 +26,7 @@ from psamm.expression import boolean
 from psamm.lpsolver import generic
 from psamm import fluxanalysis
 from psamm.commands import gimme
+from psamm.util import MaybeRelative
 
 
 class TestAddReactions(unittest.TestCase):
@@ -113,9 +114,9 @@ class TestAddReactions(unittest.TestCase):
             gimme.make_irreversible(self._mm, self._assoc,
             exclude_list=['ex_A', 'rxn_6'])
         p = fluxanalysis.FluxBalanceProblem(mm_irreversible, generic.Solver())
-        final_model, below_threshold_ids, incon_score = \
+        final_model, used_exchange, below_threshold_ids, incon_score, norm_incon = \
             gimme.solve_gimme_problem(p, mm_irreversible, 'rxn_6',
-            reversible_gene_assoc, split_rxns, threshold_dict, 20)
+            reversible_gene_assoc, split_rxns, threshold_dict, MaybeRelative(20))
         self.assertEqual(incon_score, 100)
         self.assertEqual(final_model, set(['rxn_1', 'rxn_2', 'rxn_4']))
         self.assertEqual(below_threshold_ids, set(['rxn_1', 'rxn_3', 'rxn_5']))

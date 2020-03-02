@@ -61,6 +61,7 @@ class ExportTableCommand(Command):
     - exchange: Export the list of exchange compounds/reactions
     - limits: Export list of internal flux limits
     - metadata: Export general model metadata
+    - genes: Export list of genes to reactions
     """
 
     @classmethod

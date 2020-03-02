@@ -39,9 +39,13 @@ class FluxVariabilityCommand(MetabolicMixin, SolverCommandMixin,
 
     @classmethod
     def init_parser(cls, parser):
-        parser.add_argument(
-            '--threshold', help='Threshold of objective reaction flux',
-            type=MaybeRelative, default=MaybeRelative('100%'))
+        parser.add_argument('--threshold',
+                            help='Threshold of objective reaction '
+                            'flux. Can be an absolute flux value '
+                            '(0.25) or percentage of maximum '
+                            'biomass.)',
+                            type=MaybeRelative,
+                            default=MaybeRelative('100%'))
         super(FluxVariabilityCommand, cls).init_parser(parser)
 
     def run(self):
