@@ -7,13 +7,13 @@ v1.0 (2020-03-03)
   using a template model and a mapping of orthologous genes to
   another organism.
 - Adds the new `gimme` command which implements the GIMME algorithm
-  as described in Becker and Pallson, 2008 (PMID: 18483554).
+  as described in Becker and Palsson, 2008 (PMID: 18483554).
 - Updates the `search` command to allow for searching of strings
   within any reaction or compound property.
 - Updates to the `tableexport` and `excelexport` commands to allow
-  for the export of additional gene to reaction mapping information.
+  for the export of additional gene and reaction information.
 - Adds new section to the tutorial to detail how to use the
-  `findprimarypairs` and `vis` commands.
+  `findprimarypairs` commands.
 - Renamed `duplicatescheck` command to `dupcheck`.
 
 v0.31 (2017-06-30)
