@@ -78,7 +78,7 @@ class GimmeCommand(MetabolicMixin, ObjectiveMixin,
         p = FluxBalanceProblem(mm_irreversible, solver)
 
         final_model, used_exchange, below_threshold_ids, \
-            incon_score, norm_incon_score = \
+            incon_score = \
             solve_gimme_problem(p, mm_irreversible,
                                 self._get_objective(),
                                 reversible_gene_assoc,
@@ -98,8 +98,7 @@ class GimmeCommand(MetabolicMixin, ObjectiveMixin,
             logger.info('Used {} below threshold reactions out of {} total '
                         'below threshold reactions'.format(used_below, below))
             logger.info('Inconsistency Score: {}'.format(incon_score))
-            logger.info('Inconsistency / Sum of all fluxes: {}'.format(
-                norm_incon_score))
+
 
 
 def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
@@ -172,7 +171,7 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
             original_id = reaction.replace('_forward', '')
             original_id = original_id.replace('_reverse', '')
             used_rxns.add(original_id)
-            sum_fluxes += problem.get_flux(reaction)
+            sum_fluxes += abs(problem.get_flux(reaction))
     used_below = 0
     used_above = 0
     off_below = 0
@@ -211,8 +210,7 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
     used_exchange = used_rxns - original_reaction_set
 
     return final_model, used_exchange, below_threshold_ids, \
-        problem.prob.result.get_value(obj), \
-        problem.prob.result.get_value(obj)/sum_fluxes
+        problem.prob.result.get_value(obj)
 
 
 def parse_transcriptome_file(f, threshold):

@@ -114,7 +114,7 @@ class TestAddReactions(unittest.TestCase):
             gimme.make_irreversible(self._mm, self._assoc,
             exclude_list=['ex_A', 'rxn_6'])
         p = fluxanalysis.FluxBalanceProblem(mm_irreversible, generic.Solver())
-        final_model, used_exchange, below_threshold_ids, incon_score, norm_incon = \
+        final_model, used_exchange, below_threshold_ids, incon_score = \
             gimme.solve_gimme_problem(p, mm_irreversible, 'rxn_6',
             reversible_gene_assoc, split_rxns, threshold_dict, MaybeRelative(20))
         self.assertEqual(incon_score, 100)
