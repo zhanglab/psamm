@@ -438,7 +438,7 @@ time-consuming.
 
 Some reactions could
 
-Reaction duplicates check (``duplicatescheck``)
+Reaction duplicates check (``dupcheck``)
 -----------------------------------------------
 
 This command simply checks whether multiple reactions exist in the model that
@@ -450,7 +450,7 @@ properties as well.
 
 .. code-block:: shell
 
-    $ psamm-model duplicatescheck
+    $ psamm-model dupcheck
 
 Gap check (``gapcheck``)
 ------------------------
