@@ -8,10 +8,6 @@ v1.0 (2020-03-03)
   another organism.
 - Adds the new `gimme` command which implements the GIMME algorithm
   as described in Becker and Pallson, 2008 (PMID: 18483554).
-- Adds the new `vis` command which can be used to generate
-  visualizations of GEMs. This command applies the FindPrimaryPairs
-  algorithm to generate biologically meaningful visualizations of
-  reaction networks from a GEM.
 - Updates the `search` command to allow for searching of strings
   within any reaction or compound property.
 - Updates to the `tableexport` and `excelexport` commands to allow

@@ -100,7 +100,6 @@ class GimmeCommand(MetabolicMixin, ObjectiveMixin,
             logger.info('Inconsistency Score: {}'.format(incon_score))
 
 
-
 def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
                         split_rxns, transcript_values, threshold):
     """Formulates and Solves a GIMME model.
