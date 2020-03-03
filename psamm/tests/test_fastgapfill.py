@@ -15,6 +15,7 @@
 #
 # Copyright 2016-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2016  Chao liu <lcddzyx@gmail.com>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 import unittest
 
@@ -51,3 +52,7 @@ class TestFastGapFill(unittest.TestCase):
         self.assertEqual(
             set(induced),
             {'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4'})
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -15,6 +15,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 import os
 import shutil
@@ -873,3 +874,7 @@ class TestNativeModelWriter(unittest.TestCase):
                 'equation': 'c1[c] => (2) c2[c]'
             }
         ])
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 """Implementation of Flux Balance Analysis."""
 
@@ -404,7 +405,7 @@ def flux_randomization(model, threshold, tfba, solver):
     optimize = {}
     for reaction_id in model.reactions:
         if model.is_reversible(reaction_id):
-            optimize[reaction_id] = 2*random.random() - 1.0
+            optimize[reaction_id] = 2 * random.random() - 1.0
         else:
             optimize[reaction_id] = random.random()
 

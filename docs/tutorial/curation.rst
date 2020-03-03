@@ -639,17 +639,17 @@ command can be used:
 Duplicate Reaction Checks
 -------------------------
 
-An additional searching function called ``duplicatescheck`` is also included in `PSAMM`.
+An additional searching function called ``Dupcheck`` is also included in `PSAMM`.
 This function will search through a model and compare all of the reactions in the network
 to each other. Any reactions that have all of the same metabolites consumed and produced
 will then be reported. This can be a helpful function to use if there a multiple people
 working on the construction of a model as it allows for an automated checking that
-two individuals did not add the same reaction to the reconstruction. The ``duplicatescheck``
+two individuals did not add the same reaction to the reconstruction. The ``dupcheck``
 function can be run through the following command:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model duplicatescheck
+    (psamm-env) $ psamm-model dupcheck
 
 The additional tags ``--compare-direction`` and ``--compare-stoichiometry`` can be added to
 the command to take into account the reaction directionality and metabolite stoichiometry

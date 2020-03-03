@@ -15,6 +15,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 from __future__ import unicode_literals
 
@@ -1158,3 +1159,7 @@ class TestMergeEquivalentCompounds(unittest.TestCase):
         self.assertEqual(
             model.exchange[new_exchange_compound],
             (new_exchange_compound, 'EX_g6p_e', -10, 0))
+
+
+if __name__ == '__main__':
+    unittest.main()

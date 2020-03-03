@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 from __future__ import unicode_literals
 
@@ -73,6 +74,8 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         # Calculate penalty if penalty file exists
         penalties = {}
+        for id in sorted(self._mm.reactions):
+            penalties[id] = 0
         if self._args.penalty is not None:
             for line in self._args.penalty:
                 line, _, comment = line.partition('#')
@@ -107,7 +110,8 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
         for reaction_id in sorted(self._mm.reactions):
             rx = self._mm.get_reaction(reaction_id)
             rxt = rx.translated_compounds(compound_name)
-            print('{}\t{}\t{}\t{}'.format(reaction_id, 'Model', 0, rxt))
+            print('{}\t{}\t{}\t{}'.format(
+                reaction_id, 'Model', weights[reaction_id], rxt))
 
         for rxnid in sorted(induced, key=reaction_key):
             if self._mm.has_reaction(rxnid):
@@ -115,4 +119,4 @@ class FastGapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
             rx = model_extended.get_reaction(rxnid)
             rxt = rx.translated_compounds(compound_name)
             print('{}\t{}\t{}\t{}'.format(
-                rxnid, 'Add', weights.get(rxnid, 1), rxt))
+                rxnid, 'Add', weights.get(rxnid), rxt))

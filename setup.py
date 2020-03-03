@@ -15,6 +15,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 from __future__ import print_function
 
@@ -50,7 +51,7 @@ else:
 
 setup(
     name='psamm',
-    version='0.31',
+    version='1.0',
     description='PSAMM metabolic modeling tools',
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
@@ -61,12 +62,15 @@ setup(
 
     classifiers=[
         'Development Status :: 4 - Beta',
-        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+        (
+            'License :: OSI Approved :: '
+            'GNU General Public License v3 or later (GPLv3+)'),
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6'
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
 
     packages=find_packages(),
@@ -82,7 +86,7 @@ setup(
         [psamm.commands]
         chargecheck = psamm.commands.chargecheck:ChargeBalanceCommand
         console = psamm.commands.console:ConsoleCommand
-        duplicatescheck = psamm.commands.duplicatescheck:DuplicatesCheck
+        dupcheck = psamm.commands.duplicatescheck:DuplicatesCheck
         excelexport = psamm.commands.excelexport:ExcelExportCommand
         fastgapfill = psamm.commands.fastgapfill:FastGapFillCommand
         fba = psamm.commands.fba:FluxBalanceCommand
@@ -93,6 +97,7 @@ setup(
         gapcheck = psamm.commands.gapcheck:GapCheckCommand
         gapfill = psamm.commands.gapfill:GapFillCommand
         genedelete = psamm.commands.genedelete:GeneDeletionCommand
+        gimme = psamm.commands.gimme:GimmeCommand
         masscheck = psamm.commands.masscheck:MassConsistencyCommand
         primarypairs = psamm.commands.primarypairs:PrimaryPairsCommand
         randomsparse = psamm.commands.randomsparse:RandomSparseNetworkCommand
@@ -100,11 +105,14 @@ setup(
         sbmlexport = psamm.commands.sbmlexport:SBMLExport
         search = psamm.commands.search:SearchCommand
         tableexport = psamm.commands.tableexport:ExportTableCommand
+        psammotate = psamm.commands.psammotate:PsammotateCommand
+        modelmapping = psamm.commands.model_mapping:ModelMappingCommand
 
         [psamm.importer]
         JSON = psamm.importers.cobrajson:Importer
         SBML = psamm.importers.sbml:NonstrictImporter
         SBML-strict = psamm.importers.sbml:StrictImporter
+        MATLAB = psamm.importers.matlab:Importer
     ''',
 
     test_suite='psamm.tests',
@@ -112,7 +120,11 @@ setup(
     install_requires=[
         'PyYAML~=3.11',
         'six',
-        'xlsxwriter'
+        'xlsxwriter',
+        'numpy',
+        'scipy',
+        'future',
+        'pandas'
     ],
     extras_require={
         'docs': ['sphinx', 'sphinx_rtd_theme', 'mock'],

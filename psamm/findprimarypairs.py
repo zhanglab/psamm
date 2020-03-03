@@ -14,6 +14,8 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2015-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2018-2020  Ke Zhang <kzhang@my.uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 from __future__ import division
 
@@ -26,10 +28,7 @@ from six.moves import reduce
 
 from .formula import Formula, Atom
 
-try:
-    from math import gcd
-except ImportError:
-    from fractions import gcd
+from fractions import gcd
 
 logger = logging.getLogger(__name__)
 
@@ -154,8 +153,8 @@ class _CompoundInstance(object):
 
 
 def predict_compound_pairs_iterated(
-        reactions, formulas, prior=(1, 43), max_iterations=None,
-        element_weight=element_weight):
+        reactions, formulas, ambiguous=False, prior=(1, 43),
+        max_iterations=None, element_weight=element_weight):
     """Predict reaction pairs using iterated method.
 
     Returns a tuple containing a dictionary of predictions keyed by the
@@ -168,6 +167,8 @@ def predict_compound_pairs_iterated(
         reactions: Dictionary or pair-iterable of (id, equation) pairs.
             IDs must be any hashable reaction identifier (e.g. string) and
             equation must be :class:`psamm.reaction.Reaction` objects.
+        ambiguous: True or False value to indicate if the ambiguous
+            reactions should be printed in the debugging output.
         formulas: Dictionary mapping compound IDs to
             :class:`psamm.formula.Formula`. Formulas must be flattened.
         prior: Tuple of (alpha, beta) parameters for the MAP inference.
@@ -186,11 +187,47 @@ def predict_compound_pairs_iterated(
 
     pair_reactions = {}
     possible_pairs = Counter()
+    tie_breakers = {}
     for reaction_id, equation in iteritems(reactions):
+        tie_breakers[reaction_id] = {}
         for (c1, _), (c2, _) in product(equation.left, equation.right):
             spair = tuple(sorted([c1.name, c2.name]))
             possible_pairs[spair] += 1
             pair_reactions.setdefault(spair, set()).add(reaction_id)
+
+    final_ambiguous_reactions = {}
+
+    def print_ambiguous_summary():
+        '''Function for summarizing and printing ambiguous compound pairs
+
+        '''
+        final_ambiguous_count = 0
+        final_ambiguous_hydrogen = 0
+        for reaction, pairs in sorted(iteritems(final_ambiguous_reactions)):
+            all_hydrogen = False
+            if len(pairs) > 0:
+                final_ambiguous_count += 1
+                all_hydrogen = True
+
+                for pair in pairs:
+                    for _, _, formula in pair:
+                        df = dict(formula.items())
+                        if len(df) > 1 or Atom.H not in df:
+                            all_hydrogen = False
+
+                if all_hydrogen:
+                    final_ambiguous_hydrogen += 1
+                    logger.info('Ambiguous Hydrogen '
+                                'Transfers in Reaction: {}'.format(reaction))
+                else:
+                    logger.info('Ambiguous Non-Hydrogen '
+                                'Transfers in Reaction: {}'.format(reaction))
+
+        logger.info('{} reactions were decided with ambiguity'.format(
+            final_ambiguous_count))
+        logger.info('Only hydrogen in decision: {} vs non hydrogen: {}'.format(
+            final_ambiguous_hydrogen,
+            final_ambiguous_count - final_ambiguous_hydrogen))
 
     next_reactions = set(reactions)
     pairs_predicted = None
@@ -211,13 +248,17 @@ def predict_compound_pairs_iterated(
             if result is None:
                 continue
 
-            transfer, balance = result
+            transfer, balance, ambiguous_pairs = result
+            final_ambiguous_reactions[reaction_id] = ambiguous_pairs
 
             rpairs = {}
             for ((c1, _), (c2, _)), form in iteritems(transfer):
                 rpairs.setdefault((c1, c2), []).append(form)
 
             prediction[reaction_id] = rpairs, balance
+        if ambiguous is True:
+            logger.info('Ambiguous Reactions:')
+            print_ambiguous_summary()
 
         pairs_predicted = Counter()
         for reaction_id, (rpairs, _) in iteritems(prediction):
@@ -258,6 +299,7 @@ def _match_greedily(reaction, compound_formula, score_func):
             returns the score.
     """
     uninstantiated_left, uninstantiated_right = _reaction_to_dicts(reaction)
+    ambiguous_pairs = set()
 
     def compound_instances(uninstantiated):
         instances = []
@@ -308,6 +350,23 @@ def _match_greedily(reaction, compound_formula, score_func):
     while len(pairs) > 0:
         (inst1, inst2), _ = max(iteritems(pairs), key=inst_pair_sort_key)
         common = inst1.formula & inst2.formula
+        sorted_pairs = sorted(iteritems(pairs),
+                              key=inst_pair_sort_key, reverse=True)
+        max_sort_key = inst_pair_sort_key(sorted_pairs[0])
+
+        ambiguous_entry = {(inst1.compound, inst2.compound, common)}
+        for (other_inst1, other_inst2), other_score in sorted_pairs[1:]:
+            other_sort_key = inst_pair_sort_key(
+                ((other_inst1, other_inst2), other_score))
+            if other_sort_key[:2] < max_sort_key[:2]:
+                break
+
+            other_common = other_inst1.formula & other_inst2.formula
+            ambiguous_entry.add(
+                (other_inst1.compound, other_inst2.compound, other_common))
+
+        if len(ambiguous_entry) > 1:
+            ambiguous_pairs.add(tuple(ambiguous_entry))
 
         key = (inst1.compound, inst1.index), (inst2.compound, inst2.index)
         if key not in transfer:
@@ -360,7 +419,7 @@ def _match_greedily(reaction, compound_formula, score_func):
             key = inst.compound, inst.index
             balance[key] = inst.formula
 
-    return transfer, balance
+    return transfer, balance, ambiguous_pairs
 
 
 def predict_compound_pairs(reaction, compound_formula, pair_weights={},

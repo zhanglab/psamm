@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2015-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 """Entry points and functionality for importing models.
 
@@ -449,7 +450,7 @@ def count_genes(model):
 
 def write_yaml_model(model, dest='.', convert_exchange=True,
                      split_subsystem=True):
-    """Write the given MetabolicModel to YAML files in dest folder.
+    """Write the given NativeModel to YAML files in dest folder.
 
     The parameter ``convert_exchange`` indicates whether the exchange reactions
     should be converted automatically to an exchange file.
@@ -582,6 +583,9 @@ def main(importer_class=None, args=None):
                               ' compartments.'))
     parser.add_argument('--force', action='store_true',
                         help='Enable overwriting model files')
+    parser.add_argument('--model-name', type=str,
+                        help=('specify model name if multiple models '
+                              'are stored in the .mat file'))
 
     if importer_class is None:
         parser.add_argument(
@@ -647,7 +651,10 @@ def main(importer_class=None, args=None):
     importer = importer_class()
 
     try:
-        model = importer.import_model(args.source)
+        if importer.name == 'matlab' and args.model_name is not None:
+            model = importer.import_model(args.source, args.model_name)
+        else:
+            model = importer.import_model(args.source)
     except ModelLoadError as e:
         logger.error('Failed to load model!', exc_info=True)
         importer.help()
@@ -656,6 +663,8 @@ def main(importer_class=None, args=None):
         logger.error('Failed to parse model!', exc_info=True)
         logger.error(text_type(e))
         sys.exit(-1)
+    except Exception:
+        importer.help()
 
     if args.merge_compounds:
         compounds_before = len(model.compounds)

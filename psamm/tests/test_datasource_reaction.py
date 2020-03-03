@@ -15,6 +15,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 import unittest
 from decimal import Decimal
@@ -172,3 +173,7 @@ class TestMetNet(unittest.TestCase):
             Direction.Both,
             [(Compound('3pg', 'c'), 1), (Compound('atp', 'c'), 1)],
             [(Compound('13dpg', 'c'), 1), (Compound('adp', 'c'), 1)]))
+
+
+if __name__ == '__main__':
+    unittest.main()

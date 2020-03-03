@@ -1,4 +1,4 @@
-sudo: false
+dist: trusty
 language: python
 cache:
     directories:
@@ -9,7 +9,9 @@ addons:
         packages:
             - libgmp-dev
             - libgmp10
-            - glpk
+            - libglpk36
+            - libglpk-dev
+            - glpk-utils
             - swig
 
 install:
@@ -28,7 +30,8 @@ install:
       fi
 
     - pip install tox coveralls
-
+    - pip install tox-travis
+    - pip install --upgrade six
 script: tox -v
 after_success: coveralls
 matrix:

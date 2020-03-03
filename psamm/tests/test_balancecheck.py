@@ -15,6 +15,7 @@
 #
 # Copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2016  Chao liu <lcddzyx@gmail.com>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 import os
 import unittest
@@ -121,3 +122,7 @@ class TestBalanceCheckWithReaction(unittest.TestCase):
         }
         result = balancecheck.reaction_formula(reaction, compound_formula)
         self.assertIsNone(result)
+
+
+if __name__ == '__main__':
+    unittest.main()
