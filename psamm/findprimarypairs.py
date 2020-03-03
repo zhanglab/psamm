@@ -217,11 +217,11 @@ def predict_compound_pairs_iterated(
 
                 if all_hydrogen:
                     final_ambiguous_hydrogen += 1
-                    logger.info('Ambiguous Hydrogen Transfers in Reaction: {}'.format(
-                        reaction))
+                    logger.info('Ambiguous Hydrogen '
+                                'Transfers in Reaction: {}'.format(reaction))
                 else:
-                    logger.info('Ambiguous Non-Hydrogen Transfers in Reaction: {}'.format(
-                        reaction))
+                    logger.info('Ambiguous Non-Hydrogen '
+                                'Transfers in Reaction: {}'.format(reaction))
 
         logger.info('{} reactions were decided with ambiguity'.format(
             final_ambiguous_count))
