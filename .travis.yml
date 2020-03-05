@@ -33,6 +33,7 @@ install:
     - pip install tox-travis
     - pip install --upgrade six
     - pip install pyaml
+    - pip install --upgrade coveralls
 script: tox -v
 after_success: coveralls
 matrix:
