@@ -109,7 +109,7 @@ def predict_compound_pairs(reaction, compound_formula, solver, epsilon=1e-5,
         weight_func: Optional function that returns a weight for a formula
             element (should handle specific Atom and Radical objects). By
             default, the standard MapMaker weights will be used
-            (H=0, R=40, N=0.4, O=0.4, P=0.4, *=1).
+            (H=0, R=40, N=0.4, O=0.4, P=0.4, All Others=1).
     """
     elements = set()
     for compound, value in reaction.compounds:
