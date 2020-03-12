@@ -83,8 +83,8 @@ class Curator(object):
         Args:
             id: one reaction id or a tuple of id pair
         """
-        return (id in self.curated_reaction_map.index or
-                id in self.false_reaction_map.index)
+        return (id in self.curated_reaction_map.index
+                or id in self.false_reaction_map.index)
 
     def reaction_ignored(self, id):
         """Return True if reaction id is in ignore list."""
@@ -96,8 +96,8 @@ class Curator(object):
         Args:
             id: one compound id or a tuple of id pair
         """
-        return (id in self.curated_compound_map.index or
-                id in self.false_compound_map.index)
+        return (id in self.curated_compound_map.index
+                or id in self.false_compound_map.index)
 
     def compound_ignored(self, id):
         """Return True if compound id is in ignore list."""

@@ -302,14 +302,14 @@ def compound_charge_likelihood(
         p_match = 0.9
         p_no_match = max(
             0,
-            ((compound_charge_equal_marg - p_match * compound_prior) /
-             (1.0 - compound_prior)))
+            ((compound_charge_equal_marg - p_match * compound_prior)
+             / (1.0 - compound_prior)))
     else:
         p_match = 0.1
         p_no_match = max(
             0,
-            ((compound_charge_not_equal_marg - p_match * compound_prior) /
-             (1.0 - compound_prior)))
+            ((compound_charge_not_equal_marg - p_match * compound_prior)
+             / (1.0 - compound_prior)))
 
     return p_match, p_no_match
 
@@ -326,14 +326,14 @@ def compound_formula_likelihood(
         p_match = 0.9
         p_no_match = max(
             0,
-            ((compound_formula_equal_marg - p_match * compound_prior) /
-             (1.0 - compound_prior)))
+            ((compound_formula_equal_marg - p_match * compound_prior)
+             / (1.0 - compound_prior)))
     else:
         p_match = 0.1
         p_no_match = max(
             0,
-            ((compound_formula_not_equal_marg - p_match * compound_prior) /
-             (1.0 - compound_prior)))
+            ((compound_formula_not_equal_marg - p_match * compound_prior)
+             / (1.0 - compound_prior)))
 
     return p_match, p_no_match
 
@@ -350,14 +350,14 @@ def compound_kegg_likelihood(
         p_match = 0.65
         p_no_match = max(
             0,
-            ((compound_kegg_equal_marg - p_match * compound_prior) /
-             (1.0 - compound_prior)))
+            ((compound_kegg_equal_marg - p_match * compound_prior)
+             / (1.0 - compound_prior)))
     else:
         p_match = 0.35
         p_no_match = max(
             0,
-            ((compound_kegg_not_equal_marg - p_match * compound_prior) /
-             (1.0 - compound_prior)))
+            ((compound_kegg_not_equal_marg - p_match * compound_prior)
+             / (1.0 - compound_prior)))
 
     return p_match, p_no_match
 
@@ -369,14 +369,14 @@ def reaction_id_likelihood(
         p_match = 0.30
         p_no_match = max(
             0,
-            ((reaction_id_equal_marg - p_match * reaction_prior) /
-             (1.0 - reaction_prior)))
+            ((reaction_id_equal_marg - p_match * reaction_prior)
+             / (1.0 - reaction_prior)))
     else:
         p_match = 0.7
         p_no_match = max(
             0,
-            ((reaction_id_not_equal_marg - p_match * reaction_prior) /
-             (1.0 - reaction_prior)))
+            ((reaction_id_not_equal_marg - p_match * reaction_prior)
+             / (1.0 - reaction_prior)))
 
     return p_match, p_no_match
 
@@ -386,14 +386,14 @@ def reaction_name_likelihood(r1, r2, reaction_prior, reaction_name_marg):
         p_match = 0.40
         p_no_match = max(
             0,
-            ((reaction_name_marg - p_match * reaction_prior) /
-             (1.0 - reaction_prior)))
+            ((reaction_name_marg - p_match * reaction_prior)
+             / (1.0 - reaction_prior)))
     else:
         p_match = 0.60
         p_no_match = max(
             0,
-            ((1.0 - reaction_name_marg - p_match * reaction_prior) /
-             (1.0 - reaction_prior)))
+            ((1.0 - reaction_name_marg - p_match * reaction_prior)
+             / (1.0 - reaction_prior)))
 
     return p_match, p_no_match
 
@@ -525,14 +525,14 @@ def reaction_genes_likelihood(r1, r2, reaction_prior, reaction_genes_marg,
         p_match = 0.4
         p_no_match = max(
             0,
-            ((reaction_genes_marg - p_match * reaction_prior) /
-             (1.0 - reaction_prior)))
+            ((reaction_genes_marg - p_match * reaction_prior)
+             / (1.0 - reaction_prior)))
     else:
         p_match = 0.6
         p_no_match = max(
             0,
-            ((reaction_genes_not_equal_marg - p_match * reaction_prior) /
-             (1.0 - reaction_prior)))
+            ((reaction_genes_not_equal_marg - p_match * reaction_prior)
+             / (1.0 - reaction_prior)))
 
     return p_match, p_no_match
 
@@ -621,18 +621,18 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
     # Compound charge
     # Marginal probability of observing two compounds with the same charge
     compound_charge_equal_marg = sum(
-        c1.charge is not None and
-        c2.charge is not None and
-        c1.charge == c2.charge
+        c1.charge is not None
+        and c2.charge is not None
+        and c1.charge == c2.charge
         for c1, c2 in product(
             itervalues(model1.compounds), itervalues(model2.compounds))
     ) / compound_pairs
 
     # Marginal probability of observing two compounds with different charge
     compound_charge_not_equal_marg = sum(
-        c1.charge is not None and
-        c2.charge is not None and
-        c1.charge != c2.charge
+        c1.charge is not None
+        and c2.charge is not None
+        and c1.charge != c2.charge
         for c1, c2 in product(
             itervalues(model1.compounds), itervalues(model2.compounds))
     ) / compound_pairs
@@ -661,8 +661,8 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
     compound_formula_not_equal_marg = 1.0 - compound_formula_equal_marg - (
         sum(c1.formula is None or c2.formula is None
             for c1, c2 in product(itervalues(model1.compounds),
-                                  itervalues(model2.compounds))) /
-        compound_pairs)
+                                  itervalues(model2.compounds)))
+        / compound_pairs)
 
     print('Calculating compound formula likelihoods...')
     sys.stdout.flush()
@@ -677,9 +677,9 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
         # Marginal probability of observing two compounds
         # where KEGG ids are equal
         compound_kegg_equal_marg = sum(
-            c1.kegg is not None and
-            c2.kegg is not None and
-            c1.kegg == c2.kegg
+            c1.kegg is not None
+            and c2.kegg is not None
+            and c1.kegg == c2.kegg
             for c1, c2 in product(
                 itervalues(model1.compounds),
                 itervalues(model2.compounds))
@@ -688,9 +688,9 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
         # Marginal probability of observing two compounds
         # where KEGG ids are different
         compound_kegg_not_equal_marg = sum(
-            c1.kegg is not None and
-            c2.kegg is not None and
-            c1.kegg != c2.kegg for c1, c2 in product(
+            c1.kegg is not None
+            and c2.kegg is not None
+            and c1.kegg != c2.kegg for c1, c2 in product(
                 itervalues(model1.compounds),
                 itervalues(model2.compounds))
         ) / compound_pairs
@@ -821,8 +821,8 @@ def map_model_reactions(model1, model2, cpd_pred, nproc=1, outpath='.',
         reaction_genes_not_equal_marg = 1.0 - reaction_genes_equal_marg - (
             sum(r1.genes is None or r2.genes is None
                 for r1, r2 in product(itervalues(model1.reactions),
-                                      itervalues(model2.reactions))) /
-            reaction_pairs)
+                                      itervalues(model2.reactions)))
+            / reaction_pairs)
 
         print('Calculating reaction genes likelihoods...')
         sys.stdout.flush()

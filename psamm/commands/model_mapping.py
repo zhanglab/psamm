@@ -333,11 +333,9 @@ class ModelMappingCommand(Command):
                     gene_map[source] = target
 
         # Check models
-        if (
-            not (
-                model1.check_reaction_compounds() and
-                model2.check_reaction_compounds()) and
-                self._args.consistency_check):
+        if (not (model1.check_reaction_compounds()
+                 and model2.check_reaction_compounds())
+                and self._args.consistency_check):
             quit((
                 '\nError: '
                 'equations have something not listed in compounds.yaml, '
@@ -363,8 +361,8 @@ class ModelMappingCommand(Command):
         t = time.time()
         # Write out ROC curve results
         if (actual_compound_mapping is not None):
-            with open(self._args.outpath +
-                      '/roc/compound_bayes.tsv', 'w') as f:
+            with open(self._args.outpath
+                      + '/roc/compound_bayes.tsv', 'w') as f:
                 write_roc_curve(f, cpd_bayes_pred.model1.compounds,
                                 cpd_bayes_pred.model2.compounds,
                                 cpd_bayes_pred,
@@ -399,8 +397,8 @@ class ModelMappingCommand(Command):
         t = time.time()
         # Write out ROC curve results
         if (actual_reaction_mapping is not None):
-            with open(self._args.outpath +
-                      '/roc/reaction_bayes.tsv', 'w') as f:
+            with open(self._args.outpath
+                      + '/roc/reaction_bayes.tsv', 'w') as f:
                 write_roc_curve(f, rxn_bayes_pred.model1.reactions,
                                 rxn_bayes_pred.model2.reactions,
                                 rxn_bayes_pred,
