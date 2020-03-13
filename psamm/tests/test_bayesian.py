@@ -161,7 +161,7 @@ class TestBayesianPredictor(unittest.TestCase):
         )
         self.assertEqual(p.model1, self._model1)
         self.assertEqual(p.model2, self._model2)
-        self.assertAlmostEqual(p.map('rxn_1', 'rxn_1'), 1, 3)
+        self.assertAlmostEqual(p.map('rxn_1', 'rxn_1'), 1, 1)
         self.assertIsInstance(p, bayesian.BayesianReactionPredictor)
         best_map = p.get_best_map()
         self.assertIsInstance(best_map, pd.DataFrame)
@@ -169,11 +169,13 @@ class TestBayesianPredictor(unittest.TestCase):
 
     def test_compound_id_likelihood(self):
         match, unmatch = bayesian.compound_id_likelihood(
-            CompoundEntry({'id': 'A'}), CompoundEntry({'id': 'A'}), 0.5, 0.5
+            CompoundEntry({'id': 'A'}), CompoundEntry({'id': 'A'}),
+            1.0 / 500, 1.0 / 1000
         )
         self.assertGreater(match, unmatch)
         match, unmatch = bayesian.compound_id_likelihood(
-            CompoundEntry({'id': 'A'}), CompoundEntry({'id': 'B'}), 0.5, 0.5
+            CompoundEntry({'id': 'A'}), CompoundEntry({'id': 'B'}),
+            1.0 / 500, 1.0 / 1000
         )
         self.assertLess(match, unmatch)
 
@@ -181,13 +183,13 @@ class TestBayesianPredictor(unittest.TestCase):
         match, unmatch = bayesian.compound_name_likelihood(
             CompoundEntry({'id': 'A', 'name': 'Test'}),
             CompoundEntry({'id': 'B', 'name': 'te-s(t)'}),
-            0.5, 0.5
+            1.0 / 500, 1.0 / 1000
         )
         self.assertGreater(match, unmatch)
         match, unmatch = bayesian.compound_name_likelihood(
             CompoundEntry({'id': 'A', 'name': 'Test'}),
             CompoundEntry({'id': 'B', 'name': 'Test1'}),
-            0.5, 0.5
+            1.0 / 500, 1.0 / 1000
         )
         self.assertLess(match, unmatch)
 
@@ -195,19 +197,19 @@ class TestBayesianPredictor(unittest.TestCase):
         match, unmatch = bayesian.compound_charge_likelihood(
             CompoundEntry({'id': 'A', 'charge': 1}),
             CompoundEntry({'id': 'B', 'charge': 1}),
-            0.5, 0.5, 0.5
+            1.0 / 500, 0.5, 0.5
         )
         self.assertGreater(match, unmatch)
         match, unmatch = bayesian.compound_charge_likelihood(
             CompoundEntry({'id': 'A', 'charge': 1}),
             CompoundEntry({'id': 'B', 'charge': -1}),
-            0.5, 0.5, 0.5
+            1.0 / 500, 0.5, 0.5
         )
         self.assertLess(match, unmatch)
         match, unmatch = bayesian.compound_charge_likelihood(
             CompoundEntry({'id': 'A'}),
             CompoundEntry({'id': 'B', 'charge': -1}),
-            0.5, 0.5, 0.5
+            1.0 / 500, 0.5, 0.5
         )
         self.assertEqual(match, unmatch)
 
@@ -216,19 +218,19 @@ class TestBayesianPredictor(unittest.TestCase):
             CompoundEntry({'id': 'A', 'formula': Formula.parse('C3H4')}),
             CompoundEntry(
                 {'id': 'B', 'formula': Formula.parse('C3H5'), 'charge': 1}),
-            0.5, 0.5, 0.5
+            1.0 / 500, 1.0 / 1000, 0.5
         )
         self.assertGreater(match, unmatch)
         match, unmatch = bayesian.compound_formula_likelihood(
             CompoundEntry({'id': 'A', 'formula': Formula.parse('C3H4')}),
             CompoundEntry({'id': 'B', 'formula': Formula.parse('C3H5')}),
-            0.5, 0.5, 0.5
+            1.0 / 500, 1.0 / 1000, 0.5
         )
         self.assertLess(match, unmatch)
         match, unmatch = bayesian.compound_formula_likelihood(
             CompoundEntry({'id': 'A', 'formula': Formula.parse('C3H4')}),
             CompoundEntry({'id': 'B', 'formula': None}),
-            0.5, 0.5, 0.5
+            1.0 / 500, 1.0 / 1000, 0.5
         )
         self.assertEqual(match, unmatch)
 
@@ -237,19 +239,19 @@ class TestBayesianPredictor(unittest.TestCase):
         match, unmatch = bayesian.compound_kegg_likelihood(
             CompoundEntry(id='A', kegg='C00001'),
             CompoundEntry(id='B', kegg='C00001'),
-            0.5, 0.5, 0.5
+            1.0 / 500, 1.0 / 1000, 0.5
         )
         self.assertGreater(match, unmatch)
         match, unmatch = bayesian.compound_kegg_likelihood(
             CompoundEntry(id='A', kegg='C00001'),
             CompoundEntry(id='B', kegg='C00003'),
-            0.5, 0.5, 0.5
+            1.0 / 500, 1.0 / 1000, 0.5
         )
         self.assertLess(match, unmatch)
         match, unmatch = bayesian.compound_kegg_likelihood(
             CompoundEntry(id='A', kegg=None),
             CompoundEntry(id='B', kegg='C00001'),
-            0.5, 0.5, 0.5
+            1.0 / 500, 1.0 / 1000, 0.5
         )
         self.assertEqual(match, unmatch)
 
@@ -257,13 +259,13 @@ class TestBayesianPredictor(unittest.TestCase):
         match, unmatch = bayesian.reaction_id_likelihood(
             ReactionEntry({'id': 'r1'}),
             ReactionEntry({'id': 'r1'}),
-            0.5, 0.5, 0.5
+            1.0 / 500, 1.0 / 500, 499.0 / 500
         )
         self.assertGreater(match, unmatch)
         match, unmatch = bayesian.reaction_id_likelihood(
             ReactionEntry({'id': 'r1'}),
             ReactionEntry({'id': 'r2'}),
-            0.5, 0.5, 0.5
+            1.0 / 500, 1.0 / 500, 499.0 / 500
         )
         self.assertLess(match, unmatch)
 
@@ -271,13 +273,13 @@ class TestBayesianPredictor(unittest.TestCase):
         match, unmatch = bayesian.reaction_name_likelihood(
             ReactionEntry({'id': 'r1', 'name': 'Test'}),
             ReactionEntry({'id': 'r1', 'name': 'te-s(t)'}),
-            0.5, 0.5
+            1.0 / 500, 1.0 / 1000
         )
         self.assertGreater(match, unmatch)
         match, unmatch = bayesian.reaction_name_likelihood(
             ReactionEntry({'id': 'r1', 'name': 'Test'}),
             ReactionEntry({'id': 'r2', 'name': 'Test2'}),
-            0.5, 0.5
+            1.0 / 500, 1.0 / 1000
         )
         self.assertLess(match, unmatch)
 
@@ -285,71 +287,73 @@ class TestBayesianPredictor(unittest.TestCase):
         match, unmatch = bayesian.reaction_genes_likelihood(
             ReactionEntry({'id': 'r1', 'genes': 'g1 and g2 or g3'}),
             ReactionEntry({'id': 'r1', 'genes': 'g2 and g1'}),
-            0.5, 0.5, 0.5
+            1.0 / 500, 1.0 / 1000, 0.8
         )
         self.assertGreater(match, unmatch)
         match, unmatch = bayesian.reaction_genes_likelihood(
             ReactionEntry({'id': 'r1', 'genes': 'g1 and g2 or g3'}),
             ReactionEntry({'id': 'r1', 'genes': 'g2 and g4'}),
-            0.5, 0.5, 0.5
+            1.0 / 500, 1.0 / 1000, 0.8
         )
         self.assertLess(match, unmatch)
         match, unmatch = bayesian.reaction_genes_likelihood(
             ReactionEntry({'id': 'r1', 'genes': 'g1 and g2 or g3'}),
             ReactionEntry({'id': 'r1', 'genes': 'g2 and g4'}),
-            0.5, 0.5, 0.5, {'g1': 'g4'}
+            1.0 / 500, 1.0 / 1000, 0.8, {'g1': 'g4'}
         )
         self.assertGreater(match, unmatch)
         match, unmatch = bayesian.reaction_genes_likelihood(
             ReactionEntry({'id': 'r1', 'genes': None}),
             ReactionEntry({'id': 'r1', 'genes': 'g4 and g5'}),
-            0.5, 0.5, 0.5
+            1.0 / 500, 1.0 / 1000, 0.8
         )
         self.assertEqual(match, unmatch)
 
     def test_reaction_equation_likelihood(self):
-        cpd_pred = pd.Series(
-            [1, 1, 0.9, 0.9],
-            [('A', 'A1'), ('B', 'B1'), ('C', 'C1'), ('D', 'D1')])
+        cpd_map = {'A': set(['A1']),
+                   'B': set(['B1']),
+                   'C': set(['C1']),
+                   'D': set(['D1'])}
+        cpd_score = {'A': 1, 'B': 1, 'C': 0.9, 'D': 0.9}
         eq1 = parse_reaction('A[c] + C[c] + B[c] => D[c]')
         eq2 = parse_reaction('A1[c] + C1[c] + B1[c] => D1[c]')
         m, un = bayesian.reaction_equation_compound_mapping_likelihood(
             ReactionEntry({'id': 'r1', 'equation': eq1}),
             ReactionEntry({'id': 'r2', 'equation': eq2}),
-            cpd_pred
+            cpd_map, cpd_score
         )
         self.assertGreater(m, un)
         eq2 = parse_reaction('D1[c] + F1[c] <=> A1[c] + C1[c] + B1[c]')
         m, un = bayesian.reaction_equation_compound_mapping_likelihood(
             ReactionEntry({'id': 'r1', 'equation': eq1}),
             ReactionEntry({'id': 'r2', 'equation': eq2}),
-            cpd_pred
+            cpd_map, cpd_score
         )
         self.assertGreater(m, un)
         eq2 = parse_reaction('A1[c] => D1[c] + C1[c]')
         m, un = bayesian.reaction_equation_compound_mapping_likelihood(
             ReactionEntry({'id': 'r1', 'equation': eq1}),
             ReactionEntry({'id': 'r2', 'equation': eq2}),
-            cpd_pred
+            cpd_map, cpd_score
         )
         self.assertLess(m, un)
         m, un = bayesian.reaction_equation_compound_mapping_likelihood(
             ReactionEntry({'id': 'r1', 'equation': eq1}),
             ReactionEntry({'id': 'r2', 'equation': None}),
-            cpd_pred
+            cpd_map, cpd_score
         )
         self.assertEqual(m, un)
         eq2 = parse_reaction('A1[s] + C1[s] + B1[s] => D1[s]')
         m, un = bayesian.reaction_equation_compound_mapping_likelihood(
             ReactionEntry({'id': 'r1', 'equation': eq1}),
             ReactionEntry({'id': 'r2', 'equation': eq2}),
-            cpd_pred
+            cpd_map, cpd_score
         )
         self.assertLess(m, un)
         m, un = bayesian.reaction_equation_compound_mapping_likelihood(
             ReactionEntry({'id': 'r1', 'equation': eq1}),
             ReactionEntry({'id': 'r2', 'equation': eq2}),
-            cpd_pred,
+            cpd_map, cpd_score,
             {'c': 's'}
         )
         self.assertGreater(m, un)
@@ -361,7 +365,7 @@ class Test_bayesian_util(unittest.TestCase):
 
     def test_name_similar(self):
         score = util.name_similar('kit-ten', 'sitt(i)ng')
-        self.assertEqual(score, 1-3.0/7)
+        self.assertEqual(score, 1 - 3.0 / 7)
         score = util.name_similar('kitten', None)
         self.assertEqual(score, 0.01)
         score = util.name_similar('kitten', '')
@@ -388,7 +392,7 @@ class Test_bayesian_util(unittest.TestCase):
                                                   util.jaccard):
             self.assertTupleEqual(
                 (pair, score),
-                (('kitten', 'sitting'), 3.0/7)
+                (('kitten', 'sitting'), 3.0 / 7)
             )
 
     def test_gene_equals(self):
