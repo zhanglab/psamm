@@ -15,6 +15,7 @@
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2016  Chao Liu <lcddzyx@gmail.com>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 """Implementation of fastGapFill.
 

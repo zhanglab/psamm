@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 """Representation of metabolic network models."""
 
@@ -202,6 +203,9 @@ class MetabolicModel(MetabolicDatabase):
 
     def has_reaction(self, reaction_id):
         return reaction_id in self._reaction_set
+
+    def has_compound(self, compound_id):
+        return compound_id in [str(i) for i in self._compound_set]
 
     def get_reaction(self, reaction_id):
         if reaction_id not in self._reaction_set:

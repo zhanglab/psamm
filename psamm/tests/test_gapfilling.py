@@ -15,6 +15,7 @@
 #
 # Copyright 2016-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2016  Chao liu <lcddzyx@gmail.com>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 import unittest
 
@@ -131,10 +132,8 @@ class TestCreateExtendedModel(unittest.TestCase):
             'TP_B[c]_B[e]',
             'TP_C[c]_C[e]',
             'TP_D[c]_D[e]',
-            'EX_A[e]',
             'EX_B[e]',
             'EX_C[e]',
-            'EX_D[e]'
         ])
 
         expected_weights = {
@@ -144,10 +143,8 @@ class TestCreateExtendedModel(unittest.TestCase):
             'TP_B[c]_B[e]': 3.0,
             'TP_C[c]_C[e]': 3.0,
             'TP_D[c]_D[e]': 3.0,
-            'EX_A[e]': 2.0,
             'EX_B[e]': 2.0,
-            'EX_C[e]': 2.0,
-            'EX_D[e]': 2.0
+            'EX_C[e]': 2.0
         }
         penalties = {'rxn_3': 5.6}
 
@@ -159,3 +156,7 @@ class TestCreateExtendedModel(unittest.TestCase):
             penalties=penalties)
         self.assertEqual(set(model_extended.reactions), expected_reactions)
         self.assertEqual(weights, expected_weights)
+
+
+if __name__ == '__main__':
+    unittest.main()

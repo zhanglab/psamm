@@ -13,16 +13,18 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 # Copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
 from __future__ import unicode_literals
 
 import logging
 
-from six import text_type, itervalues
+from six import text_type, itervalues, string_types
+from collections import defaultdict
 
 from ..command import Command
+from ..expression import boolean
 
 try:
     import xlsxwriter
@@ -49,6 +51,18 @@ class ExcelExportCommand(Command):
                 ' ("pip install xlsxwriter")')
 
         workbook = xlsxwriter.Workbook(self._args.file)
+
+        model_info = workbook.add_worksheet(name='Model Info')
+
+        model_info.write(0, 0, ('Model Name: {}'.format(model.name)))
+        model_info.write(
+            1, 0, ('Biomass Reaction: {}'.format(model.biomass_reaction)))
+        model_info.write(
+            2, 0, ('Default Flux Limits: {}'.format(model.default_flux_limit)))
+        if model.version_string is not None:
+            model_info.write(
+                3, 0, ('Version: {}'.format(model.version_string)))
+
         reaction_sheet = workbook.add_worksheet(name='Reactions')
 
         property_set = set()
@@ -61,6 +75,7 @@ class ExcelExportCommand(Command):
         model_reactions = set(model.model)
         for z, i in enumerate(property_list_sorted + ['in_model']):
             reaction_sheet.write_string(0, z, text_type(i))
+        gene_rxn = defaultdict(list)
         for x, i in enumerate(model.reactions):
             for y, j in enumerate(property_list_sorted):
                 value = i.properties.get(j)
@@ -69,6 +84,18 @@ class ExcelExportCommand(Command):
             reaction_sheet.write_string(
                 x+1, len(property_list_sorted),
                 text_type(i.id in model_reactions))
+            assoc = None
+            if i.genes is None:
+                continue
+            elif isinstance(i.genes, string_types):
+                assoc = boolean.Expression(i.genes)
+                for j in assoc.variables:
+                    gene_rxn[str(j)].append(i.id)
+            else:
+                variables = [boolean.Variable(g) for g in i.genes]
+                assoc = boolean.Expression(boolean.And(*variables))
+                for j in assoc.variables:
+                    gene_rxn[str(j)].append(i.id)
 
         compound_sheet = workbook.add_worksheet(name='Compounds')
 
@@ -92,6 +119,13 @@ class ExcelExportCommand(Command):
             compound_sheet.write_string(
                 x+1, len(compound_list_sorted),
                 text_type(i.id in model_compounds))
+
+        gene_sheet = workbook.add_worksheet(name='Genes')
+        gene_sheet.write_string(0, 0, 'Gene')
+        gene_sheet.write_string(0, 1, 'Reaction_List')
+        for x, i in enumerate(sorted(gene_rxn)):
+            gene_sheet.write_string(x+1, 0, i)
+            gene_sheet.write_string(x+1, 1, '#'.join(gene_rxn.get(i)))
 
         exchange_sheet = workbook.add_worksheet(name='Exchange')
 
@@ -132,16 +166,5 @@ class ExcelExportCommand(Command):
             limits_sheet.write(x+1, 0, reaction_id)
             limits_sheet.write(x+1, 1, lower)
             limits_sheet.write(x+1, 2, upper)
-
-        model_info = workbook.add_worksheet(name='Model Info')
-
-        model_info.write(0, 0, ('Model Name: {}'.format(model.name)))
-        model_info.write(
-            1, 0, ('Biomass Reaction: {}'.format(model.biomass_reaction)))
-        model_info.write(
-            2, 0, ('Default Flux Limits: {}'.format(model.default_flux_limit)))
-        if model.version_string is not None:
-            model_info.write(
-                3, 0, ('Version: {}'.format(model.version_string)))
 
         workbook.close()

@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 from __future__ import print_function, unicode_literals
 
@@ -49,6 +50,17 @@ class SearchCommand(Command):
             '--name', '-n', dest='name', metavar='name',
             action=FilePrefixAppendAction, type=text_type, default=[],
             help='Name of compound')
+        parser_compound.add_argument(
+            '--key', dest='key', metavar='key',
+            type=str, default=None,
+            help='String to search for within compound '
+                 'properties. (case insensitive)')
+        parser_compound.add_argument(
+            '--exact', action='store_true',
+            help='Match full compound property')
+        parser_compound.add_argument(
+            '--inmodel', action='store_true',
+            help='Only search compounds in the model reactions')
 
         # Reaction subcommand
         parser_reaction = subparsers.add_parser(
@@ -62,10 +74,22 @@ class SearchCommand(Command):
             '--compound', '-c', dest='compound', metavar='compound',
             action=FilePrefixAppendAction, type=str, default=[],
             help='Comma-separated list of compound IDs')
+        parser_reaction.add_argument(
+            '--key', dest='key', metavar='key',
+            type=str, default=None,
+            help='String to search for within reaction '
+                 'properties. (case insensitive)')
+        parser_reaction.add_argument(
+            '--exact', action='store_true',
+            help='Match full reaction property')
+        parser_reaction.add_argument(
+            '--inmodel', action='store_true',
+            help='Only search reactions in the model')
 
     def run(self):
         """Run search command."""
 
+        self._mm = self._model.create_metabolic_model()
         which_command = self._args.which
         if which_command == 'compound':
             self._search_compound()
@@ -74,7 +98,6 @@ class SearchCommand(Command):
 
     def _search_compound(self):
         selected_compounds = set()
-
         for compound in self._model.compounds:
             if len(self._args.id) > 0:
                 if any(c == compound.id for c in self._args.id):
@@ -92,8 +115,37 @@ class SearchCommand(Command):
                     selected_compounds.add(compound)
                     continue
 
+            # find compounds that contains any of given properties
+            if self._args.key is not None:
+
+                # prepare s list of all compound properties
+                compound_prop_list = []
+                for cpd_property in compound.properties.values():
+                    if isinstance(cpd_property, list):
+                        for i in cpd_property:
+                            compound_prop_list.append(str(i).lower())
+                    else:
+                        compound_prop_list.append(str(cpd_property).lower())
+
+                # find compound entry based on given property argument
+                props = set()
+                if self._args.exact:
+                    if self._args.key.lower() in compound_prop_list:
+                        selected_compounds.add(compound)
+                else:
+                    if self._args.key.lower() in \
+                            ('|'.join(compound_prop_list)):
+                        selected_compounds.add(compound)
+
         # Show results
-        for compound in selected_compounds:
+        if self._args.inmodel:
+            model_compounds = set(x.name for x in self._mm.compounds)
+            final_compounds = [i for i in selected_compounds
+                               if i.id in model_compounds]
+        else:
+            final_compounds = selected_compounds
+
+        for compound in final_compounds:
             props = set(compound.properties) - {'id'}
             print('id: {}'.format(compound.id))
             for prop in sorted(props):
@@ -133,8 +185,40 @@ class SearchCommand(Command):
                     selected_reactions.add(reaction)
                     continue
 
+            if self._args.key is not None:
+                props = set()
+
+                # prepare s list of all reaction properties
+                raw_reaction_prop_list = [
+                    reaction.properties[key] for key in reaction.properties]
+                # trans_rxn = reaction.equation.translated_compounds(
+                #     lambda x: compound_name.get(x, x))
+                # print(trans_rxn)
+                # raw_reaction_prop_list.append(str(trans_rxn))
+                reaction_prop_list = []
+                for rxn_property in raw_reaction_prop_list:
+                    if isinstance(rxn_property, list):
+                        for i in rxn_property:
+                            reaction_prop_list.append(str(i).lower())
+                    else:
+                        reaction_prop_list.append(str(rxn_property).lower())
+
+                # find reaction based on given property argument
+                if self._args.exact:
+                    if self._args.key.lower() in reaction_prop_list:
+                        selected_reactions.add(reaction)
+                        continue
+                else:
+                    if self._args.key.lower() in '|'.join(reaction_prop_list):
+                        selected_reactions.add(reaction)
+        if self._args.inmodel:
+            final_reactions = [i for i in selected_reactions
+                               if i.id in self._mm.reactions]
+        else:
+            final_reactions = selected_reactions
+        print(final_reactions)
         # Show results
-        for reaction in selected_reactions:
+        for reaction in final_reactions:
             props = set(reaction.properties) - {'id', 'equation'}
             print('id: {}'.format(reaction.id))
             print('equation: {}'.format(

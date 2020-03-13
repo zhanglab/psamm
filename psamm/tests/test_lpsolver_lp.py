@@ -15,6 +15,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2015-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 import math
 import unittest
@@ -383,3 +384,7 @@ class TestResult(unittest.TestCase):
         result = MockResult({'x1': 2, 'x2': 3, 'x3': 4})
         expr = lp.Expression({lp.Product(['x1', 'x2']): 3, 'x3': -1}, offset=4)
         self.assertEqual(result.get_value(expr), 18)
+
+
+if __name__ == '__main__':
+    unittest.main()

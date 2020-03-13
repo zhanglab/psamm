@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 import unittest
 
@@ -123,3 +124,7 @@ class TestQuadraticMOMA(unittest.TestCase):
         self.assertAlmostEqual(p.get_flux('rxn_4'), 1000)
         self.assertAlmostEqual(p.get_flux('rxn_5'), 1000)
         self.assertAlmostEqual(p.get_flux('rxn_6'), 1000)
+
+
+if __name__ == '__main__':
+    unittest.main()

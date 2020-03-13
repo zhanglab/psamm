@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 from __future__ import unicode_literals
 
@@ -24,9 +25,14 @@ import json
 import unittest
 from decimal import Decimal
 
+import numpy as np
+from scipy.io import savemat, loadmat
+from scipy.sparse.csc import csc_matrix
+
 from six import BytesIO
 
 from psamm import importer
+from psamm.importer import ModelLoadError
 from psamm.datasource.native import NativeModel
 from psamm.datasource.entry import (DictCompoundEntry as CompoundEntry,
                                     DictReactionEntry as ReactionEntry,
@@ -39,6 +45,7 @@ from psamm.expression import boolean
 from psamm.importers.sbml import StrictImporter as SBMLStrictImporter
 from psamm.importers.sbml import NonstrictImporter as SBMLNonstrictImporter
 from psamm.importers.cobrajson import Importer as CobraJSONImporter
+from psamm.importers.matlab import Importer as MatlabImporter
 
 
 class TestImporterBaseClass(unittest.TestCase):
@@ -399,3 +406,144 @@ class TestBiGGImportMain(unittest.TestCase):
     "reaction_count": 2382}]}''')
 
         importer.main_bigg(['list'], urlopen=mock_urlopen)
+
+
+class TestMatlabImporter(unittest.TestCase):
+    def setUp(self):
+        self.dest = tempfile.mkdtemp()
+        dt = np.dtype([
+            ('comps', 'O'),
+            ('compNames', 'O'),
+            ('rxns', 'O'),
+            ('rxnNames', 'O'),
+            ('rxnGeneMat', 'O'),
+            ('ub', 'O'),
+            ('lb', 'O'),
+            ('S', 'O'),
+            ('grRules', 'O'),
+            ('subSystems', 'O'),
+            ('mets', 'O'),
+            ('metFormulas', 'O'),
+            ('metNames', 'O'),
+            ('metCharges', 'O'),
+            ('metNotes', 'O'),
+            ('c', 'O'),
+        ])
+        model1 = np.ndarray((1, 1), dtype=dt)
+        # compartments
+        model1['comps'][0, 0] = np.ndarray((3, 1), dtype='O')
+        model1['comps'][0, 0][0][0] = np.array(['c'])
+        model1['comps'][0, 0][1][0] = np.array(['e'])
+        model1['comps'][0, 0][2][0] = np.array(['b'])
+        model1['compNames'][0, 0] = np.ndarray((3, 1), dtype='O')
+        model1['compNames'][0, 0][0][0] = np.array(['Cell'])
+        model1['compNames'][0, 0][1][0] = np.array(['Extracellular'])
+        model1['compNames'][0, 0][2][0] = np.array(['Boundary'])
+        # reactions
+        model1['rxns'][0, 0] = np.ndarray((3, 1), dtype='O')
+        model1['rxns'][0, 0][0][0] = np.array(['rxn1'])
+        model1['rxns'][0, 0][1][0] = np.array(['rxn2'])
+        model1['rxns'][0, 0][2][0] = np.array(['rxn3'])
+        model1['rxnNames'][0, 0] = np.ndarray((3, 1), dtype='O')
+        model1['rxnNames'][0, 0][0][0] = np.array(['rxn1'])
+        model1['rxnNames'][0, 0][1][0] = np.array([])
+        model1['rxnNames'][0, 0][2][0] = np.array(['rxn3'])
+        model1['rxnGeneMat'][0, 0] = np.ndarray((3, 1), dtype='O')
+        model1['rxnGeneMat'][0, 0][0][0] = np.array([])
+        model1['rxnGeneMat'][0, 0][1][0] = np.array([0])
+        model1['rxnGeneMat'][0, 0][2][0] = np.array([0])
+        model1['ub'][0, 0] = np.ndarray((3, 1), dtype='O')
+        model1['ub'][0, 0][0][0] = np.array([1000])
+        model1['ub'][0, 0][1][0] = np.array([0])
+        model1['ub'][0, 0][2][0] = np.array([1000])
+        model1['lb'][0, 0] = np.ndarray((3, 1), dtype='O')
+        model1['lb'][0, 0][0][0] = np.array([0])
+        model1['lb'][0, 0][1][0] = np.array([-1000])
+        model1['lb'][0, 0][2][0] = np.array([-1000])
+        # equation matrix
+        data = np.array([-1, -2, 1, -1, 2, -1, 1])
+        row = np.array([0, 1, 2, 2, 3, 3, 4])
+        col = np.array([0, 0, 0, 1, 1, 2, 2])
+        model1['S'][0, 0] = csc_matrix((data, (row, col)), shape=(5, 3))
+        # genes
+        model1['grRules'][0, 0] = np.ndarray((3, 1), dtype='O')
+        model1['grRules'][0, 0][0][0] = np.array(['g1 and g2'])
+        model1['grRules'][0, 0][1][0] = np.array(['g3 or g4'])
+        model1['grRules'][0, 0][2][0] = np.array([])
+        # subsystems
+        model1['subSystems'][0, 0] = np.ndarray((3, 1), dtype='O')
+        model1['subSystems'][0, 0][0][0] = np.array(['system1'])
+        model1['subSystems'][0, 0][1][0] = np.ndarray((1, 1), 'O')
+        model1['subSystems'][0, 0][1][0][0][0] = np.array(['system2'])
+        model1['subSystems'][0, 0][2][0] = np.array(['system3'])
+        # compounds
+        model1['mets'][0, 0] = np.ndarray((5, 1), dtype='O')
+        model1['mets'][0, 0][0][0] = np.array(['A[e]'])
+        model1['mets'][0, 0][1][0] = np.array(['B_c'])
+        model1['mets'][0, 0][2][0] = np.array(['C(c)'])
+        model1['mets'][0, 0][3][0] = np.array(['D[c]'])
+        model1['mets'][0, 0][4][0] = np.array(['E001e'])
+        model1['metFormulas'][0, 0] = np.ndarray((5, 1), dtype='O')
+        model1['metFormulas'][0, 0][0][0] = np.array(['H2O'])
+        model1['metFormulas'][0, 0][1][0] = np.array(['C5H10O2'])
+        model1['metFormulas'][0, 0][2][0] = np.array(['H2SPO4'])
+        model1['metFormulas'][0, 0][3][0] = np.array(['CH4N2'])
+        model1['metFormulas'][0, 0][4][0] = np.array(['CO2'])
+        model1['metNames'][0, 0] = np.ndarray((5, 1), dtype='O')
+        model1['metNames'][0, 0][0][0] = np.array(['A'])
+        model1['metNames'][0, 0][1][0] = np.array(['B'])
+        model1['metNames'][0, 0][2][0] = np.array(['C'])
+        model1['metNames'][0, 0][3][0] = np.array(['D'])
+        model1['metNames'][0, 0][4][0] = np.array(['E'])
+        model1['metCharges'][0, 0] = np.ndarray((5, 1), dtype='O')
+        model1['metCharges'][0, 0][0][0] = 1
+        model1['metCharges'][0, 0][1][0] = 2
+        model1['metCharges'][0, 0][2][0] = -1.0
+        model1['metCharges'][0, 0][3][0] = 0
+        model1['metCharges'][0, 0][4][0] = 0
+        model1['metNotes'][0, 0] = np.ndarray((5, 1), dtype='O')
+        model1['metNotes'][0, 0][0][0] = np.array(['A'])
+        model1['metNotes'][0, 0][1][0] = np.array(['B'])
+        model1['metNotes'][0, 0][2][0] = np.array([])
+        model1['metNotes'][0, 0][3][0] = np.array(['D'])
+        model1['metNotes'][0, 0][4][0] = np.array(['E'])
+        # biomass reaction
+        model1['c'][0, 0] = np.ndarray((3, 1), dtype='O')
+        model1['c'][0, 0][0][0] = 0
+        model1['c'][0, 0][1][0] = 0
+        model1['c'][0, 0][2][0] = 1
+
+        os.mkdir(os.path.join(self.dest, 'models'))
+        savemat(os.path.join(self.dest, 'model1.mat'), {'model1': model1})
+        savemat(os.path.join(self.dest, 'models', 'model1.mat'),
+                {'model1': model1})
+        model2 = model1.copy()
+        model2['c'][0, 0][1][0] = 1
+        savemat(os.path.join(self.dest, 'models', 'model2.mat'),
+                {'model1': model1, 'model2': model2})
+
+
+    def tearDown(self):
+        shutil.rmtree(self.dest)
+
+    def test_create_importer(self):
+        importer = MatlabImporter()
+        importer.help()
+        importer.import_model(os.path.join(self.dest, 'model1.mat'))
+        importer.import_model(self.dest)
+        importer.import_model(os.path.join(self.dest, 'models', 'model2.mat'),
+                              'model2')
+        with self.assertRaises(ModelLoadError):
+            importer.import_model(os.path.join(self.dest, 'models'))
+        with self.assertRaises(ModelLoadError):
+            importer.import_model(os.path.join(
+                self.dest, 'models', 'model2.mat'))
+
+    def test_matlab_importer_main(self):
+        output_dir = os.path.join(self.dest, 'output')
+        os.mkdir(output_dir)
+        importer.main(importer_class=MatlabImporter,
+                      args=[
+                          '--source', os.path.join(self.dest, 'model1.mat'),
+                          '--dest', output_dir,
+                      ])

@@ -267,11 +267,12 @@ Robustness Analysis
 
 Robustness analysis can be used to analyze the model under varying
 conditions. Robustness analysis will maximize a designated reaction
-while varying another designated reaction. For example, you could
-vary the amount of oxygen present while trying to maximize the biomass
-production to see how the model responds to different oxygen supply. You can
-specify the number of steps that will be performed in the robustness as
-well as the reaction that will be varied during the steps.
+while varying the flux through another designated reaction. For example,
+you could vary the amount of oxygen present while trying to maximize
+the biomass production to see how the model responds to different
+oxygen supply. You can specify the number of steps that will be
+performed in the robustness as well as the reaction that will be
+varied during the steps.
 
 By default, the reaction that is maximized will be the biomass reaction defined
 in the ``model.yaml`` file but a different reaction can be designated
@@ -498,4 +499,3 @@ essential to the network:
     EX_pi_e	1
     EX_pyr_e	0
     EX_succ_e	0
-

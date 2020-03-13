@@ -13,8 +13,10 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2015  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 # copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edi>
+# Copyright 2020 Christopher Powers <c-11060@my.uri.edu>
+# Copyright 2020 Elysha Sameth <esameth1@my.uri.edu>
 
 from __future__ import unicode_literals
 
@@ -22,9 +24,11 @@ import re
 import json
 import logging
 
+from collections import defaultdict
 from six import text_type, string_types, integer_types, itervalues
 
 from ..command import Command
+from ..expression import boolean
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +61,7 @@ class ExportTableCommand(Command):
     - exchange: Export the list of exchange compounds/reactions
     - limits: Export list of internal flux limits
     - metadata: Export general model metadata
+    - genes: Export list of genes to reactions
     """
 
     @classmethod
@@ -64,7 +69,7 @@ class ExportTableCommand(Command):
         parser.add_argument(
             'export', metavar='export_type',
             choices=['reactions', 'compounds', 'medium', 'exchange', 'limits',
-                     'metadata'],
+                     'metadata', 'genes'],
             help='Type of model data to export')
 
     def run(self):
@@ -79,6 +84,8 @@ class ExportTableCommand(Command):
             self._limits_export()
         elif export_type == 'metadata':
             self._metadata_export()
+        elif export_type == 'genes':
+            self._gene_export()
 
     def _reaction_export(self):
         property_set = set()
@@ -153,3 +160,23 @@ class ExportTableCommand(Command):
         if self._model.version_string is not None:
             print('Model version\t{}'.format(
                 _encode_value(self._model.version_string)))
+
+    def _gene_export(self):
+        gene_assoc = defaultdict(list)
+
+        for reaction in self._model.reactions:
+            assoc = None
+            if reaction.genes is None:
+                continue
+            elif isinstance(reaction.genes, string_types):
+                assoc = boolean.Expression(reaction.genes)
+            else:
+                variables = [boolean.Variable(g) for g in reaction.genes]
+                assoc = boolean.Expression(boolean.And(*variables))
+
+            for gene in assoc.variables:
+                gene_assoc[gene].append(reaction.id)
+
+        for gene, reaction in gene_assoc.items():
+            print('{}\t{}'.format(str(gene), (
+                '#'.join([_encode_value(value) for value in reaction]))))

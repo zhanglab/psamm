@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 import unittest
 
@@ -113,3 +114,7 @@ class TestDictEntries(unittest.TestCase):
         self.assertIsInstance(e, entry.CompartmentEntry)
         self.assertEqual(e.id, 'c')
         self.assertEqual(e.name, 'Cytosol')
+
+
+if __name__ == '__main__':
+    unittest.main()

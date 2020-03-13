@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 import unittest
 
@@ -142,3 +143,7 @@ class TestMapMaker(unittest.TestCase):
             (Compound('r5p', 'c'), Compound('s7p', 'c')):
                 Formula.parse('C2O2'),
         }, solutions)
+
+
+if __name__ == '__main__':
+    unittest.main()

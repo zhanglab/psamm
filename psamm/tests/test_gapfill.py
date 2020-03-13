@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
+# Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
 import unittest
 
@@ -93,3 +94,7 @@ class TestGapfind(unittest.TestCase):
         with self.assertRaises(GapFillError):
             gapfill(self.model, core, blocked, exclude, self.solver,
                     epsilon=0.1)
+
+
+if __name__ == '__main__':
+    unittest.main()
