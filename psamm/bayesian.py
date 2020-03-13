@@ -372,7 +372,7 @@ def reaction_id_likelihood(
         r1, r2, reaction_prior,
         reaction_id_equal_marg, reaction_id_not_equal_marg):
     if util.id_equals(r1.id, r2.id):
-        p_match = 0.30
+        p_match = 0.3
         p_no_match = max(
             0,
             ((reaction_id_equal_marg - p_match * reaction_prior)
@@ -389,13 +389,13 @@ def reaction_id_likelihood(
 
 def reaction_name_likelihood(r1, r2, reaction_prior, reaction_name_marg):
     if util.name_equals(r1.name, r2.name):
-        p_match = 0.40
+        p_match = 0.3
         p_no_match = max(
             0,
             ((reaction_name_marg - p_match * reaction_prior)
              / (1.0 - reaction_prior)))
     else:
-        p_match = 0.60
+        p_match = 0.7
         p_no_match = max(
             0,
             ((1.0 - reaction_name_marg - p_match * reaction_prior)
