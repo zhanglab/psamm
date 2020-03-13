@@ -25,9 +25,7 @@ from itertools import product
 from multiprocessing import Pool
 import operator
 import sys
-from collections import namedtuple
-
-import numpy as np
+from collections import namedtuple, defaultdict
 import pandas as pd
 
 import psamm.bayesian_util as util
@@ -222,10 +220,11 @@ class BayesianReactionPredictor(object):
                  compartment_map={}, gene_map={}):
         self._model1 = model1
         self._model2 = model2
+        self._parse_cpd_pred(cpd_pred)
         self._column_list = ['p', 'p_id', 'p_name', 'p_equation', 'p_genes']
         self._reaction_map_p = map_model_reactions(
-            self._model1, self._model2, cpd_pred, nproc, outpath,
-            log=log, gene=gene, compartment_map=compartment_map,
+            self._model1, self._model2, self._cpd_map, self._cpd_score, nproc,
+            outpath, log=log, gene=gene, compartment_map=compartment_map,
             gene_map=gene_map)
 
     @property
@@ -238,6 +237,13 @@ class BayesianReactionPredictor(object):
 
     def map(self, r1, r2):
         return self._reaction_map_p[0][r1, r2]
+
+    def _parse_cpd_pred(self, cpd_pred):
+        self._cpd_map = defaultdict(set)
+        self._cpd_score = dict()
+        for pair, score in cpd_pred.items():
+            self._cpd_map[pair[0]].add(pair[1])
+            self._cpd_score[pair[0]] = score
 
     def get_raw_map(self):
         """Return pandas.DataFrame style of raw mapping table."""
@@ -399,64 +405,76 @@ def reaction_name_likelihood(r1, r2, reaction_prior, reaction_name_marg):
 
 
 def reaction_equation_mapping_approx_max_likelihood(
-        cpd_set1, cpd_set2, cpd_pred, compartment_map={}):
+        cpd_set1, cpd_set2, cpd_map, cpd_score, compartment_map={}):
     """Calculate equation likelihood based on compound mapping."""
-    p_match = 0.0
-    p_no_match = 0.0
+    p_match = 1.0
+    p_no_match = 1.0
 
-    # get the possible best-match pairs
-    pair_list = list(set(
-        (c1.name, c2.name)
-        for c1, c2 in product(cpd_set1, cpd_set2)
-        if ((c1.name, c2.name) in cpd_pred.index
-            and (compartment_map.get(c1.compartment, c1.compartment)
-                 == c2.compartment))))
+    compartment_dict = defaultdict(set)
+    for c in cpd_set2:
+        compartment_dict[c.name].add(c.compartment)
 
-    # remove the compartment information
-    cpd_set1 = [c.name for c in cpd_set1]
-    cpd_set2 = [c.name for c in cpd_set2]
+    # get the possible best-match pairs, score as the key
+    best_match = defaultdict(set)
+    for c1 in cpd_set1:
+        for c2 in cpd_map[c1.name].intersection(compartment_dict.keys()):
+            # the compound pair should be in the same compartment
+            if (compartment_map.get(c1.compartment, c1.compartment)
+                    in compartment_dict[c2]):
+                best_match[cpd_score[c1.name]].add((c1.name, c2))
 
-    # get the p value for (c1, c2) pairs, high possibility first
-    cpd_pred = (cpd_pred.loc[pair_list]
-                .sort_values(ascending=False))
+    # translate each element to compound id
+    cpd_set1 = set(c.name for c in cpd_set1)
+    cpd_set2 = set(c.name for c in cpd_set2)
 
-    if (len(cpd_pred) > 0):  # if best-hit pairs exist
-        for c1, c2 in cpd_pred.index.values:
+    # sort by scores, get the most possible compound pairs first
+    for score in sorted(best_match.keys(), reverse=True):
+        for c1, c2 in best_match[score]:
             if (c1 in cpd_set1) and (c2 in cpd_set2):
-                score = cpd_pred[(c1, c2)]
                 # the possibility that compounds are equal
-                p_match += np.log(score * 0.9 + (1 - score) * 0.1)
-                p_no_match += np.log(score * 0.1 + (1 - score) * 0.9)
+                p_match *= score * 0.9 + (1 - score) * 0.1
+                p_no_match *= score * 0.1 + (1 - score) * 0.9
                 cpd_set1.remove(c1)
                 cpd_set2.remove(c2)
+                if len(cpd_set1) == 0 or len(cpd_set2) == 0:
+                    break
 
     for c in cpd_set1:
-        p_match += np.log(0.1)
-        p_no_match += np.log(0.9)
+        p_match *= 0.1
+        p_no_match *= 0.9
     for c in cpd_set2:
-        p_match += np.log(0.1)
-        p_no_match += np.log(0.9)
+        p_match *= 0.1
+        p_no_match *= 0.9
 
-    p_match = np.exp(p_match)
-    p_no_match = np.exp(p_no_match)
     return p_match, p_no_match
 
 
-def reaction_equation_compound_mapping_likelihood(r1, r2, cpd_pred,
-                                                  compartment_map={}):
+def reaction_equation_compound_mapping_likelihood(
+        r1, r2, *args, **kwargs):
+    """Get the likelihood of reaction equations
+
+    Args:
+        r1, r2: two `RactionEntry` objects to be compared
+    args, kwargs:
+        cpd_map: dictionary mapping compound id in the query model to a set
+                 of best-mapping compound ids in the target model.
+        cpd_score: dictionary mapping compound id in the query model to
+                   its best mapping score during compound mapping.
+        compartment_map: dictionary mapping compartment id in the query model
+                         to the id in the target model.
+    """
     if r1.equation is None or r2.equation is None:
         # p value of observing undefined equation
         # it is independent of the condition of match or not
         p_match = 1
         p_no_match = 1
     else:
-        p_match, p_no_match = get_best_p_value_set(r1, r2, cpd_pred,
-                                                   compartment_map)
+        p_match, p_no_match = get_best_p_value_set(r1, r2, *args, **kwargs)
 
     return p_match, p_no_match
 
 
-def get_best_p_value_set(r1, r2, cpd_pred, compartment_map):
+def get_best_p_value_set(r1, r2, *args, **kwargs):
     """Assume equations may have reversed direction, report best mapping p."""
     cpd_set1_left = get_cpd_set(r1.equation, left=True)
     cpd_set1_right = get_cpd_set(r1.equation, left=False)
@@ -465,12 +483,12 @@ def get_best_p_value_set(r1, r2, cpd_pred, compartment_map):
 
     # assume equations have the same direction
     p_forward_match, p_forward_no_match = merge_partial_p_set(
-        cpd_set1_left, cpd_set2_left, cpd_pred,
-        cpd_set1_right, cpd_set2_right, compartment_map)
+        cpd_set1_left, cpd_set2_left,
+        cpd_set1_right, cpd_set2_right, *args, **kwargs)
     # assume equations have the reversed direction
     p_reverse_match, p_reverse_no_match = merge_partial_p_set(
-        cpd_set1_left, cpd_set2_right, cpd_pred,
-        cpd_set1_right, cpd_set2_left, compartment_map)
+        cpd_set1_left, cpd_set2_right,
+        cpd_set1_right, cpd_set2_left, *args, **kwargs)
 
     # maintain the direction with better p values
     if (p_forward_match / p_forward_no_match
@@ -484,8 +502,8 @@ def get_best_p_value_set(r1, r2, cpd_pred, compartment_map):
     return p_match, p_no_match
 
 
-def merge_partial_p_set(cpd_set1_left, cpd_set2_left, cpd_pred,
-                        cpd_set1_right, cpd_set2_right, compartment_map):
+def merge_partial_p_set(cpd_set1_left, cpd_set2_left,
+                        cpd_set1_right, cpd_set2_right, *args, **kwargs):
     """Merge the left hand side and right hand side p values together.
 
     The compound mapping is done separately on left hand side and
@@ -494,10 +512,10 @@ def merge_partial_p_set(cpd_set1_left, cpd_set2_left, cpd_pred,
     """
     p_set_left = \
         reaction_equation_mapping_approx_max_likelihood(
-            cpd_set1_left, cpd_set2_left, cpd_pred, compartment_map)
+            cpd_set1_left, cpd_set2_left, *args, **kwargs)
     p_set_right = \
         reaction_equation_mapping_approx_max_likelihood(
-            cpd_set1_right, cpd_set2_right, cpd_pred, compartment_map)
+            cpd_set1_right, cpd_set2_right, *args, **kwargs)
     p_match = p_set_left[0] * p_set_right[0]
     p_no_match = p_set_left[1] * p_set_right[1]
     return p_match, p_no_match
@@ -543,18 +561,19 @@ def fake_likelihood(e1, e2):
 
 
 def generate_likelihood(tasks):
-    pair, likelihood, params = tasks
+    pair, likelihood, args, kwargs = tasks
     e1, e2 = pair
-    p1, p2 = likelihood(e1, e2, *params)
+    p1, p2 = likelihood(e1, e2, *args, **kwargs)
     return e1.id, e2.id, p1, p2
 
 
-def pairwise_likelihood(pool, chunksize, model1, model2, likelihood, params):
+def pairwise_likelihood(pool, chunksize, model1, model2, likelihood,
+                        *args, **kwargs):
     """Compute likelihood of all pairwise comparisons.
 
     Returns likelihoods as a dataframe with a column for each hypothesis.
     """
-    tasks = (((e1, e2), likelihood, params)
+    tasks = (((e1, e2), likelihood, args, kwargs)
              for e1, e2 in product(itervalues(model1), itervalues(model2)))
     result = pool.map(generate_likelihood, tasks, chunksize=chunksize)
     return pd.DataFrame.from_records(result, index=('e1', 'e2'),
@@ -603,7 +622,7 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
     sys.stdout.flush()
     compound_id_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.compounds, model2.compounds,
-        compound_id_likelihood, (compound_prior, compound_id_marg))
+        compound_id_likelihood, compound_prior, compound_id_marg)
 
     # Compound name
     # Marginal probability of observing two similar names
@@ -616,7 +635,7 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
     sys.stdout.flush()
     compound_name_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.compounds, model2.compounds,
-        compound_name_likelihood, (compound_prior, compound_name_marg))
+        compound_name_likelihood, compound_prior, compound_name_marg)
 
     # Compound charge
     # Marginal probability of observing two compounds with the same charge
@@ -642,10 +661,10 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
 
     compound_charge_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.compounds, model2.compounds,
-        compound_charge_likelihood, (
-            compound_prior,
-            compound_charge_equal_marg,
-            compound_charge_not_equal_marg))
+        compound_charge_likelihood,
+        compound_prior,
+        compound_charge_equal_marg,
+        compound_charge_not_equal_marg)
 
     # Compound formula
     # Marginal probability of observing two compounds with the same formula
@@ -668,9 +687,9 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
     sys.stdout.flush()
     compound_formula_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.compounds, model2.compounds,
-        compound_formula_likelihood, (
-            compound_prior, compound_formula_equal_marg,
-            compound_formula_not_equal_marg))
+        compound_formula_likelihood,
+        compound_prior, compound_formula_equal_marg,
+        compound_formula_not_equal_marg)
 
     # Compound KEGG id
     if kegg:  # run KEGG id mapping
@@ -699,13 +718,13 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
         sys.stdout.flush()
         compound_kegg_likelihoods = pairwise_likelihood(
             pool, chunksize, model1.compounds, model2.compounds,
-            compound_kegg_likelihood, (
-                compound_prior, compound_kegg_equal_marg,
-                compound_kegg_not_equal_marg))
+            compound_kegg_likelihood,
+            compound_prior, compound_kegg_equal_marg,
+            compound_kegg_not_equal_marg)
     else:  # run fake mapping
         compound_kegg_likelihoods = pairwise_likelihood(
             pool, chunksize, model1.compounds, model2.compounds,
-            fake_likelihood, ())
+            fake_likelihood)
 
     pool.close()
     pool.join()
@@ -742,8 +761,8 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
             bayes_posterior(compound_prior, compound_kegg_likelihoods))
 
 
-def map_model_reactions(model1, model2, cpd_pred, nproc=1, outpath='.',
-                        log=False, gene=False, compartment_map={},
+def map_model_reactions(model1, model2, cpd_map, cpd_score, nproc=1,
+                        outpath='.', log=False, gene=False, compartment_map={},
                         gene_map={}):
     """Map reactions of two models."""
     # Mapping of reactions
@@ -774,9 +793,8 @@ def map_model_reactions(model1, model2, cpd_pred, nproc=1, outpath='.',
     sys.stdout.flush()
     reaction_id_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.reactions, model2.reactions,
-        reaction_id_likelihood, (
-            reaction_prior,
-            reaction_id_equal_marg, reaction_id_not_equal_marg))
+        reaction_id_likelihood,
+        reaction_prior, reaction_id_equal_marg, reaction_id_not_equal_marg)
 
     # Reaction name
     # Marginal probability of observing two reactions with the same name.
@@ -790,7 +808,7 @@ def map_model_reactions(model1, model2, cpd_pred, nproc=1, outpath='.',
     sys.stdout.flush()
     reaction_name_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.reactions, model2.reactions,
-        reaction_name_likelihood, (reaction_prior, reaction_name_equal_marg))
+        reaction_name_likelihood, reaction_prior, reaction_name_equal_marg)
 
     # Reaction equation
 
@@ -799,7 +817,7 @@ def map_model_reactions(model1, model2, cpd_pred, nproc=1, outpath='.',
     reaction_equation_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.reactions, model2.reactions,
         reaction_equation_compound_mapping_likelihood,
-        (cpd_pred, compartment_map))
+        cpd_map, cpd_score, compartment_map)
 
     # Reaction genes
     # For each gene, the marginal probability of observing that gene
@@ -829,12 +847,12 @@ def map_model_reactions(model1, model2, cpd_pred, nproc=1, outpath='.',
         reaction_genes_likelihoods = pairwise_likelihood(
             pool, chunksize, model1.reactions, model2.reactions,
             reaction_genes_likelihood,
-            (reaction_prior, reaction_genes_equal_marg,
-             reaction_genes_not_equal_marg, gene_map))
+            reaction_prior, reaction_genes_equal_marg,
+            reaction_genes_not_equal_marg, gene_map)
     else:
         reaction_genes_likelihoods = pairwise_likelihood(
             pool, chunksize, model1.reactions, model2.reactions,
-            fake_likelihood, ())
+            fake_likelihood)
 
     pool.close()
     pool.join()
