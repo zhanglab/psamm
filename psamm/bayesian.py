@@ -27,6 +27,7 @@ import operator
 import sys
 from collections import namedtuple, defaultdict
 import pandas as pd
+import time
 
 import psamm.bayesian_util as util
 from psamm.formula import Formula
@@ -611,33 +612,45 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
     # Initialize parallel pool of workers
     chunksize = compound_pairs // nproc
     pool = Pool(nproc)
+
+    t = time.time()
     # Compound ID
+    print('Calculating compound ID likelihoods...', end=' ')
+    sys.stdout.flush()
+
     # Marginal probability of observing two equal compound IDs
     tasks = ((util.id_equals, (c1.id, c2.id)) for c1, c2 in product(
         itervalues(model1.compounds), itervalues(model2.compounds)))
     result = pool.map(parallel_equel, tasks, chunksize=chunksize)
     compound_id_marg = sum(result) / float(compound_pairs)
 
-    print('Calculating compound ID likelihoods...')
-    sys.stdout.flush()
     compound_id_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.compounds, model2.compounds,
         compound_id_likelihood, compound_prior, compound_id_marg)
 
+    print('%.2f seconds' % (time.time() - t))
+    t = time.time()
     # Compound name
+    print('Calculating compound name likelihoods...', end=' ')
+    sys.stdout.flush()
+
     # Marginal probability of observing two similar names
     tasks = ((util.name_equals, (c1.name, c2.name)) for c1, c2 in product(
         itervalues(model1.compounds), itervalues(model2.compounds)))
     result = pool.map(parallel_equel, tasks, chunksize=chunksize)
     compound_name_marg = sum(result) / float(compound_pairs)
 
-    print('Calculating compound name likelihoods...')
-    sys.stdout.flush()
     compound_name_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.compounds, model2.compounds,
         compound_name_likelihood, compound_prior, compound_name_marg)
 
+    print('%.2f seconds' % (time.time() - t))
+    t = time.time()
+
     # Compound charge
+    print('Calculating compound charge likelihoods...', end=' ')
+    sys.stdout.flush()
+
     # Marginal probability of observing two compounds with the same charge
     compound_charge_equal_marg = sum(
         c1.charge is not None
@@ -656,9 +669,6 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
             itervalues(model1.compounds), itervalues(model2.compounds))
     ) / compound_pairs
 
-    print('Calculating compound charge likelihoods...')
-    sys.stdout.flush()
-
     compound_charge_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.compounds, model2.compounds,
         compound_charge_likelihood,
@@ -666,7 +676,13 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
         compound_charge_equal_marg,
         compound_charge_not_equal_marg)
 
+    print('%.2f seconds' % (time.time() - t))
+    t = time.time()
+
     # Compound formula
+    print('Calculating compound formula likelihoods...', end=' ')
+    sys.stdout.flush()
+
     # Marginal probability of observing two compounds with the same formula
     tasks = ((
         util.formula_equals,
@@ -683,16 +699,20 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
                                   itervalues(model2.compounds)))
         / compound_pairs)
 
-    print('Calculating compound formula likelihoods...')
-    sys.stdout.flush()
     compound_formula_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.compounds, model2.compounds,
         compound_formula_likelihood,
         compound_prior, compound_formula_equal_marg,
         compound_formula_not_equal_marg)
 
+    print('%.2f seconds' % (time.time() - t))
+    t = time.time()
+
     # Compound KEGG id
     if kegg:  # run KEGG id mapping
+        print('Calculating compound KEGG ID likelihoods...', end=' ')
+        sys.stdout.flush()
+
         # Marginal probability of observing two compounds
         # where KEGG ids are equal
         compound_kegg_equal_marg = sum(
@@ -714,13 +734,14 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
                 itervalues(model2.compounds))
         ) / compound_pairs
 
-        print('Calculating compound KEGG ID likelihoods...')
-        sys.stdout.flush()
         compound_kegg_likelihoods = pairwise_likelihood(
             pool, chunksize, model1.compounds, model2.compounds,
             compound_kegg_likelihood,
             compound_prior, compound_kegg_equal_marg,
             compound_kegg_not_equal_marg)
+
+        print('%.2f seconds' % (time.time() - t))
+        t = time.time()
     else:  # run fake mapping
         compound_kegg_likelihoods = pairwise_likelihood(
             pool, chunksize, model1.compounds, model2.compounds,
@@ -779,6 +800,10 @@ def map_model_reactions(model1, model2, cpd_map, cpd_score, nproc=1,
     pool = Pool(nproc)
 
     # Reaction ID
+    t = time.time()
+    print('Calculating reaction ID likelihoods...', end=' ')
+    sys.stdout.flush()
+
     # Marginal probability of observing two reactions with the same ids.
     tasks = ((util.id_equals, (r1.id, r2.id)) for r1, r2 in product(
         itervalues(model1.reactions),
@@ -789,14 +814,17 @@ def map_model_reactions(model1, model2, cpd_map, cpd_score, nproc=1,
     # Marginal probability of observing two reactions with different ids.
     reaction_id_not_equal_marg = 1.0 - reaction_id_equal_marg
 
-    print('Calculating reaction ID likelihoods...')
-    sys.stdout.flush()
     reaction_id_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.reactions, model2.reactions,
         reaction_id_likelihood,
         reaction_prior, reaction_id_equal_marg, reaction_id_not_equal_marg)
 
+    print('%.2f seconds' % (time.time() - t))
+    t = time.time()
     # Reaction name
+    print('Calculating reaction name likelihoods...', end=' ')
+    sys.stdout.flush()
+
     # Marginal probability of observing two reactions with the same name.
     tasks = ((util.name_equals, (r1.name, r2.name)) for r1, r2 in product(
         itervalues(model1.reactions),
@@ -804,20 +832,24 @@ def map_model_reactions(model1, model2, cpd_map, cpd_score, nproc=1,
     result = pool.map(parallel_equel, tasks, chunksize=chunksize)
     reaction_name_equal_marg = sum(result) / float(reaction_pairs)
 
-    print('Calculating reaction name likelihoods...')
-    sys.stdout.flush()
     reaction_name_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.reactions, model2.reactions,
         reaction_name_likelihood, reaction_prior, reaction_name_equal_marg)
 
+    print('%.2f seconds' % (time.time() - t))
+    t = time.time()
+
     # Reaction equation
 
-    print('Calculating reaction equation likelihoods...')
+    print('Calculating reaction equation likelihoods...', end=' ')
     sys.stdout.flush()
     reaction_equation_likelihoods = pairwise_likelihood(
         pool, chunksize, model1.reactions, model2.reactions,
         reaction_equation_compound_mapping_likelihood,
         cpd_map, cpd_score, compartment_map)
+
+    print('%.2f seconds' % (time.time() - t))
+    t = time.time()
 
     # Reaction genes
     # For each gene, the marginal probability of observing that gene
@@ -825,6 +857,9 @@ def map_model_reactions(model1, model2, cpd_map, cpd_score, nproc=1,
     # observing a pair of genes in two reactions given that the reaction
     # do _not_ match.
     if gene:
+        print('Calculating reaction genes likelihoods...', end=' ')
+        sys.stdout.flush()
+
         # Marginal probability of observing two reactions with
         # equal gene associations.
         tasks = ((util.genes_equals, (r1.genes, r2.genes))
@@ -842,13 +877,14 @@ def map_model_reactions(model1, model2, cpd_map, cpd_score, nproc=1,
                                       itervalues(model2.reactions)))
             / reaction_pairs)
 
-        print('Calculating reaction genes likelihoods...')
-        sys.stdout.flush()
         reaction_genes_likelihoods = pairwise_likelihood(
             pool, chunksize, model1.reactions, model2.reactions,
             reaction_genes_likelihood,
             reaction_prior, reaction_genes_equal_marg,
             reaction_genes_not_equal_marg, gene_map)
+
+        print('%.2f seconds' % (time.time() - t))
+        t = time.time()
     else:
         reaction_genes_likelihoods = pairwise_likelihood(
             pool, chunksize, model1.reactions, model2.reactions,

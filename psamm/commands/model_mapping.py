@@ -255,7 +255,7 @@ class ModelMappingCommand(Command):
             model1, model2, self._args.nproc, self._args.outpath,
             log=self._args.log, kegg=self._args.map_compound_kegg)
         print(
-            'It took %s seconds to calculate compound mapping...'
+            'It took %.2f seconds to calculate compound mapping...'
             % (time.time() - t))
 
         print('Writing output...')
@@ -280,7 +280,7 @@ class ModelMappingCommand(Command):
             self._args.threshold_compound)
         compound_best.to_csv(
             self._args.outpath + '/bayes_compounds_best.tsv', sep='\t')
-        print('It took %s seconds to write output...' % (time.time() - t))
+        print('It took %.2f seconds to write output...' % (time.time() - t))
         sys.stdout.flush()
 
         # Bayesian classifier
@@ -291,7 +291,7 @@ class ModelMappingCommand(Command):
             log=self._args.log, gene=self._args.map_reaction_gene,
             compartment_map=compartment_map, gene_map=gene_map)
         print(
-            'It took %s seconds to calculate reaction mapping...'
+            'It took %.2f seconds to calculate reaction mapping...'
             % (time.time() - t))
 
         print('Writing output...')
@@ -316,7 +316,7 @@ class ModelMappingCommand(Command):
             self._args.threshold_reaction)
         reaction_best.to_csv(
             self._args.outpath + '/bayes_reactions_best.tsv', sep='\t')
-        print('It took %s seconds to write output...' % (time.time() - t))
+        print('It took %.2f seconds to write output...' % (time.time() - t))
         sys.stdout.flush()
 
     def _curation(self):
