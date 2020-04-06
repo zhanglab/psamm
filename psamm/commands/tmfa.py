@@ -44,23 +44,29 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
     @classmethod
     def init_parser(cls, parser):
-        parser.add_argument('--err', action='store_true', help='use error estimates when running TMFA')
-        parser.add_argument('--random-addition', action='store_true', help='perform random reaction constraint addition in model')
-        parser.add_argument('--hamilton', action='store_true', help='run model using Hamilton TMFA method')
-        parser.add_argument('--conc-testing', action='store_true', help='peform random compound constraint addition in model')
-        parser.add_argument('--temp', help='Temperature in Celsius')
-        parser.add_argument('--tfba', action='store_true', help = 'run TMFA with tFBA like constraints (testing only)')
-        parser.add_argument('--threshold', default=None, type=Decimal, help='value to fix biomass flux to during tmfa simulations (default = max biomass)')
-        parser.add_argument('--verbose', action='store_true', help='print out all linear constraints and equalities from LP problem. ')
-        parser.add_argument('--randomsparse', action='store_true', help='run randomsparse on reactions in model with TMFA constraints applied')
-        parser.add_argument('--randomsparse_genes', action='store_true', help='run randomsparse on genes in model with TMFA constraints applied')
-        parser.add_argument('--water', type=str, help='water compound ID without compartment (cpd_h2o, C00001)')
-        parser.add_argument('--proton-in', type=str, help='id of proton compound with compartment (in the cell)')
-        parser.add_argument('--proton-out', type=str, help='id of proton compound with compartment (outside of the cell)')
-        parser.add_argument('--single-solution', type=str, choices=['fba', 'l1min','random'], help='get a single TMFA solution', default=None)
-        parser.add_argument('--min-max-energy', type=file, help='', default=None)
         parser.add_argument('--config', type=file, help='Config file for TMFA settings')
-        parser.add_argument('--generate-config', action='store_true')
+        parser.add_argument('--threshold', default=None, type=Decimal,
+                            help='value to fix biomass flux to during tmfa simulations (default = max biomass)')
+        parser.add_argument('--temp', help='Temperature in Celsius', default=25)
+        parser.add_argument('--hamilton', action='store_true', help='run model using Hamilton TMFA method')
+        parser.add_argument('--err', action='store_true', help='use error estimates when running TMFA')
+
+        subparsers = parser.add_subparsers(title='Functions', dest='which')
+        parser_util = subparsers.add_parser('util', help='Utility functions')
+
+        parser_util.add_argument('--generate-config', action='store_true')
+        parser_util.add_argument('--conc-testing', action='store_true',
+                        help='peform random compound constraint addition in model')
+        parser_util.add_argument('--random-addition', action='store_true',
+                        help='perform random reaction constraint addition in model')
+
+        parser_sim = subparsers.add_parser('simulation', help='Simulation Functions')
+        parser_sim.add_argument('--verbose', action='store_true', help='print out all linear constraints and equalities from LP problem. ')
+        parser_sim.add_argument('--randomsparse', action='store_true', help='run randomsparse on reactions in model with TMFA constraints applied')
+        parser_sim.add_argument('--randomsparse_genes', action='store_true', help='run randomsparse on genes in model with TMFA constraints applied')
+        parser_sim.add_argument('--single-solution', type=str, choices=['fba', 'l1min','random'], help='get a single TMFA solution', default=None)
+        parser_sim.add_argument('--min-max-energy', type=file, help='', default=None)
+
         super(TMFACommand, cls).init_parser(parser)
 
     def run(self):
@@ -68,21 +74,23 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
         solver = self._get_solver()
         objective = self._get_objective()
         mm = self._mm
+        which_command = self._args.which
 
-        if self._args.generate_config:
-            with open('./example-config.yaml', mode='w') as f:
-                f.write('deltaG: <path to deltaG input file>\n')
-                f.write('exclude: <path to excluded reactions file>\n')
-                f.write('transporters: <path to transporter parameters file>\n')
-                f.write('concentrations: <path to set concentrations file>\n')
-                f.write('proton-in: <id of teh internal proton. example cpd_h[c]>\n')
-                f.write('proton-out: <id of the external proton. example cpd_h[p]>\n')
-                f.write('proton-other:\n')
-                f.write('  - <id of other proton compounds in other compartments>\n')
-                f.write('water:\n')
-                f.write('  - <id of water compounds example cpd_h2o[c]. list one per line\n')
-            logger.info('Generated example config file example-config.yaml')
-            quit()
+        if which_command == 'util':
+            if self._args.generate_config:
+                with open('./example-config.yaml', mode='w') as f:
+                    f.write('deltaG: <path to deltaG input file>\n')
+                    f.write('exclude: <path to excluded reactions file>\n')
+                    f.write('transporters: <path to transporter parameters file>\n')
+                    f.write('concentrations: <path to set concentrations file>\n')
+                    f.write('proton-in: <id of teh internal proton. example cpd_h[c]>\n')
+                    f.write('proton-out: <id of the external proton. example cpd_h[p]>\n')
+                    f.write('proton-other:\n')
+                    f.write('  - <id of other proton compounds in other compartments>\n')
+                    f.write('water:\n')
+                    f.write('  - <id of water compounds example cpd_h2o[c]. list one per line\n')
+                logger.info('Generated example config file example-config.yaml')
+                quit()
 
         if self._args.config is None:
             logger.warning('No configuration file was provided with --config option')
@@ -239,152 +247,153 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
             cp_list.append(str(cp))
             xij.define([str(cp)], lower=-50, upper=50, types=lp.VariableType.Continuous)
 
-        if self._args.random_addition:
-            testing_list = list(mm_irreversible.reactions)
-            random.shuffle(testing_list)
-            testing_list_tmp = []
-            for rx in testing_list:
-                testing_list_iter = testing_list_tmp + [rx]
-                logger.info('current testing list: {}'.format(testing_list_tmp))
-                logger.info('testing reaction: {}'.format(rx))
+        if which_command == 'util':
+            if self._args.random_addition:
+                testing_list = list(mm_irreversible.reactions)
+                random.shuffle(testing_list)
+                testing_list_tmp = []
+                for rx in testing_list:
+                    testing_list_iter = testing_list_tmp + [rx]
+                    logger.info('current testing list: {}'.format(testing_list_tmp))
+                    logger.info('testing reaction: {}'.format(rx))
 
-                prob = solver.create_problem()
-                prob.cplex.parameters.threads.set(1)
-                prob.integrality_tolerance.value = 0
-                prob.cplex.parameters.emphasis.numerical.value = 1
+                    prob = solver.create_problem()
+                    prob.cplex.parameters.threads.set(1)
+                    prob.integrality_tolerance.value = 0
+                    prob.cplex.parameters.emphasis.numerical.value = 1
 
-                self._v = v = prob.namespace(name='flux')
-                self._zi = zi = prob.namespace(name='zi')
-                self._dgri = dgri = prob.namespace(name='dgri')
-                self._xij = xij = prob.namespace(name='xij')
-                for reaction in mm_irreversible.reactions:
-                    lower, upper = mm_irreversible.limits[reaction]
-                    v.define([reaction], lower=lower, upper=upper, types=lp.VariableType.Continuous)
-                    zi.define([reaction], lower=int(0), upper=int(1), types=lp.VariableType.Binary)
-                    dgri.define([reaction], lower=-1000, upper=1000, types=lp.VariableType.Continuous)
+                    self._v = v = prob.namespace(name='flux')
+                    self._zi = zi = prob.namespace(name='zi')
+                    self._dgri = dgri = prob.namespace(name='dgri')
+                    self._xij = xij = prob.namespace(name='xij')
+                    for reaction in mm_irreversible.reactions:
+                        lower, upper = mm_irreversible.limits[reaction]
+                        v.define([reaction], lower=lower, upper=upper, types=lp.VariableType.Continuous)
+                        zi.define([reaction], lower=int(0), upper=int(1), types=lp.VariableType.Binary)
+                        dgri.define([reaction], lower=-1000, upper=1000, types=lp.VariableType.Continuous)
 
-                massbalance_lhs = {compound: 0 for compound in mm_irreversible.compounds}
-                for spec, value in iteritems(mm_irreversible.matrix):
-                    compound, reaction_id = spec
-                    massbalance_lhs[compound] += v(reaction_id) * value
-                for compound, lhs in iteritems(massbalance_lhs):
-                    prob.add_linear_constraints(lhs == 0)
+                    massbalance_lhs = {compound: 0 for compound in mm_irreversible.compounds}
+                    for spec, value in iteritems(mm_irreversible.matrix):
+                        compound, reaction_id = spec
+                        massbalance_lhs[compound] += v(reaction_id) * value
+                    for compound, lhs in iteritems(massbalance_lhs):
+                        prob.add_linear_constraints(lhs == 0)
 
-                cp_list = []
-                for cp in mm_irreversible.compounds:
-                    cp_list.append(str(cp))
-                    xij.define([str(cp)], lower=-50, upper=50, types=lp.VariableType.Continuous)
+                    cp_list = []
+                    for cp in mm_irreversible.compounds:
+                        cp_list.append(str(cp))
+                        xij.define([str(cp)], lower=-50, upper=50, types=lp.VariableType.Continuous)
 
-                prob, cpd_xij_dict = add_conc_constraints(self, prob, cpd_conc_dict, cp_list)
+                    prob, cpd_xij_dict = add_conc_constraints(self, prob, cpd_conc_dict, cp_list)
 
-                prob = add_reaction_constraints(self, prob, mm_irreversible, exclude_lump_list,
-                                                        exclude_unkown_list,
-                                                        exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
-                                                        split_reversible, transport_parameters, testing_list_iter,
-                                                        config_dict.get('scaled_compounds'), config_dict.get('water'),
-                                                        config_dict.get('proton-in'),
-                                                        config_dict.get('proton-out'), self._args.temp, self._args.err)
-                try:
-                    biomass = get_var_bound(v(self._get_objective()), lp.ObjectiveSense.Maximize)
-                    logger.info('Current Biomass: {}'.format(biomass))
-                    if biomass < self._args.threshold:
+                    prob = add_reaction_constraints(self, prob, mm_irreversible, exclude_lump_list,
+                                                            exclude_unkown_list,
+                                                            exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
+                                                            split_reversible, transport_parameters, testing_list_iter,
+                                                            config_dict.get('scaled_compounds'), config_dict.get('water'),
+                                                            config_dict.get('proton-in'),
+                                                            config_dict.get('proton-out'), self._args.temp, self._args.err)
+                    try:
+                        biomass = get_var_bound(v(self._get_objective()), lp.ObjectiveSense.Maximize)
+                        logger.info('Current Biomass: {}'.format(biomass))
+                        if biomass < self._args.threshold:
+                            continue
+                        else:
+                            testing_list_tmp.append(rx)
+                    except:
                         continue
+
+                for rx in testing_list:
+                    if rx not in testing_list_tmp:
+                        print('{}\tBad Constraint'.format(rx))
                     else:
-                        testing_list_tmp.append(rx)
-                except:
-                    continue
+                        print('{}\tGood Constraint'.format(rx))
+                quit()
 
-            for rx in testing_list:
-                if rx not in testing_list_tmp:
-                    print('{}\tBad Constraint'.format(rx))
-                else:
-                    print('{}\tGood Constraint'.format(rx))
-            quit()
+        elif which_command == 'simulation':
+            prob, cpd_xij_dict = add_conc_constraints(self, prob, cpd_conc_dict, cp_list)
 
+            prob = add_reaction_constraints(self, prob, mm_irreversible, exclude_lump_list,
+                                                    exclude_unkown_list,
+                                                    exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
+                                                    split_reversible, transport_parameters, testing_list_tmp,
+                                                    config_dict.get('scaled_compounds'), config_dict.get('water'), config_dict.get('proton-in'),
+                                                    config_dict.get('proton-out'), self._args.temp, self._args.err)
 
-        prob, cpd_xij_dict = add_conc_constraints(self, prob, cpd_conc_dict, cp_list)
+            if self._args.threshold is not None:
+                prob.add_linear_constraints(v(self._get_objective()) == self._args.threshold)
+                logger.info('Set biomass based on threshold to {}'.format(self._args.threshold))
+            else:
+                max_biomass = get_var_bound(v(self._get_objective()), lp.ObjectiveSense.Maximize)
+                prob.add_linear_constraints(v(self._get_objective()) == max_biomass)
+                logger.info('Set biomass based on max biomass to {}'.format(max_biomass))
 
-        prob = add_reaction_constraints(self, prob, mm_irreversible, exclude_lump_list,
-                                                exclude_unkown_list,
-                                                exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
-                                                split_reversible, transport_parameters, testing_list_tmp,
-                                                config_dict.get('scaled_compounds'), config_dict.get('water'), config_dict.get('proton-in'),
-                                                config_dict.get('proton-out'), self._args.temp, self._args.err)
+            if self._args.single_solution is not None:
+                print_fba(self, prob, mm_irreversible, cp_list)
+            elif self._args.min_max_energy is not None:
+                energy_min_max(self, prob, mm_irreversible, self.min_max_energy)
+            else:
+                rand_reactions = [m for m in mm_irreversible.reactions]
+                random.shuffle(rand_reactions)
+                for step, reaction in enumerate(sorted(rand_reactions)):
+                    logger.info('Testing Reaction {}/{}'.format(step, len(rand_reactions)))
+                    min_flux = get_var_bound(v(reaction), lp.ObjectiveSense.Minimize)
+                    max_flux = get_var_bound(v(reaction), lp.ObjectiveSense.Maximize)
+                    print('Flux\t{}\t{}\t{}'.format(reaction, min_flux, max_flux))
+                    if reaction not in exclude_unkown_list:
+                        min_dgr = get_var_bound(dgri(reaction), lp.ObjectiveSense.Minimize)
+                        max_dgr = get_var_bound(dgri(reaction), lp.ObjectiveSense.Maximize)
+                        min_zi = get_var_bound(zi(reaction), lp.ObjectiveSense.Minimize)
+                        max_zi = get_var_bound(zi(reaction), lp.ObjectiveSense.Maximize)
+                        print('DGR\t{}\t{}\t{}'.format(reaction, min_dgr, max_dgr))
+                        print('Zi\t{}\t{}\t{}'.format(reaction, min_zi, max_zi))
+                    else:
+                        print('DGR\t{}\t{}\t{}'.format(reaction, 'NA', 'NA'))
+                        print('Zi\t{}\t{}\t{}'.format(reaction, 'NA', 'NA'))
+                for step, cpd in enumerate(sorted(cp_list)):
+                    logger.info('Testing Compound {}\{}'.format(step, len(cp_list)))
+                    min_cpd = get_var_bound(xij(cpd), lp.ObjectiveSense.Minimize)
+                    max_cpd = get_var_bound(xij(cpd), lp.ObjectiveSense.Maximize)
+                    print('CONC\t{}\t{}\t{}'.format(cpd, min_cpd, max_cpd))
 
-        if self._args.threshold is not None:
-            prob.add_linear_constraints(v(self._get_objective()) == self._args.threshold)
-            logger.info('Set biomass based on threshold to {}'.format(self._args.threshold))
-        else:
-            max_biomass = get_var_bound(v(self._get_objective()), lp.ObjectiveSense.Maximize)
-            prob.add_linear_constraints(v(self._get_objective()) == max_biomass)
-            logger.info('Set biomass based on max biomass to {}'.format(max_biomass))
+                if self._args.verbose:
+                    index_dict_vars = {}
+                    for i, j in prob._variables.iteritems():
+                        index_dict_vars[j] = str(i)
+                    for key, value in index_dict_vars.iteritems():
+                        print('## LP variable name, lp var lower bound, lp var upper bound, var type')
+                        print(value, key, prob.cplex.variables.get_lower_bounds(key),
+                              prob.cplex.variables.get_upper_bounds(key),
+                              prob.cplex.variables.get_types(key))
 
-        if self._args.single_solution is not None:
-            print_fba(self, prob, mm_irreversible, cp_list)
-        elif self._args.min_max_energy is not None:
-            energy_min_max(self, prob, mm_irreversible, self.min_max_energy)
-        else:
-            rand_reactions = [m for m in mm_irreversible.reactions]
-            random.shuffle(rand_reactions)
-            for step, reaction in enumerate(sorted(rand_reactions)):
-                logger.info('Testing Reaction {}/{}'.format(step, len(rand_reactions)))
-                min_flux = get_var_bound(v(reaction), lp.ObjectiveSense.Minimize)
-                max_flux = get_var_bound(v(reaction), lp.ObjectiveSense.Maximize)
-                print('Flux\t{}\t{}\t{}'.format(reaction, min_flux, max_flux))
-                if reaction not in exclude_unkown_list:
-                    min_dgr = get_var_bound(dgri(reaction), lp.ObjectiveSense.Minimize)
-                    max_dgr = get_var_bound(dgri(reaction), lp.ObjectiveSense.Maximize)
-                    min_zi = get_var_bound(zi(reaction), lp.ObjectiveSense.Minimize)
-                    max_zi = get_var_bound(zi(reaction), lp.ObjectiveSense.Maximize)
-                    print('DGR\t{}\t{}\t{}'.format(reaction, min_dgr, max_dgr))
-                    print('Zi\t{}\t{}\t{}'.format(reaction, min_zi, max_zi))
-                else:
-                    print('DGR\t{}\t{}\t{}'.format(reaction, 'NA', 'NA'))
-                    print('Zi\t{}\t{}\t{}'.format(reaction, 'NA', 'NA'))
-            for step, cpd in enumerate(sorted(cp_list)):
-                logger.info('Testing Compound {}\{}'.format(step, len(cp_list)))
-                min_cpd = get_var_bound(xij(cpd), lp.ObjectiveSense.Minimize)
-                max_cpd = get_var_bound(xij(cpd), lp.ObjectiveSense.Maximize)
-                print('CONC\t{}\t{}\t{}'.format(cpd, min_cpd, max_cpd))
-
-            if self._args.verbose:
-                index_dict_vars = {}
-                for i, j in prob._variables.iteritems():
-                    index_dict_vars[j] = str(i)
-                for key, value in index_dict_vars.iteritems():
-                    print('## LP variable name, lp var lower bound, lp var upper bound, var type')
-                    print(value, key, prob.cplex.variables.get_lower_bounds(key),
-                          prob.cplex.variables.get_upper_bounds(key),
-                          prob.cplex.variables.get_types(key))
-
-                for i in prob.cplex.linear_constraints.get_names():
-                    linear_constraint = prob.cplex.linear_constraints.get_rows(i)
-                    vars = linear_constraint.ind
-                    tmp_vars = []
-                    for var in vars:
-                        tmp_vars.append(index_dict_vars[var])
-                    print('## Raw sparse pair from cplex')
-                    print(linear_constraint)
-                    print('## lhs variables, coefficients')
-                    print(tmp_vars, linear_constraint.val)
-                    print('## rhs value')
-                    print(TMFA_Problem.prob.cplex.linear_constraints.get_rhs(i))
-                    print('## rhs equation sense (L = less than or equal to, G = greater than or equal to, E = equal to')
-                    print(TMFA_Problem.prob.cplex.linear_constraints.get_senses(i))
-                    print('condensed LP constraint')
-                    equation = []
-                    for j in range(0, len(vars), 1):
-                        equation.append('{}*{}'.format(tmp_vars[j], linear_constraint.val[j]))
-                    sense = prob.cplex.linear_constraints.get_senses(i)
-                    if sense == 'L':
-                        sign = '<='
-                    elif sense == 'G':
-                        sign = '>='
-                    elif sense == 'E':
-                        sign = '=='
-                    print('{} {} {}'.format(' + '.join(equation), sign,
-                                            prob.cplex.linear_constraints.get_rhs(i)))
-                    print('-------------------------------------------------------------------')
+                    for i in prob.cplex.linear_constraints.get_names():
+                        linear_constraint = prob.cplex.linear_constraints.get_rows(i)
+                        vars = linear_constraint.ind
+                        tmp_vars = []
+                        for var in vars:
+                            tmp_vars.append(index_dict_vars[var])
+                        print('## Raw sparse pair from cplex')
+                        print(linear_constraint)
+                        print('## lhs variables, coefficients')
+                        print(tmp_vars, linear_constraint.val)
+                        print('## rhs value')
+                        print(TMFA_Problem.prob.cplex.linear_constraints.get_rhs(i))
+                        print('## rhs equation sense (L = less than or equal to, G = greater than or equal to, E = equal to')
+                        print(TMFA_Problem.prob.cplex.linear_constraints.get_senses(i))
+                        print('condensed LP constraint')
+                        equation = []
+                        for j in range(0, len(vars), 1):
+                            equation.append('{}*{}'.format(tmp_vars[j], linear_constraint.val[j]))
+                        sense = prob.cplex.linear_constraints.get_senses(i)
+                        if sense == 'L':
+                            sign = '<='
+                        elif sense == 'G':
+                            sign = '>='
+                        elif sense == 'E':
+                            sign = '=='
+                        print('{} {} {}'.format(' + '.join(equation), sign,
+                                                prob.cplex.linear_constraints.get_rhs(i)))
+                        print('-------------------------------------------------------------------')
         quit()
 
 
