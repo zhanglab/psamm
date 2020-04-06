@@ -44,7 +44,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
     @classmethod
     def init_parser(cls, parser):
-        parser.add_argument('--config', type=file, help='Config file for TMFA settings')
+        parser.add_argument('--config', type=argparse.FileType('r'), help='Config file for TMFA settings')
         parser.add_argument('--threshold', default=None, type=Decimal,
                             help='value to fix biomass flux to during tmfa simulations (default = max biomass)')
         parser.add_argument('--temp', help='Temperature in Celsius', default=25)
@@ -65,7 +65,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
         parser_sim.add_argument('--randomsparse', action='store_true', help='run randomsparse on reactions in model with TMFA constraints applied')
         parser_sim.add_argument('--randomsparse_genes', action='store_true', help='run randomsparse on genes in model with TMFA constraints applied')
         parser_sim.add_argument('--single-solution', type=str, choices=['fba', 'l1min','random'], help='get a single TMFA solution', default=None)
-        parser_sim.add_argument('--min-max-energy', type=file, help='', default=None)
+        parser_sim.add_argument('--min-max-energy', type=argparse.FileType('r'), help='', default=None)
 
         super(TMFACommand, cls).init_parser(parser)
 
