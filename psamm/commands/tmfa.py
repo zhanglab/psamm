@@ -60,6 +60,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
         parser.add_argument('--single-solution', type=str, choices=['fba', 'l1min','random'], help='get a single TMFA solution', default=None)
         parser.add_argument('--min-max-energy', type=file, help='', default=None)
         parser.add_argument('--config', type=file, help='Config file for TMFA settings')
+        parser.add_argument('--generate-config', action='store_true')
         super(TMFACommand, cls).init_parser(parser)
 
     def run(self):
@@ -68,6 +69,20 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
         objective = self._get_objective()
         mm = self._mm
 
+        if self._args.generate_config:
+            with open('./example-config.yaml', mode='w') as f:
+                f.write('deltaG: <path to deltaG input file>\n')
+                f.write('exclude: <path to excluded reactions file>\n')
+                f.write('transporters: <path to transporter parameters file>\n')
+                f.write('concentrations: <path to set concentrations file>\n')
+                f.write('proton-in: <id of teh internal proton. example cpd_h[c]>\n')
+                f.write('proton-out: <id of the external proton. example cpd_h[p]>\n')
+                f.write('proton-other:\n')
+                f.write('  - <id of other proton compounds in other compartments>\n')
+                f.write('water:\n')
+                f.write('  - <id of water compounds example cpd_h2o[c]. list one per line\n')
+            logger.info('Generated example config file example-config.yaml')
+            quit()
 
         if self._args.config is None:
             logger.warning('No configuration file was provided with --config option')
