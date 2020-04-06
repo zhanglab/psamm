@@ -71,6 +71,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 		parser.add_argument('--proton-in', type=str, help='id of proton compound with compartment (in the cell)')
 		parser.add_argument('--proton-out', type=str, help='id of proton compound with compartment (outside of the cell)')
 		parser.add_argument('--single-solution', type=str, choices=['fba', 'l1min','random'], help='get a single TMFA solution', default=None)
+		parser.add_argument('--min-max-energy', type=file, help='', default=None)
 		super(TMFACommand, cls).init_parser(parser)
 
 	def run(self):
@@ -308,6 +309,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
 		if self._args.single_solution is not None:
 			print_fba(self, prob, mm_irreversible, cp_list)
+		elif self.min_max_energy is not None:
+			energy_min_max(self, prob, mm_irreversible, self.min_max_energy)
 		else:
 			rand_reactions = [m for m in mm_irreversible.reactions]
 			random.shuffle(rand_reactions)
@@ -371,6 +374,36 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 					                        prob.cplex.linear_constraints.get_rhs(i)))
 					print('-------------------------------------------------------------------')
 		quit()
+
+
+def energy_min_max(self, problem, mm, enfile):
+	stoichs = {}
+	for row in csv.reader(enfile, delimiter='\t'):
+		stoichs['{}_reverse'.formrat(row[0])] = -1 * float(row[1])
+		stoichs['{}_forward'.formrat(row[0])] = float(row[1])
+		stoichs['{}'.formrat(row[0])] = float(row[1])
+
+	objective = None
+	for rxn in stoichs:
+		if rxn in mm.reactions:
+			if objective is None:
+				obejctive = (self._v(rxn) * stoichs)
+			else:
+				objective += (self._v(rxn) * stoichs)
+	problem.set_objective(objective)
+	result = problem.solve_unchecked(lp.ObjectiveSense.Maximize)
+	if not result.success:
+		logger.error('Solution not optimal: {}'.format(result.status))
+		quit()
+	max = result.get_value(objective)
+	result = problem.solve_unchecked(lp.ObjectiveSense.Minimize)
+	if not result.success:
+		logger.error('Solution not optimal: {}'.format(result.status))
+		quit()
+	min = result.get_value(objective)
+	print('min_sum_flux\t{}'.format(min))
+	print('max_sum_flux\t{}'.format(max))
+
 
 def print_fba(self, prob, mm, cp_list):
 	prob.set_objective(self._v(self._get_objective()))
@@ -440,7 +473,6 @@ def lump_parser(lump_file):
 	lump_to_rxnids = {}
 	lump_to_rxnids_dir = {}
 	for row in csv.reader(lump_file, delimiter=str('\t')):
-		#print(row)
 		lump_id, lump_rxn_list, lump_rxn = row
 		rx_dir_list = []
 		rx_list = []
@@ -464,6 +496,7 @@ def parse_tparam_file(file):
 			t_param['{}_forward'.format(rxn)] = (c, h)
 			t_param['{}_reverse'.format(rxn)] = (-Decimal(c), -Decimal(h))
 	return t_param
+
 
 def parse_dgf(mm, dgf_file):
 	"""A function that will parse a supplied deltaG of formation file.
@@ -821,7 +854,7 @@ def add_reaction_constraints(self, problem, mm, exclude_lumps, exclude_unknown, 
 
 	problem.add_linear_constraints(h_c >= 4)
 	problem.add_linear_constraints(h_c <= 11)
-	delta_ph = (h_p - h_c)
+	delta_ph = (h_c - h_p)
 
 	F = Decimal(0.02306)
 
