@@ -280,9 +280,9 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                                                         exclude_unkown_list,
                                                         exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
                                                         split_reversible, transport_parameters, testing_list_iter,
-                                                        self._args.scaled_compounds, self._args.water,
-                                                        self._args.proton_in,
-                                                        self._args.proton_out, self._args.temp, self._args.err)
+                                                        self._args.scaled_compounds, config_dict.get('water'),
+                                                        config_dict.get('proton-in'),
+                                                        config_dict.get('proton-out'), self._args.temp, self._args.err)
                 try:
                     biomass = get_var_bound(v(self._get_objective()), lp.ObjectiveSense.Maximize)
                     logger.info('Current Biomass: {}'.format(biomass))
@@ -307,8 +307,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                                                 exclude_unkown_list,
                                                 exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
                                                 split_reversible, transport_parameters, testing_list_tmp,
-                                                self._args.scaled_compounds, self._args.water, self._args.proton_in,
-                                                self._args.proton_out, self._args.temp, self._args.err)
+                                                self._args.scaled_compounds, config_dict.get('water'), config_dict.get('proton-in'),
+                                                config_dict.get('proton-out'), self._args.temp, self._args.err)
 
         if self._args.threshold is not None:
             prob.add_linear_constraints(v(self._get_objective()) == self._args.threshold)
@@ -320,7 +320,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
         if self._args.single_solution is not None:
             print_fba(self, prob, mm_irreversible, cp_list)
-        elif self.min_max_energy is not None:
+        elif self._args.min_max_energy is not None:
             energy_min_max(self, prob, mm_irreversible, self.min_max_energy)
         else:
             rand_reactions = [m for m in mm_irreversible.reactions]
@@ -873,8 +873,8 @@ def add_reaction_constraints(self, problem, mm, exclude_lumps, exclude_unknown, 
                          'C00080[e]', 'C00080[c]', 'C00001[e]', 'C00001[c]']
     excluded_cpd_list.append(hin)
     excluded_cpd_list.append(hout)
-    for cpt in mm.compartments:
-        excluded_cpd_list.append('{}[{}]'.format(water, cpt))
+    for wat in water:
+        excluded_cpd_list.append(wat)
     logger.info('Excluded compounds: {}'.format(','.join(excluded_cpd_list)))
     logger.info('Temperature: {}'.format(T))
     logger.info('using h in {}'.format(hin))
