@@ -44,20 +44,6 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
     @classmethod
     def init_parser(cls, parser):
-        parser.add_argument(
-            '--exclude', help='single column list of reactions to exclude from the analysis', type=file)
-        parser.add_argument(
-            '--lump-file', help='tab separate file, lump ID, lump dG_r, comma sep list of reactions in lump.',
-            type=file)
-        parser.add_argument(
-            '--dgf-file', help='tab separated file containing estimated deltaGf values for all metabolites',
-            type=argparse.FileType('rU'))
-        parser.add_argument(
-            '--set-concentrations', help='Tab seperated file with Reaction ID, [lower], [upper]', type=file)
-        parser.add_argument('--transport-parameters', help='file containing parameters for transport rxn dgr', type=file)
-        parser.add_argument('--rxn-conc-only', help='file containing reactions where deltaGf of intracellular/extracellular compounds should only be determined by ph difference', type=file)
-        parser.add_argument('--scaled-compounds', help='compounds to scale deltaGf', type=file)
-        parser.add_argument('--dgr-file', type=file, help='file containing estimated deltarG values for reactions in model.')
         parser.add_argument('--err', action='store_true', help='use error estimates when running TMFA')
         parser.add_argument('--random-addition', action='store_true', help='perform random reaction constraint addition in model')
         parser.add_argument('--hamilton', action='store_true', help='run model using Hamilton TMFA method')
@@ -280,7 +266,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                                                         exclude_unkown_list,
                                                         exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
                                                         split_reversible, transport_parameters, testing_list_iter,
-                                                        self._args.scaled_compounds, config_dict.get('water'),
+                                                        config_dict.get('scaled_compounds'), config_dict.get('water'),
                                                         config_dict.get('proton-in'),
                                                         config_dict.get('proton-out'), self._args.temp, self._args.err)
                 try:
@@ -307,7 +293,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                                                 exclude_unkown_list,
                                                 exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
                                                 split_reversible, transport_parameters, testing_list_tmp,
-                                                self._args.scaled_compounds, config_dict.get('water'), config_dict.get('proton-in'),
+                                                config_dict.get('scaled_compounds'), config_dict.get('water'), config_dict.get('proton-in'),
                                                 config_dict.get('proton-out'), self._args.temp, self._args.err)
 
         if self._args.threshold is not None:
