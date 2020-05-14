@@ -99,11 +99,7 @@ def genes_equals(g1, g2, gene_map={}):
     e1 = Expression(g1)
     e2 = Expression(g2)
 
-    reverse_map = dict()
-    for k, v in gene_map.items():
-        reverse_map[v] = k
-
-    g_list = set([reverse_map.get(v.symbol, v.symbol) for v in e2.variables])
+    g_list = set([gene_map.get(v.symbol, v.symbol) for v in e2.variables])
     check1 = e1.substitute(lambda v: v.symbol in g_list)
 
     g_list = set([gene_map.get(v.symbol, v.symbol) for v in e1.variables])

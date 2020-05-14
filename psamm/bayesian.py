@@ -223,6 +223,7 @@ class BayesianReactionPredictor(object):
         self._model2 = model2
         self._parse_cpd_pred(cpd_pred)
         self._column_list = ['p', 'p_id', 'p_name', 'p_equation', 'p_genes']
+        gene_map = self._reversible_map(gene_map)
         self._reaction_map_p = map_model_reactions(
             self._model1, self._model2, self._cpd_map, self._cpd_score, nproc,
             outpath, log=log, gene=gene, compartment_map=compartment_map,
@@ -238,6 +239,13 @@ class BayesianReactionPredictor(object):
 
     def map(self, r1, r2):
         return self._reaction_map_p[0][r1, r2]
+
+    def _reversible_map(self, genemap):
+        newmap = {}
+        for k, v in genemap.items():
+            newmap[k] = v
+            newmap[v] = k
+        return newmap
 
     def _parse_cpd_pred(self, cpd_pred):
         self._cpd_map = defaultdict(set)

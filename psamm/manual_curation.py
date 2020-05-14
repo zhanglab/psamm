@@ -233,27 +233,18 @@ def search_compound(model, id):
         print('\n')
 
 
-def search_reaction(model, id):
+def search_reaction(model, ids):
     """Search a set of reactions, print detailed properties, then return a
     generator. Each item in the generator is a list of compounds in the
     corresponding reaction.
 
     Args:
-        id: a list of reaction ids
+        ids: a list of reaction ids
     """
     selected_reactions = set()
-
-    # Prepare translation table from compound id to name
-    compound_name = {}
-    for compound in model.compounds:
-        if 'name' in compound.properties:
-            compound_name[compound.id] = compound.properties['name']
-
-    for reaction in model.reactions:
-        if len(id) > 0:
-            if any(r == reaction.id for r in id):
-                selected_reactions.add(reaction)
-                continue
+    for r in ids:
+        if r in model.reactions:
+            selected_reactions.add(model.reactions[r])
 
     # Show results
     for reaction in selected_reactions:
@@ -262,7 +253,7 @@ def search_reaction(model, id):
         print('equation: {}'.format(
             reaction.equation))
         translated_equation = reaction.equation.translated_compounds(
-            lambda x: compound_name.get(x, x))
+            lambda c: model.compounds[c].name)
         if reaction.equation != translated_equation:
             print('equation (compound names): {}'.format(
                 translated_equation))
