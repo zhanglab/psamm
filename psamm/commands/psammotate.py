@@ -22,11 +22,13 @@ import argparse
 import re
 import csv
 import logging
+import yaml
 from os import path, mkdir
 
 from ..command import Command
 from ..expression import boolean
 from psamm.datasource.native import ModelWriter
+from psamm.importer import model_exchange
 logger = logging.getLogger(__name__)
 
 
@@ -68,12 +70,18 @@ class PsammotateCommand(Command):
 
     def run(self):
         """Run psammotate command"""
-        if path.exists('{}.yaml'.format(self._args.output)):
-            logger.warning('File {}.yaml already exists. '
-                           'Please choose a different file name '
-                           'through the --output '
-                           'option.'.format(self._args.output))
-            quit()
+        if self._args.export_model is None:
+            if path.exists('{}.yaml'.format(self._args.output)):
+                logger.warning('File {}.yaml already exists. '
+                               'Please choose a different file name '
+                               'through the --output '
+                               'option.'.format(self._args.output))
+                quit()
+        elif self._args.export_model is not None:
+            if path.exists('{}'.format(self._args.export_model)):
+                logger.warning('Output directory {} already exists.'.format(
+                    self._args.export_model))
+                quit()
         if self._args.suffix:
             if any(i in self._args.suffix for i in [' ', '|', ':', ';', ',']):
                 logger.error('Special character or space found '
@@ -98,12 +106,34 @@ class PsammotateCommand(Command):
             with open(self._args.output + '.yaml', 'w') as o:
                 ModelWriter().write_reactions(o, homolo_reactions)
         elif self._args.export_model is not None:
-            try:
-                mkdir('{}'.format(self._args.export_model))
-            except:
-                print('Output directory {} already exists.'.format(self._args.export_model))
-            with open('{}/{}'.format(self._args.export_model, self._args.output)) as f:
-                ModelWriter.write_reactions(f, homolo_reactions)
+            mkdir('{}'.format(self._args.export_model))
+            #with open('./{}/{}.yaml'.format(self._args.export_model, self._args.output), 'w') as f:
+            #    ModelWriter().write_reactions(f, homolo_reactions)
+            reaction_list = [i.id for i in homolo_reactions]
+            for reaction in self._model.reactions:
+                if reaction.id not in reaction_list:
+                    self._model.reactions.discard(reaction.id)
+            compound_set = set()
+            for reaction in self._model.reactions:
+                for compound in reaction.equation.compounds:
+                    compound_set.add(compound[0].name)
+            for compound in self._model.compounds:
+                if compound.id not in compound_set:
+                    self._model.compounds.discard(compound.id)
+            for key in self._model.exchange:
+                if key.name not in compound_set:
+                    del self._model.exchange[key]
+            for key in self._model.limits:
+                if key not in reaction_list:
+                    del self._model.exchange[key]
+            with open('./{}/{}.yaml'.format(self._args.export_model, self._args.output), 'w') as f:
+                ModelWriter().write_reactions(f, homolo_reactions)
+            with open('./{}/compounds.yaml'.format(self._args.export_model), 'w') as f:
+                ModelWriter().write_compounds(f, self._model.compounds)
+
+
+
+
 
 
 def app_reader(app_file, query, template):
