@@ -21,6 +21,7 @@ from __future__ import unicode_literals
 
 import logging
 import csv
+from os import mkdir, path
 from ..lpsolver import lp
 import argparse
 from six import iteritems
@@ -30,6 +31,7 @@ from ..fluxanalysis import FluxBalanceProblem
 from ..reaction import Direction, Reaction
 from ..command import (ObjectiveMixin, SolverCommandMixin,
                        MetabolicMixin, Command)
+from psamm.importer import write_yaml_model
 from ..util import MaybeRelative
 
 logger = logging.getLogger(__name__)
@@ -54,12 +56,21 @@ class GimmeCommand(MetabolicMixin, ObjectiveMixin,
             help='Two column file of gene ID to expression')
         parser.add_argument('--detail', action='store_true',
                             help='Show model statistics.')
+        parser.add_argument(
+            '--export-model', type=str, default=None,
+            help='Path to directory for full model export.')
         super(GimmeCommand, cls).init_parser(parser)
 
     def run(self):
         solver = self._get_solver()
         model = self._model
         mm = model.create_metabolic_model()
+
+        if self._args.export_model is not None:
+            if path.exists('{}'.format(self._args.export_model)):
+                logger.warning('Output directory {} already exists.'.format(
+                    self._args.export_model))
+                quit()
 
         base_gene_dict = {}
         for rxn in model.reactions:
@@ -98,6 +109,30 @@ class GimmeCommand(MetabolicMixin, ObjectiveMixin,
             logger.info('Used {} below threshold reactions out of {} total '
                         'below threshold reactions'.format(used_below, below))
             logger.info('Inconsistency Score: {}'.format(incon_score))
+        if self._args.export_model:
+            yaml_args = {'default_flow_style': False,
+                         'encoding': 'utf-8',
+                         'allow_unicode': True,
+                         'width': 79}
+            mkdir('{}'.format(self._args.export_model))
+            for reaction in self._model.reactions:
+                if reaction.id not in final_model:
+                    self._model.reactions.discard(reaction.id)
+            compound_set = set()
+            for reaction in self._model.reactions:
+                for compound in reaction.equation.compounds:
+                    compound_set.add(compound[0].name)
+            for compound in self._model.compounds:
+                if compound.id not in compound_set:
+                    self._model.compounds.discard(compound.id)
+            for key in self._model.exchange:
+                if key.name not in compound_set:
+                    del self._model.exchange[key]
+            for key in self._model.limits:
+                if key not in final_model:
+                    del self._model.exchange[key]
+            write_yaml_model(self._model, dest='{}'.format(self._args.export_model),
+                             split_subsystem=False)
 
 
 def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
