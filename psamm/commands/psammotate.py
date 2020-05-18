@@ -22,7 +22,7 @@ import argparse
 import re
 import csv
 import logging
-from os import path
+from os import path, mkdir
 
 from ..command import Command
 from ..expression import boolean
@@ -61,6 +61,9 @@ class PsammotateCommand(Command):
         parser.add_argument(
             '--suffix', type=str, default=None,
             help='Suffix to append to end of reaction IDs and compartments.')
+        parser.add_argument(
+            '--export-model', type=str, default=None,
+            help='Path to directory for full model export.')
         super(PsammotateCommand, cls).init_parser(parser)
 
     def run(self):
@@ -91,9 +94,16 @@ class PsammotateCommand(Command):
                         for cpd, v in r.equation.compounds:
                             cpd._compartment += '_{}'.format(self._args.suffix)
                     homolo_reactions.append(r)
-
-        with open(self._args.output + '.yaml', 'w') as o:
-            ModelWriter().write_reactions(o, homolo_reactions)
+        if self._args.export_model is None:
+            with open(self._args.output + '.yaml', 'w') as o:
+                ModelWriter().write_reactions(o, homolo_reactions)
+        elif self._args.export_model is not None:
+            try:
+                mkdir('{}'.format(self._args.export_model))
+            except:
+                print('Output directory {} already exists.'.format(self._args.export_model))
+            with open('{}/{}'.format(self._args.export_model, self._args.output)) as f:
+                ModelWriter.write_reactions(f, homolo_reactions)
 
 
 def app_reader(app_file, query, template):
