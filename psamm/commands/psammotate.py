@@ -28,7 +28,7 @@ from os import path, mkdir
 from ..command import Command
 from ..expression import boolean
 from psamm.datasource.native import ModelWriter
-from psamm.importer import model_exchange
+from psamm.importer import write_yaml_model
 logger = logging.getLogger(__name__)
 
 
@@ -53,19 +53,22 @@ class PsammotateCommand(Command):
             help=('The column of the RBH file where the target '
                   'model genes are listed, starts from 1.'))
         parser.add_argument(
-            '--output', type=str, default='homolo_reactions',
-            help=('The prefix of output YAML file, '
-                  '(default: homolo_reactions).'))
-        parser.add_argument(
             '--ignore-na', action='store_true',
             help=('Ignore the reactions that do not have gene association. '
                   '(default: retain these reactions in new reactions file)'))
         parser.add_argument(
             '--suffix', type=str, default=None,
             help='Suffix to append to end of reaction IDs and compartments.')
-        parser.add_argument(
+        g = parser.add_mutually_exclusive_group()
+        g.add_argument(
             '--export-model', type=str, default=None,
-            help='Path to directory for full model export.')
+            help='Path to directory for full model export. Cannot be specified'
+                 'with --output option.')
+        g.add_argument(
+            '--output', type=str, default='homolo_reactions',
+            help=('The prefix of output YAML file, '
+                  '(default: homolo_reactions). Cannot be specified with'
+                  '--export-model option.'))
         super(PsammotateCommand, cls).init_parser(parser)
 
     def run(self):
@@ -106,13 +109,16 @@ class PsammotateCommand(Command):
             with open(self._args.output + '.yaml', 'w') as o:
                 ModelWriter().write_reactions(o, homolo_reactions)
         elif self._args.export_model is not None:
+            yaml_args = {'default_flow_style': False,
+                         'encoding': 'utf-8',
+                         'allow_unicode': True,
+                         'width': 79}
             mkdir('{}'.format(self._args.export_model))
-            #with open('./{}/{}.yaml'.format(self._args.export_model, self._args.output), 'w') as f:
-            #    ModelWriter().write_reactions(f, homolo_reactions)
             reaction_list = [i.id for i in homolo_reactions]
             for reaction in self._model.reactions:
-                if reaction.id not in reaction_list:
-                    self._model.reactions.discard(reaction.id)
+                self._model.reactions.discard(reaction.id)
+            for reaction in homolo_reactions:
+                self._model.reactions.add_entry(reaction)
             compound_set = set()
             for reaction in self._model.reactions:
                 for compound in reaction.equation.compounds:
@@ -126,11 +132,8 @@ class PsammotateCommand(Command):
             for key in self._model.limits:
                 if key not in reaction_list:
                     del self._model.exchange[key]
-            with open('./{}/{}.yaml'.format(self._args.export_model, self._args.output), 'w') as f:
-                ModelWriter().write_reactions(f, homolo_reactions)
-            with open('./{}/compounds.yaml'.format(self._args.export_model), 'w') as f:
-                ModelWriter().write_compounds(f, self._model.compounds)
-
+            write_yaml_model(self._model, dest='{}'.format(self._args.export_model),
+                             split_subsystem=False)
 
 
 
