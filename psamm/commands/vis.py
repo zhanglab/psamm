@@ -396,8 +396,8 @@ def add_node_label(g, cpd_detail, rxn_detail):
         if cpd_detail is not None:
             if node.props['type'] == 'cpd':
                 pre_label = '\n'.join(
-                    ((node.props['entry'][0].properties.get(value).encode(
-                        'ascii', 'backslashreplace')).decode('ascii')) for
+                    (str(node.props['entry'][0].properties.get(value)).encode(
+                        'ascii', 'backslashreplace').decode('ascii')) for
                     value
                     in cpd_detail[0] if
                     value != 'id' and value in node.props['entry'][
