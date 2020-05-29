@@ -1,73 +1,59 @@
 dist: trusty
 language: python
 cache:
-    directories:
-        - $HOME/.cache/pip
-        - $HOME/qsopt_ex-2.5.10.3
+  directories:
+  - "$HOME/.cache/pip"
+  - "$HOME/qsopt_ex-2.5.10.3"
 addons:
-    apt:
-        packages:
-            - libgmp-dev
-            - libgmp10
-            - libglpk36
-            - libglpk-dev
-            - glpk-utils
-            - swig
-
+  apt:
+    packages:
+    - libgmp-dev
+    - libgmp10
+    - libglpk36
+    - libglpk-dev
+    - glpk-utils
+    - swig
 install:
-    # Install QSopt_ex library
-    - if echo "$TOXENV" | grep -q "qsoptex"; then
-        if [ ! -f "$HOME/qsopt_ex-2.5.10.3/bin/esolver" ]; then
-          ( mkdir src && cd src/;
-            curl -LO https://github.com/jonls/qsopt-ex/releases/download/v2.5.10.3/qsopt_ex-2.5.10.3.tar.xz;
-            tar -xvaf qsopt_ex-2.5.10.3.tar.xz;
-            cd qsopt_ex-2.5.10.3/;
-            ./configure --prefix="$HOME/qsopt_ex-2.5.10.3" && make install );
-        fi;
-        export CPATH="$HOME/qsopt_ex-2.5.10.3/include:$CPATH";
-        export LIBRARY_PATH="$HOME/qsopt_ex-2.5.10.3/lib:$LIBRARY_PATH";
-        export LD_LIBRARY_PATH="$HOME/qsopt_ex-2.5.10.3/lib:$LD_LIBRARY_PATH";
-      fi
-
-    - pip install tox coveralls
-    - pip install tox-travis
-    - pip install --upgrade six
+- if echo "$TOXENV" | grep -q "qsoptex"; then if [ ! -f "$HOME/qsopt_ex-2.5.10.3/bin/esolver"
+  ]; then ( mkdir src && cd src/; curl -LO https://github.com/jonls/qsopt-ex/releases/download/v2.5.10.3/qsopt_ex-2.5.10.3.tar.xz;
+  tar -xvaf qsopt_ex-2.5.10.3.tar.xz; cd qsopt_ex-2.5.10.3/; ./configure --prefix="$HOME/qsopt_ex-2.5.10.3"
+  && make install ); fi; export CPATH="$HOME/qsopt_ex-2.5.10.3/include:$CPATH"; export
+  LIBRARY_PATH="$HOME/qsopt_ex-2.5.10.3/lib:$LIBRARY_PATH"; export LD_LIBRARY_PATH="$HOME/qsopt_ex-2.5.10.3/lib:$LD_LIBRARY_PATH";
+  fi
+- pip install tox coveralls
+- pip install tox-travis
+- pip install --upgrade six
 script: tox -v
 after_success: coveralls
 matrix:
-    include:
-        - env: TOXENV=flake
-
-        - env: TOXENV=py27-nosolver,coverage
-          python: '2.7'
-        - env: TOXENV=py27-glpk,coverage
-          python: '2.7'
-        - env: TOXENV=py27-qsoptex,coverage
-          python: '2.7'
-
-        - env: TOXENV=py35-nosolver,coverage
-          python: '3.5'
-        - env: TOXENV=py35-glpk,coverage
-          python: '3.5'
-        - env: TOXENV=py35-qsoptex,coverage
-          python: '3.5'
-
-        - env: TOXENV=py36-nosolver,coverage
-          python: '3.6'
-        - env: TOXENV=py36-glpk,coverage
-          python: '3.6'
-        - env: TOXENV=py36-qsoptex,coverage
-          python: '3.6'
-
-        - env: TOXENV=docs
-
+  include:
+  - env: TOXENV=flake
+  - env: TOXENV=py27-nosolver,coverage
+    python: '2.7'
+  - env: TOXENV=py27-glpk,coverage
+    python: '2.7'
+  - env: TOXENV=py27-qsoptex,coverage
+    python: '2.7'
+  - env: TOXENV=py35-nosolver,coverage
+    python: '3.5'
+  - env: TOXENV=py35-glpk,coverage
+    python: '3.5'
+  - env: TOXENV=py35-qsoptex,coverage
+    python: '3.5'
+  - env: TOXENV=py36-nosolver,coverage
+    python: '3.6'
+  - env: TOXENV=py36-glpk,coverage
+    python: '3.6'
+  - env: TOXENV=py36-qsoptex,coverage
+    python: '3.6'
+  - env: TOXENV=docs
 deploy:
-    provider: pypi
-    user: jonls
-    password:
-        secure: OCaX6DEf0D4Ky9TsF/j/y54niViXnJEu5k4ufnBx0GXzSma7FXr8hIRcsV/5qx1YKo0PyQUKB5Ym7nkD+U3OTW+KwYfUp3jaKrrcIt875qeY/Y3tm+W/HkCi/5BOHoxHY3CVtU89nKfsD8QGbWUdppX/keHhqY0vDglyojEI1X/7dGAz97arBnW6WGCtMTyAseQPhEohvXuPFCfnFbSbvztfTpkzQuTzJE68uaigItJf3Nq/KAXV3XstCUePouM4ULVqPH+GFpz8drG2leot6DH38Sthsq1fOU0rpy8EoQ1HCDkvQ2B6OlovLsoZaWInI2wkfqh4uWMPxah+Okk9DysnXcoNan/eoGLGyeTk/v8UPzc+tS6D4NXFXieGfMI8h6g0BeuUI9SIoN5okr38+Uk8sAdzzqj/3poCVxh3wuY2bKIQaDRg4oirfFJ1Z3rThwDD5FwjWemNPBsVppH7eJQDzg/X76e1DXvEoQQPtB3RhqX6oY4tF2gw5K38QfsV1izboL7HxJeJ+aBR92jZHXlQNG6VmpXeYiGXu6xeKuxFlLKtqJ5+ltXGfC0W34wQ6oyPXoq/Ns24FLCOepeRW4l3USYf3TscJ7vyPDfkefFl8UbZTzAzDqnaUYQ7Lj7Y63pb6+EZkApk+elh0kfygwl0k0t+pifgTKh9gsm3CMY=
-    on:
-        tags: true
-        repo: zhanglab/psamm
-    distributions: "sdist bdist_wheel"
-    skip_existing: true
+  provider: pypi
+  user: __psamm__
+  password:
+    secure: fcdPBMEMDrH+OjNiW5NQgnIEh4txSJi8r/g2mSwBFbnbINvABQDatPbMLkEEPEl44Jtt0ETd+IGyaivH8nVmP8JCQ1CBQQoIVEqDONWgyDAx/pbO+SyAo+cR/jfXMXWZKyK/2ZbDgPCxYm49LuQ92ff5r6giGjVPFf3Yf0zAp/a+0k/loLAgFCW81HLCvSwCBWMD0pKm1E5bePhFiE0HlmlRmqN0yyr/FRQSKqI3C/MGv+RMFxJgF2EWQlR8axolgT8CPNMQqw0XlbGvs+rpEoDvca7U7TrnKtlfCXyZQuF7T+al98oQojlUU2wUud+T+Xv16HpiZK9nuMVY5jY16ih7Lmc9zHSmyKr/yEjWWkeGu1GUDrLw7yMHLKVdInxena7sVBe+yM/wPJ3CzuFW+W+o2YBcWsok/jpGluqJcMAq+kka5bW3Cc4KjbY8ijtd2DhlncAbv0fH/GXnEAP2k1Gl4S6p24pUxwznZZ02EYpFC3rLJ8AabQ3QHWBT+cSt9wv9yvvPcH4WHRcX5ySMRdnrxKhfrAzvS6xcx2q31HOs33DeYZTqunC2z9Ub9K/t7UlL1CgvesvTcIGSqkxLhuJgP9wKg2hPjvDKr2Rxm7dDcdNgSpR6na9dKsrnuTvLc6abUtSJLIusLsABAS+tlu6Jm5DiXCWZi92UI+WgT6Y=
+  on:
+    tags: true
+    repo: zhanglab/psamm
+  distributions: sdist bdist_wheel
+  skip_existing: true
