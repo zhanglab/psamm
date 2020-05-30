@@ -11,3 +11,4 @@ PSAMM Tutorials
    tutorial/curation.rst
    tutorial/constraint_based.rst
    tutorial/fpp.rst
+   tutorial/modelmapping.rst
