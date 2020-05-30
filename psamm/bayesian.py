@@ -398,13 +398,13 @@ def reaction_id_likelihood(
 
 def reaction_name_likelihood(r1, r2, reaction_prior, reaction_name_marg):
     if util.name_equals(r1.name, r2.name):
-        p_match = 0.3
+        p_match = 0.2
         p_no_match = max(
             0,
             ((reaction_name_marg - p_match * reaction_prior)
              / (1.0 - reaction_prior)))
     else:
-        p_match = 0.7
+        p_match = 0.8
         p_no_match = max(
             0,
             ((1.0 - reaction_name_marg - p_match * reaction_prior)
@@ -549,13 +549,13 @@ def reaction_genes_likelihood(r1, r2, reaction_prior, reaction_genes_marg,
         p_match = 1
         p_no_match = 1
     elif util.genes_equals(r1.genes, r2.genes, gene_map):
-        p_match = 0.4
+        p_match = 0.2
         p_no_match = max(
             0,
             ((reaction_genes_marg - p_match * reaction_prior)
              / (1.0 - reaction_prior)))
     else:
-        p_match = 0.6
+        p_match = 0.8
         p_no_match = max(
             0,
             ((reaction_genes_not_equal_marg - p_match * reaction_prior)

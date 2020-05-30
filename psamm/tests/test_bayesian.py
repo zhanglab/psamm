@@ -296,11 +296,11 @@ class TestBayesianPredictor(unittest.TestCase):
             ReactionEntry({'id': 'r1', 'genes': 'g2 and g4'}),
             1.0 / 500, 1.0 / 1000, 0.8
         )
-        self.assertLess(match, unmatch)
+        self.assertLessEqual(match, unmatch)
         match, unmatch = bayesian.reaction_genes_likelihood(
             ReactionEntry({'id': 'r1', 'genes': 'g1 and g2 or g3'}),
             ReactionEntry({'id': 'r1', 'genes': 'g2 and g4'}),
-            1.0 / 500, 1.0 / 1000, 0.8, {'g1': 'g4'}
+            1.0 / 500, 1.0 / 1000, 0.8, {'g1': 'g4', 'g4': 'g1'}
         )
         self.assertGreater(match, unmatch)
         match, unmatch = bayesian.reaction_genes_likelihood(
@@ -401,7 +401,7 @@ class Test_bayesian_util(unittest.TestCase):
         g2 = 'A12 and B2'
         g3 = 'A1 and B2'
         g4 = '(C and D) or (E and F)'
-        gmap = {'A12': 'D', 'B2': 'C'}
+        gmap = {'A12': 'D', 'B2': 'C', 'C': 'B2', 'D': 'A12'}
         self.assertTrue(util.genes_equals(g1, g2))
         self.assertFalse(util.genes_equals(g1, g3))
         self.assertFalse(util.genes_equals(g1, None))
