@@ -26,9 +26,11 @@ from collections import defaultdict, Counter
 from six import text_type
 from ..command import (MetabolicMixin, Command, FilePrefixAppendAction)
 from .. import graph
+import sys
 
 try:
     from graphviz import render
+    from graphviz import FORMATS
 except ImportError:
     render = None
 
@@ -72,7 +74,8 @@ class VisualizationCommand(MetabolicMixin,
             '--color', type=argparse.FileType('rU'), default=None, nargs='+',
             help='File containing node color mappings')
         parser.add_argument(
-            '--image', type=text_type, default=None,
+            '--image', metavar='Image Format', type=text_type, choices=FORMATS,
+            required='--image-size' in sys.argv,
             help='Image output file format '
                  '(e.g. pdf, png, eps)')
         parser.add_argument(
@@ -89,9 +92,10 @@ class VisualizationCommand(MetabolicMixin,
         parser.add_argument(
             '--output', type=text_type, help='Output file name.')
         parser.add_argument(
-            '--image-size', type=text_type, default='None,None',
+            '--image-size', metavar=('Width', 'Height'), default=('None','None'),
+            nargs=2, type=float,
             help='Set the width and height of the graph image. '
-                 '(width,height)(inches)')
+                 '(width height)(inches)')
         super(VisualizationCommand, cls).init_parser(parser)
 
     def run(self):
@@ -118,6 +122,7 @@ class VisualizationCommand(MetabolicMixin,
         hide_edges = []
         if self._args.hide_edges is not None:
             for row in csv.reader(self._args.hide_edges, delimiter=str('\t')):
+                print(row)
                 hide_edges.append((row[0], row[1]))
                 hide_edges.append((row[1], row[0]))
 
@@ -169,7 +174,7 @@ class VisualizationCommand(MetabolicMixin,
             logger.warning(
                 '--combine option is not compatible with no-fpp method')
 
-        hw = self._args.image_size.split(',')
+        hw = self._args.image_size
         width = hw[0]
         height = hw[1]
 
