@@ -78,7 +78,7 @@ ATP -> Acetyl-Phosphate             phosphate group
 Acetate -> ADP                      None
 ===========================         ==============================
 
-While manually inferring this for one or two simple reactions is possible,
+While manually inferring thi for one or two simple reactions is possible,
 genome scale models often contain hundreds or thousands of reactions,
 making manual reactant/product pair prediction impractical.
 In addition to this, reaction mechanisms are often not known, nor are patterns
@@ -327,10 +327,10 @@ An image can also be done in one step by running `vis` command by adding an
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --image pdf
+   (psamm-env) $ psamm-model vis --image png
 
 These commands both generate an image file named 'reactions.dot.pdf'. This pdf file is
-a graphical representation of what is in the 'reactions.dot'. This graph will look like:
+a graphical representation of what in the 'reactions.dot'. This graph will look like:
 
 .. image:: 01-entireEcoli.dot.png
 
@@ -377,7 +377,7 @@ Acetate -> ADP                      None
 
 This type of element filtering can provide different views of the metabolic
 network by showing how metabolic pathways transfer different elements through
-those reactions. The mannitol utilization pathway is a multiple-step pathway
+those reactions. The mannitol utilization pathway is a  multiple-step pathway
 that converts extracellular mannitol to
 fructose 6-phosphate. This pathway also involves multiple phosphorylation
 and dephosphorylation steps. The ``--element`` argument can be added to the
@@ -398,8 +398,8 @@ Condense Reaction Nodes and Edges
 
 By default, the ``vis`` command assigns only one reaction to each reaction node.
 Additionally, it allows users to condense multiple reaction nodes into one node
-through the ``--combine`` option, in order to reduce the number of nodes and edges,
-and make the image clearer. Combine level 0 is the default, which does not
+through ``--combine`` option, in order to reduce the number of nodes and edges,
+making the image clearer. Combine level 0 is the default, which does not
 collapse any nodes. Level 1 is used to condense nodes that represent the
 same reaction and have a common reactant or product connected. Level 2 is
 used to condense nodes that represent different reactions but connected
@@ -416,7 +416,7 @@ Then the image will look like this compared to the image generated from default 
 .. image::  04-combine1.dot.png
 
 
-The combine 2 option will update the image to look like the following:
+The combined 2 option will update the image to look like the following:
 .. code-block:: shell
 
    (psamm-env) $ psamm-model vis --combine 2 --image png --output 04-combine2
@@ -435,7 +435,7 @@ the use of the ``--compartment`` argument. If the compartment information is not
 defined in the model.yaml file, then, the command will attempt to
 automatically detect the organization of the compartments by examining the reaction
 equations in the model. However, this process cannot always accurately predict the compartment
-organization. To overcome this problem, it is suggested to define the compartment
+organization though. To overcome this problem, it is suggested to define the compartment
 organization in the model.yaml file like in the following example:
 
 .. code-block:: shell
@@ -468,7 +468,7 @@ In this image there are two compartments that are labeled with
 'Compartment: e' and 'Compartment: c'. The *E. coli* core model is relatively
 small, meaning that compartment organization is simple, but ``vis`` command
 can handle more complex models as well. For example, the following image was
-made using a small example model to show a more complex compartments organization. To
+made using a small example model to show a more complex compartments organization. to
 do this running the following command:
 
 .. code-block:: shell
@@ -646,12 +646,12 @@ ____________________
 
 The size of the final network image generated through the ``vis`` command can
 be adjusted through the ``--image-size`` option. This option takes the width
-and height (in inches) separated by a space. The following command is an example
+and height (in inches) separated by a comma. The following command is an example
 that generates an image of 8.5 inches x 11 inches:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --image-size 8.5 11 --image png --combine 2
+   (psamm-env) $ psamm-model vis --image-size 8.5,11 --image png --combine 2
 
 The resulting image looks like:
 
