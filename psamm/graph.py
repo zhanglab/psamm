@@ -473,9 +473,9 @@ def make_network_dict(nm, mm, subset=None, method='fpp',
 			else:
 				logger.warning(
 					'Reaction {} is excluded from visualization due '
-					'missing or invalid compound formula'.format(r.id))
+					'missing or undefined compound formula'.format(r.id))
 
-		reaction_pairs = [(r.id, r.equation) for r in testing_list]
+		reaction_pairs = [(r.id, r.equation) for r in testing_list_update]
 		fpp_dict, _ = findprimarypairs.predict_compound_pairs_iterated(
 			reaction_pairs, compound_formula, element_weight=element_weight)
 
