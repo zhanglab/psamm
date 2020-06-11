@@ -694,3 +694,43 @@ the corresponding Python object representation.
 .. code-block:: shell
 
     $ psamm-model console
+
+
+Psammotate (``psammotate``)
+----------------------------------------
+
+Given a reciprocal best hits file, will generate a draft model based on an
+template based on gene associations provided by the template file/reference
+file gene mapping. Draft model will contain all relevant model components
+in yaml format.
+
+.. code-block:: shell
+
+    $ psamm-model psammotate
+
+To generate a draft model, a reciprocal best hits file must be specified that
+maps the draft model genes to a template model using the ``--rbh`` option.
+Within this file, you must specify the integer of the column that contains the
+target mapping and the column that contains the template mapping (both indexed
+from 1) using the ``--target`` and ``--template`` options, respectively.
+
+.. code-block:: shell
+
+    $ psamm-model psammotate --rbh gene_mapping.tsv --template 1 --target 2
+
+Typically this program retains reactions that have no gene mappings; however, if
+you want to drop reactions that do not have gene associations, you must specify
+the ``--ignore-na`` option.
+
+.. code-block:: shell
+
+    $ psamm-model psammotate --rbh gene_mapping.tsv --template 1 --target 2 --ignore-na
+
+You can also specify an output directory for all of the yaml file output using
+the ``--out`` option.
+
+.. code-block:: shell
+
+    $ psamm-model psammotate --rbh gene_mapping.tsv --template 1 --target 2 --out out
+
+    
