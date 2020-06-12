@@ -67,6 +67,7 @@ class TestMakeSubset(unittest.TestCase):
 
     def test1_no_subset(self):
         subset = vis.rxnset_for_vis(self.mm, self.sub, self.exclude)
+        print(subset)
         self.assertEqual(subset, set(['rxn1', 'rxn2', 'rxn3']))
 
     def test2_subset_reactions(self):
@@ -126,6 +127,10 @@ class TestMakeSubset(unittest.TestCase):
         subset = vis.rxnset_for_vis(self.mm, self.sub, exclude)
         self.assertEqual(subset, set(['rxn1', 'rxn2']))
 
+    def test9_exclude_mult(self):
+        exclude = ['rxn1', 'rxn3']
+        subset = vis.rxnset_for_vis(self.mm, self.sub, exclude)
+        self.assertEqual(subset, set(['rxn2']))
 
 class TestAddNodeProps(unittest.TestCase):
     def setUp(self):
