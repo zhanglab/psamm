@@ -748,3 +748,11 @@ genes in the model to their expression can be provided using the option
 .. code-block:: shell
 
     $ psamm-model gimme --transcriptome-file file.tsv --expression-threshold 1
+
+The gimme command may also specify an argument that will retain any reactions
+required in order to maintain a specific biomass threshold. This threshold may
+be specified using the ``--biomass-threshold`` option.
+
+.. code-block:: shell
+
+    $ psamm-model gimme --transcriptome-file file.tsv --expression-threshold 1 --biomass-threshold 1
