@@ -697,7 +697,7 @@ the corresponding Python object representation.
 
 
 Psammotate (``psammotate``)
-----------------------------------------
+---------------------------
 
 Given a reciprocal best hits file, will generate a draft model based on an
 template based on gene associations provided by the template file/reference
@@ -733,4 +733,18 @@ the ``--out`` option.
 
     $ psamm-model psammotate --rbh gene_mapping.tsv --template 1 --target 2 --out out
 
-    
+Gimme (``gimme``)
+-----------------
+
+This command allows you to subset a metabolic model based on gene expression
+data. The expression data for filtering may be in any normalized format (TPM,
+RPK, etc), but the threshold value supplied to gimme must be appropriate for the
+input data. Gimme functions through gene inactivation and will not "express" genes
+that do not meet the specified expression threshold. Expression thresholds can
+be specified using the ``--expression-threshold`` argument and a file that maps
+genes in the model to their expression can be provided using the option
+``--transcriptome-file``.
+
+.. code-block:: shell
+
+    $ psamm-model gimme --transcriptome-file file.tsv --expression-threshold 1
