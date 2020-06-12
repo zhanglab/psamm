@@ -727,11 +727,11 @@ the ``--ignore-na`` option.
     $ psamm-model psammotate --rbh gene_mapping.tsv --template 1 --target 2 --ignore-na
 
 You can also specify an output directory for all of the yaml file output using
-the ``--out`` option.
+the ``--output`` option.
 
 .. code-block:: shell
 
-    $ psamm-model psammotate --rbh gene_mapping.tsv --template 1 --target 2 --out out
+    $ psamm-model psammotate --rbh gene_mapping.tsv --template 1 --target 2 --output out
 
 Gimme (``gimme``)
 -----------------
@@ -756,3 +756,11 @@ be specified using the ``--biomass-threshold`` option.
 .. code-block:: shell
 
     $ psamm-model gimme --transcriptome-file file.tsv --expression-threshold 1 --biomass-threshold 1
+
+You can specify a directory to output the subset model that will create all
+yaml files for the new, subset, model in this directory. This location can
+be specified using the ``--export-model`` argument.
+
+.. code-block:: shell
+
+    $ psamm-model --transcriptome-file file.tsv --expression-threshold 1 --export-model ./gimme_out/
