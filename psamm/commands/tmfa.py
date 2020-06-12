@@ -217,7 +217,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
                     prob, v, zi, dgri, xij, cp_list = make_tmfa_problem(mm_irreversible, solver)
 
-                    prob, cpd_xij_dict = add_conc_constraints(self, xij, prob, cpd_conc_dict, cp_list, config_dict.get('water'), config_dict.get('proton-in'),
+                    prob, cpd_xij_dict = add_conc_constraints(xij, prob, cpd_conc_dict, cp_list, config_dict.get('water'), config_dict.get('proton-in'),
                             config_dict.get('proton-out'), config_dict.get('proton-other'))
 
                     prob = add_reaction_constraints(prob, v, zi, dgri, xij, mm_irreversible, exclude_lump_list,
@@ -244,7 +244,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                 quit()
         # Run simulaiton based functions
         elif which_command == 'simulation':
-            prob, cpd_xij_dict = add_conc_constraints(self, xij, prob, cpd_conc_dict, cp_list, config_dict.get('water'), config_dict.get('proton-in'),
+            prob, cpd_xij_dict = add_conc_constraints(xij, prob, cpd_conc_dict, cp_list, config_dict.get('water'), config_dict.get('proton-in'),
                             config_dict.get('proton-out'), config_dict.get('proton-other'))
             testing_list_tmp = list(mm_irreversible.reactions)
             prob = add_reaction_constraints(prob, v, zi, dgri, xij, mm_irreversible, exclude_lump_list,
@@ -352,7 +352,6 @@ def make_tmfa_problem(mm_irreversible, solver):
         xij.define([str(cp)], lower=-50, upper=50, types=lp.VariableType.Continuous)
     return prob, v, zi, dgri, xij, cp_list
 
-
 def get_var_bound(prob, var, objective_sense):
     """Gets upper or lower bound of a variable in an LP problem.
 
@@ -367,7 +366,6 @@ def get_var_bound(prob, var, objective_sense):
         logger.error('Solution not optimal: {}'.format(result.status))
         quit()
     return result.get_value(var)
-
 
 def print_fva(prob, mm_irreversible, cp_list, exclude_unknown_list, _v, _dgri, _zi, _xij):
     """Prints FVA like result from TMFA problem.
@@ -521,8 +519,8 @@ def parse_tparam_file(file):
     if file is not None:
         for row in csv.reader(file, delimiter=str('\t')):
             rxn, c, h = row
-            t_param[rxn] = (c, h)
-            t_param['{}_forward'.format(rxn)] = (c, h)
+            t_param[rxn] = (Decimal(c), Decimal(h))
+            t_param['{}_forward'.format(rxn)] = (Decimal(c), Decimal(h))
             t_param['{}_reverse'.format(rxn)] = (-Decimal(c), -Decimal(h))
     return t_param
 
@@ -551,7 +549,7 @@ def parse_dgf(mm, dgf_file):
     return cpd_dgf_dict
 
 
-def add_conc_constraints(self, xij, problem, cpd_conc_dict, cp_list, water, hin, hout, hother, ):
+def add_conc_constraints(xij, problem, cpd_conc_dict, cp_list, water, hin, hout, hother):
     '''Add concentration constraints to TMFA problem based on parsed conetration
     dictionary.
 
@@ -604,7 +602,6 @@ def parse_dgr_file(dgr_file, mm):
     for row in csv.reader(dgr_file, delimiter=str('\t')):
         rxn, dgr, err = row
         if is_number(dgr):
-
             if is_number(err):
                 err = Decimal(err)
             else:
@@ -625,7 +622,7 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions, transport_parameters, ph_dif
     """
     F = Decimal(0.02306)
     dpsi = Decimal(-130)
-    R = Decimal(1.9858775 / 1000)
+    R = Decimal(8.3144621 / 1000) # kJ/mol
 
     dph = Decimal(0.4)
     t_param = {}
