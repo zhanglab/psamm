@@ -101,6 +101,12 @@ class VisualizationCommand(MetabolicMixin,
     def run(self):
         """Run visualization command."""
 
+        for reaction in self._model.reactions:
+            if reaction.equation is None:
+                logger.warning(
+                    'Reaction {} was excluded from visualization due to '
+                    'missing reaction equation'.format(reaction.id))
+
         vis_rxns = rxnset_for_vis(
             self._mm, self._args.subset, self._args.exclude)
 
