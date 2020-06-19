@@ -155,9 +155,13 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
         threshold: A threshold that the biomass flux needs to stay above.
     """
     ci_dict = {}
+    zi = problem.prob.namespace(name='zi', types=lp.VariableType.Binary)
     for reaction in mm.reactions:
-        problem.prob.define('zi_{}'.format(reaction),
-                            types=lp.VariableType.Binary)
+        zi.define([reaction])
+        zi_var = zi(reaction)
+        vi_var = problem.get_flux_var(reaction)
+        vmax = mm.limits[reaction].upper
+        problem.prob.add_linear_constraints(vmax * zi_var >= vi_var)
         gene_string = reversible_gene_assoc.get(reaction)
         if gene_string is None:
             continue
@@ -171,8 +175,8 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
 
     for (forward, reverse) in split_rxns:
         problem.prob.add_linear_constraints(
-            problem.prob.var('zi_{}'.format(forward)) + problem.prob.var(
-                'zi_{}'.format(reverse)) <= 1)
+            zi(forward) +
+                zi(reverse) <= 1)
 
     threshold = threshold
     problem.maximize(biomass)
@@ -362,18 +366,20 @@ def make_irreversible(mm, gene_dict, exclude_list=[],
                 split_reversible.add((r_id, r2_id))
                 reversible_gene_dict[r_id] = gene_dict.get(rxn)
                 reversible_gene_dict[r2_id] = gene_dict.get(rxn)
-            if upper == lower:
+            if lower > 0:
                 mm_irrev.limits[r_id].upper = upper
                 mm_irrev.limits[r_id].lower = lower
                 mm_irrev.limits[r2_id].upper = 0
                 mm_irrev.limits[r2_id].lower = 0
+            elif upper < 0:
+                mm_irrev.limits[r_id].upper = 0
+                mm_irrev.limits[r_id].lower = 0
+                mm_irrev.limits[r2_id].upper = - lower
+                mm_irrev.limits[r2_id].lower = - upper
             else:
                 mm_irrev.limits[r_id].upper = upper
                 mm_irrev.limits[r_id].lower = 0
-                if lower == 0:
-                    mm_irrev.limits[r2_id].upper = upper
-                else:
-                    mm_irrev.limits[r2_id].upper = -lower
+                mm_irrev.limits[r2_id].upper = - lower
                 mm_irrev.limits[r2_id].lower = 0
 
     return mm_irrev, reversible_gene_dict, split_reversible
