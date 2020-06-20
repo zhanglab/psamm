@@ -29,10 +29,10 @@ from .. import graph
 import sys
 
 try:
-    from graphviz import render
-    from graphviz import FORMATS
+    from graphviz import render, FORMATS
 except ImportError:
     render = None
+    FORMATS = None
 
 logger = logging.getLogger(__name__)
 

@@ -16,11 +16,21 @@
 #
 # Copyright 2018-2020  Ke Zhang <kzhang@my.uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@uri.edu>
+# Copyright 2020       Elysha Sameth <esameth@my.uri.edu>
 
 from __future__ import unicode_literals
+from graphviz import FORMATS
 
 import unittest
 import os
+from contextlib import contextmanager
+import tempfile
+import argparse
+import sys
+import mock
+import logging
+from six import StringIO, BytesIO
+
 from psamm.formula import Formula, Atom
 from psamm.commands import vis
 from psamm.reaction import Compound, Reaction, Direction
@@ -29,8 +39,21 @@ from psamm.datasource.reaction import parse_reaction, parse_compound
 from psamm.datasource import entry
 from psamm import graph
 from psamm.datasource.native import NativeModel, ReactionEntry, CompoundEntry
-import tempfile
+from psamm.datasource import native, sbml
+from psamm.lpsolver import generic
 
+logger = logging.getLogger(__name__)
+
+@contextmanager
+def redirected_stdout(target=None):
+    stdout = sys.stdout
+    if target is None:
+        target = StringIO()
+    try:
+        sys.stdout = target
+        yield target
+    finally:
+        sys.stdout = stdout
 
 # 2019-08-30 new test cases for vis
 
@@ -67,7 +90,6 @@ class TestMakeSubset(unittest.TestCase):
 
     def test1_no_subset(self):
         subset = vis.rxnset_for_vis(self.mm, self.sub, self.exclude)
-        print(subset)
         self.assertEqual(subset, set(['rxn1', 'rxn2', 'rxn3']))
 
     def test2_subset_reactions(self):
@@ -109,18 +131,16 @@ class TestMakeSubset(unittest.TestCase):
     def test6_mixed_subset(self):
         path = os.path.join(tempfile.mkdtemp(), 'subset')
         with open(path, 'w') as f:
-            f.write('{}\n{}'.format('h2o', 'rxn1'))
+            f.write('{}\n{}'.format('h2o[c]', 'rxn1'))
         sub_file = open(path, 'r')
-        with self.assertRaises(ValueError):
-            subset = vis.rxnset_for_vis(self.mm, sub_file, self.exclude)
+        self.assertRaises(ValueError, vis.rxnset_for_vis, self.mm, sub_file, self.exclude)
 
     def test7_not_in_model(self):
         path = os.path.join(tempfile.mkdtemp(), 'subset')
         with open(path, 'w') as f:
-            f.write('{}\n{}'.format('h3o', 'rxn44'))
+            f.write('{}'.format('h3o'))
         sub_file = open(path, 'r')
-        with self.assertRaises(ValueError):
-            subset = vis.rxnset_for_vis(self.mm, sub_file, self.exclude)
+        self.assertRaises(ValueError, vis.rxnset_for_vis, self.mm, sub_file, self.exclude)
 
     def test8_exclude(self):
         exclude = ['rxn3']
@@ -311,6 +331,43 @@ class TestAddNodeProps(unittest.TestCase):
         node_list = [node_a, node_b, node_c, node_d, node_ab, node_cb]
         self.assertTrue(all(i in node_list for i in g3.nodes))
         self.assertTrue(all(i in g3.nodes for i in node_list))
+
+    def test4_IncorrectType(self):
+        self.cpd_a = CompoundEntry({
+            'id': 'A', 'name': 'compound A', 'formula': 'XXXX', 'charge': 0})
+        self.cpd_b = CompoundEntry({
+            'id': 'B', 'name': 'compound B', 'formula': 'YYYY', 'charge': 0})
+
+        # new rxn used to test: rxn1: A => B
+        self.rxn1 = entry.DictReactionEntry({
+            'id': 'rxn1', 'name': 'Reaction 1', 'genes': 'gene1 and gene2',
+            'equation': Reaction(
+                Direction.Forward, {Compound('A', 'c'): -1, Compound('B', 'c'): 1}),
+        })
+
+        self.node_a = graph.Node({
+            'id': 'A[c]', 'entry': [self.cpd_a], 'type': 'invalid', 'compartment': 'c'})
+        self.node_b = graph.Node({
+            'id': 'B[c]', 'entry': [self.cpd_b], 'type': 'cpd', 'compartment': 'c'})
+        self.node_ab = graph.Node({
+            'id': 'rxn1_1', 'entry': [self.rxn1],
+            'compartment': 'c', 'type': 'rxn'})
+
+        self.edge1 = graph.Edge(self.node_a, self.node_ab, {'dir': 'forward'})
+        self.edge2 = graph.Edge(self.node_ab, self.node_b, {'dir': 'forward'})
+
+        self.g4 = graph.Graph()
+        self.node_list = [self.node_a, self.node_b, self.node_ab]
+        for node in self.node_list:
+            self.g4.add_node(node)
+        self.edge_list = [self.edge1, self.edge2]
+        for edge in self.edge_list:
+            self.g4.add_edge(edge)
+
+        with mock.patch('psamm.commands.vis.logger') as log_mock:
+            g5 = vis.add_node_props(self.g4, {})
+            log_mock.error.assert_called_with('invalid nodes:', type(self.node_a.props['entry']), self.node_a.props['entry'])
+
 
 
 class TestAddNodeLabel(unittest.TestCase):
@@ -801,7 +858,7 @@ class TestAddExchangeRxns(unittest.TestCase):
         for edge in self.edge_list:
             self.g.add_edge(edge)
         self.EX_A = Reaction(Direction.Both, {Compound('A', 'e'): -5})
-        # self.EX_C = Reaction(Direction.Both, {Compound('C', 'e'): 5})
+        self.EX_C = Reaction(Direction.Both, {Compound('C', 'e'): 5})
 
     def test1_addExrRxn_cpdA(self):
         g1 = vis.add_exchange_rxns(self.g, 'test_EX_A', self.EX_A)
@@ -818,6 +875,22 @@ class TestAddExchangeRxns(unittest.TestCase):
 
         self.assertTrue(all(i in self.edge_list for i in g1.edges))
         self.assertTrue(all(i in g1.edges for i in self.edge_list))
+
+    def test2_addExrRxn_right(self):
+        g2 = vis.add_exchange_rxns(self.g, 'test_EX_C', self.EX_C)
+        node_ex = graph.Node({
+            'id': 'test_EX_C', 'entry': [self.EX_C], 'shape': 'box',
+            'style': 'filled', 'label': 'test_EX_C', 'type': 'Ex_rxn',
+            'fillcolor': '#90f998', 'compartment': 'e'})
+        edge_ex = graph.Edge(node_ex, self.node_c_extracell, {'dir': 'both'})
+        self.node_list.append(node_ex)
+        self.edge_list.append(edge_ex)
+
+        self.assertTrue(all(i in self.node_list for i in g2.nodes))
+        self.assertTrue(all(i in g2.nodes for i in self.node_list))
+
+        self.assertTrue(all(i in self.edge_list for i in g2.edges))
+        self.assertTrue(all(i in g2.edges for i in self.edge_list))
 
 
 class TestMakeCptTree(unittest.TestCase):
@@ -921,6 +994,169 @@ class TestGetCptBoundaries(unittest.TestCase):
         self.assertTrue(all(i in e4_bound for i in e4_bound_res))
         self.assertEqual(e4_extra, e4_extra_res)
 
+class MockCommand(vis.VisualizationCommand):
+    init_parser_called = False
+    run_called = False
+
+    @classmethod
+    def init_parser(cls, parser):
+        cls.init_parser_called = True
+        parser.add_argument('--test-argument', action='store_true')
+        super(vis.VisualizationCommand, cls).init_parser(parser)
+
+    def run(self):
+        self.__class__.run_called = True
+        self.__class__.has_native_model = hasattr(self, '_model')
+
+class BaseCommandTest(object):
+    def is_solver_available(self, **kwargs):
+        try:
+            generic.Solver(**kwargs)
+        except generic.RequirementsError:
+            return False
+
+        return True
+
+    def run_command(self, command_class, args=[], target=None, model=None):
+        parser = argparse.ArgumentParser()
+        command_class.init_parser(parser)
+        parsed_args = parser.parse_args(args)
+
+        if model is None:
+            model = self.get_default_model()
+
+        command = command_class(model, parsed_args)
+
+        with redirected_stdout(target=target) as f:
+            command.run()
+
+        return f
+
+    def run_solver_command(self, command_class, args=[], requirements={}, **kwargs):
+        print("------------ARGS ", args)
+        with redirected_stdout() as f:
+            if self.is_solver_available(**requirements):
+                self.run_command(command_class, args, **kwargs)
+            else:
+                with self.assertRaises(generic.RequirementsError):
+                    self.run_command(command_class, args, **kwargs)
+        return f
+
+class TestVisCommand(unittest.TestCase, BaseCommandTest):
+    def setUp(self):
+        doc = BytesIO('''<?xml version="1.0" encoding="UTF-8"?>
+        <sbml xmlns="http://www.sbml.org/sbml/level3/version1/core"
+              xmlns:fbc="http://www.sbml.org/sbml/level3/version1/fbc/version1"
+              xmlns:html="http://www.w3.org/1999/xhtml"
+              level="3" version="1"
+              fbc:required="false">
+         <model id="test_model" name="Test model">
+          <listOfCompartments>
+           <compartment id="C_c" name="cell" constant="true"/>
+           <compartment id="C_b" name="boundary" constant="true"/>
+          </listOfCompartments>
+          <listOfSpecies>
+           <species id="M_Glucose" name="Glucose" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="C6H12O6"/>
+           <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="C6H11O9P"/>
+           <species id="M_H2O" name="H2O" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="H2O"/>
+           <species id="M_Phosphate" name="Phosphate" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="HO4P"/>
+           <species id="M_Biomass" name="Biomass" compartment="C_b" constant="false" boundaryCondition="true" hasOnlySubstanceUnits="false"/>
+          </listOfSpecies>
+          <listOfReactions>
+           <reaction id="R_G6Pase" reversible="true" fast="false">
+            <listOfReactants>
+             <speciesReference species="M_Glucose" stoichiometry="2" constant="true"/>
+             <speciesReference species="M_Phosphate" stoichiometry="2" constant="true"/>
+            </listOfReactants>
+            <listOfProducts>
+             <speciesReference species="M_H2O" stoichiometry="2" constant="true"/>
+             <speciesReference species="M_Glucose_6_P" stoichiometry="2" constant="true"/>
+            </listOfProducts>
+           </reaction>
+           <reaction id="R_Biomass" reversible="false" fast="false">
+            <listOfReactants>
+             <speciesReference species="M_Glucose_6_P" stoichiometry="0.56" constant="true"/>
+            </listOfReactants>
+            <listOfProducts>
+             <speciesReference species="M_Biomass" stoichiometry="1" constant="true"/>
+            </listOfProducts>
+           </reaction>
+          </listOfReactions>
+          <fbc:listOfObjectives fbc:activeObjective="obj1">
+           <fbc:objective fbc:id="obj1" fbc:name="Objective 1" fbc:type="maximize">
+            <fbc:listOfFluxObjectives>
+             <fbc:fluxObjective fbc:reaction="R_Biomass" fbc:coefficient="1"/>
+            </fbc:listOfFluxObjectives>
+           </fbc:objective>
+          </fbc:listOfObjectives>
+          <fbc:listOfFluxBounds>
+           <fbc:fluxBound fbc:reaction="R_G6Pase" fbc:operation="greaterEqual" fbc:value="-10"/>
+           <fbc:fluxBound fbc:reaction="R_G6Pase" fbc:operation="lessEqual" fbc:value="1000"/>
+           <fbc:fluxBound fbc:reaction="R_Biomass" fbc:operation="greaterEqual" fbc:value="0"/>
+           <fbc:fluxBound fbc:reaction="R_Biomass" fbc:operation="lessEqual" fbc:value="1000"/>
+          </fbc:listOfFluxBounds>
+         </model>
+        </sbml>'''.encode('utf-8'))
+
+        reader = sbml.SBMLReader(doc)
+        self._model = reader.create_model()
+
+        native_model = NativeModel()
+        native_model.reactions.add_entry(ReactionEntry({
+            'id': 'rxn1', 'equation': parse_reaction(
+                'fum[c] + h2o[c] <=> mal_L[c]')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'fum', 'formula': parse_compound('C4H2O4', 'c')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'h2o', 'formula': parse_compound('H2O', 'c')}))
+        native_model.compounds.add_entry(CompoundEntry(
+            {'id': 'mal_L', 'formula': parse_compound('C4H4O5', 'c')}))
+        native_model.reactions.add_entry(ReactionEntry({
+            'id': 'rxn2', 'equation': parse_reaction(
+                'q8[c] + succ[c] => fum[c] + q8h2[c]')}))
+        native_model.compounds.add_entry(CompoundEntry(
+            {'id': 'q8', 'formula': parse_compound('C49H74O4', 'c')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'q8h2', 'formula': parse_compound('C49H76O4', 'c')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'succ', 'formula': parse_compound('C4H4O4', 'c')}))
+        native_model.reactions.add_entry(ReactionEntry({
+            'id': 'rxn3', 'equation': parse_reaction(
+                'h2o[c] <=> h2o[e]')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'h2o', 'formula': parse_compound('H2O', 'c')}))
+
+        native_model.name = "Test model"
+
+        self.mm = native_model.create_metabolic_model()
+        self.sub = None
+        self.exclude = []
+
+    def get_default_model(self):
+        return self._model
+
+    def test_run_vis(self):
+        self.run_solver_command(vis.VisualizationCommand)
+
+    def test_element_none(self):
+        self.run_solver_command(vis.VisualizationCommand, ["--element", "None"])
+
+    def test_hide_edges(self):
+        path = os.path.join(tempfile.mkdtemp(), 'hide_edges')
+        with open(path, 'w') as f:
+            f.write('{}\t{}'.format('h2o[c]', 'h2o[e]'))
+        self.run_solver_command(vis.VisualizationCommand, ["--hide-edges", path])
+
+    def test_recolor(self):
+        path = os.path.join(tempfile.mkdtemp(), 'recolor')
+        with open(path, 'w') as f:
+            f.write('{}\t{}'.format('A', '#f4fc55'))
+        self.run_solver_command(vis.VisualizationCommand, ["--color", path])
+
+    def test_render_is_None(self):
+        vis.render = None
+        with self.assertRaises(ImportError):
+            self.run_solver_command(vis.VisualizationCommand, ["--image", "pdf"])
 
 if __name__ == '__main__':
     unittest.main()
