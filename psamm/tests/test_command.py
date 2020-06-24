@@ -52,7 +52,7 @@ from psamm.commands.robustness import RobustnessCommand
 from psamm.commands.sbmlexport import SBMLExport
 from psamm.commands.search import SearchCommand
 from psamm.commands.tableexport import ExportTableCommand
-
+from psamm.commands.vis import VisualizationCommand
 
 @contextmanager
 def redirected_stdout(target=None):
@@ -606,6 +606,30 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
             ['Biomass Reaction', 'rxn_1'],
             ['Default Flux Limits', '1000']
         ])
+
+    def test_run_vis(self):
+        self.run_solver_command(VisualizationCommand)
+
+    def test_run_vis_element_none(self):
+        self.run_solver_command(VisualizationCommand, ["--element", "none"])
+
+    def test_run_vis_hide_edges(self):
+        path = os.path.join(tempfile.mkdtemp(), 'hide_edges')
+        with open(path, 'w') as f:
+            f.write('{}\t{}'.format('h20[c]', 'h2o[e]'))
+        self.run_solver_command(VisualizationCommand, ["hide-edges", path])
+
+    def test_run_vis_recolor(self):
+        path = os.path.join(tempfile.mkdtemp(), 'color')
+        with open(path, 'w') as f:
+            f.write('{}\t{}'.format('A', '#f4fc55'))
+        self.run_solver_command(VisualizationCommand, ["color", path])
+
+    def test_run_vis_output(self):
+        self.run_solver_command(VisualizationCommand, ['--output', 'test'])
+
+    def test_run_vis_compartment(self):
+        self.run_solver_command(VisualizationCommand, ['--compartment'])
 
     def test_command_main(self):
         self.run_command(MockCommand)

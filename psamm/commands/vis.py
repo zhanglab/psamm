@@ -16,6 +16,7 @@
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2018-2020  Ke Zhang <kzhang@my.uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2020    Elysha Sameth <esameth1@my.uri.edu>
 
 from __future__ import unicode_literals
 
@@ -128,7 +129,6 @@ class VisualizationCommand(MetabolicMixin,
         hide_edges = []
         if self._args.hide_edges is not None:
             for row in csv.reader(self._args.hide_edges, delimiter=str('\t')):
-                print(row)
                 hide_edges.append((row[0], row[1]))
                 hide_edges.append((row[1], row[0]))
 

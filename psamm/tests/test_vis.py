@@ -23,13 +23,11 @@ from graphviz import FORMATS
 
 import unittest
 import os
-from contextlib import contextmanager
 import tempfile
 import argparse
 import sys
 import mock
 import logging
-from six import StringIO, BytesIO
 
 from psamm.formula import Formula, Atom
 from psamm.commands import vis
@@ -44,19 +42,7 @@ from psamm.lpsolver import generic
 
 logger = logging.getLogger(__name__)
 
-@contextmanager
-def redirected_stdout(target=None):
-    stdout = sys.stdout
-    if target is None:
-        target = StringIO()
-    try:
-        sys.stdout = target
-        yield target
-    finally:
-        sys.stdout = stdout
-
 # 2019-08-30 new test cases for vis
-
 class TestMakeSubset(unittest.TestCase):
     def setUp(self):
         native_model = NativeModel()
@@ -993,170 +979,6 @@ class TestGetCptBoundaries(unittest.TestCase):
         e4_extra_res = 'e'
         self.assertTrue(all(i in e4_bound for i in e4_bound_res))
         self.assertEqual(e4_extra, e4_extra_res)
-
-class MockCommand(vis.VisualizationCommand):
-    init_parser_called = False
-    run_called = False
-
-    @classmethod
-    def init_parser(cls, parser):
-        cls.init_parser_called = True
-        parser.add_argument('--test-argument', action='store_true')
-        super(vis.VisualizationCommand, cls).init_parser(parser)
-
-    def run(self):
-        self.__class__.run_called = True
-        self.__class__.has_native_model = hasattr(self, '_model')
-
-class BaseCommandTest(object):
-    def is_solver_available(self, **kwargs):
-        try:
-            generic.Solver(**kwargs)
-        except generic.RequirementsError:
-            return False
-
-        return True
-
-    def run_command(self, command_class, args=[], target=None, model=None):
-        parser = argparse.ArgumentParser()
-        command_class.init_parser(parser)
-        parsed_args = parser.parse_args(args)
-
-        if model is None:
-            model = self.get_default_model()
-
-        command = command_class(model, parsed_args)
-
-        with redirected_stdout(target=target) as f:
-            command.run()
-
-        return f
-
-    def run_solver_command(self, command_class, args=[], requirements={}, **kwargs):
-        print("------------ARGS ", args)
-        with redirected_stdout() as f:
-            if self.is_solver_available(**requirements):
-                self.run_command(command_class, args, **kwargs)
-            else:
-                with self.assertRaises(generic.RequirementsError):
-                    self.run_command(command_class, args, **kwargs)
-        return f
-
-class TestVisCommand(unittest.TestCase, BaseCommandTest):
-    def setUp(self):
-        doc = BytesIO('''<?xml version="1.0" encoding="UTF-8"?>
-        <sbml xmlns="http://www.sbml.org/sbml/level3/version1/core"
-              xmlns:fbc="http://www.sbml.org/sbml/level3/version1/fbc/version1"
-              xmlns:html="http://www.w3.org/1999/xhtml"
-              level="3" version="1"
-              fbc:required="false">
-         <model id="test_model" name="Test model">
-          <listOfCompartments>
-           <compartment id="C_c" name="cell" constant="true"/>
-           <compartment id="C_b" name="boundary" constant="true"/>
-          </listOfCompartments>
-          <listOfSpecies>
-           <species id="M_Glucose" name="Glucose" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="C6H12O6"/>
-           <species id="M_Glucose_6_P" name="Glucose-6-P" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="C6H11O9P"/>
-           <species id="M_H2O" name="H2O" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="0" fbc:chemicalFormula="H2O"/>
-           <species id="M_Phosphate" name="Phosphate" compartment="C_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" fbc:charge="-2" fbc:chemicalFormula="HO4P"/>
-           <species id="M_Biomass" name="Biomass" compartment="C_b" constant="false" boundaryCondition="true" hasOnlySubstanceUnits="false"/>
-          </listOfSpecies>
-          <listOfReactions>
-           <reaction id="R_G6Pase" reversible="true" fast="false">
-            <listOfReactants>
-             <speciesReference species="M_Glucose" stoichiometry="2" constant="true"/>
-             <speciesReference species="M_Phosphate" stoichiometry="2" constant="true"/>
-            </listOfReactants>
-            <listOfProducts>
-             <speciesReference species="M_H2O" stoichiometry="2" constant="true"/>
-             <speciesReference species="M_Glucose_6_P" stoichiometry="2" constant="true"/>
-            </listOfProducts>
-           </reaction>
-           <reaction id="R_Biomass" reversible="false" fast="false">
-            <listOfReactants>
-             <speciesReference species="M_Glucose_6_P" stoichiometry="0.56" constant="true"/>
-            </listOfReactants>
-            <listOfProducts>
-             <speciesReference species="M_Biomass" stoichiometry="1" constant="true"/>
-            </listOfProducts>
-           </reaction>
-          </listOfReactions>
-          <fbc:listOfObjectives fbc:activeObjective="obj1">
-           <fbc:objective fbc:id="obj1" fbc:name="Objective 1" fbc:type="maximize">
-            <fbc:listOfFluxObjectives>
-             <fbc:fluxObjective fbc:reaction="R_Biomass" fbc:coefficient="1"/>
-            </fbc:listOfFluxObjectives>
-           </fbc:objective>
-          </fbc:listOfObjectives>
-          <fbc:listOfFluxBounds>
-           <fbc:fluxBound fbc:reaction="R_G6Pase" fbc:operation="greaterEqual" fbc:value="-10"/>
-           <fbc:fluxBound fbc:reaction="R_G6Pase" fbc:operation="lessEqual" fbc:value="1000"/>
-           <fbc:fluxBound fbc:reaction="R_Biomass" fbc:operation="greaterEqual" fbc:value="0"/>
-           <fbc:fluxBound fbc:reaction="R_Biomass" fbc:operation="lessEqual" fbc:value="1000"/>
-          </fbc:listOfFluxBounds>
-         </model>
-        </sbml>'''.encode('utf-8'))
-
-        reader = sbml.SBMLReader(doc)
-        self._model = reader.create_model()
-
-        native_model = NativeModel()
-        native_model.reactions.add_entry(ReactionEntry({
-            'id': 'rxn1', 'equation': parse_reaction(
-                'fum[c] + h2o[c] <=> mal_L[c]')}))
-        native_model.compounds.add_entry(CompoundEntry({
-            'id': 'fum', 'formula': parse_compound('C4H2O4', 'c')}))
-        native_model.compounds.add_entry(CompoundEntry({
-            'id': 'h2o', 'formula': parse_compound('H2O', 'c')}))
-        native_model.compounds.add_entry(CompoundEntry(
-            {'id': 'mal_L', 'formula': parse_compound('C4H4O5', 'c')}))
-        native_model.reactions.add_entry(ReactionEntry({
-            'id': 'rxn2', 'equation': parse_reaction(
-                'q8[c] + succ[c] => fum[c] + q8h2[c]')}))
-        native_model.compounds.add_entry(CompoundEntry(
-            {'id': 'q8', 'formula': parse_compound('C49H74O4', 'c')}))
-        native_model.compounds.add_entry(CompoundEntry({
-            'id': 'q8h2', 'formula': parse_compound('C49H76O4', 'c')}))
-        native_model.compounds.add_entry(CompoundEntry({
-            'id': 'succ', 'formula': parse_compound('C4H4O4', 'c')}))
-        native_model.reactions.add_entry(ReactionEntry({
-            'id': 'rxn3', 'equation': parse_reaction(
-                'h2o[c] <=> h2o[e]')}))
-        native_model.compounds.add_entry(CompoundEntry({
-            'id': 'h2o', 'formula': parse_compound('H2O', 'c')}))
-
-        native_model.name = "Test model"
-
-        self.mm = native_model.create_metabolic_model()
-        self.sub = None
-        self.exclude = []
-
-    def get_default_model(self):
-        return self._model
-
-    def test_run_vis(self):
-        self.run_solver_command(vis.VisualizationCommand)
-
-    def test_element_none(self):
-        self.run_solver_command(vis.VisualizationCommand, ["--element", "None"])
-
-    def test_hide_edges(self):
-        path = os.path.join(tempfile.mkdtemp(), 'hide_edges')
-        with open(path, 'w') as f:
-            f.write('{}\t{}'.format('h2o[c]', 'h2o[e]'))
-        self.run_solver_command(vis.VisualizationCommand, ["--hide-edges", path])
-
-    def test_recolor(self):
-        path = os.path.join(tempfile.mkdtemp(), 'recolor')
-        with open(path, 'w') as f:
-            f.write('{}\t{}'.format('A', '#f4fc55'))
-        self.run_solver_command(vis.VisualizationCommand, ["--color", path])
-
-    def test_render_is_None(self):
-        vis.render = None
-        with self.assertRaises(ImportError):
-            self.run_solver_command(vis.VisualizationCommand, ["--image", "pdf"])
 
 if __name__ == '__main__':
     unittest.main()
