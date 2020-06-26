@@ -614,16 +614,16 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         self.run_solver_command(VisualizationCommand, ["--element", "none"])
 
     def test_run_vis_hide_edges(self):
-        path = os.path.join(tempfile.mkdtemp(), 'hide_edges')
+        path = os.path.join(tempfile.mkdtemp(), 'hide_edges.csv')
         with open(path, 'w') as f:
             f.write('{}\t{}'.format('h20[c]', 'h2o[e]'))
-        self.run_solver_command(VisualizationCommand, ["hide-edges", path])
+        self.run_solver_command(VisualizationCommand, ["--hide-edges", path])
 
     def test_run_vis_recolor(self):
-        path = os.path.join(tempfile.mkdtemp(), 'color')
+        path = os.path.join(tempfile.mkdtemp(), 'color.csv')
         with open(path, 'w') as f:
             f.write('{}\t{}'.format('A', '#f4fc55'))
-        self.run_solver_command(VisualizationCommand, ["color", path])
+        self.run_solver_command(VisualizationCommand, ["--color", path])
 
     def test_run_vis_output(self):
         self.run_solver_command(VisualizationCommand, ['--output', 'test'])
