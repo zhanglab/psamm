@@ -115,23 +115,33 @@ class PsammotateCommand(Command):
                          'width': 79}
             mkdir('{}'.format(self._args.export_model))
             reaction_list = [i.id for i in homolo_reactions]
-            for reaction in self._model.reactions:
-                self._model.reactions.discard(reaction.id)
+            original_reactions = [i.id for i in self._model.reactions]
+            for reaction in original_reactions:
+                self._model.reactions.discard(reaction)
             for reaction in homolo_reactions:
                 self._model.reactions.add_entry(reaction)
             compound_set = set()
             for reaction in self._model.reactions:
                 for compound in reaction.equation.compounds:
                     compound_set.add(compound[0].name)
+            compound_removal_set = set()
             for compound in self._model.compounds:
                 if compound.id not in compound_set:
-                    self._model.compounds.discard(compound.id)
+                    compound_removal_set.add(compound.id)
+            for cpd in compound_removal_set:
+                self._model.compounds.discard(compound.id)
+            exchange_del_set = set()
             for key in self._model.exchange:
                 if key.name not in compound_set:
-                    del self._model.exchange[key]
+                    exchange_del_set.add(key)
+            for ex in exchange_del_set:
+                del self._model.exchange[ex]
+            lim_del_set = set()
             for key in self._model.limits:
                 if key not in reaction_list:
-                    del self._model.exchange[key]
+                    lim_del_set.add(key)
+            for lim in lim_del_set:
+                del self._model.exchange[key]
             write_yaml_model(self._model, dest='{}'.format(self._args.export_model),
                              split_subsystem=False)
 
