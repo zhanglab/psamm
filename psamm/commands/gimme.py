@@ -115,23 +115,35 @@ class GimmeCommand(MetabolicMixin, ObjectiveMixin,
                          'allow_unicode': True,
                          'width': 79}
             mkdir('{}'.format(self._args.export_model))
+            reactions_to_discard = []
             for reaction in self._model.reactions:
                 if reaction.id not in final_model:
-                    self._model.reactions.discard(reaction.id)
+                    reactions_to_discard.append(reaction.id)
+            for rid in reactions_to_discard:
+                self._model.reactions.discard(rid)
             compound_set = set()
             for reaction in self._model.reactions:
                 for compound in reaction.equation.compounds:
                     compound_set.add(compound[0].name)
+            compounds_to_discard = []
             for compound in self._model.compounds:
                 if compound.id not in compound_set:
-                    self._model.compounds.discard(compound.id)
+                    compounds_to_discard.append(compound.id)
+            for cid in compounds_to_discard:
+                self._model.compounds.discard(cid)
+            exchanges_to_discard = []
             for key in self._model.exchange:
                 if key.name not in compound_set:
-                    del self._model.exchange[key]
+                    exchanges_to_discard.append(key)
+            for key in exchanges_to_discard:
+                del self._model.exchange[key]
+            limits_to_discard = []
             for key in self._model.limits:
                 if key not in final_model:
-                    del self._model.exchange[key]
-            write_yaml_model(self._model, dest='{}'.format(self._args.export_model),
+                    limits_to_discard.append(key)
+            for key in limits_to_discard:
+                del self._model.exchange[key]
+            write_yaml_model(self._model, dest=self._args.export_model,
                              split_subsystem=False)
 
 
@@ -155,13 +167,7 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
         threshold: A threshold that the biomass flux needs to stay above.
     """
     ci_dict = {}
-    zi = problem.prob.namespace(name='zi', types=lp.VariableType.Binary)
     for reaction in mm.reactions:
-        zi.define([reaction])
-        zi_var = zi(reaction)
-        vi_var = problem.get_flux_var(reaction)
-        vmax = mm.limits[reaction].upper
-        problem.prob.add_linear_constraints(vmax * zi_var >= vi_var)
         gene_string = reversible_gene_assoc.get(reaction)
         if gene_string is None:
             continue
@@ -172,11 +178,6 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
                 ci_dict[reaction] = ci
 
     gimme_objective = Expression()
-
-    for (forward, reverse) in split_rxns:
-        problem.prob.add_linear_constraints(
-            zi(forward) +
-                zi(reverse) <= 1)
 
     threshold = threshold
     problem.maximize(biomass)
@@ -310,7 +311,6 @@ def get_rxn_value(root, gene_dict):
                     [get_rxn_value(i, gene_dict)
                      for i in root._terms]]
         if None in val_list:
-
             return None
         else:
             return min(x for x in val_list if x is not None)
@@ -366,12 +366,12 @@ def make_irreversible(mm, gene_dict, exclude_list=[],
                 split_reversible.add((r_id, r2_id))
                 reversible_gene_dict[r_id] = gene_dict.get(rxn)
                 reversible_gene_dict[r2_id] = gene_dict.get(rxn)
-            if lower > 0:
+            if lower >= 0:
                 mm_irrev.limits[r_id].upper = upper
                 mm_irrev.limits[r_id].lower = lower
                 mm_irrev.limits[r2_id].upper = 0
                 mm_irrev.limits[r2_id].lower = 0
-            elif upper < 0:
+            elif upper <= 0:
                 mm_irrev.limits[r_id].upper = 0
                 mm_irrev.limits[r_id].lower = 0
                 mm_irrev.limits[r2_id].upper = - lower
