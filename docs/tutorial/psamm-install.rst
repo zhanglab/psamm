@@ -51,8 +51,8 @@ checking, model simulation, and model exports; Linear programming (LP) solvers
 programming problems; ``psamm-import``, which supports the import of models
 from SBML, JSON, and Excel formats.
 
-Setting up a Virtual Python Environment
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Setting up a Virtual Python Environment (Virtualenv)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It is recommended that the PSAMM software and dependencies should be
 installed under a virtual Python environment. This can be done by using
@@ -73,11 +73,17 @@ the ``psamm-tutorial`` folder:
 In this command, ``<PATH>`` should be substituted by the directory path to
 where you created the ``psamm-tutorial``. This will change your current
 directory to the ``psamm-tutorial`` directory. Then, you can create a virtual
-environment in the ``psamm-tutorial`` directory:
+environment for Python 2 in the ``psamm-tutorial`` directory:
 
 .. code-block:: shell
 
     $ virtualenv psamm-env
+
+For Python 3, use the following command instead:
+
+.. code-block:: shell
+
+    $ python3 -m venv psamm-env
 
 That will set up the virtual environment in a folder called ``psamm-env/``.
 The next step is to activate the virtual environment so that the Python that is
@@ -116,6 +122,45 @@ above) to be able to use any packages installed in it.
     After activating the environment, the command ``pip list`` can be used to
     quickly get an overview of the packages installed in the environment and
     the version of each package.
+
+Setting up a Virtual Python Environment (Anaconda)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Anaconda_ is an open-source program that allows you to create virtual
+environments and download Python packages. Unlike VirtualEnv, which is a
+environment manager for Python, Anaconda is both a package and an environment
+manager for any programming language. Anaconda manages a list of environments
+for you, making it easy to work with. Instructions on how to install Anaconda
+can be found `here <https://docs.anaconda.com/anaconda/install/>`_.
+
+.. _Anaconda: https://www.anaconda.com
+
+To create a conda environment, you do not have to be in the ``psamm-tutorial``
+directory. You can create the environment from anywhere in your system with a
+specific version of Python, even if it is not pre-installed:
+
+.. code-block:: shell
+
+    $ conda create --name psamm-env python=<version>
+
+Unlike VirtualEnv, there will be no ``psamm-env/`` folder. A conda environment
+is not dependent on your current working directory and can be activated from
+anywhere using the command:
+
+.. code-block:: shell
+
+    $ conda activate psamm-env
+
+When you leave the environment and return at a later time, you will
+have to reactivate the environment (use the ``conda activate`` command
+above) to be able to use any packages installed in it.
+
+.. note::
+
+    After activating the environment, the command ``conda list`` can be used to
+    quickly get an overview of the packages installed in the environment and
+    the version of each package.
+
 
 Installation of ``psamm-model`` and ``psamm-import``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -187,11 +232,13 @@ will be different):
 
 .. code-block:: shell
 
-    (psamm-env) $ pip install /Library/gurobi604/mac64/
+    (psamm-env) $ cd /Library/gurobi604/mac64/
+    (psamm-env) $ python setup.py install
 
-The QSopt_ex solver can also be used with PSAMM. To install this solver you
-will first need to install Qsopt_ex on your computer and afterwards the
-Python bindings (`python-qsoptex`) can be installed in the virtual environment:
+The QSopt_ex solver can also be used with PSAMM. To install this solver, Python 2.7
+or 3.4 is required. You will first need to install Qsopt_ex on your computer and
+afterwards the Python bindings (`python-qsoptex`) can be installed in the virtual
+environment:
 
 .. code-block:: shell
 
