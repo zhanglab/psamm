@@ -25,7 +25,7 @@ of the following functions.
 
 .. code-block:: shell
 
-   (psamm-env) $ cd <PATH>/tutorial-part-6/E_coli_yaml
+   (psamm-env) $ cd <PATH>/tutorial-part-X/E_coli_yaml
 
 
 Subsetting a Metabolic Models Using Expression Data with Gimme
@@ -58,16 +58,16 @@ will print out a list of the internal reactions and a list of the external react
 that meet the thresholds.
 
 .. code-block:: shell
-    $ psamm-model gimme --transcriptome-file ../additional_files/transcriptome.tsv --expression-threshold 100
+    $ psamm-model gimme --transcriptome-file ../gimme/transcriptome.tsv --expression-threshold 100
 
 As you increase the expression threshold, you will see fewer reactions retained
 within the model, which is shown below by using the word count function to count
 the number of lines returned by each iteration of gimme:
 
 .. code-block:: shell
-    $ psamm-model gimme --transcriptome-file ../additional_files/transcriptome.tsv --expression-threshold 100 | wc -l
+    $ psamm-model gimme --transcriptome-file ../gimme/transcriptome.tsv --expression-threshold 100 | wc -l
       86
-    $ psamm-model gimme --transcriptome-file ../additional_files/transcriptome.tsv --expression-threshold 500 | wc -l
+    $ psamm-model gimme --transcriptome-file ../gimme/transcriptome.tsv --expression-threshold 500 | wc -l
       74
 
 This application of the gimme algorithm sets the objective biomass to 100%. That
@@ -79,9 +79,9 @@ shown below by using the word count function to count the number of lines return
 by each iteration of gimme:
 
 .. code-block:: shell
-    $ psamm-model gimme --transcriptome-file ../additional_files/transcriptome.tsv --expression-threshold 100 --biomass-threshold 0.93757758084 | wc -l # Maximum for this model
+    $ psamm-model gimme --transcriptome-file ../gimme/transcriptome.tsv --expression-threshold 100 --biomass-threshold 0.93757758084 | wc -l # Maximum for this model
       86
-    $ psamm-model gimme --transcriptome-file ../additional_files/transcriptome.tsv --expression-threshold 100 --biomass-threshold 0 | wc -l # No Biomass Threshold
+    $ psamm-model gimme --transcriptome-file ../gimme/transcriptome.tsv --expression-threshold 100 --biomass-threshold 0 | wc -l # No Biomass Threshold
       82
 
 In addition to simply writing out a list of reactions that satisfy the expression
@@ -90,7 +90,7 @@ output to create an entirely new model.
 
 .. code-block:: shell
     $ mkdir gimme_out
-    $ psamm-model gimme --transcriptome-file ../additional_files/transcriptome.tsv --expression-threshold 100 --export-model ./gimme_out/
+    $ psamm-model gimme --transcriptome-file ../gimme/transcriptome.tsv --expression-threshold 100 --export-model ./gimme_out/
 
 
 Generating a Draft Model From a Template Using Psammotate
@@ -143,7 +143,7 @@ psamm reactions file and contains the new gene mappings from the draft model.
 
 .. code-block:: shell
 
-    $ psamm-model psammotate --rbh ../additional_files/gene_associations.tsv --template 1 --target 2
+    $ psamm-model psammotate --rbh ../psammotate/gene_associations.tsv --template 1 --target 2
 
 The output file, ``homolo_reactions.yaml`` contains all of the reactions that
 were mapped with new gene annotations. Remember that if there is not gene
@@ -169,7 +169,7 @@ option (Note, we cannot overwrite homolo_reactions.yaml, so lets remove it first
 .. code-block:: shell
 
     $ rm homolo_reactions.yaml
-    $ psamm-model psammotate --rbh ../additional_files/gene_associations.tsv --template 1 --target 2 --ignore-na
+    $ psamm-model psammotate --rbh ../psammotate/gene_associations.tsv --template 1 --target 2 --ignore-na
 
 Note the difference in the output, where the reaction ACt2r is now false and has
 not been imported into the new draft model:
@@ -194,6 +194,6 @@ own prefix using ``--output``, as shown below:
 
 .. code-block:: shell
 
-    $  psamm-model psammotate --rbh ../additional_files/gene_associations.tsv --template 1 --target 2 --output draft_reactions
+    $  psamm-model psammotate --rbh ../psammotate/gene_associations.tsv --template 1 --target 2 --output draft_reactions
 
 Which will output the ``draft_reactions.yaml`` file instead of the ``homolo_reactions.yaml`` file.
