@@ -50,18 +50,16 @@ class TestRobustnessTaskHandler(unittest.TestCase):
         self._reactions = list(self.model.reactions)
 
     def test1_loop_removal_none(self):
-        self._run_fba = self._problem.maximize
-        RobustnessTaskHandler(self.model, self.solver, 'none', self._reactions)
-        fluxes = RobustnessTaskHandler.handle_task(self, ['rxn_6', 1000], 'rxn_6')
+        fluxes = RobustnessTaskHandler.handle_task(RobustnessTaskHandler(self.model, self.solver, 'none', self._reactions),
+                                                   ['rxn_6', 1000], 'rxn_6')
 
         self.assertAlmostEqual(fluxes['rxn_1'], 500)
         self.assertAlmostEqual(fluxes['rxn_2'], 0)
         self.assertAlmostEqual(fluxes['rxn_6'], 1000)
 
     def test2_loop_removal_l1min(self):
-        self._run_fba = self._problem.max_min_l1
-        RobustnessTaskHandler(self.model, self.solver, 'l1min', self._reactions)
-        fluxes = RobustnessTaskHandler.handle_task(self, ['rxn_6', 1000], 'rxn_6')
+        fluxes = RobustnessTaskHandler.handle_task(RobustnessTaskHandler(self.model, self.solver, 'l1min', self._reactions),
+                                                   ['rxn_6', 1000], 'rxn_6')
 
         self.assertAlmostEqual(fluxes['rxn_1'], 500)
         self.assertAlmostEqual(fluxes['rxn_2'], 0)
@@ -71,10 +69,8 @@ class TestRobustnessTaskHandler(unittest.TestCase):
         self.assertAlmostEqual(fluxes['rxn_6'], 1000)
 
     def test3_loop_removal_tfba(self):
-        self._problem.add_thermodynamic()
-        self._run_fba = self._problem.maximize
-        RobustnessTaskHandler(self.model, self.solver, 'tfba', self._reactions)
-        fluxes = RobustnessTaskHandler.handle_task(self, ['rxn_3', 100], 'rxn_1')
+        fluxes = RobustnessTaskHandler.handle_task(RobustnessTaskHandler(self.model, self.solver, 'tfba', self._reactions),
+                                                   ['rxn_3', 100], 'rxn_1')
 
         self.assertAlmostEqual(fluxes['rxn_1'], 500)
         self.assertAlmostEqual(fluxes['rxn_2'], 0)
@@ -84,11 +80,10 @@ class TestRobustnessTaskHandler(unittest.TestCase):
         self.assertAlmostEqual(fluxes['rxn_6'], 1000)
 
     def test4_no_reactions(self):
-        self._reactions = None
-        self._run_fba = self._problem.maximize
-        RobustnessTaskHandler(self.model, self.solver, 'none', self._reactions)
-        fluxes = RobustnessTaskHandler.handle_task(self, ['rxn_6', 10], 'rxn_6')
-        self.assertAlmostEqual(fluxes, 10)
+        self._reactions2 = None
+        fluxes = RobustnessTaskHandler.handle_task(RobustnessTaskHandler(self.model, self.solver, 'none', self._reactions2),
+                                                   ['rxn_6', 10], 'rxn_6')
+        self.assertEqual(fluxes, 10)
 
 class TestRobustnessTaskHandler_fva(unittest.TestCase):
     def setUp(self):
@@ -115,9 +110,8 @@ class TestRobustnessTaskHandler_fva(unittest.TestCase):
         self._reactions = list(self.model.reactions)
 
     def test1_loop_removal_none(self):
-        self._run_fba = self._problem.maximize
-        RobustnessTaskHandler(self.model, self.solver, 'none', self._reactions)
-        fluxes = RobustnessTaskHandler_fva.handle_task(self, ['rxn_6', 200], 'rxn_6')
+        fluxes = RobustnessTaskHandler_fva.handle_task(RobustnessTaskHandler_fva(self.model, self.solver, 'none', self._reactions),
+                                                       ['rxn_6', 200], 'rxn_6')
 
         for bounds in itervalues(fluxes):
             self.assertEqual(len(bounds), 2)
@@ -136,10 +130,8 @@ class TestRobustnessTaskHandler_fva(unittest.TestCase):
         self.assertGreater(fluxes['rxn_8'][1], 0)
 
     def test2_loop_removal_tfba(self):
-        self._problem.add_thermodynamic()
-        self._run_fba = self._problem.maximize
-        RobustnessTaskHandler_fva(self.model, self.solver, 'tfba', self._reactions)
-        fluxes = RobustnessTaskHandler_fva.handle_task(self, ['rxn_6', 200], 'rxn_3')
+        fluxes = RobustnessTaskHandler_fva.handle_task(RobustnessTaskHandler_fva(self.model, self.solver, 'tfba', self._reactions),
+                                                       ['rxn_6', 200], 'rxn_3')
 
         for bounds in itervalues(fluxes):
             self.assertEqual(len(bounds), 2)
@@ -161,10 +153,9 @@ class TestRobustnessTaskHandler_fva(unittest.TestCase):
 
 
     def test3_no_reactions(self):
-        self._reactions = None
-        self._run_fba = self._problem.maximize
-        RobustnessTaskHandler(self.model, self.solver, 'none', self._reactions)
-        fluxes = RobustnessTaskHandler_fva.handle_task(self, ['rxn_6', 200], 'rxn_6')
+        self._reactions2 = None
+        fluxes = RobustnessTaskHandler_fva.handle_task(RobustnessTaskHandler_fva(self.model, self.solver, 'none', self._reactions2),
+                                                       ['rxn_6', 200], 'rxn_6')
 
         for bounds in itervalues(fluxes):
             self.assertEqual(len(bounds), 2)
