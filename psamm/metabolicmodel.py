@@ -328,6 +328,85 @@ class MetabolicModel(MetabolicDatabase):
 
         return model
 
+    def make_irreversible(self, gene_dict={}, exclude_list=[],
+                          all_reversible=False):
+        """Creates a new metabolic models with only irreversible reactions.
+
+        This function will find every reversible reaction in the
+        model and split it into two reactions with the
+        {rxnid}_forward or {rxnid}_reverse as the IDs.
+
+        Args:
+            mm: A metabolicmodel object
+            gene_dict: A dictionary stores reacion ids as keys and
+                       corresponding gene association as values, it's
+                       required only in GIMME function
+            exclude_list: list of reactions to exclude in TMFA simulation
+            all_reversible: if True make all reactions in model reversible.
+
+        Values:
+            mm_irrev: A new metabolic model with only irreversible reactions
+            gene_dict_reversible: A dictionary mapping irreversible reaction
+                                  ids to gene associations, used only
+                                  in GIMME function
+            split_rxns: A list of splited reactions, each element is a tuple of
+                     ({rxnid}_forward, {rxnid}_reverse)
+        """
+        split_reversible = set()
+        mm_irrev = self.copy()
+        reversible_gene_dict = {}
+        for rxn in self.reactions:
+            upper = self.limits[rxn].upper
+            lower = self.limits[rxn].lower
+            mm_irrev.limits[rxn].upper = upper
+            mm_irrev.limits[rxn].lower = lower
+
+            reaction = mm_irrev.get_reaction(rxn)
+            if rxn not in exclude_list:
+                r = Reaction(Direction.Forward, reaction.left, reaction.right)
+                r2 = Reaction(Direction.Forward, reaction.right, reaction.left)
+                r_id = str('{}_forward'.format(rxn))
+                r2_id = str('{}_reverse'.format(rxn))
+                if reaction.direction == Direction.Forward:
+                    if all_reversible is False:
+                        reversible_gene_dict[rxn] = gene_dict.get(rxn)
+                        continue
+                    else:
+                        mm_irrev.remove_reaction(rxn)
+                        mm_irrev.database.set_reaction(r_id, r)
+                        mm_irrev.database.set_reaction(r2_id, r2)
+                        mm_irrev.add_reaction(r_id)
+                        mm_irrev.add_reaction(r2_id)
+                        split_reversible.add((r_id, r2_id))
+                        reversible_gene_dict[r_id] = gene_dict.get(rxn)
+                        reversible_gene_dict[r2_id] = gene_dict.get(rxn)
+                elif reaction.direction == Direction.Both:
+                    mm_irrev.remove_reaction(rxn)
+                    mm_irrev.database.set_reaction(r_id, r)
+                    mm_irrev.database.set_reaction(r2_id, r2)
+                    mm_irrev.add_reaction(r_id)
+                    mm_irrev.add_reaction(r2_id)
+                    split_reversible.add((r_id, r2_id))
+                    reversible_gene_dict[r_id] = gene_dict.get(rxn)
+                    reversible_gene_dict[r2_id] = gene_dict.get(rxn)
+                if lower >= 0:
+                    mm_irrev.limits[r_id].upper = upper
+                    mm_irrev.limits[r_id].lower = lower
+                    mm_irrev.limits[r2_id].upper = 0
+                    mm_irrev.limits[r2_id].lower = 0
+                elif upper <= 0:
+                    mm_irrev.limits[r_id].upper = 0
+                    mm_irrev.limits[r_id].lower = 0
+                    mm_irrev.limits[r2_id].upper = - lower
+                    mm_irrev.limits[r2_id].lower = - upper
+                else:
+                    mm_irrev.limits[r_id].upper = upper
+                    mm_irrev.limits[r_id].lower = 0
+                    mm_irrev.limits[r2_id].upper = - lower
+                    mm_irrev.limits[r2_id].lower = 0
+
+        return mm_irrev, reversible_gene_dict, split_reversible
+
 
 class FlipableFluxBounds(FluxBounds):
     """FluxBounds object for a FlipableModelView.

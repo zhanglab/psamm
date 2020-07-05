@@ -73,8 +73,8 @@ class TestAddReactions(unittest.TestCase):
             'rxn_5': str('gene_5 and gene_6')
         }
         mm_irreversible, reversible_gene_assoc, split_rxns = \
-            gimme.make_irreversible(self._mm, self._assoc,
-            exclude_list=['ex_A', 'rxn_6', 'rxn_7'])
+            self._mm.make_irreversible(self._assoc,
+                                       exclude_list=['ex_A', 'rxn_6', 'rxn_7'])
         self.assertEqual(split_rxns, set([('rxn_4_forward', 'rxn_4_reverse'),
                                           ('rxn_3_forward', 'rxn_3_reverse')]))
         self.assertEqual(reversible_gene_assoc, test_associations)
@@ -87,8 +87,8 @@ class TestAddReactions(unittest.TestCase):
         mm = self._mm.copy()
         mm.limits['rxn_3'].lower = 0
         mm_irreversible, reversible_gene_assoc, split_rxns = \
-            gimme.make_irreversible(mm, self._assoc,
-            exclude_list=['ex_A', 'rxn_6', 'rxn_7'])
+            mm.make_irreversible(self._assoc,
+                                 exclude_list=['ex_A', 'rxn_6', 'rxn_7'])
         self.assertEqual(
             mm_irreversible.limits['rxn_3_forward'].bounds, (0, 1000))
         self.assertEqual(
@@ -96,8 +96,8 @@ class TestAddReactions(unittest.TestCase):
         mm.limits['rxn_3'].lower = -1000
         mm.limits['rxn_3'].upper = 0
         mm_irreversible, reversible_gene_assoc, split_rxns = \
-            gimme.make_irreversible(mm, self._assoc,
-            exclude_list=['ex_A', 'rxn_6', 'rxn_7'])
+            mm.make_irreversible(self._assoc,
+                                 exclude_list=['ex_A', 'rxn_6', 'rxn_7'])
         self.assertEqual(
             mm_irreversible.limits['rxn_3_forward'].bounds, (0, 0))
         self.assertEqual(
@@ -113,9 +113,10 @@ class TestAddReactions(unittest.TestCase):
             'rxn_4_reverse': str('gene_3 or gene_4'),
         }
         mm_irreversible, reversible_gene_assoc, split_rxns = \
-            gimme.make_irreversible(self._mm, self._assoc,
-            exclude_list=['ex_A', 'rxn_2', 'rxn_5', 'rxn_6', 'rxn_7'],
-            all_reversible=True)
+            self._mm.make_irreversible(
+                self._assoc,
+                exclude_list=['ex_A', 'rxn_2', 'rxn_5', 'rxn_6', 'rxn_7'],
+                all_reversible=True)
         self.assertEqual(split_rxns, set([('rxn_1_forward', 'rxn_1_reverse'),
                                           ('rxn_4_forward', 'rxn_4_reverse'),
                                           ('rxn_3_forward', 'rxn_3_reverse')]))
@@ -134,8 +135,9 @@ class TestAddReactions(unittest.TestCase):
 
     def test_get_rxn_value(self):
         mm_irreversible, reversible_gene_assoc, split_rxns =\
-            gimme.make_irreversible(self._mm, self._assoc,
-            exclude_list=['ex_A', 'rxn_6'])
+            self._mm.make_irreversible(
+                self._assoc,
+                exclude_list=['ex_A', 'rxn_6'])
         f = ['gene\texpression', 'gene_1\t15', 'gene_2\t20',
              'gene_3\t15', 'gene_4\t10', 'gene_5\t10', 'gene_6\t25']
         d = gimme.parse_transcriptome_file(f, 20)
@@ -160,12 +162,15 @@ class TestAddReactions(unittest.TestCase):
              'gene_3\t15', 'gene_4\t25', 'gene_5\t10', 'gene_6\t25']
         threshold_dict = gimme.parse_transcriptome_file(f, 20)
         mm_irreversible, reversible_gene_assoc, split_rxns = \
-            gimme.make_irreversible(self._mm, self._assoc,
-            exclude_list=['ex_A', 'rxn_6'])
+            self._mm.make_irreversible(
+                self._assoc,
+                exclude_list=['ex_A', 'rxn_6'])
         p = fluxanalysis.FluxBalanceProblem(mm_irreversible, generic.Solver())
         final_model, used_exchange, below_threshold_ids, incon_score = \
-            gimme.solve_gimme_problem(p, mm_irreversible, 'rxn_6',
-            reversible_gene_assoc, split_rxns, threshold_dict, MaybeRelative(20))
+            gimme.solve_gimme_problem(
+                p, mm_irreversible, 'rxn_6',
+                reversible_gene_assoc, split_rxns, threshold_dict,
+                MaybeRelative(20))
         self.assertEqual(incon_score, 100)
         self.assertEqual(final_model, set(['rxn_1', 'rxn_2', 'rxn_4']))
         self.assertEqual(below_threshold_ids, set(['rxn_1', 'rxn_3', 'rxn_5']))
@@ -175,13 +180,15 @@ class TestAddReactions(unittest.TestCase):
              'gene_3\t15', 'gene_4\t30', 'gene_5\t10', 'gene_6\t25']
         threshold_dict = gimme.parse_transcriptome_file(f, 20)
         mm_irreversible, reversible_gene_assoc, split_rxns = \
-            gimme.make_irreversible(self._mm, self._assoc,
-            exclude_list=['ex_A', 'rxn_6'])
+            self._mm.make_irreversible(
+                self._assoc,
+                exclude_list=['ex_A', 'rxn_6'])
         p = fluxanalysis.FluxBalanceProblem(mm_irreversible, generic.Solver())
         final_model, used_exchange, below_threshold_ids, incon_score = \
-            gimme.solve_gimme_problem(p, mm_irreversible, 'rxn_6',
-            reversible_gene_assoc, split_rxns, threshold_dict,
-            MaybeRelative('2%'))
+            gimme.solve_gimme_problem(
+                p, mm_irreversible, 'rxn_6',
+                reversible_gene_assoc, split_rxns, threshold_dict,
+                MaybeRelative('2%'))
         self.assertEqual(incon_score, 100)
         self.assertEqual(final_model, set(['rxn_1', 'rxn_2', 'rxn_4']))
         self.assertEqual(below_threshold_ids, set(['rxn_1', 'rxn_3', 'rxn_5']))
