@@ -88,14 +88,15 @@ Gurobi
 The Gurobi Python bindings will have to be installed into the virtualenv. After
 activating the virtualenv:
 
-1. Locate the directory where the Guropi python bindings were installed. For
+1. Change the directory to where the Guropi python bindings were installed. For
    example, on OSX this directory is ``/Library/gurobiXXX/mac64`` where ``XXX``
    is a version code.
-2. Use ``pip`` to install the package from this directory. For example:
+2. Use ``python`` to install the package from this directory. For example:
 
 .. code-block:: shell
 
-    (env) $ pip install /Library/gurobi604/mac64
+    (env) $ cd /Library/gurobi604/mac64
+    (env) $ python setup.py install
 
 GLPK
 ----
@@ -117,6 +118,11 @@ can be installed using ``pip``:
 .. code-block:: shell
 
     (env) $ pip install python-qsoptex
+
+.. note::
+
+    QSopt_ex only supports Python 3.4 or lower. If you want to use this solver,
+    make sure that you have the correct version of Python.
 
 .. _Virtualenv: https://virtualenv.pypa.io/
 .. _python-qsoptex: https://pypi.python.org/pypi/python-qsoptex

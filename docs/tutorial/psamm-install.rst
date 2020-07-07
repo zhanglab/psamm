@@ -218,13 +218,13 @@ bindings for CPLEX into the virtual environment.
     should be installed specifically under the virtual environment with the
     PSAMM installation.
 
-PSAMM also supports the use of two other linear programming solvers, Gurobi and
-QSopt_ex. To install the Gurobi solver, Gurobi will first need to be installed
+PSAMM also supports the use of three other linear programming solvers, Gurobi,
+QSopt_ex, and GLPK. To install the Gurobi solver, Gurobi will first need to be installed
 on your computer. Gurobi can be obtained with an academic license from
 here: `Gurobi`_
 
 Once Gurobi is installed the Python bindings will need to be installed in the
-virtual environment by using pip to install them from the package directory. An
+virtual environment by running the setup.py script in the package directory. An
 example of how this could be done on a macOS is (on other platforms the path
 will be different):
 
@@ -235,8 +235,8 @@ will be different):
     (psamm-env) $ cd /Library/gurobi604/mac64/
     (psamm-env) $ python setup.py install
 
-The QSopt_ex solver can also be used with PSAMM. To install this solver, Python 2.7
-or 3.4 is required. You will first need to install Qsopt_ex on your computer and
+The QSopt_ex solver can also be used with PSAMM. To install this solver, Python 3.4 or
+lower is required. You will first need to install Qsopt_ex on your computer and
 afterwards the Python bindings (`python-qsoptex`) can be installed in the virtual
 environment:
 
@@ -255,6 +255,12 @@ installing both the library and the Python bindings.
     solver is used thermodynamic constraints cannot be used during simulation. By
     default ``psamm-model`` will not use these constraints.
 
+The GLPK solver is also supported by PSAMM. The GLPK library can be installed in
+the virtual environment using the following command:
+
+.. code-block:: shell
+
+    (psamm-env) $ pip install swiglpk
 
 Once a solver is installed you should now be able to fully use all of the
 ``psamm-model`` flux analysis functions. To see a list of the installed solvers
@@ -274,17 +280,26 @@ installed you would see the following output from ``psamm-list-lpsolvers``:
     Name: cplex
     Priority: 10
     MILP (integer) problem support: True
+    QP (quadratic) problem support: True
     Rational solution: False
     Class: <class 'psamm.lpsolver.cplex.Solver'>
 
     Name: gurobi
     Priority: 9
     MILP (integer) problem support: True
+    QP (quadratic) problem support: False
     Rational solution: False
     Class: <class 'psamm.lpsolver.gurobi.Solver'>
 
+    Name: glpk
+    Priority: 8
+    MILP (integer) problem support: True
+    QP (quadratic) problem support: False
+    Rational solution: False
+    Class: <class 'psamm.lpsolver.glpk.Solver'>
+
     Unavailable solvers:
-    qsoptex: Error loading solver: No module named qsoptex
+    qsoptex: Error loading solver: No module named 'qsoptex'
 
 By default the solver with the highest priority (highest priority number) is
 used in constraint based simulations. If you want to use a solver with a
