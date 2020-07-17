@@ -107,6 +107,15 @@ class ModelMappingCommand(Command):
                 'if the compartment ids in the two models are not consistent.'
             )
         )
+        parser_mm.add_argument(
+            '--gene-map-file', type=str,
+            help=(
+                'A tab delimited file (.tsv) listing the gene ids of '
+                'query model in the first column, and the corresponding '
+                'gene ids of dest model in the second column. Required '
+                'if the gene ids in the two models are not consistent.'
+            )
+        )
 
         # manual curation subcommand
         parser_c = subparsers.add_parser(
@@ -217,12 +226,18 @@ class ModelMappingCommand(Command):
                     source, target = row.strip().split()
                     compartment_map[source] = target
 
+        # Load gene mapping
+        gene_map = {}
+        if self._args.gene_map_file is not None:
+            with open(self._args.gene_map_file, 'r') as f:
+                for row in f:
+                    source, target = row.strip().split()
+                    gene_map[source] = target
+
         # Check models
-        if (
-            not (
-                model1.check_reaction_compounds() and
-                model2.check_reaction_compounds()) and
-                self._args.consistency_check):
+        if (not (model1.check_reaction_compounds()
+                 and model2.check_reaction_compounds())
+                and self._args.consistency_check):
             quit((
                 '\nError: '
                 'equations have something not listed in compounds.yaml, '
@@ -240,7 +255,7 @@ class ModelMappingCommand(Command):
             model1, model2, self._args.nproc, self._args.outpath,
             log=self._args.log, kegg=self._args.map_compound_kegg)
         print(
-            'It took %s seconds to calculate compound mapping...'
+            'It took %.2f seconds to calculate compound mapping...'
             % (time.time() - t))
 
         print('Writing output...')
@@ -248,8 +263,8 @@ class ModelMappingCommand(Command):
         t = time.time()
         # Write out ROC curve results
         if (actual_compound_mapping is not None):
-            with open(self._args.outpath +
-                      '/roc/compound_bayes.tsv', 'w') as f:
+            with open(self._args.outpath
+                      + '/roc/compound_bayes.tsv', 'w') as f:
                 write_roc_curve(f, cpd_bayes_pred.model1.compounds,
                                 cpd_bayes_pred.model2.compounds,
                                 cpd_bayes_pred,
@@ -265,7 +280,7 @@ class ModelMappingCommand(Command):
             self._args.threshold_compound)
         compound_best.to_csv(
             self._args.outpath + '/bayes_compounds_best.tsv', sep='\t')
-        print('It took %s seconds to write output...' % (time.time() - t))
+        print('It took %.2f seconds to write output...' % (time.time() - t))
         sys.stdout.flush()
 
         # Bayesian classifier
@@ -274,9 +289,9 @@ class ModelMappingCommand(Command):
             model1, model2, compound_best.loc[:, 'p'],
             self._args.nproc, self._args.outpath,
             log=self._args.log, gene=self._args.map_reaction_gene,
-            compartment_map=compartment_map)
+            compartment_map=compartment_map, gene_map=gene_map)
         print(
-            'It took %s seconds to calculate reaction mapping...'
+            'It took %.2f seconds to calculate reaction mapping...'
             % (time.time() - t))
 
         print('Writing output...')
@@ -284,8 +299,8 @@ class ModelMappingCommand(Command):
         t = time.time()
         # Write out ROC curve results
         if (actual_reaction_mapping is not None):
-            with open(self._args.outpath +
-                      '/roc/reaction_bayes.tsv', 'w') as f:
+            with open(self._args.outpath
+                      + '/roc/reaction_bayes.tsv', 'w') as f:
                 write_roc_curve(f, rxn_bayes_pred.model1.reactions,
                                 rxn_bayes_pred.model2.reactions,
                                 rxn_bayes_pred,
@@ -301,7 +316,7 @@ class ModelMappingCommand(Command):
             self._args.threshold_reaction)
         reaction_best.to_csv(
             self._args.outpath + '/bayes_reactions_best.tsv', sep='\t')
-        print('It took %s seconds to write output...' % (time.time() - t))
+        print('It took %.2f seconds to write output...' % (time.time() - t))
         sys.stdout.flush()
 
     def _curation(self):

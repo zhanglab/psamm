@@ -21,13 +21,13 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import open
 from builtins import super
-from future import standard_library
-standard_library.install_aliases()  # noqa
 import csv
 import logging
 from psamm.datasource.native import NativeModel
 from psamm.importer import write_yaml_model
 from psamm.util import mkdir_p
+from future import standard_library
+standard_library.install_aliases()  # noqa
 
 
 def read_mapping(mapping):

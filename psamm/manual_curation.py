@@ -84,8 +84,8 @@ class Curator(object):
         Args:
             id: one reaction id or a tuple of id pair
         """
-        return (id in self.curated_reaction_map.index or
-                id in self.false_reaction_map.index)
+        return (id in self.curated_reaction_map.index
+                or id in self.false_reaction_map.index)
 
     def reaction_ignored(self, id):
         """Return True if reaction id is in ignore list."""
@@ -97,8 +97,8 @@ class Curator(object):
         Args:
             id: one compound id or a tuple of id pair
         """
-        return (id in self.curated_compound_map.index or
-                id in self.false_compound_map.index)
+        return (id in self.curated_compound_map.index
+                or id in self.false_compound_map.index)
 
     def compound_ignored(self, id):
         """Return True if compound id is in ignore list."""
@@ -233,27 +233,18 @@ def search_compound(model, id):
         print('\n')
 
 
-def search_reaction(model, id):
+def search_reaction(model, ids):
     """Search a set of reactions, print detailed properties, then return a
     generator. Each item in the generator is a list of compounds in the
     corresponding reaction.
 
     Args:
-        id: a list of reaction ids
+        ids: a list of reaction ids
     """
     selected_reactions = set()
-
-    # Prepare translation table from compound id to name
-    compound_name = {}
-    for compound in model.compounds:
-        if 'name' in compound.properties:
-            compound_name[compound.id] = compound.properties['name']
-
-    for reaction in model.reactions:
-        if len(id) > 0:
-            if any(r == reaction.id for r in id):
-                selected_reactions.add(reaction)
-                continue
+    for r in ids:
+        if r in model.reactions:
+            selected_reactions.add(model.reactions[r])
 
     # Show results
     for reaction in selected_reactions:
@@ -262,7 +253,7 @@ def search_reaction(model, id):
         print('equation: {}'.format(
             reaction.equation))
         translated_equation = reaction.equation.translated_compounds(
-            lambda x: compound_name.get(x, x))
+            lambda c: model.compounds[c].name)
         if reaction.equation != translated_equation:
             print('equation (compound names): {}'.format(
                 translated_equation))
