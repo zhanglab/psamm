@@ -133,7 +133,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
         # exclude_lump_unkown list is a list of all excluded reactions, lump reactions and lumped reactions.
         exclude_lump_list = set(base_exclude_list)
         exclude_unknown_list = set(base_exclude_list)
-        for lump_id, sub_rxn_list in lump_to_rxnids.iteritems():
+        for lump_id, sub_rxn_list in iteritems(lump_to_rxnids):
             exclude_lump_list.add(lump_id)
             for sub_rxn in sub_rxn_list:
                 exclude_unknown_list.add(sub_rxn)
@@ -148,7 +148,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                 cpd_conc_dict[cpd] = [lower, upper]
 
         # Add lump reactions to the mm_irreversible model
-        for lump_id, rxn in lumpid_to_rxn.iteritems():
+        for lump_id, rxn in iteritems(lumpid_to_rxn):
             reaction = parse_reaction(rxn)
             mm.database.set_reaction(lump_id, reaction)
             mm.add_reaction(lump_id)
@@ -169,7 +169,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
         gene_dictionary = defaultdict(list)
         # for rx in split_reactions:
         # 	print(rx)
-        for rx in model.reactions:
+        for rx in [i for i in model.reactions]:
             if rx.id in split_reactions:
                 f = ReactionEntry(dict(id='{}_forward'.format(rx.id), genes=rx.genes))
                 r = ReactionEntry(dict(id='{}_reverse'.format(rx.id), genes=rx.genes))
@@ -179,7 +179,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
         # update these lists for the new reversible lumps and constituent reactions.
         # exclude lump_list is a list of all excluded reactions and lump reactions.
         # exclude_lump_unkown list is a list of all excluded reactions, lump reactions and lumped reactions.
-        for lump_id, sub_rxn_list in reversible_lump_to_rxn_dict.iteritems():
+        for lump_id, sub_rxn_list in iteritems(reversible_lump_to_rxn_dict):
             exclude_lump_list.add(lump_id)
             for sub_rxn in sub_rxn_list:
                 exclude_unknown_list.add(sub_rxn)
@@ -269,9 +269,9 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
             if self._args.verbose:
                 index_dict_vars = {}
-                for i, j in prob._variables.iteritems():
+                for i, j in iteritems(prob._variables):
                     index_dict_vars[j] = str(i)
-                for key, value in index_dict_vars.iteritems():
+                for key, value in iteritems(index_dict_vars):
                     print('## LP variable name, lp var lower bound, lp var upper bound, var type')
                     print(value, key, prob.cplex.variables.get_lower_bounds(key),
                           prob.cplex.variables.get_upper_bounds(key),
@@ -858,7 +858,8 @@ def add_reaction_constraints(problem, _v, _zi, _dgri, _xij, mm, exclude_lumps, e
     excluded_cpd_list = []
     excluded_cpd_list.append(hin)
     excluded_cpd_list.append(hout)
-    excluded_cpd_list.append(hother)
+    if hother is not None:
+        excluded_cpd_list.append(hother)
     for wat in water:
         excluded_cpd_list.append(wat)
     logger.info('Excluded compounds: {}'.format(','.join(excluded_cpd_list)))
