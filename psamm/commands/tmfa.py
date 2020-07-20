@@ -59,7 +59,6 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                         help='perform random reaction constraint addition in model')
 
         parser_sim = subparsers.add_parser('simulation', help='Simulation Functions')
-        parser_sim.add_argument('--verbose', action='store_true', help='print out all linear constraints and equalities from LP problem. ')
         parser_sim.add_argument('--randomsparse', action='store_true', help='run randomsparse on reactions in model with TMFA constraints applied')
         parser_sim.add_argument('--randomsparse_genes', action='store_true', help='run randomsparse on genes in model with TMFA constraints applied')
         parser_sim.add_argument('--single-solution', type=str, choices=['fba', 'l1min','random'], help='get a single TMFA solution', default=None)
@@ -267,44 +266,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
             else:
                 print_fva(prob, mm_irreversible, cp_list, exclude_unknown_list, v, dgri, zi, xij)
 
-            if self._args.verbose:
-                index_dict_vars = {}
-                for i, j in iteritems(prob._variables):
-                    index_dict_vars[j] = str(i)
-                for key, value in iteritems(index_dict_vars):
-                    print('## LP variable name, lp var lower bound, lp var upper bound, var type')
-                    print(value, key, prob.cplex.variables.get_lower_bounds(key),
-                          prob.cplex.variables.get_upper_bounds(key),
-                          prob.cplex.variables.get_types(key))
 
-                for i in prob.cplex.linear_constraints.get_names():
-                    linear_constraint = prob.cplex.linear_constraints.get_rows(i)
-                    vars = linear_constraint.ind
-                    tmp_vars = []
-                    for var in vars:
-                        tmp_vars.append(index_dict_vars[var])
-                    print('## Raw sparse pair from cplex')
-                    print(linear_constraint)
-                    print('## lhs variables, coefficients')
-                    print(tmp_vars, linear_constraint.val)
-                    print('## rhs value')
-                    print(TMFA_Problem.prob.cplex.linear_constraints.get_rhs(i))
-                    print('## rhs equation sense (L = less than or equal to, G = greater than or equal to, E = equal to')
-                    print(TMFA_Problem.prob.cplex.linear_constraints.get_senses(i))
-                    print('condensed LP constraint')
-                    equation = []
-                    for j in range(0, len(vars), 1):
-                        equation.append('{}*{}'.format(tmp_vars[j], linear_constraint.val[j]))
-                    sense = prob.cplex.linear_constraints.get_senses(i)
-                    if sense == 'L':
-                        sign = '<='
-                    elif sense == 'G':
-                        sign = '>='
-                    elif sense == 'E':
-                        sign = '=='
-                    print('{} {} {}'.format(' + '.join(equation), sign,
-                                            prob.cplex.linear_constraints.get_rhs(i)))
-                    print('-------------------------------------------------------------------')
         quit()
 
 
