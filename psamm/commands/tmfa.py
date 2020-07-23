@@ -80,7 +80,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                     f.write('exclude: <path to excluded reactions file>\n')
                     f.write('transporters: <path to transporter parameters file>\n')
                     f.write('concentrations: <path to set concentrations file>\n')
-                    f.write('proton-in: <id of teh internal proton. example cpd_h[c]>\n')
+                    f.write('proton-in: <id of the internal proton. example cpd_h[c]>\n')
                     f.write('proton-out: <id of the external proton. example cpd_h[p]>\n')
                     f.write('proton-other:\n')
                     f.write('  - <id of other proton compounds in other compartments>\n')
@@ -446,10 +446,9 @@ def lump_parser(lump_file):
     """Parses a supplied file and returns dictionaries containing lump information.
 
     The supplied file should be in a tab separated table in the format of
-    lumpID  lump_deltaG rxn1,rxn2,rxn3  lumpRXN
-    returns two dictionaries, lump_to_dg where the keys are lump reaction ids
-    and the values are deltaG values, and the rxn_to_lump_id dict where the keys
-    are reaction ids and the values are what lump reaction they belong to.
+    lumpID  lump_deltaG rxn1:1,rxn2:-1,rxn3:1  lumpRXN
+    Returns dictionaries storing this information, linking reactions to the
+    lumps.
     """
     rxn_to_lump_id = {}
     lump_to_rxn = {}
@@ -663,7 +662,7 @@ def add_reaction_constraints(problem, _v, _zi, _dgri, _xij, mm, exclude_lumps, e
             dgf_scaling[row[0]] = Decimal(row[1])
 
     R = Decimal(8.3144621 / 1000) # kJ/mol
-
+    # R = Decimal(1.987 / 1000) kcal/mol
     T = Decimal(temp) + Decimal(273.15)
     k = 500
     epsilon = 0.000001
@@ -693,11 +692,10 @@ def add_reaction_constraints(problem, _v, _zi, _dgri, _xij, mm, exclude_lumps, e
     logger.info('using h out {}'.format(hout))
     logger.info('using water {}'.format(water))
     split_list = []
-    for (f, r) in split_rxns:
-        split_list.append(f)
-        split_list.append(r)
 
     for (f,r) in split_rxns:
+        split_list.append(f)
+        split_list.append(r)
         if f not in exclude_unknown:
             dgrif = _dgri(f)
             dgrir = _dgri(r)
@@ -736,9 +734,9 @@ def add_reaction_constraints(problem, _v, _zi, _dgri, _xij, mm, exclude_lumps, e
                 ssxi = 0
 
                 if err_est:
-                    problem.prob.define('dgr_err_{}'.format(reaction), types=lp.VariableType.Continuous, lower=-1000,
+                    problem.define('dgr_err_{}'.format(reaction), types=lp.VariableType.Continuous, lower=-1000,
                                         upper=1000)
-                    dgr_err = problem.prob.var('dgr_err_{}'.format(reaction))
+                    dgr_err = problem.var('dgr_err_{}'.format(reaction))
                     problem.add_linear_constraints(dgr_err <= 2*err)
                     problem.add_linear_constraints(dgr_err >= -2*err)
                 else:
@@ -761,19 +759,19 @@ def add_reaction_constraints(problem, _v, _zi, _dgri, _xij, mm, exclude_lumps, e
 
 
 
-                if reaction in lump_rxn_list.keys():
-                    yi = problem.prob.var('yi_{}'.format(reaction))
-                    if reaction not in new_excluded_reactions:
-                        vi = _v(reaction)
-                        yi = problem.prob.var('yi_{}'.format(reaction))
-                        dgri = _dgri(reaction)
-                        problem._prob.add_linear_constraints(vi == 0)
-                        problem._prob.add_linear_constraints(dgri - (k * yi) <= - epsilon)
-                        sub_rxn_list = lump_rxn_list[reaction]
-                        sszi = 0
-                        for sub_rxn in sub_rxn_list:
-                            sszi += _zi(sub_rxn)
-                        problem._prob.add_linear_constraints(yi + sszi <= len(sub_rxn_list))
+    if reaction in lump_rxn_list.keys():
+        yi = problem.prob.var('yi_{}'.format(reaction))
+        if reaction not in new_excluded_reactions:
+            vi = _v(reaction)
+            yi = problem.prob.var('yi_{}'.format(reaction))
+            dgri = _dgri(reaction)
+            problem._prob.add_linear_constraints(vi == 0)
+            problem._prob.add_linear_constraints(dgri - (k * yi) <= - epsilon)
+            sub_rxn_list = lump_rxn_list[reaction]
+            sszi = 0
+            for sub_rxn in sub_rxn_list:
+                sszi += _zi(sub_rxn)
+            problem._prob.add_linear_constraints(yi + sszi <= len(sub_rxn_list))
 
     for (forward, reverse) in split_rxns:
         problem.add_linear_constraints(
