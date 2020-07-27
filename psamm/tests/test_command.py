@@ -15,6 +15,7 @@
 #
 # Copyright 2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2020-2020  Elysha Sameth <esameth@my.uri.edu>
 
 from __future__ import unicode_literals
 
@@ -630,6 +631,18 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
 
     def test_run_vis_compartment(self):
         self.run_solver_command(VisualizationCommand, ['--compartment'])
+
+    def test_run_vis_fba(self):
+        path = os.path.join(tempfile.mkdtemp(), 'fba.tsv')
+        with open(path, 'w') as f:
+            f.write('{}\t{}'.format('rxn_1', -0.000001))
+        self.run_solver_command(VisualizationCommand, ['--fba', path])
+
+    def test_run_vis_fva(self):
+        path = os.path.join(tempfile.mkdtemp(), 'fva.tsv')
+        with open(path, 'w') as f:
+            f.write('{}\t{}\t'.format('rxn_1', -0.000001, 0.000001))
+            self.run_solver_command(VisualizationCommand, ['--fva', path])
 
     def test_command_main(self):
         self.run_command(MockCommand)

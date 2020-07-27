@@ -16,13 +16,12 @@
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2018-2020  Ke Zhang <kzhang@my.uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2020-2020  Elysha Sameth <esameth1@my.uri.edu>
 
 from __future__ import unicode_literals
 
 from itertools import count
-
 from six import iteritems, text_type
-
 from collections import defaultdict, Counter
 
 from . import findprimarypairs
@@ -30,11 +29,10 @@ from . import findprimarypairs
 import logging
 
 from .formula import Formula, Atom, ParseError
-
-from .datasource.reaction import Direction
+from .reaction import Direction, Reaction
+from .datasource.entry import DictReactionEntry
 
 logger = logging.getLogger(__name__)
-
 
 def _graphviz_prop_string(d):
 	return ','.join('{}="{}"'.format(k, text_type(v)) for k, v
@@ -420,7 +418,7 @@ def get_compound_dict(model):
 
 
 def make_network_dict(nm, mm, subset=None, method='fpp',
-                      element=None, excluded_reactions=[]):
+                      element=None, excluded_reactions=[], reaction_dict={}, analysis=None):
 	"""Create a dictionary of reactant/product pairs to reaction directions.
 
     Returns a dictionary that connects predicted reactant/product pairs
@@ -441,42 +439,72 @@ def make_network_dict(nm, mm, subset=None, method='fpp',
             visualization.
     """
 	compound_formula = get_compound_dict(nm)
-
 	if subset is not None:
 		testing_list = []
-		for rxn in nm.reactions:
-			if rxn.id in mm.reactions:
-				if rxn.id in subset:
-					if rxn.id not in excluded_reactions:
+		for rxn in mm.reactions:
+			if rxn in nm.reactions:
+				if rxn in subset:
+					if rxn not in excluded_reactions:
 						testing_list.append(rxn)
 					else:
 						logger.warning(
 							'Reaction {} is in the subset and exclude file. '
-							'Reaction will be excluded.'.format(rxn.id))
+							'Reaction will be excluded.'.format(rxn))
 	else:
-		testing_list = [rxn for rxn in nm.reactions if
-		                rxn.id in mm.reactions and rxn.id
+		testing_list = [rxn for rxn in mm.reactions if
+		                rxn in nm.reactions and rxn
 		                not in excluded_reactions]
 
 	reaction_data = {}
+	style_flux_dict = {}
+
 	for rxn in testing_list:
-		reaction_data[rxn.id] = (rxn, rxn.equation.direction)
+		flux = 0
+		style = 'solid' if analysis is None else 'dotted'
+		direction = nm.reactions[rxn].equation.direction
+		if rxn in reaction_dict:
+			style = 'solid'
+			reaction = mm.get_reaction(rxn)
+			lower = reaction_dict[rxn][0]
+			upper = reaction_dict[rxn][1]
+			flux = lower * upper
+
+			if flux == 0:
+				if analysis =='fba' or (lower == 0 and upper == 0):
+					style = 'dotted'
+				elif lower == 0:
+					direction = Direction.Forward
+				else:
+					direction = Direction.Reverse
+			elif flux > 0:
+				direction = Direction.Forward if (analysis == 'fba' or lower > 0) else Direction.Reverse
+			else:
+				direction = Direction.Reverse if analysis == 'fba' else Direction.Both
+
+			r = Reaction(direction, reaction.left, reaction.right)
+			r_id = rxn
+			mm.remove_reaction(rxn)
+			mm.database.set_reaction(r_id, r)
+			mm.add_reaction(r_id)
+			nm.reactions[rxn].equation = r
+
+		reaction_data[rxn] = (nm.reactions[rxn], direction)
+		flux = max(min(10, abs(flux)), 1)
+		style_flux_dict[rxn] = (style, flux)
 
 	full_pairs_dict = {}
-
 	if method == 'fpp':
 		element_weight = findprimarypairs.element_weight
 		testing_list_update = []
 		for r in testing_list:
 			if all(cpd.name in compound_formula
-			       for cpd, _ in r.equation.compounds):
+			       for cpd, _ in nm.reactions[r].equation.compounds):
 				testing_list_update.append(r)
 			else:
 				logger.warning(
 					'Reaction {} is excluded from visualization due '
-					'missing or undefined compound formula'.format(r.id))
-
-		reaction_pairs = [(r.id, r.equation) for r in testing_list_update]
+					'missing or undefined compound formula'.format(r))
+		reaction_pairs = [(r, nm.reactions[r].equation) for r in testing_list_update]
 		fpp_dict, _ = findprimarypairs.predict_compound_pairs_iterated(
 			reaction_pairs, compound_formula, element_weight=element_weight)
 
@@ -494,8 +522,8 @@ def make_network_dict(nm, mm, subset=None, method='fpp',
 	elif method == 'no-fpp':
 		for reaction in testing_list:
 			compound_pairs = []
-			for substrate in reaction.equation.left:
-				for product in reaction.equation.right:
+			for substrate in nm.reactions[reaction].equation.left:
+				for product in nm.reactions[reaction].equation.right:
 					if element is None:
 						compound_pairs.append((substrate[0], product[0]))
 					else:
@@ -504,9 +532,10 @@ def make_network_dict(nm, mm, subset=None, method='fpp',
 								Atom(element) in \
 								compound_formula[product[0].name]:
 							compound_pairs.append((substrate[0], product[0]))
-			full_pairs_dict[reaction] = \
-				(sorted(compound_pairs), reaction.equation.direction)
-	return full_pairs_dict
+			full_pairs_dict[nm.reactions[reaction]] = \
+				(sorted(compound_pairs), nm.reactions[reaction].equation.direction)
+
+	return full_pairs_dict, style_flux_dict
 
 
 def write_network_dict(network_dict):
@@ -527,7 +556,7 @@ def write_network_dict(network_dict):
 			print('{}\t{}\t{}\t{}'.format(key.id, c1, c2, dir_value(dir)))
 
 
-def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges=[]):
+def make_cpair_dict(filter_dict, args_method, args_combine, style_flux_dict, hide_edges=[]):
 	"""Create a mapping from compound pair to a defaultdict containing
     lists of reactions for the forward, reverse, and both directions.
 
@@ -546,6 +575,7 @@ def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges=[]):
     """
 
 	new_id_mapping = {}
+	new_style_flux_dict = {}
 	rxn_count = Counter()
 	cpair_dict = defaultdict(lambda: defaultdict(list))
 
@@ -594,6 +624,7 @@ def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges=[]):
 						have_visited.add(k1)
 						r_id = '{}_{}'.format(rxn.id, rxn_count[rxn]).encode('ascii', 'ignore').decode('ascii')
 						new_id_mapping[r_id] = rxn
+						new_style_flux_dict[r_id] = style_flux_dict[rxn.id]
 						for v in v1:
 							rxn_mixcpairs[r_id].append((k1, v))
 						for k2, v2 in iteritems(sub_pro):
@@ -608,6 +639,8 @@ def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges=[]):
 					for (c1, c2) in cpairs:
 						if cpairs_dir[1] == Direction.Forward:
 							cpair_dict[(c1, c2)]['forward'].append(rxn_id)
+						elif cpairs_dir[1] == Direction.Reverse:
+							cpair_dict[(c1, c2)]['back'].append(rxn_id)
 						else:
 							cpair_dict[(c1, c2)]['both'].append(rxn_id)
 
@@ -619,9 +652,9 @@ def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges=[]):
 					if c1 not in have_visited:
 						if c2 not in have_visited:
 							rxn_count[rxn] += 1
-							rxn_id = str('{}_{}'.format(rxn.id,
-							                            rxn_count[rxn]))
+							rxn_id = str('{}_{}'.format(rxn.id, rxn_count[rxn]))
 							new_id_mapping[rxn_id] = rxn
+							new_style_flux_dict[rxn_id] = style_flux_dict[rxn.id]
 							have_visited.add(c1)
 							have_visited.add(c2)
 							cpd_rid[c1] = rxn_id
@@ -637,6 +670,8 @@ def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges=[]):
 
 					if cpairs_dir[1] == Direction.Forward:
 						cpair_dict[(c1, c2)]['forward'].append(rxn_id)
+					elif cpairs_dir[1] == Direction.Reverse:
+						cpair_dict[(c1, c2)]['back'].append(rxn_id)
 					else:
 						cpair_dict[(c1, c2)]['both'].append(rxn_id)
 	else:
@@ -644,18 +679,20 @@ def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges=[]):
 			for (c1, c2) in cpairs_dir[0]:
 				r_id = rxn.id
 				new_id_mapping[r_id] = rxn
+				new_style_flux_dict[r_id] = style_flux_dict[rxn.id]
 				if cpairs_dir[1] == Direction.Forward:
 					cpair_dict[(c1, c2)]['forward'].append(r_id)
+				elif cpairs_dir[1] == Direction.Reverse:
+					cpair_dict[(c1, c2)]['back'].append(r_id)
 				else:
 					cpair_dict[(c1, c2)]['both'].append(r_id)
 
 	rxns_sorted_cpair_dict = make_mature_cpair_dict(cpair_dict, hide_edges)
-
-	return rxns_sorted_cpair_dict, new_id_mapping
+	return rxns_sorted_cpair_dict, new_id_mapping, new_style_flux_dict
 
 
 def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method,
-                                args_combine, model_compound_entries):
+                                args_combine, model_compound_entries, new_style_flux_dict):
 	""" Makes a bipartite graph object from a cpair_dict object.
 
     Start from empty graph() and cpair dict to make a graph object.
@@ -739,7 +776,7 @@ def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method,
 							graph_nodes.add(sub_rxn)
 		return g
 
-	def add_edges(g, cpairs_dict, method, args_combine):
+	def add_edges(g, cpairs_dict, method, args_combine, new_style_flux_dict):
 		""" Add edges to the graph object obtained in last step.
 
         Args:
@@ -754,7 +791,6 @@ def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method,
             args_combine: Command line argument, an
                 integer(could be 0, 1 or 2).
         """
-
 		edge_list = []
 		for (c1, c2), value in iteritems(cpairs_dict):
 			for direction, rlist in iteritems(value):
@@ -768,7 +804,9 @@ def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method,
 							g.add_edge(Edge(
 								g.get_node(text_type(c1)),
 								g.get_node(text_type(sub_rxn)),
-								{'dir': direction}))
+								{'dir': direction,
+								 'style': new_style_flux_dict[sub_rxn][0],
+								 'penwidth': new_style_flux_dict[sub_rxn][1]}))
 
 						test2 = c2, sub_rxn
 						if test2 not in edge_list:
@@ -776,27 +814,45 @@ def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method,
 							g.add_edge(Edge(
 								g.get_node(text_type(sub_rxn)),
 								g.get_node(text_type(c2)),
-								{'dir': direction}))
+								{'dir': direction,
+								 'style': new_style_flux_dict[sub_rxn][0],
+								 'penwidth': new_style_flux_dict[sub_rxn][1]}))
+
 				else:
 					test1 = c1, new_rlist
 					test2 = c2, new_rlist
+					sub_rxn = list(new_rlist.split(','))
+					style_list = [new_style_flux_dict[rxn][0] for rxn in sub_rxn]
+					dotted = all(style == 'dotted' for style in style_list)
+					style = 'dotted' if dotted else 'solid'
+					if len(style_list) == 1:
+						style = new_style_flux_dict[new_rlist][0]
+
+					flux = 0
+					for rxn in sub_rxn:
+						flux += new_style_flux_dict[rxn][1]
+					flux = max(min(10, flux), 1)
+
 					if test1 not in edge_list:
 						edge_list.append(test1)
 						g.add_edge(Edge(
 							g.get_node(text_type(c1)),
 							g.get_node(text_type(new_rlist)),
-							{'dir': direction}))
+							{'dir': direction, 'style': style,
+							 'penwidth': flux}))
+
 					if test2 not in edge_list:
 						edge_list.append(test2)
 						g.add_edge(Edge(
 							g.get_node(text_type(new_rlist)),
-							g.get_node(text_type(c2)), {'dir': direction}))
+							g.get_node(text_type(c2)),
+							{'dir': direction, 'style': style,
+							 'penwidth': flux}))
 		return g
 
 	g = add_graph_nodes(g, cpairs_dict, method, new_id_mapping,
 	                    args_combine, model_compound_entries)
-	g = add_edges(g, cpairs_dict, method, args_combine)
-
+	g = add_edges(g, cpairs_dict, method, args_combine, new_style_flux_dict)
 	return g
 
 
