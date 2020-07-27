@@ -15,6 +15,7 @@
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@uri.edu>
+# Copyright 2020-2020  Elysha Sameth <esameth1@my.uri.edu>
 
 
 from __future__ import unicode_literals
@@ -533,7 +534,8 @@ class TestOther(unittest.TestCase):
 		self.assertEqual(test_dict, cpd_dict)
 
 	def test_network_dict(self):
-		net_dict = graph.make_network_dict(self.native, self.mm, subset=None, method='fpp', element=None, excluded_reactions=[])
+		net_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm, subset=None, method='fpp', element=None, excluded_reactions=[])
+
 		test_dict = {self.rxn1 : ([(Compound(u'fum_c', u'c'), Compound(u'mal_L_c', u'c')), (Compound(u'h2o_c', u'c'),
 		                            Compound(u'mal_L_c', u'c'))], Direction.Both), self.rxn2 :
 									([(Compound(u'q8_c', u'c'),Compound(u'q8h2_c', u'c')),
@@ -543,7 +545,7 @@ class TestOther(unittest.TestCase):
 		self.assertEqual(net_dict, test_dict)
 
 	def test_network_dict_nofpp(self):
-		net_dict = graph.make_network_dict(self.native, self.mm, subset=None, method='no-fpp', element=None, excluded_reactions=[])
+		net_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm, subset=None, method='no-fpp', element=None, excluded_reactions=[])
 		test_dict = {self.rxn1 : ([(Compound(u'fum_c', u'c'), Compound(u'mal_L_c', u'c')),
 									(Compound(u'h2o_c', u'c'), Compound(u'mal_L_c', u'c'))],
 									Direction.Both), self.rxn2 :
@@ -615,14 +617,22 @@ class TestMakeNetworks(unittest.TestCase):
 		self.node_rxn1_1 = graph.Node({'id': 'rxn1_1', 'entry': [self.rxn1], 'compartment': None, 'type': 'rxn'})
 		self.node_rxn1_2 = graph.Node({'id': 'rxn1_2', 'entry': [self.rxn1], 'compartment': None, 'type': 'rxn'})
 		self.node_rxn2_1 = graph.Node({'id': 'rxn2_1', 'entry': [self.rxn2], 'compartment': None, 'type': 'rxn'})
-		self.edge_bip_1 = graph.Edge(self.node_atp_bip, self.node_rxn1_1, props={'dir': 'forward'})
-		self.edge_bip_2 = graph.Edge(self.node_rxn1_1, self.node_adp_bip, props={'dir': 'forward'})
-		self.edge_bip_3 = graph.Edge(self.node_atp_bip, self.node_rxn1_1, props={'dir': 'forward'})
-		self.edge_bip_4 = graph.Edge(self.node_rxn1_1, self.node_g6p_bip, props={'dir': 'forward'})
-		self.edge_bip_5 = graph.Edge(self.node_glc_bip, self.node_rxn1_2, props={'dir': 'forward'})
-		self.edge_bip_6 = graph.Edge(self.node_rxn1_2, self.node_g6p_bip, props={'dir': 'forward'})
-		self.edge_bip_7 = graph.Edge(self.node_g6p_bip, self.node_rxn2_1, props={'dir': 'both'})
-		self.edge_bip_8 = graph.Edge(self.node_rxn2_1, self.node_f6p_bip, props={'dir': 'both'})
+		self.edge_bip_1 = graph.Edge(self.node_atp_bip, self.node_rxn1_1, props={'dir': 'forward',
+																				 'style': 'solid', 'penwidth': 1})
+		self.edge_bip_2 = graph.Edge(self.node_rxn1_1, self.node_adp_bip, props={'dir': 'forward',
+																				 'style': 'solid', 'penwidth': 1})
+		self.edge_bip_3 = graph.Edge(self.node_atp_bip, self.node_rxn1_1, props={'dir': 'forward',
+																				 'style': 'solid', 'penwidth': 1})
+		self.edge_bip_4 = graph.Edge(self.node_rxn1_1, self.node_g6p_bip, props={'dir': 'forward',
+																				 'style': 'solid', 'penwidth': 1})
+		self.edge_bip_5 = graph.Edge(self.node_glc_bip, self.node_rxn1_2, props={'dir': 'forward',
+																				 'style': 'solid', 'penwidth': 1})
+		self.edge_bip_6 = graph.Edge(self.node_rxn1_2, self.node_g6p_bip, props={'dir': 'forward',
+																				 'style': 'solid', 'penwidth': 1})
+		self.edge_bip_7 = graph.Edge(self.node_g6p_bip, self.node_rxn2_1, props={'dir': 'both',
+																				 'style': 'solid', 'penwidth': 1})
+		self.edge_bip_8 = graph.Edge(self.node_rxn2_1, self.node_f6p_bip, props={'dir': 'both',
+																				 'style': 'solid', 'penwidth': 1})
 		self.node_list = [
 			self.node_atp_bip, self.node_adp_bip, self.node_g6p_bip, self.node_glc_bip, self.node_f6p_bip,
 			self.node_rxn1_1, self.node_rxn1_2, self.node_rxn2_1]
@@ -637,16 +647,16 @@ class TestMakeNetworks(unittest.TestCase):
 			self.model_compound_entries[cpd.id] = cpd
 
 	def test_compound_graph(self):
-		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
-		                                   excluded_reactions=[])
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
+		                                   excluded_reactions=[], reaction_dict={}, analysis=None)
 		compound_graph = graph.make_compound_graph(net_dict)
 		self.assertTrue(all(i in compound_graph.nodes for i in [self.node_atp, self.node_adp, self.node_g6p, self.node_glc, self.node_f6p]))
 		self.assertTrue(all(i in compound_graph.edges for i in [self.edge_1, self.edge_2, self.edge_3, self.edge_4, self.edge_5]))
 		self.assertTrue(self.edge_6 not in compound_graph.edges)
 
 	def test_compound_graph_filter(self):
-		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element='C',
-		                                   excluded_reactions=[])
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element='C',
+		                                   excluded_reactions=[], reaction_dict={}, analysis=None)
 		compound_graph = graph.make_compound_graph(net_dict)
 		self.assertTrue(all(i in compound_graph.nodes for i in [self.node_atp, self.node_adp, self.node_g6p, self.node_glc, self.node_f6p]))
 		self.assertTrue(all(i in compound_graph.edges for i in [self.edge_1, self.edge_2, self.edge_3, self.edge_4]))
@@ -655,8 +665,8 @@ class TestMakeNetworks(unittest.TestCase):
 
 
 	def test_compound_graph_subset(self):
-		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=['rxn1'], method='fpp', element=None,
-		                                   excluded_reactions=[])
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=['rxn1'], method='fpp', element=None,
+		                                   excluded_reactions=[], reaction_dict={}, analysis=None)
 		compound_graph = graph.make_compound_graph(net_dict)
 		self.assertTrue(all(i in compound_graph.nodes for i in [self.node_atp, self.node_adp, self.node_g6p, self.node_glc]))
 		self.assertTrue(self.node_f6p not in compound_graph.nodes)
@@ -665,8 +675,8 @@ class TestMakeNetworks(unittest.TestCase):
 		self.assertTrue(self.edge_6 not in compound_graph.edges)
 
 	def test_compound_graph_exclude(self):
-		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
-		                                   excluded_reactions=['rxn2'])
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
+		                                   excluded_reactions=['rxn2'], reaction_dict={}, analysis=None)
 		compound_graph = graph.make_compound_graph(net_dict)
 		self.assertTrue(all(i in compound_graph.nodes for i in [self.node_atp, self.node_adp, self.node_g6p, self.node_glc]))
 		self.assertTrue(self.node_f6p not in compound_graph.nodes)
@@ -675,16 +685,16 @@ class TestMakeNetworks(unittest.TestCase):
 		self.assertTrue(self.edge_6 not in compound_graph.edges)
 
 	def test_compound_graph_nofpp(self):
-		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='no-fpp', element=None,
-		                                   excluded_reactions=[])
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='no-fpp', element=None,
+		                                   excluded_reactions=[], reaction_dict={}, analysis=None)
 		compound_graph = graph.make_compound_graph(net_dict)
 		self.assertTrue(all(i in compound_graph.nodes for i in [self.node_f6p, self.node_g6p, self.node_glc, self.node_adp, self.node_atp]))
 		self.assertTrue(all(i in compound_graph.edges for i in [self.edge_1, self.edge_2, self.edge_3, self.edge_4, self.edge_5, self.edge_6]))
 
 	def test_make_cpair_dict_combine_0(self):
-		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
-		                                   excluded_reactions=[])
-		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
+		                                   excluded_reactions=[], reaction_dict={}, analysis=None)
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'fpp', 0, style_flux_dict)
 		test_dict = defaultdict(lambda: defaultdict(list))
 		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_1']
 		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_1']
@@ -697,9 +707,9 @@ class TestMakeNetworks(unittest.TestCase):
 		self.assertEqual(new_id, test_new_id)
 
 	def test_make_cpair_dict_combine_1(self):
-		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
-		                                   excluded_reactions=[])
-		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 1)
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
+		                                   excluded_reactions=[], reaction_dict={}, analysis=None)
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'fpp', 1, style_flux_dict)
 		test_dict = defaultdict(lambda: defaultdict(list))
 		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1_1']
 		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_1']
@@ -712,9 +722,9 @@ class TestMakeNetworks(unittest.TestCase):
 		self.assertEqual(new_id, test_new_id)
 
 	def test_make_cpair_dict_combine_2(self):
-		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
-		                                   excluded_reactions=[])
-		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 2)
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
+		                                   excluded_reactions=[], reaction_dict={}, analysis=None)
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'fpp', 2, style_flux_dict)
 		test_dict = defaultdict(lambda: defaultdict(list))
 		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1_1']
 		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_1']
@@ -727,9 +737,9 @@ class TestMakeNetworks(unittest.TestCase):
 		self.assertEqual(new_id, test_new_id)
 
 	def test_make_cpair_dict_nofpp(self):
-		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='no-fpp', element=None,
-		                                   excluded_reactions=[])
-		cpairs, new_id = graph.make_cpair_dict(net_dict, 'no-fpp', 0)
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='no-fpp', element=None,
+		                                   excluded_reactions=[], reaction_dict={}, analysis=None)
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'no-fpp', 0, style_flux_dict)
 		test_dict = defaultdict(lambda: defaultdict(list))
 		test_dict[(Compound('glc'), Compound('g6p'))]['forward'] = ['rxn1']
 		test_dict[(Compound('glc'), Compound('adp'))]['forward'] = ['rxn1']
@@ -750,9 +760,9 @@ class TestMakeNetworks(unittest.TestCase):
 		nm.reactions.add_entry(rxn3)
 		mm = self.native_model.create_metabolic_model()
 
-		net_dict = graph.make_network_dict(nm, mm, subset=None, method='fpp', element=None,
-		                                   excluded_reactions=[])
-		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
+		net_dict, style_flux_dict = graph.make_network_dict(nm, mm, subset=None, method='fpp', element=None,
+		                                   excluded_reactions=[], reaction_dict={}, analysis=None)
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'fpp', 0, style_flux_dict)
 		test_dict = defaultdict(lambda: defaultdict(list))
 		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_1']
 		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_1']
@@ -771,9 +781,9 @@ class TestMakeNetworks(unittest.TestCase):
 		nm.reactions.add_entry(rxn3)
 		mm = self.native_model.create_metabolic_model()
 
-		net_dict = graph.make_network_dict(nm, mm, subset=None, method='fpp', element=None,
-		                                   excluded_reactions=[])
-		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
+		net_dict, style_flux_dict = graph.make_network_dict(nm, mm, subset=None, method='fpp', element=None,
+		                                   excluded_reactions=[], reaction_dict={}, analysis=None)
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'fpp', 0, style_flux_dict)
 		test_dict = defaultdict(lambda: defaultdict(list))
 		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_1']
 		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_1']
@@ -794,9 +804,9 @@ class TestMakeNetworks(unittest.TestCase):
 		nm.reactions.add_entry(rxn3)
 		mm = self.native_model.create_metabolic_model()
 
-		net_dict = graph.make_network_dict(nm, mm, subset=None, method='fpp', element=None,
-		                                   excluded_reactions=[])
-		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
+		net_dict, style_flux_dict = graph.make_network_dict(nm, mm, subset=None, method='fpp', element=None,
+		                                   excluded_reactions=[], reaction_dict={}, analysis=None)
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'fpp', 0, style_flux_dict)
 		test_dict = defaultdict(lambda: defaultdict(list))
 		test_dict[(Compound('atp'), Compound('adp'))]['forward'] = ['rxn1_1']
 		test_dict[(Compound('atp'), Compound('g6p'))]['forward'] = ['rxn1_1']
@@ -817,23 +827,20 @@ class TestMakeNetworks(unittest.TestCase):
 		self.assertEqual(g.nodes_original_id_dict, d)
 
 	def test_bipartite_graph(self):
-		# self.native_model.default_compartment = 'c'
-		# print(self.native_model.default_compartment)
-		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
-										   excluded_reactions=[])
-		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
-		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries)
-
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
+										   excluded_reactions=[], reaction_dict={}, analysis=None)
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'fpp', 0, style_flux_dict)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries, new_style_flux_dict)
 		self.assertTrue(all(i in bipartite_graph.nodes for i in self.node_list))
 		self.assertTrue(all(i in self.node_list for i in bipartite_graph.nodes))
 		self.assertTrue(all(i in bipartite_graph.edges for i in self.edge_list))
 		self.assertTrue(all(i in self.edge_list for i in bipartite_graph.edges))
 
 	def test_bipartite_graph_filter(self):
-		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element='C',
-										   excluded_reactions=[])
-		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
-		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries)
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element='C',
+										   excluded_reactions=[], reaction_dict={}, analysis=None)
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'fpp', 0, style_flux_dict)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries, new_style_flux_dict)
 		edge_list = [self.edge_bip_1, self.edge_bip_2, self.edge_bip_5, self.edge_bip_6, self.edge_bip_7, self.edge_bip_8]
 		self.assertTrue(all(i in bipartite_graph.nodes for i in self.node_list))
 		self.assertTrue(all(i in bipartite_graph.edges for i in edge_list))
@@ -841,10 +848,10 @@ class TestMakeNetworks(unittest.TestCase):
 		self.assertTrue(all(i in edge_list for i in bipartite_graph.edges))
 
 	def test_bipartite_graph_filter2(self):
-		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element='P',
-										   excluded_reactions=[])
-		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
-		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries)
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element='P',
+										   excluded_reactions=[], reaction_dict={}, analysis=None)
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'fpp', 0, style_flux_dict)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries, new_style_flux_dict)
 		node_list = [i for i in self.node_list if i not in [self.node_glc_bip, self.node_rxn1_2]]
 		edge_list = [self.edge_bip_1, self.edge_bip_2, self.edge_bip_3, self.edge_bip_4, self.edge_bip_7, self.edge_bip_8]
 		self.assertTrue(all(i in bipartite_graph.nodes for i in node_list))
@@ -853,10 +860,10 @@ class TestMakeNetworks(unittest.TestCase):
 		self.assertTrue(all(i in edge_list for i in bipartite_graph.edges))
 
 	def test_bipartite_graph_subset(self):
-		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=['rxn1'], method='fpp', element=None,
-										   excluded_reactions=[])
-		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
-		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries)
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=['rxn1'], method='fpp', element=None,
+										   excluded_reactions=[], reaction_dict={}, analysis=None)
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'fpp', 0, style_flux_dict)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries, new_style_flux_dict)
 		node_list = [i for i in self.node_list if i not in [self.node_f6p_bip, self.node_rxn2_1]]
 		edge_list = [self.edge_bip_1, self.edge_bip_2, self.edge_bip_3, self.edge_bip_4, self.edge_bip_5, self.edge_bip_6]
 		self.assertTrue(all(i in bipartite_graph.nodes for i in node_list))
@@ -865,10 +872,10 @@ class TestMakeNetworks(unittest.TestCase):
 		self.assertTrue(all(i in edge_list for i in bipartite_graph.edges))
 
 	def test_bipartite_graph_subset2(self):
-		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=['rxn2'], method='fpp', element=None,
-										   excluded_reactions=[])
-		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
-		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries)
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=['rxn2'], method='fpp', element=None,
+										   excluded_reactions=[], reaction_dict={}, analysis=None)
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'fpp', 0, style_flux_dict)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries, new_style_flux_dict)
 		node_list = [self.node_g6p_bip, self.node_f6p_bip, self.node_rxn2_1]
 		edge_list = [self.edge_bip_7, self.edge_bip_8]
 		self.assertTrue(all(i in bipartite_graph.nodes for i in node_list))
@@ -877,10 +884,10 @@ class TestMakeNetworks(unittest.TestCase):
 		self.assertTrue(all(i in edge_list for i in bipartite_graph.edges))
 
 	def test_bipartite_graph_exclude(self):
-		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
-										   excluded_reactions=['rxn2'])
-		cpairs, new_id = graph.make_cpair_dict(net_dict, 'fpp', 0)
-		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries)
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
+										   excluded_reactions=['rxn2'], reaction_dict={}, analysis=None)
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'fpp', 0, style_flux_dict)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries, new_style_flux_dict)
 		node_list = [i for i in self.node_list if i not in [self.node_f6p_bip, self.node_rxn2_1]]
 		edge_list = [self.edge_bip_1, self.edge_bip_2, self.edge_bip_3, self.edge_bip_4, self.edge_bip_5, self.edge_bip_6]
 		self.assertTrue(all(i in bipartite_graph.nodes for i in node_list))
@@ -889,18 +896,84 @@ class TestMakeNetworks(unittest.TestCase):
 		self.assertTrue(all(i in edge_list for i in bipartite_graph.edges))
 
 	def test_bipartite_graph_nofpp(self):
-		net_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='no-fpp', element=None,
-										   excluded_reactions=[])
-		cpairs, new_id = graph.make_cpair_dict(net_dict, 'no-fpp', 0)
-		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'no-fpp', 0, self.model_compound_entries)
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='no-fpp', element=None,
+										   excluded_reactions=[], reaction_dict={}, analysis=None)
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'no-fpp', 0, style_flux_dict)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'no-fpp', 0, self.model_compound_entries, new_style_flux_dict)
 		node_rxn1 = graph.Node({'id': 'rxn1', 'entry': [self.rxn1], 'compartment': None, 'type': 'rxn'})
 		node_rxn2 = graph.Node({'id': 'rxn2', 'entry': [self.rxn2], 'compartment': None, 'type': 'rxn'})
-		edge_bip_1 = graph.Edge(self.node_atp_bip, node_rxn1, props={'dir': 'forward'})
-		edge_bip_2 = graph.Edge(self.node_glc_bip, node_rxn1, props={'dir': 'forward'})
-		edge_bip_3 = graph.Edge(node_rxn1, self.node_adp_bip, props={'dir': 'forward'})
-		edge_bip_4 = graph.Edge(node_rxn1, self.node_g6p_bip, props={'dir': 'forward'})
-		edge_bip_5 = graph.Edge(self.node_g6p_bip, node_rxn2, props={'dir': 'both'})
-		edge_bip_6 = graph.Edge(node_rxn2, self.node_f6p_bip, props={'dir': 'both'})
+		edge_bip_1 = graph.Edge(self.node_atp_bip, node_rxn1, props={'dir': 'forward', 'style': 'solid',
+																	 'penwidth': 1})
+		edge_bip_2 = graph.Edge(self.node_glc_bip, node_rxn1, props={'dir': 'forward', 'style': 'solid',
+																	'penwidth': 1})
+		edge_bip_3 = graph.Edge(node_rxn1, self.node_adp_bip, props={'dir': 'forward', 'style': 'solid',
+																	 'penwidth': 1})
+		edge_bip_4 = graph.Edge(node_rxn1, self.node_g6p_bip, props={'dir': 'forward', 'style': 'solid',
+																	 'penwidth': 1})
+		edge_bip_5 = graph.Edge(self.node_g6p_bip, node_rxn2, props={'dir': 'both', 'style': 'solid',
+																	 'penwidth': 1})
+		edge_bip_6 = graph.Edge(node_rxn2, self.node_f6p_bip, props={'dir': 'both', 'style': 'solid',
+																	 'penwidth': 1})
+		node_list = [self.node_atp_bip, self.node_adp_bip, self.node_g6p_bip, self.node_glc_bip, self.node_f6p_bip,
+					 node_rxn1, node_rxn2]
+		edge_list = [edge_bip_1, edge_bip_2, edge_bip_3, edge_bip_4, edge_bip_5, edge_bip_6]
+		self.assertTrue(all(i in bipartite_graph.nodes for i in node_list))
+		self.assertTrue(all(i in bipartite_graph.edges for i in edge_list))
+		self.assertTrue(all(i in node_list for i in bipartite_graph.nodes))
+		self.assertTrue(all(i in edge_list for i in bipartite_graph.edges))
+
+	def test_bipartite_graph_fba(self):
+		reaction_dict = {'rxn1': (0,1), 'rxn2': (2,1)}
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='no-fpp',
+													   element=None, excluded_reactions=[],
+													   reaction_dict=reaction_dict, analysis='fba')
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'no-fpp', 0, style_flux_dict)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'no-fpp', 0,
+															self.model_compound_entries, new_style_flux_dict)
+		node_rxn1 = graph.Node({'id': 'rxn1', 'entry': [self.rxn1], 'compartment': None, 'type': 'rxn'})
+		node_rxn2 = graph.Node({'id': 'rxn2', 'entry': [self.rxn2], 'compartment': None, 'type': 'rxn'})
+		edge_bip_1 = graph.Edge(self.node_atp_bip, node_rxn1, props={'dir': 'forward', 'style': 'dotted',
+																	 'penwidth': 1})
+		edge_bip_2 = graph.Edge(self.node_glc_bip, node_rxn1, props={'dir': 'forward', 'style': 'dotted',
+																	 'penwidth': 1})
+		edge_bip_3 = graph.Edge(node_rxn1, self.node_adp_bip, props={'dir': 'forward', 'style': 'dotted',
+																	 'penwidth': 1})
+		edge_bip_4 = graph.Edge(node_rxn1, self.node_g6p_bip, props={'dir': 'forward', 'style': 'dotted',
+																	 'penwidth': 1})
+		edge_bip_5 = graph.Edge(self.node_g6p_bip, node_rxn2, props={'dir': 'forward', 'style': 'solid',
+																	 'penwidth': 2})
+		edge_bip_6 = graph.Edge(node_rxn2, self.node_f6p_bip, props={'dir': 'forward', 'style': 'solid',
+																	 'penwidth': 2})
+		node_list = [self.node_atp_bip, self.node_adp_bip, self.node_g6p_bip, self.node_glc_bip, self.node_f6p_bip,
+					 node_rxn1, node_rxn2]
+		edge_list = [edge_bip_1, edge_bip_2, edge_bip_3, edge_bip_4, edge_bip_5, edge_bip_6]
+		self.assertTrue(all(i in bipartite_graph.nodes for i in node_list))
+		self.assertTrue(all(i in bipartite_graph.edges for i in edge_list))
+		self.assertTrue(all(i in node_list for i in bipartite_graph.nodes))
+		self.assertTrue(all(i in edge_list for i in bipartite_graph.edges))
+
+	def test_bipartite_graph_fva(self):
+		reaction_dict = {'rxn1': (0,0), 'rxn2': (-1, 1)}
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='no-fpp',
+													   element=None, excluded_reactions=[],
+													   reaction_dict=reaction_dict, analysis='fva')
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'no-fpp', 0, style_flux_dict)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'no-fpp', 0,
+															self.model_compound_entries, new_style_flux_dict)
+		node_rxn1 = graph.Node({'id': 'rxn1', 'entry': [self.rxn1], 'compartment': None, 'type': 'rxn'})
+		node_rxn2 = graph.Node({'id': 'rxn2', 'entry': [self.rxn2], 'compartment': None, 'type': 'rxn'})
+		edge_bip_1 = graph.Edge(self.node_atp_bip, node_rxn1, props={'dir': 'forward', 'style': 'dotted',
+																	 'penwidth': 1})
+		edge_bip_2 = graph.Edge(self.node_glc_bip, node_rxn1, props={'dir': 'forward', 'style': 'dotted',
+																	 'penwidth': 1})
+		edge_bip_3 = graph.Edge(node_rxn1, self.node_adp_bip, props={'dir': 'forward', 'style': 'dotted',
+																	 'penwidth': 1})
+		edge_bip_4 = graph.Edge(node_rxn1, self.node_g6p_bip, props={'dir': 'forward', 'style': 'dotted',
+																	 'penwidth': 1})
+		edge_bip_5 = graph.Edge(self.node_g6p_bip, node_rxn2, props={'dir': 'both', 'style': 'solid',
+																	 'penwidth': 1})
+		edge_bip_6 = graph.Edge(node_rxn2, self.node_f6p_bip, props={'dir': 'both', 'style': 'solid',
+																	 'penwidth': 1})
 		node_list = [self.node_atp_bip, self.node_adp_bip, self.node_g6p_bip, self.node_glc_bip, self.node_f6p_bip,
 					 node_rxn1, node_rxn2]
 		edge_list = [edge_bip_1, edge_bip_2, edge_bip_3, edge_bip_4, edge_bip_5, edge_bip_6]

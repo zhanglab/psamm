@@ -16,7 +16,7 @@
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2018-2020  Ke Zhang <kzhang@my.uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
-# Copyright 2020    Elysha Sameth <esameth1@my.uri.edu>
+# Copyright 2020-2020  Elysha Sameth <esameth1@my.uri.edu>
 
 from __future__ import unicode_literals
 
@@ -42,6 +42,7 @@ COMPOUND_COLOR = '#ffd8bf'
 ACTIVE_COLOR = '#90f998'
 ALT_COLOR = '#b3fcb8'
 
+EPSILON = 1e-5
 
 class VisualizationCommand(MetabolicMixin,
                            Command, FilePrefixAppendAction):
@@ -97,6 +98,14 @@ class VisualizationCommand(MetabolicMixin,
             nargs=2, type=float,
             help='Set the width and height of the graph image. '
                  '(width height)(inches)')
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument(
+            '--fba', type=argparse.FileType('rU'), default=None,
+            help='Visualize fba reaction flux')
+        group.add_argument(
+            '--fva', type=argparse.FileType('rU'), default=None,
+            help='Visualize fva reaction flux')
+
         super(VisualizationCommand, cls).init_parser(parser)
 
     def run(self):
@@ -115,10 +124,28 @@ class VisualizationCommand(MetabolicMixin,
         if self._args.element.lower() == 'none':
             self._args.element = None
 
+        self.analysis = None
+        reaction_dict = {}
+        if self._args.fba is not None:
+            self.analysis = 'fba'
+            for row in csv.reader(self._args.fba, delimiter=str('\t')):
+                if abs(float(row[1])) <= EPSILON:
+                    row[1] = 0
+                reaction_dict[row[0]] = (float(row[1]), 1)
+
+        if self._args.fva is not None:
+            self.analysis = 'fva'
+            for row in csv.reader(self._args.fva, delimiter=str('\t')):
+                if abs(float(row[1])) <= EPSILON:
+                    row[0] = 0
+                if abs(float(row[2])) <= EPSILON:
+                    row[1] = 0
+                reaction_dict[row[0]] = (float(row[1]), float(row[2]))
+
         exclude_for_fpp = [self._model.biomass_reaction] + self._args.exclude
-        filter_dict = graph.make_network_dict(
+        filter_dict, style_flux_dict = graph.make_network_dict(
             self._model, self._mm, vis_rxns, self._args.method,
-            self._args.element, exclude_for_fpp)
+            self._args.element, exclude_for_fpp, reaction_dict, self.analysis)
 
         model_compound_entries, model_reaction_entries = {}, {}
         for c in self._model.compounds:
@@ -132,12 +159,12 @@ class VisualizationCommand(MetabolicMixin,
                 hide_edges.append((row[0], row[1]))
                 hide_edges.append((row[1], row[0]))
 
-        cpair_dict, new_id_mapping = graph.make_cpair_dict(
-            filter_dict, self._args.method, self._args.combine, hide_edges)
+        cpair_dict, new_id_mapping, new_style_flux_dict = graph.make_cpair_dict(
+            filter_dict, self._args.method, self._args.combine, style_flux_dict, hide_edges)
 
         g = graph.make_bipartite_graph_object(
             cpair_dict, new_id_mapping, self._args.method, self._args.combine,
-            model_compound_entries)
+            model_compound_entries, new_style_flux_dict)
 
         recolor_dict = {}
         if self._args.color is not None:

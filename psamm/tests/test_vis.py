@@ -16,7 +16,7 @@
 #
 # Copyright 2018-2020  Ke Zhang <kzhang@my.uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@uri.edu>
-# Copyright 2020       Elysha Sameth <esameth@my.uri.edu>
+# Copyright 2020-2020  Elysha Sameth <esameth@my.uri.edu>
 
 from __future__ import unicode_literals
 from graphviz import FORMATS
@@ -937,6 +937,107 @@ class TestGetCptBoundaries(unittest.TestCase):
         e4_extra_res = 'e'
         self.assertTrue(all(i in e4_bound for i in e4_bound_res))
         self.assertEqual(e4_extra, e4_extra_res)
+
+class TestFlux(unittest.TestCase):
+    def setUp(self):
+        native_model = NativeModel()
+        native_model.reactions.add_entry(ReactionEntry({
+            'id': 'rxn1', 'equation': parse_reaction(
+                'fum[c] + h2o[c] <=> mal_L[c]')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'fum', 'formula': 'C4H2O4'}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'h2o', 'formula': 'H2O'}))
+        native_model.compounds.add_entry(CompoundEntry(
+            {'id': 'mal_L', 'formula': 'C4H4O5'}))
+        native_model.reactions.add_entry(ReactionEntry({
+            'id': 'rxn2', 'equation': parse_reaction(
+                'q8[c] + succ[c] => fum[c] + q8h2[c]')}))
+        native_model.compounds.add_entry(CompoundEntry(
+            {'id': 'q8', 'formula': 'C49H74O4'}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'q8h2', 'formula': 'C49H76O4'}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'succ', 'formula': 'C4H4O4'}))
+        native_model.reactions.add_entry(ReactionEntry({
+            'id': 'rxn3', 'equation': parse_reaction(
+                'h2o[c] <=> h2o[e]')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'h2o', 'formula': 'H2O'}))
+        self.native = native_model
+        self.mm = native_model.create_metabolic_model()
+
+    def test1_neg_flux_fba(self):
+        reaction_dict = {'rxn1': (-20, 1)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                        reaction_dict=reaction_dict, analysis='fba')
+        self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('solid', style_flux_dict['rxn1'][0])
+        self.assertEqual(10, style_flux_dict['rxn1'][1])
+
+    def test2_pos_flux_fba(self):
+        reaction_dict = {'rxn1': (10, 1)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                              reaction_dict=reaction_dict, analysis='fba')
+        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('solid', style_flux_dict['rxn1'][0])
+        self.assertEqual(10, style_flux_dict['rxn1'][1])
+
+    def test3_0_flux_fba(self):
+        reaction_dict = {'rxn1': (0, 1)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                              reaction_dict=reaction_dict, analysis='fba')
+        self.assertEqual(Direction.Both, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('dotted', style_flux_dict['rxn1'][0])
+        self.assertEqual(1, style_flux_dict['rxn1'][1])
+
+    def test4_neg_flux_fva(self):
+        reaction_dict = {'rxn1': (-10, 1)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                        reaction_dict=reaction_dict, analysis='fva')
+        self.assertEqual(Direction.Both, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('dotted', style_flux_dict['rxn2'][0])
+        self.assertEqual(10, style_flux_dict['rxn1'][1])
+
+    def test5_pos_flux_neg_fva(self):
+        reaction_dict = {'rxn1': (-10, -10)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                        reaction_dict=reaction_dict, analysis='fva')
+        self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('solid', style_flux_dict['rxn1'][0])
+        self.assertEqual(10, style_flux_dict['rxn1'][1])
+
+    def test6_pos_flux_pos_fva(self):
+        reaction_dict = {'rxn1': (10, 10)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                              reaction_dict=reaction_dict, analysis='fva')
+        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('solid', style_flux_dict['rxn1'][0])
+        self.assertEqual(10, style_flux_dict['rxn1'][1])
+
+    def test7_lower_0_flux_fva(self):
+        reaction_dict = {'rxn1': (0, 10)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                        reaction_dict=reaction_dict, analysis='fva')
+        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('solid', style_flux_dict['rxn1'][0])
+        self.assertEqual(1, style_flux_dict['rxn1'][1])
+
+    def test8_upper_0_flux_fva(self):
+        reaction_dict = {'rxn1': (-10, 0)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                              reaction_dict=reaction_dict, analysis='fva')
+        self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('solid', style_flux_dict['rxn1'][0])
+        self.assertEqual(1, style_flux_dict['rxn1'][1])
+
+    def test9_both_0_flux_fva(self):
+        reaction_dict = {'rxn1': (0, 0)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                              reaction_dict=reaction_dict, analysis='fva')
+        self.assertEqual(Direction.Both, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('dotted', style_flux_dict['rxn1'][0])
+        self.assertEqual(1, style_flux_dict['rxn1'][1])
 
 if __name__ == '__main__':
     unittest.main()
