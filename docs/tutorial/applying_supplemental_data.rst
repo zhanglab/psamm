@@ -247,7 +247,7 @@ fixed at 0.5, you can use the following command:
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model tmfa --config ./config.yaml --threshold 0.5 simulation
+    (psamm-env) $ psamm-model tmfa --config ./config.yaml --threshold 0.1 simulation
 
 The next option that can be specified is the temperature that will be used for
 the simulation. Since temperature is a component of the calculation of the
@@ -256,7 +256,7 @@ the model. The temperature is given in Celsius.
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model tmfa --config ./config.yaml --threshold 0.5 --temp 15 simulation
+    (psamm-env) $ psamm-model tmfa --config ./config.yaml --threshold 0.1 --temp 15 simulation
 
 
 The next option is related to the use of the error estimates in for the gibbs
@@ -316,7 +316,7 @@ constraints might be causing problems.
 
 .. code-block:: shell
 
-    (psamm-env) $ psamm-model tmfa --config ./config.yaml --threshold 0.5 util --random-addition
+    (psamm-env) $ psamm-model tmfa --config ./config.yaml --threshold 0.1 util --random-addition
 
 
 Running Growth Simulations with TMFA
@@ -413,4 +413,4 @@ based on genes or based on reactions.
 
 Overall the ``tmfa`` function can be used to explore a variety of metabolic
 features and provide a way to futher explore the relationships between
-metabolic reactions through their thermodynamics. 
+metabolic reactions through their thermodynamics.
