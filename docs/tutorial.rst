@@ -11,3 +11,4 @@ PSAMM Tutorials
    tutorial/curation.rst
    tutorial/constraint_based.rst
    tutorial/fpp.rst
+   tutorial/applying_supplemental_data.rst

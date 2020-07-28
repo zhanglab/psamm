@@ -764,3 +764,8 @@ be specified using the ``--export-model`` argument.
 .. code-block:: shell
 
     $ psamm-model --transcriptome-file file.tsv --expression-threshold 1 --export-model ./gimme_out/
+
+.. _commands-tmfa:
+
+TMFA (``tmfa``)
+---------------

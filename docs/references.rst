@@ -37,9 +37,10 @@ References
     and perturbed metabolic networks. Proceedings of the National Academy of
     Sciences of the United States of America. 2002;99(23):15112-15117.
     :doi:`10.1073/pnas.232349399`.
-.. [Steffensen17] Steffensen JL, Zhang Y. FindPrimaryPairs: An efficient
-    algorithm for predicting element-transferring reactant/product pairs in
-    metabolic networks. *Submitted*
+.. [Steffensen17] Steffensen, J. L., Dufault-Thompson, K., & Zhang, Y. (2018).
+    FindPrimaryPairs: An efficient algorithm for predicting element-transferring
+    reactant/product pairs in metabolic networks. PLOS ONE, 13(2), e0192891.
+    :doi:`10.1371/journal.pone.0192891`
 .. [Tervo16] Tervo CJ, Reed JL. MapMaker and PathTracer for tracking carbon in
     genome-scale metabolic models. Biotechnol J. 2016; 1–23.
     :doi:`10.1002/biot.201400305`.
@@ -57,3 +58,10 @@ References
     comprehensive genome-scale reconstruction of Escherichia coli
     metabolism--2011. Mol Syst Biol. EMBO Press; 2011;7: 535.
     :doi:`10.1038/msb.2011.65`.
+.. [Henry07] Henry, C. S., Broadbelt, L. J., & Hatzimanikatis, V. (2007).
+    Thermodynamics-Based Metabolic Flux Analysis. Biophysical Journal,
+    92(5), 1792–1805. :doi:`10.1529/biophysj.106.093138`.
+.. [Hamilton13] Hamilton, J. J., Dwivedi, V., & Reed, J. L. (2013).
+    Quantitative Assessment of Thermodynamic Constraints on the Solution
+    Space of Genome-Scale Metabolic Models. Biophysical Journal, 105(2),
+    512–522. :doi:`10.1016/j.bpj.2013.06.011`
