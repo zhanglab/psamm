@@ -138,7 +138,7 @@ class GimmeCommand(MetabolicMixin, ObjectiveMixin,
                 if key not in final_model:
                     limits_to_discard.append(key)
             for key in limits_to_discard:
-                del self._model.exchange[key]
+                del self._model.limits[key]
             write_yaml_model(self._model, dest=self._args.export_model,
                              split_subsystem=False)
 
