@@ -110,7 +110,6 @@ class VisualizationCommand(MetabolicMixin,
 
     def run(self):
         """Run visualization command."""
-
         for reaction in self._model.reactions:
             if reaction.equation is None:
                 logger.warning(
@@ -120,8 +119,7 @@ class VisualizationCommand(MetabolicMixin,
         vis_rxns = rxnset_for_vis(
             self._mm, self._args.subset, self._args.exclude)
 
-        # Set element to NoneType if specified by commandline parameters
-        if self._args.element.lower() == 'none':
+        if self._args.element.lower() == 'all':
             self._args.element = None
 
         self.analysis = None
@@ -129,18 +127,40 @@ class VisualizationCommand(MetabolicMixin,
         if self._args.fba is not None:
             self.analysis = 'fba'
             for row in csv.reader(self._args.fba, delimiter=str('\t')):
-                if abs(float(row[1])) <= EPSILON:
-                    row[1] = 0
-                reaction_dict[row[0]] = (float(row[1]), 1)
+                if row[0] in vis_rxns:
+                    try:
+                        if abs(float(row[1])) <= EPSILON:
+                            row[1] = 0
+                    except ValueError:
+                        logger.warning(
+                            'Reaction {} has an invalid flux value of {} '
+                            'and will be considered as a flux of 0'.format(row[0], row[1]))
+                        row[1] = 0
+                    reaction_dict[row[0]] = (float(row[1]), 1)
+                else:
+                    logger.warning(
+                        'Reaction {} in input fba file was excluded from visualization '
+                        'due to not being defined in the model'.format(row[0]))
 
         if self._args.fva is not None:
             self.analysis = 'fva'
             for row in csv.reader(self._args.fva, delimiter=str('\t')):
-                if abs(float(row[1])) <= EPSILON:
-                    row[0] = 0
-                if abs(float(row[2])) <= EPSILON:
-                    row[1] = 0
-                reaction_dict[row[0]] = (float(row[1]), float(row[2]))
+                if row[0] in vis_rxns:
+                    try:
+                        if abs(float(row[1])) <= EPSILON:
+                            row[1] = 0
+                        if abs(float(row[2])) <= EPSILON:
+                            row[2] = 0
+                    except ValueError:
+                        logger.warning(
+                            'Reaction {} has an invalid flux value of {},{} '
+                            'and will be considered as a flux of 0,0'.format(row[0], row[1], row[2]))
+                        row[1], row[2] = 0, 0
+                    reaction_dict[row[0]] = (float(row[1]), float(row[2]))
+                else:
+                    logger.warning(
+                        'Reaction {} in input fva file was excluded from visualization '
+                        'due to not being defined in the model'.format(row[0]))
 
         exclude_for_fpp = [self._model.biomass_reaction] + self._args.exclude
         filter_dict, style_flux_dict = graph.make_network_dict(
@@ -175,14 +195,20 @@ class VisualizationCommand(MetabolicMixin,
         g = add_node_label(g, self._args.cpd_detail, self._args.rxn_detail)
         bio_cpds_sub = set()
         bio_cpds_pro = set()
+
         if self._model.biomass_reaction in vis_rxns:
-            nm_biomass_rxn = \
-                model_reaction_entries[self._model.biomass_reaction]
-            g = add_biomass_rxns(g, nm_biomass_rxn)
-            for cpd, _ in nm_biomass_rxn.equation.left:
-                bio_cpds_sub.add(text_type(cpd))
-            for cpd, _ in nm_biomass_rxn.equation.right:
-                bio_cpds_pro.add(text_type(cpd))
+            if self._model.biomass_reaction in model_reaction_entries:
+                nm_biomass_rxn = \
+                    model_reaction_entries[self._model.biomass_reaction]
+                g = add_biomass_rxns(g, nm_biomass_rxn)
+                for cpd, _ in nm_biomass_rxn.equation.left:
+                    bio_cpds_sub.add(text_type(cpd))
+                for cpd, _ in nm_biomass_rxn.equation.right:
+                    bio_cpds_pro.add(text_type(cpd))
+            else:
+                logger.warning(
+                    'Biomass reaction {} was excluded from visualization due to '
+                    'missing reaction entry'.format(self._model.biomass_reaction))
 
         exchange_cpds = set()
         for rid in self._mm.reactions:
