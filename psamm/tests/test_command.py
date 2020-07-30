@@ -611,8 +611,8 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
     def test_run_vis(self):
         self.run_solver_command(VisualizationCommand)
 
-    def test_run_vis_element_none(self):
-        self.run_solver_command(VisualizationCommand, ["--element", "none"])
+    def test_run_vis_element_all(self):
+        self.run_solver_command(VisualizationCommand, ["--element", "all"])
 
     def test_run_vis_hide_edges(self):
         path = os.path.join(tempfile.mkdtemp(), 'hide_edges.csv')
@@ -638,11 +638,24 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
             f.write('{}\t{}'.format('rxn_1', -0.000001))
         self.run_solver_command(VisualizationCommand, ['--fba', path])
 
+    def test_run_vis_fba_invalid_flux(self):
+        path = os.path.join(tempfile.mkdtemp(), 'fba.tsv')
+        with open(path, 'w') as f:
+            f.write('{}\t{}'.format('rxn_1', 'a'))
+        self.run_solver_command(VisualizationCommand, ['--fba', path])
+
     def test_run_vis_fva(self):
         path = os.path.join(tempfile.mkdtemp(), 'fva.tsv')
         with open(path, 'w') as f:
-            f.write('{}\t{}\t'.format('rxn_1', -0.000001, 0.000001))
-            self.run_solver_command(VisualizationCommand, ['--fva', path])
+            f.write('{}\t{}\t{}'.format('rxn_1', -0.000001, 0.000001))
+        self.run_solver_command(VisualizationCommand, ['--fva', path])
+
+    def test_run_vis_fva_invalid_flux(self):
+        path = os.path.join(tempfile.mkdtemp(), 'fva.tsv')
+        with open(path, 'w') as f:
+            f.write('{}\t{}\t{}'.format('rxn_1', 'a', -0.000001))
+        self.run_solver_command(VisualizationCommand, ['--fva', path])
+
 
     def test_command_main(self):
         self.run_command(MockCommand)

@@ -973,7 +973,7 @@ class TestFlux(unittest.TestCase):
                                                         reaction_dict=reaction_dict, analysis='fba')
         self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn1']][1])
         self.assertEqual('solid', style_flux_dict['rxn1'][0])
-        self.assertEqual(10, style_flux_dict['rxn1'][1])
+        self.assertEqual(5, style_flux_dict['rxn1'][1])
 
     def test2_pos_flux_fba(self):
         reaction_dict = {'rxn1': (10, 1)}
@@ -981,7 +981,7 @@ class TestFlux(unittest.TestCase):
                                                               reaction_dict=reaction_dict, analysis='fba')
         self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
         self.assertEqual('solid', style_flux_dict['rxn1'][0])
-        self.assertEqual(10, style_flux_dict['rxn1'][1])
+        self.assertEqual(5, style_flux_dict['rxn1'][1])
 
     def test3_0_flux_fba(self):
         reaction_dict = {'rxn1': (0, 1)}
@@ -997,7 +997,7 @@ class TestFlux(unittest.TestCase):
                                                         reaction_dict=reaction_dict, analysis='fva')
         self.assertEqual(Direction.Both, full_pairs_dict[self.native.reactions['rxn1']][1])
         self.assertEqual('dotted', style_flux_dict['rxn2'][0])
-        self.assertEqual(10, style_flux_dict['rxn1'][1])
+        self.assertEqual(5, style_flux_dict['rxn1'][1])
 
     def test5_pos_flux_neg_fva(self):
         reaction_dict = {'rxn1': (-10, -10)}
@@ -1005,7 +1005,7 @@ class TestFlux(unittest.TestCase):
                                                         reaction_dict=reaction_dict, analysis='fva')
         self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn1']][1])
         self.assertEqual('solid', style_flux_dict['rxn1'][0])
-        self.assertEqual(10, style_flux_dict['rxn1'][1])
+        self.assertEqual(5, style_flux_dict['rxn1'][1])
 
     def test6_pos_flux_pos_fva(self):
         reaction_dict = {'rxn1': (10, 10)}
@@ -1013,7 +1013,7 @@ class TestFlux(unittest.TestCase):
                                                               reaction_dict=reaction_dict, analysis='fva')
         self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
         self.assertEqual('solid', style_flux_dict['rxn1'][0])
-        self.assertEqual(10, style_flux_dict['rxn1'][1])
+        self.assertEqual(5, style_flux_dict['rxn1'][1])
 
     def test7_lower_0_flux_fva(self):
         reaction_dict = {'rxn1': (0, 10)}
@@ -1038,6 +1038,34 @@ class TestFlux(unittest.TestCase):
         self.assertEqual(Direction.Both, full_pairs_dict[self.native.reactions['rxn1']][1])
         self.assertEqual('dotted', style_flux_dict['rxn1'][0])
         self.assertEqual(1, style_flux_dict['rxn1'][1])
+
+    def test10_mult_rxn_fba(self):
+        reaction_dict = {'rxn1': (2, 1), 'rxn2': (-4, 1), 'rxn3': (6, 1)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                                   reaction_dict=reaction_dict, analysis='fba')
+        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn2']][1])
+        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn3']][1])
+        self.assertEqual('solid', style_flux_dict['rxn1'][0])
+        self.assertEqual('solid', style_flux_dict['rxn2'][0])
+        self.assertEqual('solid', style_flux_dict['rxn3'][0])
+        self.assertEqual(2.5, style_flux_dict['rxn1'][1])
+        self.assertEqual(5, style_flux_dict['rxn2'][1])
+        self.assertEqual(7.5, style_flux_dict['rxn3'][1])
+
+    def test11_mult_rxn_fva(self):
+        reaction_dict = {'rxn1': (0, 2), 'rxn2': (-4, 1), 'rxn3': (-1, -1)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                                   reaction_dict=reaction_dict, analysis='fva')
+        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual(Direction.Both, full_pairs_dict[self.native.reactions['rxn2']][1])
+        self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn3']][1])
+        self.assertEqual('solid', style_flux_dict['rxn1'][0])
+        self.assertEqual('solid', style_flux_dict['rxn2'][0])
+        self.assertEqual('solid', style_flux_dict['rxn3'][0])
+        self.assertEqual(1, style_flux_dict['rxn1'][1])
+        self.assertEqual(8, style_flux_dict['rxn2'][1])
+        self.assertEqual(2, style_flux_dict['rxn3'][1])
 
 if __name__ == '__main__':
     unittest.main()

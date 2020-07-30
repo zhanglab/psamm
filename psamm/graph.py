@@ -27,6 +27,7 @@ from collections import defaultdict, Counter
 from . import findprimarypairs
 
 import logging
+import statistics
 
 from .formula import Formula, Atom, ParseError
 from .reaction import Direction, Reaction
@@ -439,6 +440,13 @@ def make_network_dict(nm, mm, subset=None, method='fpp',
             visualization.
     """
 	compound_formula = get_compound_dict(nm)
+	if not compound_formula and (method == 'fpp' or element):
+		logger.error(
+			'Compound formulas are required for fpp or specific element visualizations,'
+			'try --element all to visualize all pathways without compound formula input.'
+		)
+		exit(1)
+
 	if subset is not None:
 		testing_list = []
 		for rxn in mm.reactions:
@@ -487,10 +495,22 @@ def make_network_dict(nm, mm, subset=None, method='fpp',
 			mm.database.set_reaction(r_id, r)
 			mm.add_reaction(r_id)
 			nm.reactions[rxn].equation = r
-
 		reaction_data[rxn] = (nm.reactions[rxn], direction)
-		flux = max(min(10, abs(flux)), 1)
-		style_flux_dict[rxn] = (style, flux)
+		style_flux_dict[rxn] = (style, abs(flux))
+
+	flux_list = sorted([flux for style, flux in style_flux_dict.values()])
+	median = 1
+	flux_list = list(filter(lambda x: x != 0, flux_list))
+
+	if flux_list:
+		median = statistics.median(flux_list)
+		if median < 1:
+			median = 1
+
+	for rxn, (style, flux) in style_flux_dict.items():
+		new_flux = (5 * flux) / median
+		new_flux = max(min(10, new_flux), 1)
+		style_flux_dict.update({rxn: (style, new_flux)})
 
 	full_pairs_dict = {}
 	if method == 'fpp':
@@ -502,7 +522,7 @@ def make_network_dict(nm, mm, subset=None, method='fpp',
 				testing_list_update.append(r)
 			else:
 				logger.warning(
-					'Reaction {} is excluded from visualization due '
+					'Reaction {} is excluded from visualization due to'
 					'missing or undefined compound formula'.format(r))
 		reaction_pairs = [(r, nm.reactions[r].equation) for r in testing_list_update]
 		fpp_dict, _ = findprimarypairs.predict_compound_pairs_iterated(
