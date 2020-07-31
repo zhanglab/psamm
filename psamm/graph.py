@@ -27,7 +27,6 @@ from collections import defaultdict, Counter
 from . import findprimarypairs
 
 import logging
-import statistics
 
 from .formula import Formula, Atom, ParseError
 from .reaction import Direction, Reaction
@@ -497,18 +496,22 @@ def make_network_dict(nm, mm, subset=None, method='fpp',
 			nm.reactions[rxn].equation = r
 		reaction_data[rxn] = (nm.reactions[rxn], direction)
 		style_flux_dict[rxn] = (style, abs(flux))
+	print(style_flux_dict)
 
 	flux_list = sorted([flux for style, flux in style_flux_dict.values()])
 	median = 1
 	flux_list = list(filter(lambda x: x != 0, flux_list))
 
 	if flux_list:
-		median = statistics.median(flux_list)
+		if len(flux_list) % 2 == 1:
+			median = flux_list[len(flux_list)//2]
+		else:
+			median = float(flux_list[(len(flux_list)//2) - 1] + flux_list[len(flux_list)//2]) / 2.0
 		if median < 1:
 			median = 1
 
 	for rxn, (style, flux) in style_flux_dict.items():
-		new_flux = (5 * flux) / median
+		new_flux = float(5 * flux) / float(median)
 		new_flux = max(min(10, new_flux), 1)
 		style_flux_dict.update({rxn: (style, new_flux)})
 
