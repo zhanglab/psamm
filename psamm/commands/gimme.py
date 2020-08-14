@@ -21,15 +21,16 @@ from __future__ import unicode_literals
 
 import logging
 import csv
+from os import mkdir, path
 from ..lpsolver import lp
 import argparse
 from six import iteritems
 from ..expression import boolean
 from ..lpsolver.lp import Expression, ObjectiveSense
 from ..fluxanalysis import FluxBalanceProblem
-from ..reaction import Direction, Reaction
 from ..command import (ObjectiveMixin, SolverCommandMixin,
                        MetabolicMixin, Command)
+from psamm.importer import write_yaml_model
 from ..util import MaybeRelative
 
 logger = logging.getLogger(__name__)
@@ -54,12 +55,21 @@ class GimmeCommand(MetabolicMixin, ObjectiveMixin,
             help='Two column file of gene ID to expression')
         parser.add_argument('--detail', action='store_true',
                             help='Show model statistics.')
+        parser.add_argument(
+            '--export-model', type=str, default=None,
+            help='Path to directory for full model export.')
         super(GimmeCommand, cls).init_parser(parser)
 
     def run(self):
         solver = self._get_solver()
         model = self._model
         mm = model.create_metabolic_model()
+
+        if self._args.export_model is not None:
+            if path.exists('{}'.format(self._args.export_model)):
+                logger.warning('Output directory {} already exists.'.format(
+                    self._args.export_model))
+                quit()
 
         base_gene_dict = {}
         for rxn in model.reactions:
@@ -72,8 +82,9 @@ class GimmeCommand(MetabolicMixin, ObjectiveMixin,
         exchange_exclude = [rxn for rxn in mm.reactions
                             if mm.is_exchange(rxn)]
         exchange_exclude.append(self._get_objective())
-        mm_irreversible, reversible_gene_assoc, split_rxns = make_irreversible(
-            mm, base_gene_dict, exclude_list=exchange_exclude)
+        mm_irreversible, reversible_gene_assoc, split_rxns = \
+            mm.make_irreversible(base_gene_dict,
+                                 exclude_list=exchange_exclude)
 
         p = FluxBalanceProblem(mm_irreversible, solver)
 
@@ -98,6 +109,38 @@ class GimmeCommand(MetabolicMixin, ObjectiveMixin,
             logger.info('Used {} below threshold reactions out of {} total '
                         'below threshold reactions'.format(used_below, below))
             logger.info('Inconsistency Score: {}'.format(incon_score))
+        if self._args.export_model:
+            mkdir('{}'.format(self._args.export_model))
+            reactions_to_discard = []
+            for reaction in self._model.reactions:
+                if reaction.id not in final_model:
+                    reactions_to_discard.append(reaction.id)
+            for rid in reactions_to_discard:
+                self._model.reactions.discard(rid)
+            compound_set = set()
+            for reaction in self._model.reactions:
+                for compound in reaction.equation.compounds:
+                    compound_set.add(compound[0].name)
+            compounds_to_discard = []
+            for compound in self._model.compounds:
+                if compound.id not in compound_set:
+                    compounds_to_discard.append(compound.id)
+            for cid in compounds_to_discard:
+                self._model.compounds.discard(cid)
+            exchanges_to_discard = []
+            for key in self._model.exchange:
+                if key.name not in compound_set:
+                    exchanges_to_discard.append(key)
+            for key in exchanges_to_discard:
+                del self._model.exchange[key]
+            limits_to_discard = []
+            for key in self._model.limits:
+                if key not in final_model:
+                    limits_to_discard.append(key)
+            for key in limits_to_discard:
+                del self._model.limits[key]
+            write_yaml_model(self._model, dest=self._args.export_model,
+                             split_subsystem=False)
 
 
 def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
@@ -121,8 +164,6 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
     """
     ci_dict = {}
     for reaction in mm.reactions:
-        problem.prob.define('zi_{}'.format(reaction),
-                            types=lp.VariableType.Binary)
         gene_string = reversible_gene_assoc.get(reaction)
         if gene_string is None:
             continue
@@ -133,11 +174,6 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
                 ci_dict[reaction] = ci
 
     gimme_objective = Expression()
-
-    for (forward, reverse) in split_rxns:
-        problem.prob.add_linear_constraints(
-            problem.prob.var('zi_{}'.format(forward)) + problem.prob.var(
-                'zi_{}'.format(reverse)) <= 1)
 
     threshold = threshold
     problem.maximize(biomass)
@@ -271,74 +307,6 @@ def get_rxn_value(root, gene_dict):
                     [get_rxn_value(i, gene_dict)
                      for i in root._terms]]
         if None in val_list:
-
             return None
         else:
             return min(x for x in val_list if x is not None)
-
-
-def make_irreversible(mm, gene_dict, exclude_list=[],
-                      all_reversible=False):
-    """Creates a new metabolic models with only irreversible reactions.
-
-    This function will find every reversible reaction in the
-    model and split it into two reactions with the
-    {rxnid}_forward or {rxnid}_reverse as the IDs.
-
-    Args:
-        mm: A metabolicmodel object
-        exclude_list: list of reactions to exclude in TMFA simulation
-        all_reversible: if True make all reactions in model reversible.
-    """
-    split_reversible = set()
-    mm_irrev = mm.copy()
-    reversible_gene_dict = {}
-    for rxn in mm.reactions:
-        upper = mm.limits[rxn].upper
-        lower = mm.limits[rxn].lower
-        mm_irrev.limits[rxn].upper = upper
-        mm_irrev.limits[rxn].lower = lower
-
-        reaction = mm_irrev.get_reaction(rxn)
-        if rxn not in exclude_list:
-            r = Reaction(Direction.Forward, reaction.left, reaction.right)
-            r2 = Reaction(Direction.Forward, reaction.right, reaction.left)
-            r_id = str('{}_forward'.format(rxn))
-            r2_id = str('{}_reverse'.format(rxn))
-            if reaction.direction == Direction.Forward:
-                if all_reversible is False:
-                    reversible_gene_dict[rxn] = gene_dict.get(rxn)
-                    continue
-                else:
-                    mm_irrev.remove_reaction(rxn)
-                    mm_irrev.database.set_reaction(r_id, r)
-                    mm_irrev.database.set_reaction(r2_id, r2)
-                    mm_irrev.add_reaction(r_id)
-                    mm_irrev.add_reaction(r2_id)
-                    split_reversible.add((r_id, r2_id))
-                    reversible_gene_dict[r_id] = gene_dict.get(rxn)
-                    reversible_gene_dict[r2_id] = gene_dict.get(rxn)
-            elif reaction.direction == Direction.Both:
-                mm_irrev.remove_reaction(rxn)
-                mm_irrev.database.set_reaction(r_id, r)
-                mm_irrev.database.set_reaction(r2_id, r2)
-                mm_irrev.add_reaction(r_id)
-                mm_irrev.add_reaction(r2_id)
-                split_reversible.add((r_id, r2_id))
-                reversible_gene_dict[r_id] = gene_dict.get(rxn)
-                reversible_gene_dict[r2_id] = gene_dict.get(rxn)
-            if upper == lower:
-                mm_irrev.limits[r_id].upper = upper
-                mm_irrev.limits[r_id].lower = lower
-                mm_irrev.limits[r2_id].upper = 0
-                mm_irrev.limits[r2_id].lower = 0
-            else:
-                mm_irrev.limits[r_id].upper = upper
-                mm_irrev.limits[r_id].lower = 0
-                if lower == 0:
-                    mm_irrev.limits[r2_id].upper = upper
-                else:
-                    mm_irrev.limits[r2_id].upper = -lower
-                mm_irrev.limits[r2_id].lower = 0
-
-    return mm_irrev, reversible_gene_dict, split_reversible
