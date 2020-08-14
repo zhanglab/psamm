@@ -128,3 +128,45 @@ can be installed using ``pip``:
 .. _python-qsoptex: https://pypi.python.org/pypi/python-qsoptex
 .. _GnuMP: https://gmplib.org/
 .. _QSopt_ex library: https://github.com/jonls/qsopt-ex
+
+LP Solver Compatibility
+-----------------------
+
+Not all of the LP solvers supported are supported across all python versions.
+A table showing which solvers are compatible with which versions of python
+is shown below:
+
+.. list-table:: Title
+   :widths: 20 15 15 15 15 15
+   :header-rows: 1
+    - Solver
+    - Python 2.7
+    - Python 3.5
+    - Python 3.6
+    - Python 3.7
+    - Python 3.8
+    - Cplex
+    - Yes
+    - Yes
+    - Yes
+    - Yes
+    - Yes
+    - Qsopt_ex
+    - Yes
+    - Yes
+    - Yes
+    - Yes
+    - Yes
+    - Gurobi
+    - Yes
+    - Yes
+    - No
+    - No
+    - No
+    - GLPK
+    - Yes
+    - No
+    - Yes
+    - Yes
+    - Yes
+
