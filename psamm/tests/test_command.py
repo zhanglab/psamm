@@ -361,11 +361,11 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         self.run_solver_command(FluxConsistencyCommand, ['--reduce-lp'])
 
     def test_run_fluxcheck_with_reduce_lp_infeasible(self):
-            self.skip_test_if_no_solver()
-            with self.assertRaises(SystemExit):
-                self.run_solver_command(
-                    FluxConsistencyCommand, ['--reduce-lp'],
-                    model=self._infeasible_model)
+        self.skip_test_if_no_solver()
+        with self.assertRaises(SystemExit):
+            self.run_solver_command(
+                FluxConsistencyCommand, ['--reduce-lp'],
+                model=self._infeasible_model)
 
     def test_run_fluxcheck_with_both_tfba_and_fastcore(self):
         self.skip_test_if_no_solver()
@@ -534,6 +534,32 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
     def test_run_robustness_with_l1min(self):
         self.run_solver_command(
             RobustnessCommand, ['--loop-removal=l1min', 'rxn_2_\u03c0'])
+
+    def test_run_robustness_with_fva(self):
+        self.run_solver_command(
+            RobustnessCommand, ['--fva', 'rxn_2_\u03c0']
+        )
+
+    def test_run_robustness_with_invalid_objective(self):
+        with self.assertRaises(SystemExit):
+            self.run_solver_command(
+                RobustnessCommand, ['--objective=rxn_4', 'rxn_2_\u03c0'],
+                model=self._model)
+
+    def test_run_robustness_with_neg_steps(self):
+        with self.assertRaises(CommandError):
+            self.run_solver_command(
+                RobustnessCommand, ['--steps=0', 'rxn_2_\u03c0'])
+
+    def test_run_robustness_with_loop_removal_fva(self):
+        with self.assertRaises(SystemExit):
+            self.run_solver_command(
+                RobustnessCommand, ['--loop-removal=tfba', '--fva', 'rxn_2_\u03c0'])
+
+    def test_run_robustness_min_greater(self):
+        with self.assertRaises(CommandError):
+            self.run_solver_command(
+                RobustnessCommand, ['--minimum=50', '--maximum=20', 'rxn_2_\u03c0'])
 
     def test_run_robustness_with_infeasible(self):
         self.skip_test_if_no_solver()

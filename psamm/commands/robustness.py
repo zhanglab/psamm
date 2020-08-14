@@ -15,6 +15,7 @@
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2020-2020  Ke Zhang <kzhang@uri.edu>
 
 from __future__ import unicode_literals
 
@@ -50,15 +51,18 @@ class RobustnessCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
             help='Number of flux value steps for varying reaction')
         parser.add_argument(
             '--minimum', metavar='V', type=float,
-            help='Minumum flux value of varying reacton')
+            help='Minumum flux value of varying reaction')
         parser.add_argument(
             '--maximum', metavar='V', type=float,
-            help='Maximum flux value of varying reacton')
+            help='Maximum flux value of varying reaction')
         parser.add_argument(
             '--all-reaction-fluxes',
             help='Print reaction flux for all model reactions',
             action='store_true')
         parser.add_argument('varying', help='Reaction to vary')
+        parser.add_argument(
+            '--fva', action='store_true',
+            help='Run FVA and print flux range instead of flux value')
         super(RobustnessCommand, cls).init_parser(parser)
 
     def run(self):
@@ -79,10 +83,18 @@ class RobustnessCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
             self.argument_error('Invalid number of steps: {}\n'.format(steps))
 
         loop_removal = self._get_loop_removal_option()
-        if loop_removal == 'tfba':
-            solver = self._get_solver(integer=True)
-        else:
-            solver = self._get_solver()
+        solver = self._get_solver()
+        if loop_removal != 'none':
+            if self._args.fva is not True:
+                if loop_removal == 'tfba':
+                    solver = self._get_solver(integer=True)
+                else:
+                    solver = self._get_solver()
+            else:
+                logger.warning(
+                    'The loop removal method {} is not possible with --fva '
+                    'option in this command'.format(loop_removal))
+                quit()
 
         p = fluxanalysis.FluxBalanceProblem(self._mm, solver)
         if loop_removal == 'tfba':
@@ -117,8 +129,6 @@ class RobustnessCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
 
         handler_args = (
             self._mm, solver, loop_removal, self._args.all_reaction_fluxes)
-        executor = self._create_executor(
-            RobustnessTaskHandler, handler_args, cpus_per_worker=2)
 
         def iter_tasks():
             for i in range(steps):
@@ -127,24 +137,54 @@ class RobustnessCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
                 yield constraint, reaction
 
         # Run FBA on model at different fixed flux values
-        with executor:
-            for task, result in executor.imap_unordered(iter_tasks(), 16):
-                (varying_reaction, fixed_flux), _ = task
-                if result is None:
-                    logger.warning('No solution found for {} at {}'.format(
-                        varying_reaction, fixed_flux))
-                elif self._args.all_reaction_fluxes:
-                    for other_reaction in self._mm.reactions:
+        if self._args.fva is not True:
+            executor = self._create_executor(
+                RobustnessTaskHandler, handler_args, cpus_per_worker=2)
+            with executor:
+                for task, result in executor.imap_unordered(iter_tasks(), 16):
+                    (varying_reaction, fixed_flux), _ = task
+                    if result is None:
+                        logger.warning('No solution found for {} at {}'.format(
+                            varying_reaction, fixed_flux))
+                    elif self._args.all_reaction_fluxes:
+                        for other_reaction in self._mm.reactions:
+                            print('{}\t{}\t{}'.format(
+                                other_reaction, fixed_flux,
+                                result[other_reaction]))
+                    else:
+                        print('{}\t{}'.format(fixed_flux, result))
+
+            executor.join()
+
+            logger.info('Solving took {:.2f} seconds'.format(
+                time.time() - start_time))
+
+        # Run FVA on model at different fixed flux values
+        else:
+            executor_fva = self._create_executor(
+                RobustnessTaskHandler_fva, handler_args, cpus_per_worker=2)
+            with executor_fva:
+                for task, result in executor_fva.imap_unordered(
+                        iter_tasks(), 16):
+                    (varying_reaction, fixed_flux), _ = task
+                    if result is None:
+                        logger.warning('No solution found for {} at {}'.format(
+                            varying_reaction, fixed_flux))
+                    elif self._args.all_reaction_fluxes:
+                        for other_reaction in self._mm.reactions:
+                            print('{}\t{}\t{}\t{}'.format(
+                                other_reaction, fixed_flux,
+                                result[other_reaction][0],
+                                result[other_reaction][1]))
+                    else:
                         print('{}\t{}\t{}'.format(
-                            other_reaction, fixed_flux,
-                            result[other_reaction]))
-                else:
-                    print('{}\t{}'.format(fixed_flux, result))
+                            fixed_flux, result[reaction][0],
+                            result[reaction][1]))
 
-        executor.join()
+            executor_fva.join()
 
-        logger.info('Solving took {:.2f} seconds'.format(
-            time.time() - start_time))
+            logger.info('Solving took {:.2f} seconds'.format(
+                time.time() - start_time))
 
 
 class RobustnessTaskHandler(object):
@@ -177,3 +217,45 @@ class RobustnessTaskHandler(object):
             return None
         finally:
             c.delete()
+
+
+class RobustnessTaskHandler_fva(object):
+    def __init__(self, model, solver, loop_removal, all_reactions):
+        self._problem = fluxanalysis.FluxBalanceProblem(model, solver)
+
+        if loop_removal == 'none':
+            self._run_fba = self._problem.maximize
+        # elif loop_removal == 'l1min':
+        #     self._run_fba = self._problem.max_min_l1
+        elif loop_removal == 'tfba':
+            self._problem.add_thermodynamic()
+            self._run_fba = self._problem.maximize
+
+        self._reactions = list(model.reactions) if all_reactions else None
+
+    def handle_task(self, constraint, reaction):
+        d = None
+        varying_reaction, fixed_flux = constraint
+        flux_var = self._problem.get_flux_var(varying_reaction)
+        c, = self._problem.prob.add_linear_constraints(flux_var == fixed_flux)
+        try:
+            self._problem.maximize(reaction)
+            obj_flux = self._problem.get_flux(reaction)
+            d, = self._problem.prob.add_linear_constraints(
+                self._problem.get_flux_var(reaction) == obj_flux)
+            if self._reactions is not None:
+                all_rxn_fluxes = {}
+                for rxn in self._reactions:
+                    all_rxn_fluxes[rxn] = (
+                        self._problem.flux_bound(rxn, -1),
+                        self._problem.flux_bound(rxn, 1))
+                return all_rxn_fluxes
+            else:
+                return {reaction: (self._problem.flux_bound(reaction, -1),
+                        self._problem.flux_bound(reaction, 1))}
+        except fluxanalysis.FluxBalanceError:
+            return None
+        finally:
+            c.delete()
+            if d is not None:
+                d.delete()
