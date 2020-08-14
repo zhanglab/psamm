@@ -15,6 +15,7 @@
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2020-2020  Ke Zhang <kzhang@uri.edu>
 
 from __future__ import unicode_literals
 
@@ -163,7 +164,8 @@ class RobustnessCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
             executor_fva = self._create_executor(
                 RobustnessTaskHandler_fva, handler_args, cpus_per_worker=2)
             with executor_fva:
-                for task, result in executor_fva.imap_unordered(iter_tasks(), 16):
+                for task, result in executor_fva.imap_unordered(
+                        iter_tasks(), 16):
                     (varying_reaction, fixed_flux), _ = task
                     if result is None:
                         logger.warning('No solution found for {} at {}'.format(
@@ -176,7 +178,8 @@ class RobustnessCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
                                 result[other_reaction][1]))
                     else:
                         print('{}\t{}\t{}'.format(
-                            fixed_flux, result[reaction][0], result[reaction][1]))
+                            fixed_flux, result[reaction][0],
+                            result[reaction][1]))
 
             executor_fva.join()
 
