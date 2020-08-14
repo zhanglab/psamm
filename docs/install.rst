@@ -119,15 +119,22 @@ can be installed using ``pip``:
 
     (env) $ pip install python-qsoptex
 
-.. note::
-
-    QSopt_ex only supports Python 3.4 or lower. If you want to use this solver,
-    make sure that you have the correct version of Python.
-
 .. _Virtualenv: https://virtualenv.pypa.io/
 .. _python-qsoptex: https://pypi.python.org/pypi/python-qsoptex
 .. _GnuMP: https://gmplib.org/
 .. _QSopt_ex library: https://github.com/jonls/qsopt-ex
+
+The installation method	detailed above is only supported on Python 3.4 or lower.
+If you want to use this	solver with later versions of Python, you must first   
+install	some dependencies, a differnt library, and different bindings. 
+
+.. code-block:: shell
+
+    (env) $ pip install cython
+    (env) $ pip install python-qsoptex # Second qsopt_ex from below
+
+.. _python-qsoptex_higherPython: https://github.com/jonls/python-qsoptex.git
+.. _QSopt_ex_higherPython: https://github.com/jonls/qsopt-ex.git
 
 LP Solver Compatibility
 -----------------------
