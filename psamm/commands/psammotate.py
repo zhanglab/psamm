@@ -22,7 +22,6 @@ import argparse
 import re
 import csv
 import logging
-import yaml
 from os import path, mkdir
 
 from ..command import Command
@@ -109,10 +108,6 @@ class PsammotateCommand(Command):
             with open(self._args.output + '.yaml', 'w') as o:
                 ModelWriter().write_reactions(o, homolo_reactions)
         elif self._args.export_model is not None:
-            yaml_args = {'default_flow_style': False,
-                         'encoding': 'utf-8',
-                         'allow_unicode': True,
-                         'width': 79}
             mkdir('{}'.format(self._args.export_model))
             reaction_list = [i.id for i in homolo_reactions]
             original_reactions = [i.id for i in self._model.reactions]
@@ -129,7 +124,7 @@ class PsammotateCommand(Command):
                 if compound.id not in compound_set:
                     compound_removal_set.add(compound.id)
             for cpd in compound_removal_set:
-                self._model.compounds.discard(compound.id)
+                self._model.compounds.discard(compound.id)  # .discard(cpd)?
             exchange_del_set = set()
             for key in self._model.exchange:
                 if key.name not in compound_set:
@@ -141,12 +136,9 @@ class PsammotateCommand(Command):
                 if key not in reaction_list:
                     lim_del_set.add(key)
             for lim in lim_del_set:
-                del self._model.exchange[key]
-            write_yaml_model(self._model, dest='{}'.format(self._args.export_model),
-                             split_subsystem=False)
-
-
-
+                del self._model.exchange[key]   # del self._model.exchange[lim]?
+            write_yaml_model(self._model, dest='{}'.format(
+                self._args.export_model), split_subsystem=False)
 
 
 def app_reader(app_file, query, template):
