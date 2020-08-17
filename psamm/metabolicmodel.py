@@ -328,7 +328,7 @@ class MetabolicModel(MetabolicDatabase):
 
         return model
 
-    def make_irreversible(self, gene_dict={}, lumped_rxns = {},exclude_list=[],
+    def make_irreversible(self, gene_dict={}, exclude_list=[], lumped_rxns={},
                           all_reversible=False):
         """Creates a new metabolic models with only irreversible reactions.
 

@@ -250,7 +250,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                         config_dict.get('proton-out'),
                         config_dict.get('proton-other'))
 
-                    prob = add_reaction_constraints(
+                    prob, excluded_compounds = add_reaction_constraints(
                         prob, v, zi, dgri, xij, mm_irreversible,
                         exclude_lump_list, exclude_unknown_list,
                         exclude_lump_unkown, dgr_dict,
