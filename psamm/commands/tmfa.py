@@ -62,7 +62,6 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
         parser_sim.add_argument('--randomsparse', action='store_true', help='run randomsparse on reactions in model with TMFA constraints applied')
         parser_sim.add_argument('--randomsparse_genes', action='store_true', help='run randomsparse on genes in model with TMFA constraints applied')
         parser_sim.add_argument('--single-solution', type=str, choices=['fba', 'l1min','random'], help='get a single TMFA solution', default=None)
-        parser_sim.add_argument('--min-max-energy', type=argparse.FileType('r'), help='', default=None)
 
         super(TMFACommand, cls).init_parser(parser)
 
@@ -246,7 +245,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
             prob, cpd_xij_dict = add_conc_constraints(xij, prob, cpd_conc_dict, cp_list, config_dict.get('water'), config_dict.get('proton-in'),
                             config_dict.get('proton-out'), config_dict.get('proton-other'))
             testing_list_tmp = list(mm_irreversible.reactions)
-            prob = add_reaction_constraints(prob, v, zi, dgri, xij, mm_irreversible, exclude_lump_list,
+            prob, excluded_compounds = add_reaction_constraints(prob, v, zi, dgri, xij, mm_irreversible, exclude_lump_list,
                                                     exclude_unknown_list,
                                                     exclude_lump_unkown, dgr_dict, reversible_lump_to_rxn_dict,
                                                     split_reversible, transport_parameters, testing_list_tmp,
@@ -262,9 +261,9 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                 logger.info('Set biomass based on max biomass to {}'.format(max_biomass))
 
             if self._args.single_solution is not None:
-                print_fba(self._args.single_solution, prob, self._get_objective(), v, zi, dgri, xij, mm_irreversible, cp_list)
+                print_fba(self._args.single_solution, prob, self._get_objective(), v, zi, dgri, xij, mm_irreversible, cp_list, excluded_compounds)
             else:
-                print_fva(prob, mm_irreversible, cp_list, exclude_unknown_list, v, dgri, zi, xij)
+                print_fva(prob, mm_irreversible, cp_list, exclude_unknown_list, v, dgri, zi, xij, excluded_compounds)
 
 
         quit()
@@ -329,7 +328,7 @@ def get_var_bound(prob, var, objective_sense):
         quit()
     return result.get_value(var)
 
-def print_fva(prob, mm_irreversible, cp_list, exclude_unknown_list, _v, _dgri, _zi, _xij):
+def print_fva(prob, mm_irreversible, cp_list, exclude_unknown_list, _v, _dgri, _zi, _xij, excluded_compounds):
     """Prints FVA like result from TMFA problem.
 
     This function will take a TMFA problem along with the associated
@@ -345,10 +344,12 @@ def print_fva(prob, mm_irreversible, cp_list, exclude_unknown_list, _v, _dgri, _
         _dgri: variable namespace for gibbs free energy variables
         _zi: variables namespace for indicator variables
         _xij: variable namespace for concentrations
+        excluded_compounds: list of compounds that are not constrained
+
     """
     len_rxns = len([i for i in mm_irreversible.reactions])
     for step, reaction in enumerate(sorted(mm_irreversible.reactions)):
-        logger.info('Testing Reaction {}/{}'.format(step, len_rxns))
+        #logger.info('Testing Reaction {}/{}'.format(step, len_rxns))
         min_flux = get_var_bound(prob, _v(reaction), lp.ObjectiveSense.Minimize)
         max_flux = get_var_bound(prob, _v(reaction), lp.ObjectiveSense.Maximize)
         print('Flux\t{}\t{}\t{}'.format(reaction, min_flux, max_flux))
@@ -363,13 +364,14 @@ def print_fva(prob, mm_irreversible, cp_list, exclude_unknown_list, _v, _dgri, _
             print('DGR\t{}\t{}\t{}'.format(reaction, 'NA', 'NA'))
             print('Zi\t{}\t{}\t{}'.format(reaction, 'NA', 'NA'))
     for step, cpd in enumerate(sorted(cp_list)):
-        logger.info('Testing Compound {}\{}'.format(step, len(cp_list)))
-        min_cpd = get_var_bound(prob, _xij(cpd), lp.ObjectiveSense.Minimize)
-        max_cpd = get_var_bound(prob, _xij(cpd), lp.ObjectiveSense.Maximize)
-        print('CONC\t{}\t{}\t{}'.format(cpd, min_cpd, max_cpd))
+        if cpd not in excluded_compounds:
+            #logger.info('Testing Compound {}\{}'.format(step, len(cp_list)))
+            min_cpd = get_var_bound(prob, _xij(cpd), lp.ObjectiveSense.Minimize)
+            max_cpd = get_var_bound(prob, _xij(cpd), lp.ObjectiveSense.Maximize)
+            print('CONC\t{}\t{}\t{}'.format(cpd, math.exp(min_cpd), math.exp(max_cpd)))
 
 
-def print_fba(simulation, prob, objective, _v, _zi, _dgri, _xij, mm, cp_list):
+def print_fba(simulation, prob, objective, _v, _zi, _dgri, _xij, mm, cp_list, excluded_compounds):
     """Prints FBA like result from TMFA problem.
 
     This function will take a TMFA problem along with the associated
@@ -389,6 +391,7 @@ def print_fba(simulation, prob, objective, _v, _zi, _dgri, _xij, mm, cp_list):
         _dgri: variable namespace for gibbs free energy variables
         _zi: variables namespace for indicator variables
         _xij: variable namespace for concentrations
+        excluded_compounds: list of compounds that are not constrained
     """
     prob.set_objective(_v(objective))
     result = prob.solve_unchecked(lp.ObjectiveSense.Maximize)
@@ -401,7 +404,8 @@ def print_fba(simulation, prob, objective, _v, _zi, _dgri, _xij, mm, cp_list):
             print('DGR\t{}\t{}'.format(rxn, result.get_value(_dgri(rxn))))
             print('Zi\t{}\t{}'.format(rxn, result.get_value(_zi(rxn))))
         for cp in cp_list:
-            print('CPD\t{}\t{}'.format(cp, result.get_value(_xij(cp))))
+            if cp not in excluded_compounds:
+                print('CPD\t{}\t{}'.format(cp, result.get_value(_xij(cp))))
     elif simulation == 'l1min':
         _z = prob.namespace(mm.reactions, lower=0)
         z = _z.set(mm.reactions)
@@ -421,7 +425,8 @@ def print_fba(simulation, prob, objective, _v, _zi, _dgri, _xij, mm, cp_list):
             print('DGR\t{}\t{}'.format(rxn, result.get_value(_dgri(rxn))))
             print('Zi\t{}\t{}'.format(rxn, result.get_value(_zi(rxn))))
         for cp in cp_list:
-            print('CPD\t{}\t{}'.format(cp, result.get_value(_xij(cp))))
+            if cp not in excluded_compounds:
+                print('CPD\t{}\t{}'.format(cp, result.get_value(_xij(cp))))
     elif simulation == 'random':
         optimize = None
         for rxn_id in mm.reactions:
@@ -439,7 +444,8 @@ def print_fba(simulation, prob, objective, _v, _zi, _dgri, _xij, mm, cp_list):
             print('DGR\t{}\t{}'.format(rxn, result.get_value(_dgri(rxn))))
             print('Zi\t{}\t{}'.format(rxn, result.get_value(_zi(rxn))))
         for cp in cp_list:
-            print('CPD\t{}\t{}'.format(cp, result.get_value(_xij(cp))))
+            if cp not in excluded_compounds:
+                print('CPD\t{}\t{}'.format(cp, result.get_value(_xij(cp))))
 
 
 def lump_parser(lump_file):
@@ -776,4 +782,4 @@ def add_reaction_constraints(problem, _v, _zi, _dgri, _xij, mm, exclude_lumps, e
     for (forward, reverse) in split_rxns:
         problem.add_linear_constraints(
             _zi(forward) + _zi(reverse) <= int(1))
-    return problem
+    return problem, excluded_cpd_list
