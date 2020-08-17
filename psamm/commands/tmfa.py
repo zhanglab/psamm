@@ -306,8 +306,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                     v(self._get_objective()), lp.ObjectiveSense.Maximize)
                 prob.add_linear_constraints(
                     v(self._get_objective()) == max_biomass)
-                logger.info('Set biomass based on max\
-                    biomass to {}'.format(max_biomass))
+                logger.info('Set biomass based on maxbiomass to {}'.format(
+                    max_biomass))
 
             if self._args.single_solution is not None:
                 print_fba(self._args.single_solution, prob,
