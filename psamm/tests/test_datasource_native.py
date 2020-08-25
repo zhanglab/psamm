@@ -237,7 +237,7 @@ co2     e       -       50
         }, 'e'))
 
         self.assertEqual(len(exchange), 5)
-        self.assertEqual(exchange[0], (Compound('ac', 'e'), None, None, None))
+        self.assertEqual(exchange[0], (Compound(('ac'), ('e')), None, None, None))
         self.assertEqual(exchange[1], (Compound('glcD', 'e'), None, -10, None))
         self.assertEqual(exchange[2], (Compound('co2', 'e'), None, None, 50))
         self.assertEqual(
@@ -470,6 +470,7 @@ class TestYAMLFileSystemData(unittest.TestCase):
         ]))
 
         reactions = list(native.parse_reaction_file(path))
+        print('REACTION: ', reactions[0].equation)
         self.assertEqual(len(reactions), 2)
 
         self.assertEqual(reactions[0].id, 'rxn_1')

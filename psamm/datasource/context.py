@@ -21,7 +21,7 @@
 from __future__ import unicode_literals
 
 import os
-
+import io
 import six
 from six import string_types, text_type
 

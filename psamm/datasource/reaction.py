@@ -15,18 +15,34 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2020-2020  Elysha Sameth <esameth1@my.uri.edu>
 
 """Reaction parser."""
+from __future__ import unicode_literals
 
 import re
+import sys
 from decimal import Decimal
 import enum
 
-from six import raise_from
+from six import raise_from, text_type, PY3
 
 from psamm.reaction import Reaction, Compound, Direction
 from psamm.expression import affine
 
+def convert_to_unicode(str_, encoding=sys.stdin.encoding):
+    if PY3 or bool(re.search(r'\\u', str_)):
+        try:
+            return str_.encode('latin-1').decode('unicode-escape')
+        except:
+            pass
+        return str_
+    if isinstance(str_, unicode):
+        return str_
+    try:
+        return str_.encode(encoding)
+    except:
+        return str_.decode(encoding)
 
 class ParseError(Exception):
     """Error raised when parsing reaction fails."""
@@ -100,7 +116,6 @@ class ReactionParser(object):
 
     def parse(self, s):
         """Parse reaction string."""
-
         global_comp = None
         if self._parse_global:
             # Split by colon for global compartment information
@@ -108,7 +123,6 @@ class ReactionParser(object):
             if m is not None:
                 global_comp = m.group(1)
                 s = m.group(2)
-
         expect_operator = False
         direction = None
         left = []
@@ -212,7 +226,6 @@ class ReactionParser(object):
 
         if direction is None:
             raise ParseError('Missing equation arrow')
-
         return Reaction(direction, left, right)
 
 
@@ -236,12 +249,11 @@ def parse_compound(s, global_compartment=None):
 
     m = re.match(r'^(.+)\[(\S+)\]$', s)
     if m:
-        compound_id = m.group(1)
+        compound_id = convert_to_unicode(m.group(1))
         compartment = m.group(2)
     else:
-        compound_id = s
+        compound_id = convert_to_unicode(s)
         compartment = global_compartment
-
     return Compound(compound_id, compartment=compartment)
 
 
@@ -249,7 +261,7 @@ def parse_compound_count(s):
     """Parse a compound count (number of compounds)."""
     m = re.match(r'^\((.*)\)$', s)
     if m:
-        s = m.group(1)
+        s = convert_to_unicode(m.group(1))
 
     for count_type in (int, Decimal, affine.Expression):
         try:

@@ -21,11 +21,10 @@ from __future__ import unicode_literals
 import math
 import logging
 
-from ..command import Command, FilePrefixAppendAction
+from ..command import Command, FilePrefixAppendAction, convert_to_unicode
 from ..balancecheck import charge_balance
 
 logger = logging.getLogger(__name__)
-
 
 class ChargeBalanceCommand(Command):
     """Check whether compound charge is balanced.
@@ -38,8 +37,8 @@ class ChargeBalanceCommand(Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--exclude', metavar='reaction', action=FilePrefixAppendAction,
-            type=str, default=[], help='Exclude reaction from balance check')
+            '--exclude', metavar='reaction', type=convert_to_unicode, action=FilePrefixAppendAction,
+            default=[], help='Exclude reaction from balance check')
         parser.add_argument(
             '--epsilon', metavar='epsilon', type=float, default=1e-6,
             help='Threshold for charge imbalance to be considered zero'
@@ -73,6 +72,7 @@ class ChargeBalanceCommand(Command):
             elif abs(charge) > self._args.epsilon:
                 unbalanced += 1
                 rxt = reaction.equation.translated_compounds(compound_name)
+                print("*********", reaction.id, rxt)
                 print('{}\t{}\t{}'.format(reaction.id, charge, rxt))
 
         logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))

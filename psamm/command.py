@@ -28,6 +28,7 @@ The :func:`.main` function is the entry point of command line interface.
 
 from __future__ import division, unicode_literals
 
+import re
 import os
 import sys
 import argparse
@@ -38,7 +39,7 @@ from itertools import islice
 import multiprocessing as mp
 
 import pkg_resources
-from six import add_metaclass, iteritems, itervalues, text_type
+from six import add_metaclass, iteritems, itervalues, text_type, PY3
 
 from . import __version__ as package_version
 from .datasource import native, sbml
@@ -47,6 +48,19 @@ from .lpsolver import generic
 
 logger = logging.getLogger(__name__)
 
+def convert_to_unicode(str_, encoding=sys.stdin.encoding):
+    if PY3 or bool(re.search(r'\\u', str_)):
+        try:
+            return str_.encode('latin-1').decode('unicode-escape')
+        except:
+            pass
+        return str_
+    if isinstance(str_, unicode):
+        return str_
+    try:
+        return str_.encode(encoding)
+    except:
+        return str_.decode(encoding)
 
 class CommandError(Exception):
     """Error from running a command.
@@ -102,7 +116,6 @@ class Command(object):
             logger.debug('Command failure caused by exception!', exc_info=exc)
         sys.exit(1)
 
-
 class MetabolicMixin(object):
     """Mixin for commands that use a metabolic model representation."""
 
@@ -124,16 +137,14 @@ class MetabolicMixin(object):
                 ', '.join(sorted(to_check)))
         self.fail(message, exc)
 
-
 class ObjectiveMixin(object):
     """Mixin for commands that use biomass as objective.
 
     Allows the user to override the default objective from the command line.
     """
-
     @classmethod
     def init_parser(cls, parser):
-        parser.add_argument('--objective', help='Reaction to use as objective')
+        parser.add_argument('--objective', type=convert_to_unicode, help='Reaction to use as objective')
         super(ObjectiveMixin, cls).init_parser(parser)
 
     def _get_objective(self, log=True):
@@ -148,7 +159,6 @@ class ObjectiveMixin(object):
             logger.info('Using {} as objective'.format(reaction))
 
         return reaction
-
 
 class LoopRemovalMixin(object):
     """Mixin for commands that perform loop removal."""
@@ -284,7 +294,6 @@ class FilePrefixAppendAction(argparse.Action):
 
         self.__fromfile_prefix_chars = fromfile_prefix_chars
         self.__final_type = kwargs.get('type')
-        kwargs['type'] = text_type
 
         super(FilePrefixAppendAction, self).__init__(
             option_strings, dest, **kwargs)
@@ -294,7 +303,7 @@ class FilePrefixAppendAction(argparse.Action):
         if arguments is None or len(arguments) == 0:
             arguments = []
             setattr(namespace, self.dest, arguments)
-
+        values = text_type(values)
         if len(values) > 0 and values[0] in self.__fromfile_prefix_chars:
             filepath = values[1:]
             try:

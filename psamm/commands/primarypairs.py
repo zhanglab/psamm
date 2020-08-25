@@ -21,7 +21,7 @@ from __future__ import unicode_literals
 import logging
 import random
 
-from ..command import Command, SolverCommandMixin, FilePrefixAppendAction
+from ..command import Command, SolverCommandMixin, FilePrefixAppendAction, convert_to_unicode
 from ..formula import Formula, Atom, Radical, ParseError
 from .. import findprimarypairs
 from .. import mapmaker
@@ -46,7 +46,7 @@ class PrimaryPairsCommand(SolverCommandMixin, Command):
             choices=['fpp', 'mapmaker'],
             default='fpp', help='Primary pair prediction method')
         parser.add_argument(
-            '--exclude', metavar='reaction', type=text_type, default=[],
+            '--exclude', metavar='reaction', type=convert_to_unicode, default=[],
             action=FilePrefixAppendAction,
             help=('Reaction to exclude (e.g. biomass reactions or'
                   ' macromolecule synthesis)'))

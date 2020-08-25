@@ -15,11 +15,13 @@
 #
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2020-2020  Elysha Sameth <esameth1@my.uri.edu>
 
 """Definitions related to reaction equations and parsing of such equations."""
 
 from __future__ import unicode_literals
 
+import sys
 import re
 import functools
 import enum
@@ -28,7 +30,6 @@ from collections import Counter
 
 import six
 from six import text_type, iteritems
-
 
 @six.python_2_unicode_compatible
 @functools.total_ordering
@@ -44,10 +45,10 @@ class Compound(object):
     """
 
     def __init__(self, name, compartment=None, arguments=()):
-        self._name = text_type(name)
+        self._name = name
         self._compartment = None
         if compartment is not None:
-            self._compartment = text_type(compartment)
+            self._compartment = compartment
         self._arguments = tuple(arguments)
 
     @property
@@ -81,6 +82,10 @@ class Compound(object):
         Compound('H+', 'e')
         """
         return self.__class__(self._name, compartment, self._arguments)
+
+    def convert_str(self):
+        s = self.__str__()
+        return s.decode('utf-8')
 
     def __eq__(self, other):
         return (isinstance(other, Compound) and
@@ -335,11 +340,16 @@ class Reaction(object):
                      for compound, value in self.compounds)
         return Reaction(self._direction, compounds)
 
+    def convert_str(self):
+        s = self.__str__()
+        return s.decode(sys.stdin.encoding)
+
     def __str__(self):
         # Use the same format as ModelSEED
         def format_compound(compound, count):
             """Format compound"""
             cpdspec = text_type(compound)
+
             if re.search(r'\s', cpdspec):
                 cpdspec = '|{}|'.format(cpdspec)
             if count != 1:
@@ -356,7 +366,6 @@ class Reaction(object):
             s = format_compound_list(self._left) + ' ' + s
         if len(self._right) > 0:
             s += ' ' + format_compound_list(self._right)
-
         return s
 
     def __repr__(self):
