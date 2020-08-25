@@ -24,7 +24,7 @@ import logging
 from six import iteritems
 
 from ..command import (Command, SolverCommandMixin,
-                       MetabolicMixin, FilePrefixAppendAction)
+                       MetabolicMixin, FilePrefixAppendAction, convert_to_unicode)
 from .. import massconsistency
 from ..reaction import Compound
 
@@ -38,14 +38,14 @@ class MassConsistencyCommand(MetabolicMixin, SolverCommandMixin, Command):
     def init_parser(cls, parser):
         parser.add_argument(
             '--exclude', metavar='reaction', action=FilePrefixAppendAction,
-            type=str, default=[],
+            type=convert_to_unicode, default=[],
             help='Exclude reaction from mass consistency')
         parser.add_argument(
             '--epsilon', type=float, help='Mass threshold',
             default=1e-5)
         parser.add_argument(
             '--checked', metavar='reaction', action=FilePrefixAppendAction,
-            type=str, default=[],
+            type=convert_to_unicode, default=[],
             help='Mark reaction as already checked (no residual)')
         parser.add_argument(
             '--type', choices=['compound', 'reaction'],

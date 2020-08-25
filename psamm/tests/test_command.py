@@ -27,7 +27,7 @@ import tempfile
 from contextlib import contextmanager
 import unittest
 
-from six import StringIO, BytesIO
+from six import StringIO, BytesIO, text_type
 
 from psamm.command import (main, Command, MetabolicMixin, SolverCommandMixin,
                            CommandError)
@@ -572,7 +572,6 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
 
     def test_run_tableexport_compounds(self):
         f = self.run_command(ExportTableCommand, ['compounds'])
-
         self.assertTableOutputEqual(f.getvalue(), [
             ['id', 'name', 'charge', 'formula', 'in_model'],
             ['A_\u2206', 'Compound A', '0', '', 'true'],
@@ -655,7 +654,6 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         with open(path, 'w') as f:
             f.write('{}\t{}\t{}'.format('rxn_1', 'a', -0.000001))
         self.run_solver_command(VisualizationCommand, ['--fva', path])
-
 
     def test_command_main(self):
         self.run_command(MockCommand)

@@ -21,14 +21,15 @@
 from __future__ import unicode_literals
 
 import logging
+import io
 import csv
 import argparse
 from collections import defaultdict, Counter
-from six import text_type
-from ..command import (MetabolicMixin, Command, FilePrefixAppendAction)
+from six import text_type, PY3
+from ..command import MetabolicMixin, Command, FilePrefixAppendAction, convert_to_unicode
 from .. import graph
 import sys
-
+import re
 try:
     from graphviz import render, FORMATS
 except ImportError:
@@ -51,22 +52,22 @@ class VisualizationCommand(MetabolicMixin,
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--method', type=text_type, default='fpp',
+            '--method', type=str, default='fpp',
             help='Compound pair prediction method',
             choices=['fpp', 'no-fpp'])
         parser.add_argument(
-            '--exclude', metavar='reaction', type=text_type, default=[],
+            '--exclude', metavar='reaction', type=convert_to_unicode, default=[],
             action=FilePrefixAppendAction,
             help='Reaction(s) to exclude from metabolite pair prediction')
         parser.add_argument(
-            '--element', type=text_type, default='C',
+            '--element', type=str, default='C',
             help='Element transfer to show on the graph (C, N, O, S).')
         parser.add_argument(
-            '--cpd-detail', type=text_type, default=None, action='append',
+            '--cpd-detail', type=str, default=None, action='append',
             nargs='+', help='List of properties to include on '
                             'compound nodes.')
         parser.add_argument(
-            '--rxn-detail', type=text_type, default=None, action='append',
+            '--rxn-detail', type=str, default=None, action='append',
             nargs='+', help='List of properties to include on reaction '
                             'nodes.')
         parser.add_argument(
@@ -76,7 +77,7 @@ class VisualizationCommand(MetabolicMixin,
             '--color', type=argparse.FileType('rU'), default=None, nargs='+',
             help='File containing node color mappings')
         parser.add_argument(
-            '--image', metavar='Image Format', type=text_type, choices=FORMATS,
+            '--image', metavar='Image Format', type=str, choices=FORMATS,
             required='--image-size' in sys.argv,
             help='Image output file format '
                  '(e.g. pdf, png, eps)')
@@ -92,7 +93,7 @@ class VisualizationCommand(MetabolicMixin,
             '--compartment', action='store_true',
             help='Include compartments in final visualization')
         parser.add_argument(
-            '--output', type=text_type, help='Output file name.')
+            '--output', type=str, help='Output file name.')
         parser.add_argument(
             '--image-size', metavar=('Width', 'Height'), default=('None','None'),
             nargs=2, type=float,
@@ -127,6 +128,7 @@ class VisualizationCommand(MetabolicMixin,
         if self._args.fba is not None:
             self.analysis = 'fba'
             for row in csv.reader(self._args.fba, delimiter=str('\t')):
+                row[0] = convert_to_unicode(row[0])
                 if row[0] in vis_rxns:
                     try:
                         if abs(float(row[1])) <= EPSILON:
@@ -145,6 +147,7 @@ class VisualizationCommand(MetabolicMixin,
         if self._args.fva is not None:
             self.analysis = 'fva'
             for row in csv.reader(self._args.fva, delimiter=str('\t')):
+                row[0] = convert_to_unicode(row[0])
                 if row[0] in vis_rxns:
                     try:
                         if abs(float(row[1])) <= EPSILON:
@@ -246,15 +249,15 @@ class VisualizationCommand(MetabolicMixin,
             boundaries, extracellular = get_cpt_boundaries(self._model)
             boundary_tree, extracellular = make_cpt_tree(boundaries,
                                                          extracellular)
-            with open('{}.dot'.format(output), 'w') as f:
+            with io.open('{}.dot'.format(output), 'w', encoding='utf-8', errors='backslashreplace') as f:
                 g.write_graphviz_compartmentalized(
                     f, boundary_tree, extracellular, width, height)
         else:
-            with open('{}.dot'.format(output), 'w') as f:
+            with io.open('{}.dot'.format(output), 'w', encoding='utf-8', errors='backslashreplace') as f:
                 g.write_graphviz(f, width, height)
-        with open('{}.nodes.tsv'.format(output), 'w') as f:
+        with io.open('{}.nodes.tsv'.format(output), 'w', encoding='utf-8', errors='backslashreplace') as f:
             g.write_nodes_tables(f)
-        with open('{}.edges.tsv'.format(output), 'w') as f:
+        with io.open('{}.edges.tsv'.format(output), 'w', encoding='utf-8', errors='backslashreplace') as f:
             g.write_edges_tables(f)
 
         if self._args.image is not None:
@@ -460,8 +463,7 @@ def add_node_label(g, cpd_detail, rxn_detail):
         if cpd_detail is not None:
             if node.props['type'] == 'cpd':
                 pre_label = '\n'.join(
-                    (str(node.props['entry'][0].properties.get(value)).encode(
-                        'ascii', 'backslashreplace').decode('ascii')) for
+                    (str(node.props['entry'][0].properties.get(value))) for
                     value
                     in cpd_detail[0] if
                     value != 'id' and value in node.props['entry'][
@@ -475,9 +477,7 @@ def add_node_label(g, cpd_detail, rxn_detail):
             if node.props['type'] == 'rxn':
                 if len(node.props['entry']) == 1:
                     pre_label = '\n'.join(
-                        (str(node.props['entry'][0].properties.get(value)
-                             ).encode('ascii', 'backslashreplace').decode(
-                            'ascii')) for value in rxn_detail[0] if
+                        (str(node.props['entry'][0].properties.get(value))) for value in rxn_detail[0] if
                         value != 'id' and value in
                         node.props['entry'][0].properties)
                     if 'id' in rxn_detail[0]:

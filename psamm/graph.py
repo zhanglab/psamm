@@ -177,13 +177,9 @@ class Graph(Entity):
 			f.write(' {}="{}";\n'.format(k, v))
 
 		for node in sorted(self.nodes, key=lambda k: k.props['id']):
-			f.write(' "{}"[{}]\n'.format(
-				node.props['id'], _graphviz_prop_string(node.props)).encode('ascii', 'ignore').decode(
-						'ascii'))
+			f.write(' "{}"[{}]\n'.format(node.props['id'], _graphviz_prop_string(node.props)))
 
-		for edge in sorted(self.edges, key=lambda k: (k.source.props['id'],
-		                                              k.dest.props['id'],
-		                                              k.props.get('dir'))):
+		for edge in sorted(self.edges, key=lambda k: (k.source.props['id'], k.dest.props['id'], k.props.get('dir'))):
 			f.write(' "{}" -> "{}"[{}]\n'.format(
 				edge.source.props['id'], edge.dest.props['id'],
 				_graphviz_prop_string(edge.props)))
@@ -263,7 +259,7 @@ class Graph(Entity):
 				for x in sorted(node_dict[vertex],
 				                key=lambda k: k.props['id']):
 					f.write(' "{}"[{}]\n'.format(
-						x.props['id'], _graphviz_prop_string(x.props)).encode('ascii', 'ignore').decode('ascii'))
+						x.props['id'], _graphviz_prop_string(x.props)))
 			for neighbor in graph[vertex]:
 				if neighbor not in path:
 					path = dfs_recursive(graph, neighbor, node_dict, path, f)
@@ -313,7 +309,7 @@ class Graph(Entity):
 			a = '\t'.join(text_type(node.props.get(x))
 			              for x in properties if x != 'label')
 			b = node.props['label'].replace('\n', ',')
-			f.write('{}\t{}\n'.format(a, b).encode('ascii', 'ignore').decode('ascii'))
+			f.write('{}\t{}\n'.format(a, b))
 
 	def write_edges_tables(self, f):
 		""" Write a tab separated table that contains edges information,
@@ -341,8 +337,7 @@ class Graph(Entity):
 			f.write('{}\t{}\t{}\n'.format(
 				edge.source.props['id'], edge.dest.props['id'],
 				'\t'.join(
-					text_type(edge.props.get(x.encode('ascii').decode(
-						'ascii'))) for x in properties)))
+					text_type(edge.props.get(x)) for x in properties)))
 
 
 class Node(Entity):
@@ -496,7 +491,6 @@ def make_network_dict(nm, mm, subset=None, method='fpp',
 			nm.reactions[rxn].equation = r
 		reaction_data[rxn] = (nm.reactions[rxn], direction)
 		style_flux_dict[rxn] = (style, abs(flux))
-	print(style_flux_dict)
 
 	flux_list = sorted([flux for style, flux in style_flux_dict.values()])
 	median = 1
@@ -645,7 +639,7 @@ def make_cpair_dict(filter_dict, args_method, args_combine, style_flux_dict, hid
 					if k1 not in have_visited:
 						rxn_count[rxn] += 1
 						have_visited.add(k1)
-						r_id = '{}_{}'.format(rxn.id, rxn_count[rxn]).encode('ascii', 'ignore').decode('ascii')
+						r_id = '{}_{}'.format(rxn.id, rxn_count[rxn])
 						new_id_mapping[r_id] = rxn
 						new_style_flux_dict[r_id] = style_flux_dict[rxn.id]
 						for v in v1:
