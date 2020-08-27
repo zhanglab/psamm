@@ -497,10 +497,8 @@ def make_network_dict(nm, mm, subset=None, method='fpp',
 	flux_list = list(filter(lambda x: x != 0, flux_list))
 
 	if flux_list:
-		if len(flux_list) % 2 == 1:
-			median = flux_list[len(flux_list)//2]
-		else:
-			median = float(flux_list[(len(flux_list)//2) - 1] + flux_list[len(flux_list)//2]) / 2.0
+		mid = len(flux_list) // 2
+		median = flux_list[mid] if len(flux_list) % 2 else float(flux_list[mid-1] + flux_list[mid]) / 2.0
 		if median < 1:
 			median = 1
 
