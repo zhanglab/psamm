@@ -22,11 +22,12 @@ import argparse
 import re
 import csv
 import logging
-from os import path
+from os import path, mkdir
 
 from ..command import Command
 from ..expression import boolean
 from psamm.datasource.native import ModelWriter
+from psamm.importer import write_yaml_model
 logger = logging.getLogger(__name__)
 
 
@@ -51,26 +52,38 @@ class PsammotateCommand(Command):
             help=('The column of the RBH file where the target '
                   'model genes are listed, starts from 1.'))
         parser.add_argument(
-            '--output', type=str, default='homolo_reactions',
-            help=('The prefix of output YAML file, '
-                  '(default: homolo_reactions).'))
-        parser.add_argument(
             '--ignore-na', action='store_true',
             help=('Ignore the reactions that do not have gene association. '
                   '(default: retain these reactions in new reactions file)'))
         parser.add_argument(
             '--suffix', type=str, default=None,
             help='Suffix to append to end of reaction IDs and compartments.')
+        g = parser.add_mutually_exclusive_group()
+        g.add_argument(
+            '--export-model', type=str, default=None,
+            help='Path to directory for full model export. Cannot be specified'
+                 'with --output option.')
+        g.add_argument(
+            '--output', type=str, default='homolo_reactions',
+            help=('The prefix of output YAML file, '
+                  '(default: homolo_reactions). Cannot be specified with'
+                  '--export-model option.'))
         super(PsammotateCommand, cls).init_parser(parser)
 
     def run(self):
         """Run psammotate command"""
-        if path.exists('{}.yaml'.format(self._args.output)):
-            logger.warning('File {}.yaml already exists. '
-                           'Please choose a different file name '
-                           'through the --output '
-                           'option.'.format(self._args.output))
-            quit()
+        if self._args.export_model is None:
+            if path.exists('{}.yaml'.format(self._args.output)):
+                logger.warning('File {}.yaml already exists. '
+                               'Please choose a different file name '
+                               'through the --output '
+                               'option.'.format(self._args.output))
+                quit()
+        elif self._args.export_model is not None:
+            if path.exists('{}'.format(self._args.export_model)):
+                logger.warning('Output directory {} already exists.'.format(
+                    self._args.export_model))
+                quit()
         if self._args.suffix:
             if any(i in self._args.suffix for i in [' ', '|', ':', ';', ',']):
                 logger.error('Special character or space found '
@@ -91,9 +104,41 @@ class PsammotateCommand(Command):
                         for cpd, v in r.equation.compounds:
                             cpd._compartment += '_{}'.format(self._args.suffix)
                     homolo_reactions.append(r)
-
-        with open(self._args.output + '.yaml', 'w') as o:
-            ModelWriter().write_reactions(o, homolo_reactions)
+        if self._args.export_model is None:
+            with open(self._args.output + '.yaml', 'w') as o:
+                ModelWriter().write_reactions(o, homolo_reactions)
+        elif self._args.export_model is not None:
+            mkdir('{}'.format(self._args.export_model))
+            reaction_list = [i.id for i in homolo_reactions]
+            original_reactions = [i.id for i in self._model.reactions]
+            for reaction in original_reactions:
+                self._model.reactions.discard(reaction)
+            for reaction in homolo_reactions:
+                self._model.reactions.add_entry(reaction)
+            compound_set = set()
+            for reaction in self._model.reactions:
+                for compound in reaction.equation.compounds:
+                    compound_set.add(compound[0].name)
+            compound_removal_set = set()
+            for compound in self._model.compounds:
+                if compound.id not in compound_set:
+                    compound_removal_set.add(compound.id)
+            for cpd in compound_removal_set:
+                self._model.compounds.discard(cpd)
+            exchange_del_set = set()
+            for key in self._model.exchange:
+                if key.name not in compound_set:
+                    exchange_del_set.add(key)
+            for ex in exchange_del_set:
+                del self._model.exchange[ex]
+            lim_del_set = set()
+            for key in self._model.limits:
+                if key not in reaction_list:
+                    lim_del_set.add(key)
+            for lim in lim_del_set:
+                del self._model.exchange[lim]
+            write_yaml_model(self._model, dest='{}'.format(
+                self._args.export_model), split_subsystem=False)
 
 
 def app_reader(app_file, query, template):
