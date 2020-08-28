@@ -124,7 +124,7 @@ class PsammotateCommand(Command):
                 if compound.id not in compound_set:
                     compound_removal_set.add(compound.id)
             for cpd in compound_removal_set:
-                self._model.compounds.discard(compound.id)  # .discard(cpd)?
+                self._model.compounds.discard(cpd)
             exchange_del_set = set()
             for key in self._model.exchange:
                 if key.name not in compound_set:
@@ -136,7 +136,7 @@ class PsammotateCommand(Command):
                 if key not in reaction_list:
                     lim_del_set.add(key)
             for lim in lim_del_set:
-                del self._model.exchange[key]   # del self._model.exchange[lim]?
+                del self._model.exchange[lim]
             write_yaml_model(self._model, dest='{}'.format(
                 self._args.export_model), split_subsystem=False)
 
