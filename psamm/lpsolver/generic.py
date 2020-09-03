@@ -15,6 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2020-2020  Elysha Sameth <esameth1@my.uri.edu>
 
 """Generic interface to LP solver instantiation."""
 
@@ -42,7 +43,11 @@ try:
         'integer': True,
         'quadratic': True,
         'rational': False,
-        'priority': 10
+        'priority': 10,
+        'feasibility_tolerance': True,
+        'optimality_tolerance': True,
+        'integrality_tolerance': True,
+        'threads': True
     })
 except ImportError as e:
     _solver_import_errors['cplex'] = str(e)
@@ -56,7 +61,11 @@ try:
         'integer': False,
         'quadratic': False,
         'rational': True,
-        'priority': 5
+        'priority': 5,
+        'feasibility_tolerance': True,
+        'optimality_tolerance': True,
+        'integrality_tolerance': False,
+        'threads': False
     })
 except ImportError as e:
     _solver_import_errors['qsoptex'] = str(e)
@@ -70,7 +79,11 @@ try:
         'integer': True,
         'quadratic': False,
         'rational': False,
-        'priority': 9
+        'priority': 9,
+        'feasibility_tolerance': True,
+        'optimality_tolerance': True,
+        'integrality_tolerance': True,
+        'threads': True
     })
 except ImportError as e:
     _solver_import_errors['gurobi'] = str(e)
@@ -84,7 +97,11 @@ try:
         'integer': True,
         'quadratic': False,
         'rational': False,
-        'priority': 8
+        'priority': 8,
+        'feasibility_tolerance': True,
+        'optimality_tolerance': True,
+        'integrality_tolerance': True,
+        'threads': False
     })
 except ImportError as e:
     _solver_import_errors['glpk'] = str(e)
@@ -98,8 +115,11 @@ def filter_solvers(solvers, requirements):
     """Yield solvers that fullfil the requirements."""
     for solver in solvers:
         for req, value in iteritems(requirements):
-            if (req in ('integer', 'quadratic', 'rational', 'name') and
-                    (req not in solver or solver[req] != value)):
+            if (req in ('threads', 'feasibility_tolerance',
+                        'optimality_tolerance',
+                        'integrality_tolerance') and solver[req] is True):
+                continue
+            elif solver[req] != value:
                 break
         else:
             yield solver
@@ -172,6 +192,11 @@ def parse_solver_setting(s):
     elif key in ('feasibility_tolerance', 'optimality_tolerance',
                  'integrality_tolerance'):
         value = float(value)
+    elif key in ('name',):
+        pass
+    else:
+        raise RequirementsError(
+            '{} is not a solver parameter option'.format(key))
 
     return key, value
 

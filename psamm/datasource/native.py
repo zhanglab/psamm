@@ -610,6 +610,12 @@ class NativeModel(object):
         if len(self.model) > 0:
             model_definition = self.model
 
+        for reaction in self.reactions:
+            if reaction.equation is None:
+                logger.warning(
+                    'Reaction {} has no reaction equation'.format(reaction.id))
+                del model_definition[reaction.id]
+
         return MetabolicModel.load_model(
             database, model_definition, itervalues(self.exchange),
             itervalues(self.limits), v_max=self.default_flux_limit)
