@@ -115,8 +115,9 @@ def filter_solvers(solvers, requirements):
     """Yield solvers that fullfil the requirements."""
     for solver in solvers:
         for req, value in iteritems(requirements):
-            if (req in ('threads', 'feasibility_tolerance', 'optimality_tolerance',
-                        'integrality_tolerance') and solver[req] == True):
+            if (req in ('threads', 'feasibility_tolerance',
+                        'optimality_tolerance',
+                        'integrality_tolerance') and solver[req] is True):
                 continue
             elif solver[req] != value:
                 break
