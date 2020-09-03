@@ -52,6 +52,7 @@ class TestAddReactions(unittest.TestCase):
             'rxn_7': str('gene5 and gene4')
         }
         self._obj_reaction = 'rxn_6'
+        self.empty_dict = {}
 
         try:
             self._solver = generic.Solver()
@@ -72,7 +73,7 @@ class TestAddReactions(unittest.TestCase):
             'rxn_4_reverse': str('gene_3 or gene_4'),
             'rxn_5': str('gene_5 and gene_6')
         }
-        mm_irreversible, reversible_gene_assoc, split_rxns = \
+        mm_irreversible, reversible_gene_assoc, split_rxns, self.empty_dict = \
             self._mm.make_irreversible(self._assoc,
                                        exclude_list=['ex_A', 'rxn_6', 'rxn_7'])
         self.assertEqual(split_rxns, set([('rxn_4_forward', 'rxn_4_reverse'),
@@ -86,7 +87,8 @@ class TestAddReactions(unittest.TestCase):
     def test_revese_model_limits(self):
         mm = self._mm.copy()
         mm.limits['rxn_3'].lower = 0
-        mm_irreversible, reversible_gene_assoc, split_rxns = \
+        empty_dict = {}
+        mm_irreversible, reversible_gene_assoc, split_rxns, self.empty_dict = \
             mm.make_irreversible(self._assoc,
                                  exclude_list=['ex_A', 'rxn_6', 'rxn_7'])
         self.assertEqual(
@@ -95,7 +97,7 @@ class TestAddReactions(unittest.TestCase):
             mm_irreversible.limits['rxn_3_reverse'].bounds, (0, 0))
         mm.limits['rxn_3'].lower = -1000
         mm.limits['rxn_3'].upper = 0
-        mm_irreversible, reversible_gene_assoc, split_rxns = \
+        mm_irreversible, reversible_gene_assoc, split_rxns, self.empty_dict = \
             mm.make_irreversible(self._assoc,
                                  exclude_list=['ex_A', 'rxn_6', 'rxn_7'])
         self.assertEqual(
@@ -112,7 +114,7 @@ class TestAddReactions(unittest.TestCase):
             'rxn_4_forward': str('gene_3 or gene_4'),
             'rxn_4_reverse': str('gene_3 or gene_4'),
         }
-        mm_irreversible, reversible_gene_assoc, split_rxns = \
+        mm_irreversible, reversible_gene_assoc, split_rxns, self.empty_dict = \
             self._mm.make_irreversible(
                 self._assoc,
                 exclude_list=['ex_A', 'rxn_2', 'rxn_5', 'rxn_6', 'rxn_7'],
@@ -134,7 +136,7 @@ class TestAddReactions(unittest.TestCase):
         self.assertEqual(d, {'gene_1': 5.0, 'gene_3': 5.0, 'gene_5': 10.0})
 
     def test_get_rxn_value(self):
-        mm_irreversible, reversible_gene_assoc, split_rxns =\
+        mm_irreversible, reversible_gene_assoc, split_rxns, self.empty_dict =\
             self._mm.make_irreversible(
                 self._assoc,
                 exclude_list=['ex_A', 'rxn_6'])
@@ -161,7 +163,7 @@ class TestAddReactions(unittest.TestCase):
         f = ['gene\texpression', 'gene_1\t15', 'gene_2\t20',
              'gene_3\t15', 'gene_4\t25', 'gene_5\t10', 'gene_6\t25']
         threshold_dict = gimme.parse_transcriptome_file(f, 20)
-        mm_irreversible, reversible_gene_assoc, split_rxns = \
+        mm_irreversible, reversible_gene_assoc, split_rxns, self.empty_dict = \
             self._mm.make_irreversible(
                 self._assoc,
                 exclude_list=['ex_A', 'rxn_6'])
@@ -179,7 +181,7 @@ class TestAddReactions(unittest.TestCase):
         f = ['gene\texpression', 'gene_1\t15', 'gene_2\t20',
              'gene_3\t15', 'gene_4\t30', 'gene_5\t10', 'gene_6\t25']
         threshold_dict = gimme.parse_transcriptome_file(f, 20)
-        mm_irreversible, reversible_gene_assoc, split_rxns = \
+        mm_irreversible, reversible_gene_assoc, split_rxns, self.empty_dict = \
             self._mm.make_irreversible(
                 self._assoc,
                 exclude_list=['ex_A', 'rxn_6'])

@@ -82,7 +82,7 @@ class GimmeCommand(MetabolicMixin, ObjectiveMixin,
         exchange_exclude = [rxn for rxn in mm.reactions
                             if mm.is_exchange(rxn)]
         exchange_exclude.append(self._get_objective())
-        mm_irreversible, reversible_gene_assoc, split_rxns = \
+        mm_irreversible, reversible_gene_assoc, split_rxns, _ = \
             mm.make_irreversible(base_gene_dict,
                                  exclude_list=exchange_exclude)
 
