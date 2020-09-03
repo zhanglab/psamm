@@ -12,3 +12,4 @@ PSAMM Tutorials
    tutorial/constraint_based.rst
    tutorial/fpp.rst
    tutorial/modelmapping.rst
+   tutorial/applying_supplemental_data.rst

@@ -118,6 +118,7 @@ minimum and maximum possible flux values as tab-separated values. ::
     PPCK    0.0     135.266721627  [...]
     PTAr    62.3091585921    1000.0  [...]
 
+
 In this example the ``PPCK`` reaction has a minimum flux of zero and maximum
 flux of 135.3 units. The ``PTAr`` reaction has a minimum flux of 62.3 and a
 maximum of 1000 units.
@@ -694,3 +695,414 @@ the corresponding Python object representation.
 .. code-block:: shell
 
     $ psamm-model console
+
+
+Psammotate (``psammotate``)
+---------------------------
+
+Given a reciprocal best hits file, will generate a draft model based on an
+template based on gene associations provided by the template file/reference
+file gene mapping. Draft model will contain all relevant model components
+in yaml format.
+
+.. code-block:: shell
+
+    $ psamm-model psammotate
+
+To generate a draft model, a reciprocal best hits file must be specified that
+maps the draft model genes to a template model using the ``--rbh`` option.
+Within this file, you must specify the integer of the column that contains the
+target mapping and the column that contains the template mapping (both indexed
+from 1) using the ``--target`` and ``--template`` options, respectively.
+
+.. code-block:: shell
+
+    $ psamm-model psammotate --rbh gene_mapping.tsv --template 1 --target 2
+
+Typically, this program retains reactions that have no gene mappings; however, if
+you want to drop reactions that do not have gene associations, you must specify
+the ``--ignore-na`` option.
+
+.. code-block:: shell
+
+    $ psamm-model psammotate --rbh gene_mapping.tsv --template 1 --target 2 --ignore-na
+
+You can also specify an output directory for all of the yaml file output using
+the ``--output`` option.
+
+.. code-block:: shell
+
+    $ psamm-model psammotate --rbh gene_mapping.tsv --template 1 --target 2 --output out
+
+GIMME (``gimme``)
+-----------------
+
+This command allows you to subset a metabolic model based on gene expression
+data. The expression data for filtering may be in any normalized format (TPM,
+RPK, etc.), but the threshold value supplied to gimme must be appropriate for the
+input data. Gimme functions through gene inactivation and will not "express" genes
+that do not meet the specified expression threshold. Expression thresholds can
+be specified using the ``--expression-threshold`` argument and a file that maps
+genes in the model to their expression can be provided using the option
+``--transcriptome-file``.
+
+.. code-block:: shell
+
+    $ psamm-model gimme --transcriptome-file file.tsv --expression-threshold 1
+
+The gimme command may also specify an argument that will retain any reactions
+required in order to maintain a specific biomass threshold. This threshold may
+be specified using the ``--biomass-threshold`` option.
+
+.. code-block:: shell
+
+    $ psamm-model gimme --transcriptome-file file.tsv --expression-threshold 1 --biomass-threshold 1
+
+You can specify a directory to output the subset model that will create all
+yaml files for the new, subset, model in this directory. This location can
+be specified using the ``--export-model`` argument.
+
+.. code-block:: shell
+
+    $ psamm-model --transcriptome-file file.tsv --expression-threshold 1 --export-model ./gimme_out/
+
+.. _commands-tmfa:
+
+TMFA (``tmfa``)
+---------------
+
+This command can be used to run growth simulations using the TMFA algorithm
+as detailed in [Henry07]_. This method simulates fluxes in a metabolic model
+while incorporating metabolite concentrations and thermodynamic constraints.
+This is done through the incorporation of the gibbs free energy equation along
+with additional constraints to link reactions fluxes to thermodynamic
+feasibility.
+
+This simulation method requires multiple input files to be prepared beforehand.
+The following section is going to detail these input files and their formats.
+
+TMFA Input Files
+~~~~~~~~~~~~~~~~
+
+Gibbs Free Energy Files
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``tmfa`` method in psamm requires standard gibbs free energy of reaction
+values to be supplied as an input. These values could be obtained from a
+database or predicted based on metabolite structures and reaction equations.
+These values must be in kilojoules per mol (kJ/mol). The input file is formatted
+as a three column, tab separated table, consisting of reaction IDs, standard
+gibbs free energy values, and gibbs free energy uncertainty values for the
+predicted values. Any reactions that do not have associated gibbs
+free energy predictions need to either be included in the lumped
+reactions or in the excluded reactions.
+
+.. code-block:: shell
+
+    rxn1  -5.8  1.2
+    rxn2  12.1  2.5
+    rxn3  -0.1  0.2
+    ....
+
+Excluded Reactions File
+^^^^^^^^^^^^^^^^^^^^^^^
+Reactions that cannot be thermodynamically constrained need to be included in
+the list of excluded reactions. These reactions typically consist of reactions
+that are artificial (for example, biomass equations) or ones for which the
+gibbs free energy is unknown. This input file just consists of reaction IDs
+with each line containing just one ID. Note that exchange reactions will be
+automatically excluded and do not need to be included in this file.
+
+.. code-block:: shell
+
+    biomass
+    rxn6
+    rxn7
+    ....
+
+Lumped Reactions File
+^^^^^^^^^^^^^^^^^^^^^^^
+The lumped reactions file is where lumped reactions are defined for the
+TMFA problem. These reactions are summary reactions that can be used to
+constrain groups of reactions, when some of the reactions in the groups
+have unknown gibbs free energy values. More details on this concept can be
+found in the original TMFA publication [Henry07]_. This file consists of
+3 columns where the first column is a lumped reaction ID, the second column
+consists of a comma separated list of reaction IDs and directions (indicated
+by a 1 for forward and -1 for reverse), and a lump reaction equation. Any Lumped
+reactions need to also have their gibbs free energy values assigned in the
+gibbs free energy input file. The reactions that are included in the lumped
+reactions do not need to be included in the excluded reactions file.
+
+.. code-block:: shell
+
+    Lump1  GLYBt2r:-1,GLYBabc:1    atp[c] + h2o[c] <=> adp[c] + h[e] + pi[c]
+    Lump2  ADMDCr:1,SPMS:1,METAT:1 atp[c] + h2o[c] + met-L[c] + ptrc[c] <=> 5mta[c] + co2[c] + pi[c] + ppi[c] + spmd[c]
+
+
+Transporter Parameters
+^^^^^^^^^^^^^^^^^^^^^^^
+Gibbs free energy values for transporters have to also account for the transport
+of charge and pH across compartments in a model. To allow these calculations to
+be made each transporter in the model needs to have an associated gibbs free
+energy values defined in the gibbs free energy input file along with
+the counts of protons and charge transported across the membrane defined in the
+transport parameter input file. This file is formatted as three columns with
+the first being reaction ID for the transporter reactions, the second being the
+net charge transported from the outside compartment, and the third being the
+number of protons transported from out to the in compartment for that reaction.
+
+As an example, if we had the following reaction equation where H is a proton with
+a +1 charge and X is a compound with 0 charge.
+
+.. code-block:: yaml
+
+    - id: transX
+      equation: X[e] + H[e] <=> X[c] + H[c]
+
+This equation would have a net charge transported of +1 and the net number of
+protons transported from out to in of 1. This would mean that the transporter
+parameter line for this reaction would be:
+
+.. code-block:: shell
+
+    transX  1 1
+
+Another case could be if the compounds were both charged. In this case the
+net charge needs to be used. For example, in the following reaction where
+the compound Y is now going to have a charge of -1.
+
+.. code-block:: yaml
+
+    - id: transY
+      equation: Y[e] + H[e] <=> Y[c] + H[c]
+
+The protons transported from out to in would still be 1, but since compound Y
+also has a charge in this case the net charge transported would be 0 (+1 for
+the proton and -1 for Y). This would have an input line of the following in
+the transport parameter file:
+
+.. code-block:: shell
+
+    transY  0  1
+
+
+If reactions involve antiport, where one compound goes in and one goes out,
+then this needs to be accounted for in these transporter values. The
+values are always calculated in the direction of out to in. So, if there
+was the export of 1 proton in the reaction equation, then the value for
+that reaction would be -1 protons transported from out to in.
+
+Lastly many reactions involve other components to their equations related
+to energy costs for the reaction. For example, PTS transport reactions
+may also involve the conversion of PEP to Pyruvate. These other compounds
+are not considered in the transport parameter calculations, even if they
+do have a charge. The only metabolites that are considered are the ones
+that cross the membrane in the reaction equation.
+
+
+Concentration Settings
+^^^^^^^^^^^^^^^^^^^^^^^
+The last input file that needs to be prepared is the concentrations file.
+This file is used to set the concentrations of any metabolites that in
+the model. By default, metabolites are allowed to vary in concentration
+between 0.02 M and 1e-6 M. This file can be used to designate any
+metabolites that will have non-default bounds in the model. These could
+include ones where the measured concentrations fall outside of the
+default range, or ones where the they have measured values that may
+help constrain the model. For example, metabolites that are provided
+in the media can have their concentrations set in this file. The
+file is set up as a 3 column, tab-separated, table where the first
+column is the metabolite ID (with compartment ID), the second column
+is the lower bound of the concentration, and the third column is the
+upper bound of the concentration. All concentrations are designated as
+molar concentrations.
+
+.. code-block:: shell
+
+    cpd_a[e]    0.02  0.02
+    cpd_b[e]    0.1 0.1
+    cpd_e[e]    0.0004  0.0004
+
+
+Configuration File
+^^^^^^^^^^^^^^^^^^^
+Because the ``tmfa`` function requires multiple input files to run,
+the command was organized to use a central configuration file.
+A template configuration file can be generated using the following
+`PSAMM` command:
+
+.. code-block:: shell
+
+    $ psamm-model tmfa --config ./config.yaml util --generate-config
+
+
+The configuration file contains the relative paths to the input
+files that are detailed above, as well as a few other TMFA specific
+parameters. Note: The relative paths in this file have to be set
+based on where you are running the command from, not based on
+where the configuration file is located. Additionally, any
+files which are not needed for a specific model can be left out
+of this configuration file.
+
+.. code-block:: yaml
+
+    deltaG: ./gibbs-with-uncertainty.tsv
+    exclude: ./exclude.tsv
+    transporters: ./transport-parameters.tsv
+    concentrations: ./concentrations.tsv
+    lumped_reactions: ./lumped-reactions.tsv
+    proton-in: h[c]
+    proton-out: h[e]
+    proton-other:
+     - h[p]
+     - h[mito]
+    water:
+      - h2o[c]
+      - h2o[e]
+      - h2o[mito]
+      - h2o[p]
+
+In addition to the relative paths to the input files, the configuration
+file is also where metabolites that are considered special cases
+are designated. Specifically, water and protons are not considered as
+part of the Keq portion of the gibbs free energy calculations. Becuase
+of their special properties, they are considered separately from the
+other metabolites. Protons are also involved in the calculation of the
+gibbs free energy for transporter reactions. As such the proton ID for
+the internal compartment protons and external compartment protons
+need to be designated in this file as well.
+
+
+TMFA Simulation Command Line Parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The ``tmfa`` command has 4 general settings that can be applied to any
+simulation. These settings are things that might be changed
+from simulation to simulation, so they are defined through command line
+parameters instead of in the configuration file.
+
+Temperature
+^^^^^^^^^^^^
+The temperature used in the calculation of the gibbs free energy of the
+reactions can be set through the ``--temp`` command line parameter. This
+temperature is provided in Celsius.
+
+.. code-block:: shell
+
+    $ psamm-model tmfa --config ./config.yaml --temp 27 simulation
+
+
+Biomass Flux
+^^^^^^^^^^^^^
+The biomass flux can be fixed at a certain value in the simulation using
+the ``--threshold`` command line option. By default, the biomass is fixed
+at the maximum biomass value for the model.
+
+.. code-block:: shell
+
+    $ psamm-model tmfa --config ./config.yaml --threshold 0.1 simulation
+
+Reaction Reversibility
+^^^^^^^^^^^^^^^^^^^^^^^
+All of the reactions in a model can be allowed to be reversible, and have their
+actual reversibility in the simulation only determined by the thermodynamic
+constraints in the simulation. This follows a variation of TMFA as detailed in
+the paper [Hamilton13]_. This can be enabled for a simulation using the
+``--hamilton`` command line argument.
+
+.. code-block:: shell
+
+    $ psamm-model tmfa --config ./config.yaml --hamilton simulation
+
+Error Estimates
+^^^^^^^^^^^^^^^^
+The gibbs free energy error estimates can be incorporated into the ``tmfa``
+simulations by using the ``--err`` command line argument. This argument will
+allow for the gibbs free energy values to vary slightly based on the provided
+uncertainty estimates in the input file.
+
+.. code-block:: shell
+
+    $ psamm-model tmfa --config ./config.yaml --err simulation
+
+
+Running Simulations with TMFA
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Variability Analysis
+^^^^^^^^^^^^^^^^^^^^^
+The default simulation method with TMFA calculates the lower and upper bounds
+for each variable in the TMFA problem. this produces a four-column output that
+gives the variable type, variable ID, lower bound, and upper bound.
+This variability analysis is done for the metabolite concentrations, reaction
+fluxes, reaction gibbs free energy values, and binary constraint variables for
+the reactions. This analysis can be run using the following command:
+
+.. code-block:: shell
+
+    $ psamm-model tmfa --config ./config.yaml simulation
+
+
+This will produce an output like this:
+
+.. code-blocks:: shell
+
+    Flux	CS	0.18355092011356122	0.18355092011362384
+    DGR	CS	-42.528916818320724	-1.0000000010279564e-06
+    Zi	CS	1.0	1.0
+    CONC	icit_c[c]	9.999e-06	0.007
+    CONC	co2_c[c]	9.999e-06	9.999e-05
+    CONC	2pg_c[c]	9.999e-06	0.0127
+
+Single Solution Simulations
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+The TMFA simulations can also be run to produce single, arbitrary solutions
+instead of doing the variability analysis. This can be run to produce a
+single solution using just the TMFA constraints ``fba``, by doing an additional
+L1 minimization of the fluxes ``l1min``, or to produce a random solution from
+the solution space ``random``. (NOTE: the random solution is experimental and
+is not guaranteed to be completely random).
+
+.. code-block:: shell
+
+    $ psamm-model tmfa --config ./config.yaml simulation --single-solution fba
+
+    $ psamm-model tmfa --config ./config.yaml simulation --single-solution l1min
+
+    $ psamm-model tmfa --config ./config.yaml simulation --single-solution random
+
+Randomsparse with TMFA Constraints
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Random reaction or gene deletions can be performed while accounting for the
+thermodynamic constraints through using the ``--randomsparse`` or
+``--randomsparse_genes`` command line arguments. These functions will
+perform random deletions of reactions or genes in the model in the same way
+as the PSAMM ``randomsparse`` command, but while accounting for the
+thermodynamic constraints in the model.
+
+.. code-block:: shell
+
+    $ psamm-model tmfa --config ./config.yaml simulation --randomsparse
+
+    $ psamm-model tmfa --config ./config.yaml simulation --randomsparse_genes
+
+
+Other TMFA Utility Functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The ``tmfa`` utility functions include the ``--generate-config`` command
+, which was detailed above, and a testing command ``--random-addtion`` which
+can be run to test which thermodynamic constraints might be causing
+a model to fail to produce biomass. In some cases when the simulations settings
+are being set up or when the parameters are changed (for example, different temps
+or concentrations) the ``tmfa`` simulation might not produce biomass.
+Unfortunately, it can be difficult to isolate which constraints might cause
+this problem without extensive manual investigation. To help with this process
+the ``--random-addition`` utility function was developed. This function will
+randomly add reaction thermodynamic constraints to the model and test which
+constraints cause the model to fall below the set biomass threshold. This can
+be useful for identifying potentially problematic or over constrained reactions
+in the model.
+
+.. code-block:: shell
+
+    $ psamm-model tmfa --config ./config.yaml util --random-addition
