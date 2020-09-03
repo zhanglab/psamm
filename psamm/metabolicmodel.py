@@ -328,7 +328,7 @@ class MetabolicModel(MetabolicDatabase):
 
         return model
 
-    def make_irreversible(self, gene_dict={}, exclude_list=[],
+    def make_irreversible(self, gene_dict={}, exclude_list=[], lumped_rxns={},
                           all_reversible=False):
         """Creates a new metabolic models with only irreversible reactions.
 
@@ -355,6 +355,7 @@ class MetabolicModel(MetabolicDatabase):
         split_reversible = set()
         mm_irrev = self.copy()
         reversible_gene_dict = {}
+        new_lump_rxn_dict = {}
         for rxn in self.reactions:
             upper = self.limits[rxn].upper
             lower = self.limits[rxn].lower
@@ -405,7 +406,76 @@ class MetabolicModel(MetabolicDatabase):
                     mm_irrev.limits[r2_id].upper = - lower
                     mm_irrev.limits[r2_id].lower = 0
 
-        return mm_irrev, reversible_gene_dict, split_reversible
+            elif rxn in lumped_rxns.keys():
+                final_sub_rxn_list = []
+                sub = lumped_rxns[rxn]
+                check = 0
+                for (x,y) in sub:
+                    rn = mm_irrev.get_reaction(x)
+                    if rn.direction != Direction.Both:
+                        check += 1
+                if reaction.direction == Direction.Forward or check != 0:
+                    mm_irrev.limits[rxn].upper = 0
+                    mm_irrev.limits[rxn].lower = 0
+                    sub_rxn_list = lumped_rxns[rxn]
+                    for entry in sub_rxn_list:
+                        (subrxn, dir)= entry
+                        final_sub_rxn_list.append(subrxn)
+                    new_lump_rxn_dict[rxn] = final_sub_rxn_list
+                elif reaction.direction == Direction.Both:
+                    # split the lump reaction itself
+                    lumped_rxns.append(rxn)
+                    r = Reaction(Direction.Forward, reaction.left, reaction.right)
+                    r2 = Reaction(Direction.Forward, reaction.right, reaction.left)
+                    r_id = str('{}_forward'.format(rxn))
+                    r2_id = str('{}_reverse'.format(rxn))
+                    mm_irrev.remove_reaction(rxn)
+                    mm_irrev.database.set_reaction(r_id, r)
+                    mm_irrev.database.set_reaction(r2_id, r2)
+                    mm_irrev.add_reaction(r_id)
+                    mm_irrev.add_reaction(r2_id)
+                    split_reversible.append((r_id, r2_id))
+
+                    sub_rxn_list = lumped_rxns[rxn]
+                    for_sub_rxn_list = []
+                    rev_sub_rxn_list = []
+                    mm_irrev.limits[r_id].upper = 0
+                    mm_irrev.limits[r_id].lower = 0
+                    mm_irrev.limits[r2_id].upper = 0
+                    mm_irrev.limits[r2_id].lower = 0
+                    for entry in sub_rxn_list:
+                        (subrxn, dir) = entry
+                        dir = int(dir)
+                        lumped_rxns.append(subrxn)
+                        subreaction = mm.get_reaction(subrxn)
+                        sub_r1 = Reaction(Direction.Forward, subreaction.left, subreaction.right)
+                        sub_r1_id = '{}_forward'.format(subrxn)
+                        sub_r2 = Reaction(Direction.Forward, subreaction.right, subreaction.left)
+                        sub_r2_id = '{}_reverse'.format(subrxn)
+
+                        split_reversible.append((sub_r1_id, sub_r2_id))
+                        if dir == 1:
+                            for_sub_rxn_list.append(sub_r1_id)
+                            rev_sub_rxn_list.append(sub_r2_id)
+                            mm_irrev.database.set_reaction(sub_r1_id, sub_r1)
+                            mm_irrev.add_reaction(sub_r1_id)
+                            mm_irrev.database.set_reaction(sub_r2_id, sub_r2)
+                            mm_irrev.add_reaction(sub_r2_id)
+                        elif dir == -1:
+                            for_sub_rxn_list.append(sub_r2_id)
+                            rev_sub_rxn_list.append(sub_r1_id)
+                            mm_irrev.database.set_reaction(sub_r1_id, sub_r1)
+                            mm_irrev.add_reaction(sub_r1_id)
+                            mm_irrev.database.set_reaction(sub_r2_id, sub_r2)
+                            mm_irrev.add_reaction(sub_r2_id)
+                        mm_irrev.limits[sub_r1_id].lower = 0
+                        mm_irrev.limits[sub_r1_id].upper = 100
+                        mm_irrev.limits[sub_r2_id].lower = 0
+                        mm_irrev.limits[sub_r2_id].upper = 100
+                    new_lump_rxn_dict[r_id] = for_sub_rxn_list
+                    new_lump_rxn_dict[r2_id] = rev_sub_rxn_list
+
+        return mm_irrev, reversible_gene_dict, split_reversible, new_lump_rxn_dict
 
 
 class FlipableFluxBounds(FluxBounds):

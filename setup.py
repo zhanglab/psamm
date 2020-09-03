@@ -108,6 +108,7 @@ setup(
         psammotate = psamm.commands.psammotate:PsammotateCommand
         modelmapping = psamm.commands.model_mapping:ModelMappingCommand
         vis = psamm.commands.vis:VisualizationCommand
+        tmfa = psamm.commands.tmfa:TMFACommand
 
         [psamm.importer]
         JSON = psamm.importers.cobrajson:Importer

@@ -54,7 +54,7 @@ class RandomSparseNetworkCommand(MetabolicMixin, LoopRemovalMixin,
             type=util.MaybeRelative)
         parser.add_argument(
             '--type', help='Type of deletion to perform',
-            choices=['reactions', 'exchange', 'genes'], type=str,
+            choices=['reactions', 'exchange', 'genes', 'rxgenes'], type=str,
             required=True)
         super(RandomSparseNetworkCommand, cls).init_parser(parser)
 
@@ -98,19 +98,32 @@ class RandomSparseNetworkCommand(MetabolicMixin, LoopRemovalMixin,
             strategy = randomsparse.ReactionDeletionStrategy(
                 self._mm)
             entity = 'reactions'
+        elif self._args.type == 'rxgenes':
+            strategy = randomsparse.GeneDeletionStrategy(
+                self._mm, randomsparse.get_gene_associations(self._model))
+            entity = 'genes'
         else:
             strategy = randomsparse.GeneDeletionStrategy(
                 self._mm, randomsparse.get_gene_associations(self._model))
             entity = 'genes'
 
-        essential, deleted = randomsparse.random_sparse(
-            strategy, p, reaction, flux_threshold)
+        if self._args.type == 'rxgenes':
+            essential, deleted = randomsparse.random_sparse_return_all(
+                strategy, p, reaction, flux_threshold)
+            for i in self._mm.reactions:
+                if i in deleted:
+                    print('{}\t{}'.format(i, 0))
+                else:
+                    print('{}\t{}'.format(i, 1))
+        else:
+            essential, deleted = randomsparse.random_sparse(
+                strategy, p, reaction, flux_threshold)
 
-        logger.info('Essential {}: {}/{}'.format(
-            entity, len(essential), len(strategy.entities)))
-        logger.info('Deleted {}: {}/{}'.format(
-            entity, len(deleted), len(strategy.entities)))
+            logger.info('Essential {}: {}/{}'.format(
+                entity, len(essential), len(strategy.entities)))
+            logger.info('Deleted {}: {}/{}'.format(
+                entity, len(deleted), len(strategy.entities)))
 
-        for entity_id in sorted(strategy.entities):
-            value = 0 if entity_id in deleted else 1
-            print('{}\t{}'.format(entity_id, value))
+            for entity_id in sorted(strategy.entities):
+                value = 0 if entity_id in deleted else 1
+                print('{}\t{}'.format(entity_id, value))

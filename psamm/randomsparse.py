@@ -222,3 +222,85 @@ def random_sparse(strategy, prob, obj_reaction, flux_threshold):
             logger.info('Entity {} was deleted'.format(entity))
 
     return essential, deleted
+
+def random_sparse_return_all(strategy, prob, obj_reaction, flux_threshold):
+    """Find a random minimal network of model reactions.
+
+    Given a reaction to optimize and a threshold, delete entities randomly
+    until the flux of the reaction to optimize falls under the threshold.
+    Keep deleting until no more entities can be deleted. It works
+    with two strategies: deleting reactions or deleting genes (reactions
+    related to certain genes).
+
+    Args:
+        strategy: :class:`.ReactionDeletionStrategy` or
+            :class:`.GeneDeletionStrategy`.
+        prob: :class:`psamm.fluxanalysis.FluxBalanceProblem`.
+        obj_reaction: objective reactions to optimize.
+        flux_threshold: threshold of max reaction flux.
+    """
+
+    essential = set()
+    deleted = set()
+    essential_rxn = set()
+    deleted_rxn = set()
+    for entity, deleted_reactions in strategy.iter_tests():
+        if obj_reaction in deleted_reactions:
+            logger.info(
+                'Marking entity {} as essential because the objective'
+                ' reaction depends on this entity...'.format(entity))
+            essential.add(entity)
+            continue
+
+        if len(deleted_reactions) == 0:
+            logger.info(
+                'No reactions were removed when entity {}'
+                ' was deleted'.format(entity))
+            deleted.add(entity)
+            strategy.delete(entity, deleted_reactions)
+            continue
+
+        logger.info('Deleted reactions: {}'.format(
+            ', '.join(deleted_reactions)))
+
+        constr = []
+        for r in deleted_reactions:
+            flux_var = prob.get_flux_var(r)
+            c, = prob.prob.add_linear_constraints(flux_var == 0)
+            constr.append(c)
+
+        logger.info('Trying FBA without reactions {}...'.format(
+            ', '.join(deleted_reactions)))
+
+        try:
+            prob.maximize(obj_reaction)
+        except fluxanalysis.FluxBalanceError:
+            logger.info(
+                'FBA is infeasible, marking {} as essential'.format(
+                    entity))
+            for c in constr:
+                c.delete()
+            essential.add(entity)
+            for r in deleted_reactions:
+                essential_rxn.add(r)
+            continue
+
+        logger.debug('Reaction {} has flux {}'.format(
+            obj_reaction, prob.get_flux(obj_reaction)))
+
+        if prob.get_flux(obj_reaction) < flux_threshold:
+            for c in constr:
+                c.delete()
+            essential.add(entity)
+            logger.info('Entity {} was essential'.format(
+                entity))
+            for r in deleted_reactions:
+                essential_rxn.add(r)
+        else:
+            deleted.add(entity)
+            strategy.delete(entity, deleted_reactions)
+            logger.info('Entity {} was deleted'.format(entity))
+            for r in deleted_reactions:
+                deleted_rxn.add(r)
+
+    return essential_rxn, deleted_rxn

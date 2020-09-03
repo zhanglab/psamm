@@ -344,7 +344,8 @@ def flux_variability(model, reactions, fixed, tfba, solver):
     """
 
     fba = _get_fba_problem(model, tfba, solver)
-
+    fba.prob.integrality_tolerance.value = 0.0
+    print(fba.prob.integrality_tolerance.value)
     for reaction_id, value in iteritems(fixed):
         flux = fba.get_flux_var(reaction_id)
         fba.prob.add_linear_constraints(flux >= value)
