@@ -93,8 +93,8 @@ class VisualizationCommand(MetabolicMixin,
         parser.add_argument(
             '--output', type=text_type, help='Output file name.')
         parser.add_argument(
-            '--image-size', metavar=('Width', 'Height'), default=('None','None'),
-            nargs=2, type=float,
+            '--image-size', metavar=('Width', 'Height'),
+            default=('None', 'None'), nargs=2, type=float,
             help='Set the width and height of the graph image. '
                  '(width height)(inches)')
         super(VisualizationCommand, cls).init_parser(parser)
@@ -245,8 +245,8 @@ def rxnset_for_vis(mm, subset_file, exclude):
         final_rxn_set = set()
         cpd_set = set()
         rxn_set = set()
-        for l in subset_file.readlines():
-            value = l.strip()
+        for line in subset_file.readlines():
+            value = line.strip()
             if value in all_cpds:
                 cpd_set.add(value)
             elif mm.has_reaction(value):
