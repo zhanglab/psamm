@@ -119,7 +119,6 @@ class SearchCommand(Command):
                 # prepare s list of all compound properties
                 compound_prop_list = []
                 for cpd_property in compound.properties.values():
-                    print("$$$$$$$$$", cpd_property)
                     if isinstance(cpd_property, list):
                         for i in cpd_property:
                             if isinstance(rxn_property, Compound):
