@@ -603,6 +603,47 @@ The image generated looks like this:
     For these two options, if a required detail is not included in the model, that
     property will be skipped and not shown on those nodes.
 
+Visualize FBA or FVA
+~~~~~~~~~~~~~~~~~~~~~~
+
+Performing various simulations of growth is made possible through methods such
+as FBA and FVA. Using the ``--fba`` or ``--fva`` option, the flow of metabolites
+calculated by these methods can be visualized. When visualizing FBA, a tsv file
+containing the reaction name and flux value is required. For example, the following
+command can be used:
+
+.. code-block:: shell
+
+   (psamm-env) $ psamm-model vis --fba fba.tsv --image png
+
+The image generated looks like this:
+
+.. image:: fba.dot.png
+
+If the FVA option is given, the file should contain the reaction name, and a lower
+and upper bound flux value that would still allow the model to sustain the same
+objective function flux. To visualize the FVA results, you can use the command:
+
+.. code-block:: shell
+
+   (psamm-env) $ psamm-model vis --fva fva.tsv --image png
+
+The image generated looks like this:
+
+.. image:: fva.dot.png
+
+Reactions with a flux of zero is represented as a dotted edge and non-zero fluxes as
+solid. Meanwhile, the thickness of the edges is proportional to the flux through
+the reaction. Visualizing these fluxes may help highlight reactions that contribute
+the most to the objective.
+
+.. note::
+
+    The ``--fba`` and ``--fva`` options cannot be used together.
+
+.. note::
+
+    Fluxes less than the absolute value of 1e-5 will be considered as 0.
 
 Other Visualization Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

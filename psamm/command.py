@@ -48,7 +48,12 @@ from .lpsolver import generic
 
 logger = logging.getLogger(__name__)
 
-def convert_to_unicode(str_, encoding=sys.stdin.encoding):
+import codecs
+if not PY3:
+    if sys.stdout.encoding != 'UTF-8':
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout, 'strict')
+
+def convert_to_unicode(str_, encoding='UTF-8'):
     if PY3 or bool(re.search(r'\\u', str_)):
         try:
             return str_.encode('latin-1').decode('unicode-escape')
@@ -57,10 +62,7 @@ def convert_to_unicode(str_, encoding=sys.stdin.encoding):
         return str_
     if isinstance(str_, unicode):
         return str_
-    try:
-        return str_.encode(encoding)
-    except:
-        return str_.decode(encoding)
+    return unicode(str_, encoding)
 
 class CommandError(Exception):
     """Error from running a command.
@@ -228,7 +230,10 @@ class SolverCommandMixin(object):
     def init_parser(cls, parser):
         parser.add_argument(
             '--solver', action='append', type=str,
-            help='Specify solver requirements (e.g. "rational=yes")')
+            help='Specify solver requirements (e.g. "rational=yes")\n'
+                 'Choices: \trational, integer, quadratic, '
+                 'threads. feasibility_tolerance, optimality_tolerance, '
+                 'integrality_tolerance')
         super(SolverCommandMixin, cls).init_parser(parser)
 
     def __init__(self, *args, **kwargs):
