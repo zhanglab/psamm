@@ -805,7 +805,6 @@ def parse_reaction_equation(equation_def, default_compartment):
     else:
         compartment = equation_def.get('compartment', default_compartment)
         reversible = bool(equation_def.get('reversible', True))
-        ############### NEED TO TEST THIS
         left = equation_def.get('left', [])
         right = equation_def.get('right', [])
         if len(left) == 0 and len(right) == 0:
@@ -879,9 +878,9 @@ def parse_reaction_table_file(path, f, default_compartment):
         if text_type('id') not in row or text_type(convert_to_unicode(row['id'].strip())) == '':
             raise ParseError('Expected `id` column in table')
 
-        props = {key: text_type(convert_to_unicode(value))
+        props = {key: convert_to_unicode(value)
                  for key, value in iteritems(row)
-                 if text_type(convert_to_unicode(value)) != ''}
+                 if convert_to_unicode(value) != ''}
 
         if 'equation' in props:
             props['equation'] = parse_reaction_equation_string(
@@ -944,7 +943,7 @@ def parse_exchange(exchange_def, default_compartment):
     for compound_def in exchange_def.get('compounds', []):
         compartment = compound_def.get('compartment', default_compartment)
         compound = Compound(convert_to_unicode(compound_def['id']), compartment=compartment)
-        reaction = compound_def.get('reaction') ################# NEED TO TEST THIS
+        reaction = compound_def.get('reaction')
         lower, upper = get_limits(compound_def)
         yield compound, reaction, lower, upper
 
@@ -1002,7 +1001,6 @@ parse_medium_yaml_file = parse_exchange_yaml_file
    Use :func:`parse_exchange_yaml_file` instead.
 """
 
-########### NEED TO CHECK THIS
 def parse_exchange_table_file(f):
     """Parse a space-separated file containing exchange compound flux limits.
 
@@ -1012,7 +1010,7 @@ def parse_exchange_table_file(f):
     """
 
     for line in f:
-        line, _, comment = line.partition('#')
+        line, _, comment = convert_to_unicode(line).partition('#')
         line = line.strip()
         if line == '':
             continue
@@ -1077,7 +1075,6 @@ parse_medium_file = parse_exchange_file
    Use :func:`parse_exchange_file` instead.
 """
 
-############ NEED TO CHECK THIS
 def parse_limit(limit_def):
     """Parse a structured flux limit definition as obtained from a YAML file
 
@@ -1085,7 +1082,7 @@ def parse_limit(limit_def):
     """
 
     lower, upper = get_limits(limit_def)
-    reaction = text_type(limit_def.get('reaction'))
+    reaction = convert_to_unicode(limit_def.get('reaction'))
 
     return reaction, lower, upper
 
@@ -1107,7 +1104,6 @@ def parse_limits_list(path, limits):
         else:
             yield parse_limit(limit_def)
 
-############## NEED TO CHECK THIS
 def parse_limits_table_file(f):
     """Parse a space-separated file containing reaction flux limits
 
@@ -1117,7 +1113,7 @@ def parse_limits_table_file(f):
     """
 
     for line in f:
-        line, _, comment = line.partition('#')
+        line, _, comment = convert_to_unicode(line).partition('#')
         line = line.strip()
         if line == '':
             continue
@@ -1190,7 +1186,6 @@ def parse_model_group(path, group):
             context, group.get('groups', [])):
         yield reaction_id
 
-######## NEED TO LOOK AT THIS
 def parse_model_group_list(path, groups):
     """Parse a structured list of model groups as obtained from a YAML file
 
@@ -1223,7 +1218,7 @@ def parse_model_table_file(path, f):
     """
 
     for line in f:
-        line, _, comment = line.partition('#')
+        line, _, comment = convert_to_unicode(line).partition('#')
         line = line.strip()
         if line == '':
             continue

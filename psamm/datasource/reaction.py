@@ -25,12 +25,12 @@ import sys
 from decimal import Decimal
 import enum
 
-from six import raise_from, text_type, PY3
+from six import raise_from, PY3
 
 from psamm.reaction import Reaction, Compound, Direction
 from psamm.expression import affine
 
-def convert_to_unicode(str_, encoding=sys.stdin.encoding):
+def convert_to_unicode(str_, encoding='UTF-8'):
     if PY3 or bool(re.search(r'\\u', str_)):
         try:
             return str_.encode('latin-1').decode('unicode-escape')
@@ -39,10 +39,7 @@ def convert_to_unicode(str_, encoding=sys.stdin.encoding):
         return str_
     if isinstance(str_, unicode):
         return str_
-    try:
-        return str_.encode(encoding)
-    except:
-        return str_.decode(encoding)
+    return unicode(str_, encoding)
 
 class ParseError(Exception):
     """Error raised when parsing reaction fails."""

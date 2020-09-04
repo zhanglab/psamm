@@ -20,6 +20,7 @@
 from __future__ import unicode_literals
 
 import sys
+import io
 import os
 import argparse
 import shutil
@@ -621,8 +622,8 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
 
     def test_run_vis_recolor(self):
         path = os.path.join(tempfile.mkdtemp(), 'color.csv')
-        with open(path, 'w') as f:
-            f.write('{}\t{}'.format('A_\u2206', '#f4fc55').encode('ascii', 'ignore').decode('ascii'))
+        with io.open(path, 'w') as f:
+            f.write('{}\t{}'.format('A_\u2206', '#f4fc55'))
         self.run_solver_command(VisualizationCommand, ["--color", path])
 
     def test_run_vis_output(self):
