@@ -72,7 +72,6 @@ class ChargeBalanceCommand(Command):
             elif abs(charge) > self._args.epsilon:
                 unbalanced += 1
                 rxt = reaction.equation.translated_compounds(compound_name)
-                print("*********", reaction.id, rxt)
                 print('{}\t{}\t{}'.format(reaction.id, charge, rxt))
 
         logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))
