@@ -361,11 +361,11 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         self.run_solver_command(FluxConsistencyCommand, ['--reduce-lp'])
 
     def test_run_fluxcheck_with_reduce_lp_infeasible(self):
-            self.skip_test_if_no_solver()
-            with self.assertRaises(SystemExit):
-                self.run_solver_command(
-                    FluxConsistencyCommand, ['--reduce-lp'],
-                    model=self._infeasible_model)
+        self.skip_test_if_no_solver()
+        with self.assertRaises(SystemExit):
+            self.run_solver_command(
+                FluxConsistencyCommand, ['--reduce-lp'],
+                model=self._infeasible_model)
 
     def test_run_fluxcheck_with_both_tfba_and_fastcore(self):
         self.skip_test_if_no_solver()
@@ -616,13 +616,13 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
     def test_run_vis_hide_edges(self):
         path = os.path.join(tempfile.mkdtemp(), 'hide_edges.csv')
         with open(path, 'w') as f:
-            f.write('{}\t{}'.format('h20[c]', 'h2o[e]'))
+            f.write('{}\t{}'.format('D[c]', 'E[c]'))
         self.run_solver_command(VisualizationCommand, ["--hide-edges", path])
 
     def test_run_vis_recolor(self):
         path = os.path.join(tempfile.mkdtemp(), 'color.csv')
         with open(path, 'w') as f:
-            f.write('{}\t{}'.format('A', '#f4fc55'))
+            f.write('{}\t{}'.format('A_\u2206', '#f4fc55').encode('ascii', 'ignore').decode('ascii'))
         self.run_solver_command(VisualizationCommand, ["--color", path])
 
     def test_run_vis_output(self):

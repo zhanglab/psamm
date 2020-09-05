@@ -180,7 +180,8 @@ class Graph(Entity):
 
 		for node in sorted(self.nodes, key=lambda k: k.props['id']):
 			f.write(' "{}"[{}]\n'.format(
-				node.props['id'], _graphviz_prop_string(node.props)))
+				node.props['id'], _graphviz_prop_string(node.props)).encode('ascii', 'ignore').decode(
+						'ascii'))
 
 		for edge in sorted(self.edges, key=lambda k: (k.source.props['id'],
 		                                              k.dest.props['id'],
@@ -264,7 +265,7 @@ class Graph(Entity):
 				for x in sorted(node_dict[vertex],
 				                key=lambda k: k.props['id']):
 					f.write(' "{}"[{}]\n'.format(
-						x.props['id'], _graphviz_prop_string(x.props)))
+						x.props['id'], _graphviz_prop_string(x.props)).encode('ascii', 'ignore').decode('ascii'))
 			for neighbor in graph[vertex]:
 				if neighbor not in path:
 					path = dfs_recursive(graph, neighbor, node_dict, path, f)
@@ -314,7 +315,7 @@ class Graph(Entity):
 			a = '\t'.join(text_type(node.props.get(x))
 			              for x in properties if x != 'label')
 			b = node.props['label'].replace('\n', ',')
-			f.write('{}\t{}\n'.format(a, b))
+			f.write('{}\t{}\n'.format(a, b).encode('ascii', 'ignore').decode('ascii'))
 
 	def write_edges_tables(self, f):
 		""" Write a tab separated table that contains edges information,
@@ -591,7 +592,7 @@ def make_cpair_dict(filter_dict, args_method, args_combine, hide_edges=[]):
 					if k1 not in have_visited:
 						rxn_count[rxn] += 1
 						have_visited.add(k1)
-						r_id = str('{}_{}'.format(rxn.id, rxn_count[rxn]))
+						r_id = '{}_{}'.format(rxn.id, rxn_count[rxn]).encode('ascii', 'ignore').decode('ascii')
 						new_id_mapping[r_id] = rxn
 						for v in v1:
 							rxn_mixcpairs[r_id].append((k1, v))

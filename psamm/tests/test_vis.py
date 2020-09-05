@@ -26,8 +26,6 @@ import os
 import tempfile
 import argparse
 import sys
-import mock
-import logging
 
 from psamm.formula import Formula, Atom
 from psamm.commands import vis
@@ -39,8 +37,6 @@ from psamm import graph
 from psamm.datasource.native import NativeModel, ReactionEntry, CompoundEntry
 from psamm.datasource import native, sbml
 from psamm.lpsolver import generic
-
-logger = logging.getLogger(__name__)
 
 # 2019-08-30 new test cases for vis
 class TestMakeSubset(unittest.TestCase):
@@ -317,44 +313,6 @@ class TestAddNodeProps(unittest.TestCase):
         node_list = [node_a, node_b, node_c, node_d, node_ab, node_cb]
         self.assertTrue(all(i in node_list for i in g3.nodes))
         self.assertTrue(all(i in g3.nodes for i in node_list))
-
-    def test4_IncorrectType(self):
-        self.cpd_a = CompoundEntry({
-            'id': 'A', 'name': 'compound A', 'formula': 'XXXX', 'charge': 0})
-        self.cpd_b = CompoundEntry({
-            'id': 'B', 'name': 'compound B', 'formula': 'YYYY', 'charge': 0})
-
-        # new rxn used to test: rxn1: A => B
-        self.rxn1 = entry.DictReactionEntry({
-            'id': 'rxn1', 'name': 'Reaction 1', 'genes': 'gene1 and gene2',
-            'equation': Reaction(
-                Direction.Forward, {Compound('A', 'c'): -1, Compound('B', 'c'): 1}),
-        })
-
-        self.node_a = graph.Node({
-            'id': 'A[c]', 'entry': [self.cpd_a], 'type': 'invalid', 'compartment': 'c'})
-        self.node_b = graph.Node({
-            'id': 'B[c]', 'entry': [self.cpd_b], 'type': 'cpd', 'compartment': 'c'})
-        self.node_ab = graph.Node({
-            'id': 'rxn1_1', 'entry': [self.rxn1],
-            'compartment': 'c', 'type': 'rxn'})
-
-        self.edge1 = graph.Edge(self.node_a, self.node_ab, {'dir': 'forward'})
-        self.edge2 = graph.Edge(self.node_ab, self.node_b, {'dir': 'forward'})
-
-        self.g4 = graph.Graph()
-        self.node_list = [self.node_a, self.node_b, self.node_ab]
-        for node in self.node_list:
-            self.g4.add_node(node)
-        self.edge_list = [self.edge1, self.edge2]
-        for edge in self.edge_list:
-            self.g4.add_edge(edge)
-
-        with mock.patch('psamm.commands.vis.logger') as log_mock:
-            g5 = vis.add_node_props(self.g4, {})
-            log_mock.error.assert_called_with('invalid nodes:', type(self.node_a.props['entry']), self.node_a.props['entry'])
-
-
 
 class TestAddNodeLabel(unittest.TestCase):
     def setUp(self):
