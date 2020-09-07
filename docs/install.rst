@@ -88,14 +88,15 @@ Gurobi
 The Gurobi Python bindings will have to be installed into the virtualenv. After
 activating the virtualenv:
 
-1. Locate the directory where the Guropi python bindings were installed. For
+1. Change the directory to where the Guropi python bindings were installed. For
    example, on OSX this directory is ``/Library/gurobiXXX/mac64`` where ``XXX``
    is a version code.
-2. Use ``pip`` to install the package from this directory. For example:
+2. Use ``python`` to install the package from this directory. For example:
 
 .. code-block:: shell
 
-    (env) $ pip install /Library/gurobi604/mac64
+    (env) $ cd /Library/gurobi604/mac64
+    (env) $ python setup.py install
 
 GLPK
 ----
@@ -122,3 +123,94 @@ can be installed using ``pip``:
 .. _python-qsoptex: https://pypi.python.org/pypi/python-qsoptex
 .. _GnuMP: https://gmplib.org/
 .. _QSopt_ex library: https://github.com/jonls/qsopt-ex
+
+The installation method	detailed above is only supported on Python 3.4 or lower.
+If you want to use this	solver with later versions of Python, you must first   
+install this `python-qsoptex_higherPython`_, a different library for this solver,
+and different bindings from `QSopt_ex_higherPython`_ 
+
+.. code-block:: shell
+
+    (env) $ pip install cython
+    (env) $ pip install python-qsoptex
+
+.. _python-qsoptex_higherPython: https://github.com/jonls/python-qsoptex.git
+.. _QSopt_ex_higherPython: https://github.com/jonls/qsopt-ex.git
+
+LP Solver Compatibility
+-----------------------
+
+Not all of the LP solvers supported are supported across all python versions.
+A table showing which solvers are compatible with which versions of python
+is shown below:
+
+.. list-table:: Python Version Compatibility
+   :header-rows: 1
+
+   * - Solver
+     - Python 2.7
+     - Python 3.5
+     - Python 3.6
+     - Python 3.7
+     - Python 3.8
+   * - Cplex
+     - Yes
+     - Yes
+     - Yes
+     - Yes
+     - Yes
+   * - Qsopt_ex
+     - Yes
+     - Yes
+     - Yes
+     - Yes
+     - Yes
+   * - Gurobi
+     - Yes
+     - Yes
+     - No
+     - No
+     - No
+   * - GLPK
+     - Yes
+     - No
+     - Yes
+     - Yes
+     - Yes
+
+LP Solver Global Options
+------------------------
+
+Additionally, not all LP solvers are compatible with all of the
+global parameters for solvers. Reference the table below for the
+global parameters you might require before choosing a solver.
+
+
+.. list-table:: Global Solver Options
+   :header-rows: 1
+
+   * - Solver
+     - feasibility tolerance
+     - optimality tolerance
+     - inegrality tolerance
+     - threads
+   * - Cplex
+     - Yes
+     - Yes
+     - Yes
+     - Yes
+   * - Qsopt_ex
+     - Yes
+     - Yes
+     - No
+     - No
+   * - Gurobi
+     - Yes
+     - Yes
+     - Yes
+     - Yes
+   * - GLPK
+     - Yes
+     - Yes
+     - Yes
+     - No
