@@ -302,14 +302,15 @@ def rxnset_for_vis(mm, subset_file, exclude):
         cpd_set = set()
         rxn_set = set()
         for l in subset_file.readlines():
-            value = l.strip()
-            if value in all_cpds:
-                cpd_set.add(value)
-            elif mm.has_reaction(value):
-                rxn_set.add(value)
-            else:
-                raise ValueError('{} is in subset file but is '
-                                 'not a compound or reaction ID'.format(value))
+            if not l.startswith('#'):
+                value = l.strip()
+                if value in all_cpds:
+                    cpd_set.add(value)
+                elif mm.has_reaction(value):
+                    rxn_set.add(value)
+                else:
+                    raise ValueError('{} is in subset file but is '
+                                     'not a compound or reaction ID'.format(value))
 
         if all(i > 0 for i in [len(cpd_set), len(rxn_set)]):
             raise ValueError('Subset file is a mixture of reactions and '
