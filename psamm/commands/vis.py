@@ -30,6 +30,7 @@ from ..command import MetabolicMixin, Command, FilePrefixAppendAction, convert_t
 from .. import graph
 import sys
 import re
+from ..formula import Formula, Atom
 try:
     from graphviz import render, FORMATS
 except ImportError:
@@ -117,6 +118,8 @@ class VisualizationCommand(MetabolicMixin,
                     'Reaction {} was excluded from visualization due to '
                     'missing reaction equation'.format(reaction.id))
 
+        compound_formula = graph.get_compound_dict(self._model)
+
         vis_rxns = rxnset_for_vis(
             self._mm, self._args.subset, self._args.exclude)
 
@@ -189,6 +192,18 @@ class VisualizationCommand(MetabolicMixin,
             cpair_dict, new_id_mapping, self._args.method, self._args.combine,
             model_compound_entries, new_style_flux_dict)
 
+        exchange_cpds = set()
+        for rid in vis_rxns:
+            if self._mm.is_exchange(rid) and rid != self._model.biomass_reaction:
+                exchange_rxn = self._mm.get_reaction(rid)
+                # print('test exchange:', rid, exchange_rxn)
+                for c, _ in exchange_rxn.compounds:
+                    if text_type(c) not in g.nodes_id_dict:
+                        g = add_ex_cpd(g, c, model_compound_entries[c.name],
+                                       compound_formula, self._args.element)
+                    exchange_cpds.add(text_type(c))
+                g = add_exchange_rxns(g, rid, exchange_rxn)
+
         recolor_dict = {}
         if self._args.color is not None:
             for f in self._args.color:
@@ -212,15 +227,6 @@ class VisualizationCommand(MetabolicMixin,
                 logger.warning(
                     'Biomass reaction {} was excluded from visualization due to '
                     'missing reaction entry'.format(self._model.biomass_reaction))
-
-        exchange_cpds = set()
-        for rid in self._mm.reactions:
-            if self._mm.is_exchange(rid):
-                if rid != self._model.biomass_reaction:
-                    exchange_rxn = self._mm.get_reaction(rid)
-                    g = add_exchange_rxns(g, rid, exchange_rxn)
-                    for cpd, _ in exchange_rxn.compounds:
-                        exchange_cpds.add(text_type(cpd))
 
         for node in g.nodes:
             if node.props['id'] in bio_cpds_sub:
@@ -368,6 +374,28 @@ def add_biomass_rxns(g, nm_bio_reaction):
             if c in product_list:
                 g.add_edge(graph.Edge(node_bio, g.get_node(text_type(c)),
                                       {'dir': direction}))
+    return g
+
+
+def add_ex_cpd(g, mm_cpd, nm_cpd, compound_formula, element):
+    node_dict = {'id': text_type(mm_cpd),
+                 'entry': [nm_cpd],
+                 'compartment': mm_cpd.compartment,
+                 'type': 'cpd'}
+    if element is not None:
+        if mm_cpd.name not in compound_formula:
+            logger.error('Compound formulas are required for fpp or specific '
+                         'element visualizations, but compound {} does not '
+                         'have valid formula, add its formula, or try '
+                         '--element all to visualize all pathways without '
+                         'compound formula input.'.format(mm_cpd.name))
+        else:
+            if Atom(element) in compound_formula[mm_cpd.name]:
+                node = graph.Node(node_dict)
+                g.add_node(node)
+    else:
+        node = graph.Node(node_dict)
+        g.add_node(node)
     return g
 
 
