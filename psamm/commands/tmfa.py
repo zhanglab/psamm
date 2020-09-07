@@ -336,9 +336,7 @@ def make_tmfa_problem(mm_irreversible, solver):
         solver: linear programming library to use.
     """
     prob = solver.create_problem()
-    prob.cplex.parameters.threads.set(1)
     prob.integrality_tolerance.value = 0
-    prob.cplex.parameters.emphasis.numerical.value = 1
 
     v = prob.namespace(name='flux')
     zi = prob.namespace(name='zi')
