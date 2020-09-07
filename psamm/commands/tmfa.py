@@ -41,28 +41,28 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
         parser.add_argument('--config', type=argparse.FileType('r'),
                             help='Config file for TMFA settings')
         parser.add_argument('--threshold', default=None, type=Decimal,
-            help='value to fix biomass flux to during \
-            tmfa simulations (default = max biomass)')
+                            help='value to fix biomass flux to during '
+                                 'tmfa simulations (default = max biomass)')
         parser.add_argument('--temp', help='Temperature in Celsius',
-            default=25)
+                            default=25)
         parser.add_argument('--hamilton', action='store_true',
-            help='run model using Hamilton TMFA method')
+                            help='run model using Hamilton TMFA method')
         parser.add_argument('--err', action='store_true',
-            help='use error estimates when running TMFA')
+                            help='use error estimates when running TMFA')
 
         subparsers = parser.add_subparsers(title='Functions', dest='which')
         parser_util = subparsers.add_parser('util', help='Utility functions')
 
         parser_util.add_argument('--generate-config', action='store_true')
         parser_util.add_argument('--random-addition', action='store_true',
-                        help='perform random reaction constraint \
-                        addition in model')
+                                 help='perform random reaction constraint '
+                                      'addition in model')
 
         parser_sim = subparsers.add_parser('simulation',
-            help='Simulation Functions')
-        parser_sim.add_argument('--single-solution', type=str,
-            choices=['fba', 'l1min', 'random'],
-            help='get a single TMFA solution', default=None)
+                                           help='Simulation Functions')
+        parser_sim.add_argument('--single-solution', type=str, default=None,
+                                choices=['fba', 'l1min', 'random'],
+                                help='get a single TMFA solution')
 
         super(TMFACommand, cls).init_parser(parser)
 
@@ -217,8 +217,9 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
             dgf_dict = parse_dgf(mm_irreversible, open(
                 config_dict.get('deltaGf')))
             # Calculate the deltaGr values for all reactions
-            dgr_dict = calculate_dgr(mm_irreversible, dgf_dict,
-                exclude_unknown_list, open(config_dict.get('transporters')),
+            dgr_dict = calculate_dgr(
+                mm_irreversible, dgf_dict, exclude_unknown_list,
+                open(config_dict.get('transporters')),
                 ph_difference_rxn, open(config_dict.get('scaled_compounds')))
             print('using dgf file')
 
@@ -262,9 +263,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                         config_dict.get('proton-other'),
                         self._args.temp, self._args.err)
                     try:
-                        biomass = get_var_bound(prob,
-                            v(self._get_objective()),
-                            lp.ObjectiveSense.Maximize)
+                        biomass = get_var_bound(prob, v(self._get_objective()),
+                                                lp.ObjectiveSense.Maximize)
                         logger.info('Current Biomass: {}'.format(biomass))
                         if biomass < self._args.threshold:
                             continue
@@ -302,8 +302,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                 logger.info('Set biomass based on\
                     threshold to {}'.format(self._args.threshold))
             else:
-                max_biomass = get_var_bound(prob,
-                    v(self._get_objective()), lp.ObjectiveSense.Maximize)
+                max_biomass = get_var_bound(prob, v(self._get_objective()),
+                                            lp.ObjectiveSense.Maximize)
                 prob.add_linear_constraints(
                     v(self._get_objective()) == max_biomass)
                 logger.info('Set biomass based on maxbiomass to {}'.format(
@@ -311,12 +311,11 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
 
             if self._args.single_solution is not None:
                 print_fba(self._args.single_solution, prob,
-                    self._get_objective(), v, zi, dgri, xij,
-                    mm_irreversible, cp_list, excluded_compounds)
+                          self._get_objective(), v, zi, dgri, xij,
+                          mm_irreversible, cp_list, excluded_compounds)
             else:
-                print_fva(prob, mm_irreversible, cp_list,
-                    exclude_unknown_list, v, dgri, zi,
-                    xij, excluded_compounds)
+                print_fva(prob, mm_irreversible, cp_list, exclude_unknown_list,
+                          v, dgri, zi, xij, excluded_compounds)
         quit()
 
 
@@ -345,11 +344,11 @@ def make_tmfa_problem(mm_irreversible, solver):
     for reaction in mm_irreversible.reactions:
         lower, upper = mm_irreversible.limits[reaction]
         v.define([reaction], lower=lower, upper=upper,
-            types=lp.VariableType.Continuous)
+                 types=lp.VariableType.Continuous)
         zi.define([reaction], lower=int(0), upper=int(1),
-            types=lp.VariableType.Binary)
+                  types=lp.VariableType.Binary)
         dgri.define([reaction], lower=-1000, upper=1000,
-            types=lp.VariableType.Continuous)
+                    types=lp.VariableType.Continuous)
 
     massbalance_lhs = {compound: 0 for compound in mm_irreversible.compounds}
     for spec, value in iteritems(mm_irreversible.matrix):
@@ -362,7 +361,7 @@ def make_tmfa_problem(mm_irreversible, solver):
     for cp in mm_irreversible.compounds:
         cp_list.append(str(cp))
         xij.define([str(cp)], lower=-50, upper=50,
-            types=lp.VariableType.Continuous)
+                   types=lp.VariableType.Continuous)
     return prob, v, zi, dgri, xij, cp_list
 
 
@@ -382,9 +381,8 @@ def get_var_bound(prob, var, objective_sense):
     return result.get_value(var)
 
 
-def print_fva(prob, mm_irreversible, cp_list,
-        exclude_unknown_list, _v, _dgri, _zi,
-        _xij, excluded_compounds):
+def print_fva(prob, mm_irreversible, cp_list, exclude_unknown_list,
+              _v, _dgri, _zi, _xij, excluded_compounds):
     """Prints FVA like result from TMFA problem.
 
     This function will take a TMFA problem along with the associated
@@ -407,19 +405,19 @@ def print_fva(prob, mm_irreversible, cp_list,
     for step, reaction in enumerate(sorted(mm_irreversible.reactions)):
         # logger.info('Testing Reaction {}/{}'.format(step, len_rxns))
         min_flux = get_var_bound(prob, _v(reaction),
-            lp.ObjectiveSense.Minimize)
+                                 lp.ObjectiveSense.Minimize)
         max_flux = get_var_bound(prob, _v(reaction),
-            lp.ObjectiveSense.Maximize)
+                                 lp.ObjectiveSense.Maximize)
         print('Flux\t{}\t{}\t{}'.format(reaction, min_flux, max_flux))
         if reaction not in exclude_unknown_list:
             min_dgr = get_var_bound(prob, _dgri(reaction),
-                lp.ObjectiveSense.Minimize)
+                                    lp.ObjectiveSense.Minimize)
             max_dgr = get_var_bound(prob, _dgri(reaction),
-                lp.ObjectiveSense.Maximize)
+                                    lp.ObjectiveSense.Maximize)
             min_zi = get_var_bound(prob, _zi(reaction),
-                lp.ObjectiveSense.Minimize)
+                                   lp.ObjectiveSense.Minimize)
             max_zi = get_var_bound(prob, _zi(reaction),
-                lp.ObjectiveSense.Maximize)
+                                   lp.ObjectiveSense.Maximize)
             print('DGR\t{}\t{}\t{}'.format(reaction, min_dgr, max_dgr))
             print('Zi\t{}\t{}\t{}'.format(reaction, min_zi, max_zi))
         else:
@@ -429,15 +427,15 @@ def print_fva(prob, mm_irreversible, cp_list,
         if cpd not in excluded_compounds:
             # logger.info('Testing Compound {}\{}'.format(step, len(cp_list)))
             min_cpd = get_var_bound(prob, _xij(cpd),
-                lp.ObjectiveSense.Minimize)
+                                    lp.ObjectiveSense.Minimize)
             max_cpd = get_var_bound(prob, _xij(cpd),
-                lp.ObjectiveSense.Maximize)
-            print('CONC\t{}\t{}\t{}'.format(cpd,
-                math.exp(min_cpd), math.exp(max_cpd)))
+                                    lp.ObjectiveSense.Maximize)
+            print('CONC\t{}\t{}\t{}'.format(
+                cpd, math.exp(min_cpd), math.exp(max_cpd)))
 
 
-def print_fba(simulation, prob, objective, _v, _zi, _dgri,
-     _xij, mm, cp_list, excluded_compounds):
+def print_fba(simulation, prob, objective, _v, _zi, _dgri, _xij, mm,
+              cp_list, excluded_compounds):
     """Prints FBA like result from TMFA problem.
 
     This function will take a TMFA problem along with the associated
@@ -447,7 +445,7 @@ def print_fba(simulation, prob, objective, _v, _zi, _dgri,
     boundary of the solution space.
 
     Args:
-        simluation: type of solving for the problem. ['fba', 'l1min', 'random']
+        simulation: type of solving for the problem. ['fba', 'l1min', 'random']
         prob: :class:`psamm.lpsolver.lp.Problem`.
         objective: Objective reaction ID.
         mm_irreversible: :class:`psamm.metabolicmodel.MetabolicModel`.
@@ -589,7 +587,7 @@ def parse_dgf(mm, dgf_file):
 
 
 def add_conc_constraints(xij, problem, cpd_conc_dict,
-        cp_list, water, hin, hout, hother):
+                         cp_list, water, hin, hout, hother):
     '''Add concentration constraints to TMFA problem
     based on parsed conetration dictionary.
 
@@ -663,7 +661,7 @@ def parse_dgr_file(dgr_file, mm):
 
 
 def calculate_dgr(mm, dgf_dict, excluded_reactions,
-        transport_parameters, ph_difference_rxn, scaled_compounds):
+                  transport_parameters, ph_difference_rxn, scaled_compounds):
     """Calculates DeltaG values from DeltaG of formation values of compounds.
 
     """
@@ -706,11 +704,11 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions,
     return dgr_dict
 
 
-def add_reaction_constraints(problem, _v, _zi, _dgri, _xij, mm,
-            exclude_lumps, exclude_unknown, exclude_lumps_unknown, dgr_dict,
-            lump_rxn_list, split_rxns, transport_parameters, testing_list,
-            scaled_compounds, water, hin, hout, hother, temp,
-            err_est=False, hamilton=False):
+def add_reaction_constraints(
+        problem, _v, _zi, _dgri, _xij, mm, exclude_lumps, exclude_unknown,
+        exclude_lumps_unknown, dgr_dict, lump_rxn_list, split_rxns,
+        transport_parameters, testing_list, scaled_compounds, water, hin,
+        hout, hother, temp, err_est=False, hamilton=False):
     """Adds reaction constraints to a TMFA problem
 
     This function will add in gibbs free energy constraints to a TMFA flux
@@ -718,7 +716,7 @@ def add_reaction_constraints(problem, _v, _zi, _dgri, _xij, mm,
     energy values and temperature.
 
     Args:
-        prob: :class:`psamm.lpsolver.lp.Problem`.
+        problem: :class:`psamm.lpsolver.lp.Problem`.
         mm: :class:`psamm.metabolicmodel.MetabolicModel`.
         _v: variable namespace for flux variables.
         _dgri: variable namespace for gibbs free energy variables
