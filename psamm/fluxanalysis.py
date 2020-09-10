@@ -344,7 +344,14 @@ def flux_variability(model, reactions, fixed, tfba, solver):
     """
 
     fba = _get_fba_problem(model, tfba, solver)
-    fba.prob.integrality_tolerance.value = 0.0
+    # fba.prob.integrality_tolerance.value = 0.0
+    if solver._properties['name'] == 'gurobi':
+        fba.prob.integrality_tolerance.value = 1e-9
+        logger.warning(
+            'Gurobi supports minimum integrality tolerance of 1e-9. This may '
+            'affect the results from this simulation')
+    else:
+        fba.prob.integrality_tolerance.value = 0
     print(fba.prob.integrality_tolerance.value)
     for reaction_id, value in iteritems(fixed):
         flux = fba.get_flux_var(reaction_id)
