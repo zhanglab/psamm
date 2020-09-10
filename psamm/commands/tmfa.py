@@ -335,10 +335,13 @@ def make_tmfa_problem(mm_irreversible, solver):
         solver: linear programming library to use.
     """
     prob = solver.create_problem()
-    prob.cplex.parameters.threads.set(1)
-    prob.integrality_tolerance.value = 0
-    prob.cplex.parameters.emphasis.numerical.value = 1
-
+    if solver._properties['name'] == 'gurobi':
+        prob.integrality_tolerance.value = 1e-9
+        logger.warning(
+            'Gurobi supports minimum integrality tolerance of 1e-9. This may '
+            'affect the results from this simulation')
+    else:
+        prob.integrality_tolerance.value = 0
     v = prob.namespace(name='flux')
     zi = prob.namespace(name='zi')
     dgri = prob.namespace(name='dgri')
