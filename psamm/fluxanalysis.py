@@ -350,6 +350,8 @@ def flux_variability(model, reactions, fixed, tfba, solver):
         logger.warning(
             'Gurobi supports minimum integrality tolerance of 1e-9. This may '
             'affect the results from this simulation')
+    elif solver._properties['name'] == 'glpk':
+        fba.prob.integrality_tolerance.value = 1e-21
     else:
         fba.prob.integrality_tolerance.value = 0
     print(fba.prob.integrality_tolerance.value)

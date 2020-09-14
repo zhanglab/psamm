@@ -340,6 +340,8 @@ def make_tmfa_problem(mm_irreversible, solver):
         logger.warning(
             'Gurobi supports minimum integrality tolerance of 1e-9. This may '
             'affect the results from this simulation')
+    elif solver._properties['name'] == 'glpk':
+        prob.integrality_tolerance.value = 1e-21
     else:
         prob.integrality_tolerance.value = 0
     v = prob.namespace(name='flux')
