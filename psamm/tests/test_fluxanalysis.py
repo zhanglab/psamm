@@ -211,6 +211,11 @@ class TestFluxVariability(unittest.TestCase):
             self.skipTest('Unable to find an LP solver for tests')
 
     def test_flux_variability(self):
+        try:
+            self.solver = generic.Solver(integrality_tolerance=True)
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an LP solver for tests')
+
         fluxes = dict(fluxanalysis.flux_variability(
             self.model, self.model.reactions, {'rxn_6': 200},
             tfba=False, solver=self.solver))

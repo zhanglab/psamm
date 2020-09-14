@@ -49,6 +49,11 @@ class TestTMFA(unittest.TestCase):
         except generic.RequirementsError:
             self.skipTest('Unable to find an LP solver for tests')
 
+        try:
+            self.solver = generic.Solver(integrality_tolerance=True)
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an LP solver for tests')
+
     def test_mm_irrev(self):
         mm_irreversible, _, split_reversible, new_lump_rxn_dict = \
             self.model.make_irreversible({}, [], {}, False)
@@ -140,6 +145,12 @@ class TestSolving(unittest.TestCase):
             self.solver = generic.Solver()
         except generic.RequirementsError:
             self.skipTest('Unable to find an LP solver for tests')
+
+        try:
+            self.solver = generic.Solver(integrality_tolerance=True)
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an LP solver for tests')
+
         self.dgr_dict = {'rxn1_forward': (0, 2), 'rxn1_reverse': (0, 2),
             'rxn2_forward': (0, 2), 'rxn2_reverse': (0, 2),
             'rxn8_forward': (0, 2), 'rxn8_reverse': (0, 2),
