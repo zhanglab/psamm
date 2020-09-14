@@ -29,6 +29,7 @@ from psamm.commands.robustness import RobustnessTaskHandler, RobustnessTaskHandl
 
 from six import itervalues
 
+
 class TestRobustnessTaskHandler(unittest.TestCase):
     def setUp(self):
         self.database = DictDatabase()
@@ -69,6 +70,11 @@ class TestRobustnessTaskHandler(unittest.TestCase):
         self.assertAlmostEqual(fluxes['rxn_6'], 1000)
 
     def test3_loop_removal_tfba(self):
+        try:
+            self.solver = generic.Solver(integer=True)
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an MIQP solver for tests')
+
         fluxes = RobustnessTaskHandler.handle_task(RobustnessTaskHandler(self.model, self.solver, 'tfba', self._reactions),
                                                    ['rxn_3', 100], 'rxn_1')
 
@@ -84,6 +90,7 @@ class TestRobustnessTaskHandler(unittest.TestCase):
         fluxes = RobustnessTaskHandler.handle_task(RobustnessTaskHandler(self.model, self.solver, 'none', self._reactions2),
                                                    ['rxn_6', 10], 'rxn_6')
         self.assertEqual(fluxes, 10)
+
 
 class TestRobustnessTaskHandler_fva(unittest.TestCase):
     def setUp(self):
@@ -130,6 +137,11 @@ class TestRobustnessTaskHandler_fva(unittest.TestCase):
         self.assertGreater(fluxes['rxn_8'][1], 0)
 
     def test2_loop_removal_tfba(self):
+        try:
+            self.solver = generic.Solver(integer=True)
+        except generic.RequirementsError:
+            self.skipTest('Unable to find an MIQP solver for tests')
+
         fluxes = RobustnessTaskHandler_fva.handle_task(RobustnessTaskHandler_fva(self.model, self.solver, 'tfba', self._reactions),
                                                        ['rxn_6', 200], 'rxn_3')
 
@@ -150,7 +162,6 @@ class TestRobustnessTaskHandler_fva(unittest.TestCase):
 
         self.assertAlmostEqual(fluxes['rxn_7'][1], 0)
         self.assertAlmostEqual(fluxes['rxn_8'][1], 0)
-
 
     def test3_no_reactions(self):
         self._reactions2 = None
