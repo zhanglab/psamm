@@ -299,52 +299,52 @@ class TestBayesianPredictor(unittest.TestCase):
         )
         self.assertEqual(match, unmatch)
 
-    def test_reaction_equation_likelihood(self):
-        cpd_pred = pd.Series(
-            [1, 1, 0.9, 0.9],
-            [('A', 'A1'), ('B', 'B1'), ('C', 'C1'), ('D', 'D1')])
-        eq1 = parse_reaction('A[c] + C[c] + B[c] => D[c]')
-        eq2 = parse_reaction('A1[c] + C1[c] + B1[c] => D1[c]')
-        m, un = bayesian.reaction_equation_compound_mapping_likelihood(
-            ReactionEntry({'id': 'r1', 'equation': eq1}),
-            ReactionEntry({'id': 'r2', 'equation': eq2}),
-            cpd_pred
-        )
-        self.assertGreater(m, un)
-        eq2 = parse_reaction('D1[c] + F1[c] <=> A1[c] + C1[c] + B1[c]')
-        m, un = bayesian.reaction_equation_compound_mapping_likelihood(
-            ReactionEntry({'id': 'r1', 'equation': eq1}),
-            ReactionEntry({'id': 'r2', 'equation': eq2}),
-            cpd_pred
-        )
-        self.assertGreater(m, un)
-        eq2 = parse_reaction('A1[c] => D1[c] + C1[c]')
-        m, un = bayesian.reaction_equation_compound_mapping_likelihood(
-            ReactionEntry({'id': 'r1', 'equation': eq1}),
-            ReactionEntry({'id': 'r2', 'equation': eq2}),
-            cpd_pred
-        )
-        self.assertLess(m, un)
-        m, un = bayesian.reaction_equation_compound_mapping_likelihood(
-            ReactionEntry({'id': 'r1', 'equation': eq1}),
-            ReactionEntry({'id': 'r2', 'equation': None}),
-            cpd_pred
-        )
-        self.assertEqual(m, un)
-        eq2 = parse_reaction('A1[s] + C1[s] + B1[s] => D1[s]')
-        m, un = bayesian.reaction_equation_compound_mapping_likelihood(
-            ReactionEntry({'id': 'r1', 'equation': eq1}),
-            ReactionEntry({'id': 'r2', 'equation': eq2}),
-            cpd_pred
-        )
-        self.assertLess(m, un)
-        m, un = bayesian.reaction_equation_compound_mapping_likelihood(
-            ReactionEntry({'id': 'r1', 'equation': eq1}),
-            ReactionEntry({'id': 'r2', 'equation': eq2}),
-            cpd_pred,
-            {'c': 's'}
-        )
-        self.assertGreater(m, un)
+    # def test_reaction_equation_likelihood(self):
+    #     cpd_pred = pd.Series(
+    #         [1, 1, 0.9, 0.9],
+    #         [('A', 'A1'), ('B', 'B1'), ('C', 'C1'), ('D', 'D1')])
+    #     eq1 = parse_reaction('A[c] + C[c] + B[c] => D[c]')
+    #     eq2 = parse_reaction('A1[c] + C1[c] + B1[c] => D1[c]')
+    #     m, un = bayesian.reaction_equation_compound_mapping_likelihood(
+    #         ReactionEntry({'id': 'r1', 'equation': eq1}),
+    #         ReactionEntry({'id': 'r2', 'equation': eq2}),
+    #         cpd_pred
+    #     )
+    #     self.assertGreater(m, un)
+    #     eq2 = parse_reaction('D1[c] + F1[c] <=> A1[c] + C1[c] + B1[c]')
+    #     m, un = bayesian.reaction_equation_compound_mapping_likelihood(
+    #         ReactionEntry({'id': 'r1', 'equation': eq1}),
+    #         ReactionEntry({'id': 'r2', 'equation': eq2}),
+    #         cpd_pred
+    #     )
+    #     self.assertGreater(m, un)
+    #     eq2 = parse_reaction('A1[c] => D1[c] + C1[c]')
+    #     m, un = bayesian.reaction_equation_compound_mapping_likelihood(
+    #         ReactionEntry({'id': 'r1', 'equation': eq1}),
+    #         ReactionEntry({'id': 'r2', 'equation': eq2}),
+    #         cpd_pred
+    #     )
+    #     self.assertLess(m, un)
+    #     m, un = bayesian.reaction_equation_compound_mapping_likelihood(
+    #         ReactionEntry({'id': 'r1', 'equation': eq1}),
+    #         ReactionEntry({'id': 'r2', 'equation': None}),
+    #         cpd_pred
+    #     )
+    #     self.assertEqual(m, un)
+    #     eq2 = parse_reaction('A1[s] + C1[s] + B1[s] => D1[s]')
+    #     m, un = bayesian.reaction_equation_compound_mapping_likelihood(
+    #         ReactionEntry({'id': 'r1', 'equation': eq1}),
+    #         ReactionEntry({'id': 'r2', 'equation': eq2}),
+    #         cpd_pred
+    #     )
+    #     self.assertLess(m, un)
+    #     m, un = bayesian.reaction_equation_compound_mapping_likelihood(
+    #         ReactionEntry({'id': 'r1', 'equation': eq1}),
+    #         ReactionEntry({'id': 'r2', 'equation': eq2}),
+    #         cpd_pred,
+    #         {'c': 's'}
+    #     )
+    #     self.assertGreater(m, un)
 
 
 class Test_bayesian_util(unittest.TestCase):
