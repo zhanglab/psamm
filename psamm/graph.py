@@ -305,12 +305,16 @@ class Graph(Entity):
             properties.remove('label')
         if 'original_id' in properties:
             properties.remove('original_id')
+        if 'entry' in properties:
+            properties.remove('entry')
         properties = ['id'] + sorted(properties) + ['label']
         f.write('\t'.join(properties) + '\n')
 
         for node in sorted(self.nodes, key=lambda k: k.props['id']):
+            # a = '\t'.join(text_type(node.props.get(x))
+            #               for x in properties if x != 'label')
             a = '\t'.join(text_type(node.props.get(x))
-                          for x in properties if x != 'label')
+                          for x in properties if x not in ['label', 'entry'])
             b = node.props['label'].replace('\n', ',')
             f.write('{}\t{}\n'.format(a, b))
 
