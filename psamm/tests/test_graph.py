@@ -929,7 +929,7 @@ class TestMakeNetworks(unittest.TestCase):
 													   reaction_dict=reaction_dict, analysis='fba')
 		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'no-fpp', 0, style_flux_dict)
 		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'no-fpp', 0,
-															self.model_compound_entries, new_style_flux_dict)
+															self.model_compound_entries, new_style_flux_dict, 'fba')
 		node_rxn1 = graph.Node({'id': 'rxn1', 'entry': [self.rxn1], 'compartment': None, 'type': 'rxn'})
 		node_rxn2 = graph.Node({'id': 'rxn2', 'entry': [self.rxn2], 'compartment': None, 'type': 'rxn'})
 		edge_bip_1 = graph.Edge(self.node_atp_bip, node_rxn1, props={'dir': 'forward', 'style': 'dotted',
@@ -959,7 +959,7 @@ class TestMakeNetworks(unittest.TestCase):
 													   reaction_dict=reaction_dict, analysis='fva')
 		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'no-fpp', 0, style_flux_dict)
 		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'no-fpp', 0,
-															self.model_compound_entries, new_style_flux_dict)
+															self.model_compound_entries, new_style_flux_dict, 'fva')
 		node_rxn1 = graph.Node({'id': 'rxn1', 'entry': [self.rxn1], 'compartment': None, 'type': 'rxn'})
 		node_rxn2 = graph.Node({'id': 'rxn2', 'entry': [self.rxn2], 'compartment': None, 'type': 'rxn'})
 		edge_bip_1 = graph.Edge(self.node_atp_bip, node_rxn1, props={'dir': 'forward', 'style': 'dotted',
@@ -987,11 +987,10 @@ class TestMakeNetworks(unittest.TestCase):
 		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp',
 													   element=None, excluded_reactions=[],
 													   reaction_dict=reaction_dict, analysis='fva')
-		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'fpp', 0, style_flux_dict)
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'fpp', 2, style_flux_dict)
 		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 2,
-															self.model_compound_entries, new_style_flux_dict)
+															self.model_compound_entries, new_style_flux_dict, 'fva')
 		node_rxn1_1 = graph.Node({'id': 'rxn1_1', 'entry': [self.rxn1], 'compartment': None, 'type': 'rxn'})
-		node_rxn1_2 = graph.Node({'id': 'rxn1_2', 'entry': [self.rxn1], 'compartment': None, 'type': 'rxn'})
 		node_rxn2_1 = graph.Node({'id': 'rxn2_1', 'entry': [self.rxn2], 'compartment': None, 'type': 'rxn'})
 		edge_bip_1 = graph.Edge(self.node_atp_bip, node_rxn1_1, props={'dir': 'forward', 'style': 'dotted',
 																	 'penwidth': 1})
@@ -1003,13 +1002,11 @@ class TestMakeNetworks(unittest.TestCase):
 																	 'penwidth': 5})
 		edge_bip_5 = graph.Edge(node_rxn2_1, self.node_f6p_bip, props={'dir': 'both', 'style': 'solid',
 																	 'penwidth': 5})
-		edge_bip_6 = graph.Edge(self.node_glc_bip, node_rxn1_2, props={'dir': 'forward', 'style': 'dotted',
-																	   'penwidth': 1})
-		edge_bip_7 = graph.Edge(node_rxn1_2, self.node_g6p_bip, props={'dir': 'forward', 'style': 'dotted',
+		edge_bip_6 = graph.Edge(self.node_glc_bip, node_rxn1_1, props={'dir': 'forward', 'style': 'dotted',
 																	   'penwidth': 1})
 		node_list = [self.node_atp_bip, self.node_adp_bip, self.node_g6p_bip, self.node_glc_bip, self.node_f6p_bip,
-					 node_rxn1_1, node_rxn1_2, node_rxn2_1]
-		edge_list = [edge_bip_1, edge_bip_2, edge_bip_3, edge_bip_4, edge_bip_5, edge_bip_6, edge_bip_7]
+					 node_rxn1_1, node_rxn2_1]
+		edge_list = [edge_bip_1, edge_bip_2, edge_bip_3, edge_bip_4, edge_bip_5, edge_bip_6]
 		self.assertTrue(all(i in bipartite_graph.nodes for i in node_list))
 		self.assertTrue(all(i in bipartite_graph.edges for i in edge_list))
 		self.assertTrue(all(i in node_list for i in bipartite_graph.nodes))

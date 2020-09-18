@@ -197,7 +197,7 @@ class VisualizationCommand(MetabolicMixin,
 
         g = graph.make_bipartite_graph_object(
             cpair_dict, new_id_mapping, self._args.method, self._args.combine,
-            model_compound_entries, new_style_flux_dict)
+            model_compound_entries, new_style_flux_dict, self.analysis)
 
         exchange_cpds = set()
         for rid in vis_rxns:
