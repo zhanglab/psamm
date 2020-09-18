@@ -727,7 +727,7 @@ def make_cpair_dict(filter_dict, args_method, args_combine, style_flux_dict,
 
 def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method,
                                 args_combine, model_compound_entries,
-                                new_style_flux_dict):
+                                new_style_flux_dict, analysis=None):
     """ Makes a bipartite graph object from a cpair_dict object.
 
     Start from empty graph() and cpair dict to make a graph object.
@@ -789,10 +789,6 @@ def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method,
                     real_rxns = [new_id_mapping[r] for r in rlist]
                     rxn_string = text_type(','.join(rlist))
                     if rxn_string not in graph_nodes:
-                        # if len(rlist) == 1:
-                        #     entry = real_rxns[0]
-                        # else:
-                        #     entry = real_rxns
                         rnode = Node({
                             'id': text_type(','.join(rlist)),
                             'entry': real_rxns,
@@ -813,7 +809,7 @@ def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method,
                             graph_nodes.add(sub_rxn)
         return g
 
-    def add_edges(g, cpairs_dict, method, args_combine, new_style_flux_dict):
+    def add_edges(g, cpairs_dict, method, args_combine, new_style_flux_dict, analysis):
         """ Add edges to the graph object obtained in last step.
 
         Args:
@@ -859,16 +855,11 @@ def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method,
                     test1 = c1, new_rlist
                     test2 = c2, new_rlist
                     sub_rxn = list(new_rlist.split(','))
-                    style_list = [new_style_flux_dict[rxn][0]
-                                  for rxn in sub_rxn]
-                    dotted = all(style == 'dotted' for style in style_list)
-                    style = 'dotted' if dotted else 'solid'
-                    if len(style_list) == 1:
-                        style = new_style_flux_dict[new_rlist][0]
 
-                    flux = 0
-                    for rxn in sub_rxn:
-                        flux += new_style_flux_dict[rxn][1]
+                    style_list = set(new_style_flux_dict[rxn][0] for rxn in sub_rxn)
+                    style = style_list.pop() if len(set(style_list)) == 1 else 'solid'
+
+                    flux = sum([new_style_flux_dict[rxn][1] for rxn in sub_rxn], 0) if analysis else 0
                     flux = max(min(10, flux), 1)
 
                     if test1 not in edge_list:
@@ -890,7 +881,7 @@ def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method,
 
     g = add_graph_nodes(g, cpairs_dict, method, new_id_mapping,
                         args_combine, model_compound_entries)
-    g = add_edges(g, cpairs_dict, method, args_combine, new_style_flux_dict)
+    g = add_edges(g, cpairs_dict, method, args_combine, new_style_flux_dict, analysis)
     return g
 
 
