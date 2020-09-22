@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 
 import logging
 import io
+import os
 import csv
 import argparse
 from collections import defaultdict, Counter
@@ -108,6 +109,10 @@ class VisualizationCommand(MetabolicMixin,
         group.add_argument(
             '--fva', type=argparse.FileType('rU'), default=None,
             help='Visualize fva reaction flux')
+        group.add_argument(
+            '--array', type=int, default=None,
+            help='determine how many isolated islands per row in final network'
+                 'image')
 
         super(VisualizationCommand, cls).init_parser(parser)
 
@@ -291,7 +296,16 @@ class VisualizationCommand(MetabolicMixin,
                         'This graph contains {} reactions, '
                         'graphs of this size may take a long time to '
                         'create'.format(len(filter_dict.keys())))
-                render('dot', self._args.image, '{}.dot'.format(output))
+                if self._args.array is None:
+                    render('dot', self._args.image, '{}.dot'.format(output))
+                else:
+                    out = '{}.dot'.format(output)
+                    format = self._args.image
+                    image = '{}.dot.{}'.format(output, format)
+                    print('test output name: {}'.format(out))
+                    os.system("ccomps -x {} |dot |gvpack -array{} |neato "
+                              "-T{} -n2 -o {}".format(out, self._args.array,
+                                                      format, image))
 
 
 def rxnset_for_vis(mm, subset_file, exclude):
