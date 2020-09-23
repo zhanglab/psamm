@@ -40,10 +40,9 @@ will need to go into the tutorial-part-4 folder located in the psamm-tutorial fo
     (psamm-env) $ cd <PATH>/tutorial-part-4/
 
 Once in this folder, you should see a folder called E_coli_yaml which contains
-all of the files required to run the commands in this tutorial. The E_coli_yaml
-directory contains the required model files and a directory called
-additional_files/ contains additional input files that will be
-used in the visualization portion of the tutorial.
+all of the required model files, and a directory called additional_files/ that
+contains additional input files that will be used to run the commands in this
+tutorial.
 
 To run the following tutorials, go into the E_coli_yaml/ directory:
 
@@ -283,7 +282,7 @@ information as the `dot` based graph, but in a more generic table based
 format that can be used with other graph analysis and visualization software
 like `Cytoscape`.
 
-File 'reactions.nodes.tsv' contains all of the information that define the
+File 'reactions.nodes.tsv' contains all the information that define the
 graph nodes, including both reaction and compound nodes. It looks like the
 following:
 
@@ -303,10 +302,10 @@ looks like the following:
 
 .. code-block:: shell
 
-   source	target	dir
-   CS_3	cit_c[c]	forward
-   f6p_c[c]	Biomass_Ecoli_core_w_GAM_5	forward
-   ALCD2x_1	acald_c[c]	both
+    source	target	dir	penwidth	style
+    2pg_c[c]	PGM_1	both	1	solid
+    PGM_1	3pg_c[c]	both	1	solid
+    2pg_c[c]	ENO_1	both	1	solid
    ...
 
 
@@ -314,8 +313,8 @@ Generate Images from Text-based Graphs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Images can be generated from the 'reactions.dot' file by using the `Graphviz`
-program. `Graphviz` support multiple image formats, (PDF, PNG, JPEG, etc).
-And image file can be generated as a `PDF` file by using the
+program. `Graphviz` support multiple image formats (PDF, PNG, JPEG, etc).
+For example, image file can be generated as a `PDF` file by using the
 following `Graphviz` program command:
 
 .. code-block:: shell
@@ -329,7 +328,7 @@ An image can also be done in one step by running `vis` command by adding an
 
    (psamm-env) $ psamm-model vis --image pdf
 
-These commands both generate an image file named 'reactions.dot.pdf'. This pdf file is
+The commands above both generate an image file named 'reactions.dot.pdf'. This pdf file is
 a graphical representation of what is in the 'reactions.dot'. This graph will look like:
 
 .. image:: 01-entireEcoli.dot.png
@@ -338,20 +337,10 @@ In this default version of the network image, there are two sets of nodes: oval 
 nodes, which represent metabolites and rectangular green nodes, which represent reactions.
 These nodes are connected by edges which indicate reaction directionality.
 
-In addition, `PSAMM-Vis` allows users to customize the name of resulting files via
-the ``--output`` option followed by a string. For example, running the following command:
-
-.. code-block:: shell
-
-   (psamm-env) $ psamm-model vis --output MyOutput
-
-The three resulting files will be named "MyOutput.dot", "MyOutput.nodes.tsv" and
-"MyOutput.edges.tsv"
-
 The rest of the tutorial will detail how to modify the default version of network
 image to show different aspects of the metabolism and customize the node properties.
-For these sections, the mannitol utilization pathway from
-the previous tutorial sections will be used as an example.
+For these sections, the mannitol utilization pathway from the previous tutorial
+sections will be used as an example.
 
 Represent Different Element Flows
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -405,23 +394,48 @@ same reaction and have a common reactant or product connected. Level 2 is
 used to condense nodes that represent different reactions but connected
 to the same reactant/product pair with the same direction
 (This is often seen on reactant/product pairs like
-ATP/ADP and NADH/NADH).
+ATP/ADP and NAD/NADH).
 
 .. code-block:: shell
 
    (psamm-env) $ psamm-model vis --combine 1 --image png
 
-Then the image will look like this compared to the image generated from default setting:
+Then the image will look like the figure below:
 
-.. image::  04-combine1.dot.png
+.. image::  03-combine1.dot.png
 
 
 The combine 2 option will update the image to look like the following:
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --combine 2 --image png --output 04-combine2
+   (psamm-env) $ psamm-model vis --combine 2 --image png
 
 .. image:: 04-combine2.dot.png
+
+Rearrange graph components in the image
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In some cases, the network images contain many connected components,
+while these components aren't connected with each other. This may cause the
+image too wide and difficult to read. To create a better view, ``--array``
+option could be used. It can decompress graphs into their connected components,
+then arrange these components with specific array setting. ``--array`` is
+followed by an integer, for example, ``--array 2`` indicates placing two
+connected components per row. For graphs that contains many small connected
+components, ``--array 4`` could be a better option because you can get most
+of the important larger components in the top few rows of the image, and
+all the smaller components will just be spread out below them. Example of
+applying this option see below:
+
+
+.. code-block:: shell
+
+   (psamm-env) $ psamm-model vis --image png --array 2
+
+Then the exported image "reactions.dot.png" will look like the figure below:
+
+.. image:: 16-array2.dot.png
+
 
 Show Cellular Compartments
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -462,7 +476,7 @@ be used to generate an image that shows the compartment information of the model
 
 The resulting file 'reactions.dot.png' will look like the following:
 
-.. image:: 03-cpt.dot.png
+.. image:: 05-cpt.dot.png
 
 In this image there are two compartments that are labeled with
 'Compartment: e' and 'Compartment: c'. The *E. coli* core model is relatively
@@ -473,28 +487,28 @@ do this running the following command:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model --model <path-to-psamm-tutorial>/tutorial-part-4/additional_files/toy_model_cpt/toy_model.yaml vis --image png --compartment
+   (psamm-env) $ psamm-model --model ../additional_files/toy_model_cpt/toy_model.yaml vis --image png --compartment
 
 The resulting network image "reactions.dot.png" looks like:
 
-.. image:: 03-cptToy.dot.png
+.. image:: 06-cptToy.dot.png
 
 Visualize Reactions and Pathways of Interest
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In some situations, it might be better useful visualize a subset of a larger
+In some situations, it might be better to visualize a subset of a larger
 model so that smaller subsystems can be examined in more detail. This can
 be done through the ``--subset`` option. This option takes an input of a single
 column file, where each line contains either a reaction ID or a metabolite ID.
-The whole file can only contain reaction IDs or metabolite IDs and cannot be
-a mix of both in the same subset file.
+The whole file can contain only reaction IDs or metabolite IDs and cannot be
+a mix of both.
 
 To show the usage of this option, a subset of reactions involved in mannitol
 utilization pathway was visualized through the following command:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --subset ../additional_files/subset_mannitol_pathway --image png
+   (psamm-env) $ psamm-model vis --subset ../additional_files/subset_mannitol_pathway.tsv --image png
 
 The input file subset_mannitol_pathway looks like the following:
 
@@ -508,7 +522,7 @@ The input file subset_mannitol_pathway looks like the following:
 
 This resulting image "reactions.dot.png" looks like the following:
 
-.. image::  05-subsetRxn.dot.png
+.. image::  07-subsetRxn.dot.png
 
 This image only contains reactions listed in the subset file and any associated
 exchange reactions.
@@ -528,12 +542,12 @@ command:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --subset <path-to-psamm-tutorial>/tutorial-part-4/additional_files/subset_pyruvate_list --image png
+   (psamm-env) $ psamm-model vis --subset ../additional_files/subset_pyruvate_list.tsv --image png
 
 This will generate an image like the following that only shows the reactions that
 contain pyruvate:
 
-.. image:: 05-subsetCpd.dot.png
+.. image:: 08-subsetCpd.dot.png
 
 Highlight Reactions and Metabolites in the Network
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -547,7 +561,7 @@ the color of a set of nodes through the ``--color`` option.
 This option can be used to change the color of the reaction or metabolite nodes
 on the final network image, making it easy to highlight certain pathways while still
 maintaining the larger metabolic context. This ``--color`` option will take a
-two column file that contains reaction or metabolite IDs in the first column and
+two-column file that contains reaction or metabolite IDs in the first column and
 hex color codes in the second column. A color file that can be used to color
 all of the mannitol utilization pathway reactions purple would look like the following:
 
@@ -564,11 +578,11 @@ utilization pathway highlighted, use the following command:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --color <PATH>/tutorial-part-4/additional_files/color_mannitol_pathway --image png --combine 2
+   (psamm-env) $ psamm-model vis --color ../additional_files/color_mannitol_pathway.tsv --image png
 
 The resulting image file should look like the following:
 
-.. image::  06-colorC2.dot.png
+.. image::  09-color.dot.png
 
 Coloring of specific nodes like this can make it easy to locate or highlight
 specific pathways, especially in larger models.
@@ -587,22 +601,64 @@ information defined in the compounds or reactions YAML file through the use
 of the ``--cpd-detail`` and ``--rxn-detail`` options. These options are
 followed by a space separated list of metabolite or reaction property names,
 such as id, name, equation, and formula. The required properties will present
-on the node labels in network image. For example, to show metabolite ID, name,
-and formula, as well as reaction ID, and equation, running the following command:
+on the node labels in network image. For example, for reaction ME1 (NAD-dependent
+malic enzyme), to show metabolite ID, name and formula, as well as reaction ID,
+and equation, running the following command:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --subset ../additional_files/detail_PDH.tsv --cpd-detail id name formula --rxn-detail id equation --image png --combine 1
+   (psamm-env) $ psamm-model vis --subset ../additional_files/detail_ME1.tsv --cpd-detail id name formula --rxn-detail id equation --image png
 
 The image generated looks like this:
 
-.. image:: 07-detailC1.dot.png
+.. image:: 10-details.dot.png
 
 .. note::
 
     For these two options, if a required detail is not included in the model, that
     property will be skipped and not shown on those nodes.
 
+Visualize FBA or FVA
+~~~~~~~~~~~~~~~~~~~~~~
+
+Performing various simulations of growth is made possible through methods such
+as FBA and FVA. Using the ``--fba`` or ``--fva`` option, the flow of metabolites
+calculated by these methods can be visualized. When visualizing FBA, a tsv file
+containing the reaction name and flux value is required. For example, the following
+command can be used:
+
+.. code-block:: shell
+
+   (psamm-env) $ psamm-model vis --fba ../additional_files/fba.tsv --image png
+
+The image generated looks like this:
+
+.. image:: 11-fba.dot.png
+
+If the FVA option is given, the file should contain the reaction name, and a lower
+and upper bound flux value that would still allow the model to sustain the same
+objective function flux. To visualize the FVA results, you can use the command:
+
+.. code-block:: shell
+
+   (psamm-env) $ psamm-model vis --fva ../additional_files/fva.tsv --image png
+
+The image generated looks like this:
+
+.. image:: 12-fva.dot.png
+
+Reactions with a flux of zero is represented as a dotted edge and non-zero fluxes as
+solid. Meanwhile, the thickness of the edges is proportional to the flux through
+the reaction. Visualizing these fluxes may help highlight reactions that contribute
+the most to the objective.
+
+.. note::
+
+    The ``--fba`` and ``--fva`` options cannot be used together.
+
+.. note::
+
+    Fluxes less than the absolute value of 1e-5 will be considered as 0.
 
 Other Visualization Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -632,14 +688,14 @@ edges between ATP and ADP:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --hide-edges ../additional_files/hide_edges_list --image png
+   (psamm-env) $ psamm-model vis --hide-edges ../additional_files/hide_edges_list.tsv --image png
 
 When comparing this image to previous visualizations we can see that many
 edges between ATP and ADP have been removed from the graph. While this might
 not make a huge difference on a small model like this, on larger models this can help during
 the process of generating cleaner final images.
 
-.. image:: 08-hideEdges.dot.png
+.. image:: 13-hideEdges.dot.png
 
 Adjusting Image Size
 ____________________
@@ -651,11 +707,11 @@ that generates an image of 8.5 inches x 11 inches:
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-model vis --image-size 8.5 11 --image png --combine 2
+   (psamm-env) $ psamm-model vis --image-size 8.5 11 --image png
 
 The resulting image looks like:
 
-.. image:: 09-imagesizeC2.dot.png
+.. image::14-imagesize.dot.png
 
 Specifying A File Name
 ______________________
@@ -686,7 +742,7 @@ following command:
    (psamm-env) $ psamm-model vis --method no-fpp --image png
 
 
-.. image:: 10-nofpp.dot.png
+.. image:: 15-nofpp.dot.png
 
 .. note::
 

@@ -16,19 +16,22 @@
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2018-2020  Ke Zhang <kzhang@my.uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
-# Copyright 2020    Elysha Sameth <esameth1@my.uri.edu>
+# Copyright 2020-2020  Elysha Sameth <esameth1@my.uri.edu>
 
 from __future__ import unicode_literals
 
 import logging
+import io
+import os
 import csv
 import argparse
 from collections import defaultdict, Counter
 from six import text_type
-from ..command import (MetabolicMixin, Command, FilePrefixAppendAction)
+from ..command import MetabolicMixin, Command, FilePrefixAppendAction, \
+    convert_to_unicode
 from .. import graph
 import sys
-
+from ..formula import Atom
 try:
     from graphviz import render, FORMATS
 except ImportError:
@@ -42,6 +45,8 @@ COMPOUND_COLOR = '#ffd8bf'
 ACTIVE_COLOR = '#90f998'
 ALT_COLOR = '#b3fcb8'
 
+EPSILON = 1e-5
+
 
 class VisualizationCommand(MetabolicMixin,
                            Command, FilePrefixAppendAction):
@@ -50,22 +55,22 @@ class VisualizationCommand(MetabolicMixin,
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--method', type=text_type, default='fpp',
+            '--method', type=str, default='fpp',
             help='Compound pair prediction method',
             choices=['fpp', 'no-fpp'])
         parser.add_argument(
-            '--exclude', metavar='reaction', type=text_type, default=[],
-            action=FilePrefixAppendAction,
+            '--exclude', metavar='reaction', type=convert_to_unicode,
+            default=[], action=FilePrefixAppendAction,
             help='Reaction(s) to exclude from metabolite pair prediction')
         parser.add_argument(
-            '--element', type=text_type, default='C',
+            '--element', type=str, default='C',
             help='Element transfer to show on the graph (C, N, O, S).')
         parser.add_argument(
-            '--cpd-detail', type=text_type, default=None, action='append',
+            '--cpd-detail', type=str, default=None, action='append',
             nargs='+', help='List of properties to include on '
                             'compound nodes.')
         parser.add_argument(
-            '--rxn-detail', type=text_type, default=None, action='append',
+            '--rxn-detail', type=str, default=None, action='append',
             nargs='+', help='List of properties to include on reaction '
                             'nodes.')
         parser.add_argument(
@@ -75,7 +80,7 @@ class VisualizationCommand(MetabolicMixin,
             '--color', type=argparse.FileType('rU'), default=None, nargs='+',
             help='File containing node color mappings')
         parser.add_argument(
-            '--image', metavar='Image Format', type=text_type, choices=FORMATS,
+            '--image', metavar='Image Format', type=str, choices=FORMATS,
             required='--image-size' in sys.argv,
             help='Image output file format '
                  '(e.g. pdf, png, eps)')
@@ -91,34 +96,92 @@ class VisualizationCommand(MetabolicMixin,
             '--compartment', action='store_true',
             help='Include compartments in final visualization')
         parser.add_argument(
-            '--output', type=text_type, help='Output file name.')
+            '--output', type=str, help='Output file name.')
         parser.add_argument(
-            '--image-size', metavar=('Width', 'Height'), default=('None','None'),
-            nargs=2, type=float,
+            '--image-size', metavar=('Width', 'Height'),
+            default=('None', 'None'), nargs=2, type=float,
             help='Set the width and height of the graph image. '
                  '(width height)(inches)')
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument(
+            '--fba', type=argparse.FileType('rU'), default=None,
+            help='Visualize fba reaction flux')
+        group.add_argument(
+            '--fva', type=argparse.FileType('rU'), default=None,
+            help='Visualize fva reaction flux')
+        group.add_argument(
+            '--array', type=int, default=None,
+            help='determine how many isolated islands per row in final network'
+                 'image')
+
         super(VisualizationCommand, cls).init_parser(parser)
 
     def run(self):
         """Run visualization command."""
-
         for reaction in self._model.reactions:
             if reaction.equation is None:
                 logger.warning(
                     'Reaction {} was excluded from visualization due to '
                     'missing reaction equation'.format(reaction.id))
 
+        compound_formula = graph.get_compound_dict(self._model)
+
         vis_rxns = rxnset_for_vis(
             self._mm, self._args.subset, self._args.exclude)
 
-        # Set element to NoneType if specified by commandline parameters
-        if self._args.element.lower() == 'none':
+        if self._args.element.lower() == 'all':
             self._args.element = None
 
+        self.analysis = None
+        reaction_dict = {}
+        if self._args.fba is not None:
+            self.analysis = 'fba'
+            for row in csv.reader(self._args.fba, delimiter=str('\t')):
+                row[0] = convert_to_unicode(row[0])
+                if row[0] in vis_rxns:
+                    try:
+                        if abs(float(row[1])) <= EPSILON:
+                            row[1] = 0
+                    except ValueError:
+                        logger.warning(
+                            'Reaction {} has an invalid flux value of {} '
+                            'and will be considered as a flux of 0'.format(
+                                row[0], row[1]))
+                        row[1] = 0
+                    reaction_dict[row[0]] = (float(row[1]), 1)
+                else:
+                    logger.warning(
+                        'Reaction {} in input fba file was excluded from '
+                        'visualization due to not being defined in the '
+                        'model'.format(row[0]))
+
+        if self._args.fva is not None:
+            self.analysis = 'fva'
+            for row in csv.reader(self._args.fva, delimiter=str('\t')):
+                row[0] = convert_to_unicode(row[0])
+                if row[0] in vis_rxns:
+                    try:
+                        if abs(float(row[1])) <= EPSILON:
+                            row[1] = 0
+                        if abs(float(row[2])) <= EPSILON:
+                            row[2] = 0
+                    except ValueError:
+                        logger.warning(
+                            'Reaction {} has an invalid flux value of {},{} '
+                            'and will be considered as a flux of 0,0'.format(
+                                row[0], row[1], row[2]))
+                        row[1], row[2] = 0, 0
+                    reaction_dict[row[0]] = (float(row[1]), float(row[2]))
+                else:
+                    logger.warning(
+                        'Reaction {} in input fva file was excluded from '
+                        'visualization due to not being defined in the '
+                        'model'.format(row[0]))
+
         exclude_for_fpp = [self._model.biomass_reaction] + self._args.exclude
-        filter_dict = graph.make_network_dict(
+        filter_dict, style_flux_dict = graph.make_network_dict(
             self._model, self._mm, vis_rxns, self._args.method,
-            self._args.element, exclude_for_fpp)
+            self._args.element, exclude_for_fpp, reaction_dict, self.analysis)
 
         model_compound_entries, model_reaction_entries = {}, {}
         for c in self._model.compounds:
@@ -132,12 +195,27 @@ class VisualizationCommand(MetabolicMixin,
                 hide_edges.append((row[0], row[1]))
                 hide_edges.append((row[1], row[0]))
 
-        cpair_dict, new_id_mapping = graph.make_cpair_dict(
-            filter_dict, self._args.method, self._args.combine, hide_edges)
+        cpair_dict, new_id_mapping, new_style_flux_dict = \
+            graph.make_cpair_dict(
+                filter_dict, self._args.method, self._args.combine,
+                style_flux_dict, hide_edges)
 
         g = graph.make_bipartite_graph_object(
             cpair_dict, new_id_mapping, self._args.method, self._args.combine,
-            model_compound_entries)
+            model_compound_entries, new_style_flux_dict, self.analysis)
+
+        exchange_cpds = set()
+        for rid in vis_rxns:
+            if self._mm.is_exchange(rid) and rid != \
+                    self._model.biomass_reaction:
+                exchange_rxn = self._mm.get_reaction(rid)
+                # print('test exchange:', rid, exchange_rxn)
+                for c, _ in exchange_rxn.compounds:
+                    if text_type(c) not in g.nodes_id_dict:
+                        g = add_ex_cpd(g, c, model_compound_entries[c.name],
+                                       compound_formula, self._args.element)
+                    exchange_cpds.add(text_type(c))
+                g = add_exchange_rxns(g, rid, exchange_rxn)
 
         recolor_dict = {}
         if self._args.color is not None:
@@ -148,23 +226,21 @@ class VisualizationCommand(MetabolicMixin,
         g = add_node_label(g, self._args.cpd_detail, self._args.rxn_detail)
         bio_cpds_sub = set()
         bio_cpds_pro = set()
-        if self._model.biomass_reaction in vis_rxns:
-            nm_biomass_rxn = \
-                model_reaction_entries[self._model.biomass_reaction]
-            g = add_biomass_rxns(g, nm_biomass_rxn)
-            for cpd, _ in nm_biomass_rxn.equation.left:
-                bio_cpds_sub.add(text_type(cpd))
-            for cpd, _ in nm_biomass_rxn.equation.right:
-                bio_cpds_pro.add(text_type(cpd))
 
-        exchange_cpds = set()
-        for rid in self._mm.reactions:
-            if self._mm.is_exchange(rid):
-                if rid != self._model.biomass_reaction:
-                    exchange_rxn = self._mm.get_reaction(rid)
-                    g = add_exchange_rxns(g, rid, exchange_rxn)
-                    for cpd, _ in exchange_rxn.compounds:
-                        exchange_cpds.add(text_type(cpd))
+        if self._model.biomass_reaction in vis_rxns:
+            if self._model.biomass_reaction in model_reaction_entries:
+                nm_biomass_rxn = \
+                    model_reaction_entries[self._model.biomass_reaction]
+                g = add_biomass_rxns(g, nm_biomass_rxn)
+                for cpd, _ in nm_biomass_rxn.equation.left:
+                    bio_cpds_sub.add(text_type(cpd))
+                for cpd, _ in nm_biomass_rxn.equation.right:
+                    bio_cpds_pro.add(text_type(cpd))
+            else:
+                logger.warning(
+                    'Biomass reaction {} was excluded from visualization '
+                    'due to missing reaction entry'.format(
+                        self._model.biomass_reaction))
 
         for node in g.nodes:
             if node.props['id'] in bio_cpds_sub:
@@ -193,15 +269,19 @@ class VisualizationCommand(MetabolicMixin,
             boundaries, extracellular = get_cpt_boundaries(self._model)
             boundary_tree, extracellular = make_cpt_tree(boundaries,
                                                          extracellular)
-            with open('{}.dot'.format(output), 'w') as f:
+            with io.open('{}.dot'.format(output), 'w', encoding='utf-8',
+                         errors='backslashreplace') as f:
                 g.write_graphviz_compartmentalized(
                     f, boundary_tree, extracellular, width, height)
         else:
-            with open('{}.dot'.format(output), 'w') as f:
+            with io.open('{}.dot'.format(output), 'w', encoding='utf-8',
+                         errors='backslashreplace') as f:
                 g.write_graphviz(f, width, height)
-        with open('{}.nodes.tsv'.format(output), 'w') as f:
+        with io.open('{}.nodes.tsv'.format(output), 'w', encoding='utf-8',
+                     errors='backslashreplace') as f:
             g.write_nodes_tables(f)
-        with open('{}.edges.tsv'.format(output), 'w') as f:
+        with io.open('{}.edges.tsv'.format(output), 'w', encoding='utf-8',
+                     errors='backslashreplace') as f:
             g.write_edges_tables(f)
 
         if self._args.image is not None:
@@ -216,7 +296,16 @@ class VisualizationCommand(MetabolicMixin,
                         'This graph contains {} reactions, '
                         'graphs of this size may take a long time to '
                         'create'.format(len(filter_dict.keys())))
-                render('dot', self._args.image, '{}.dot'.format(output))
+                if self._args.array is None:
+                    render('dot', self._args.image, '{}.dot'.format(output))
+                else:
+                    out = '{}.dot'.format(output)
+                    format = self._args.image
+                    image = '{}.dot.{}'.format(output, format)
+                    print('test output name: {}'.format(out))
+                    os.system("ccomps -x {} |dot |gvpack -array{} |neato "
+                              "-T{} -n2 -o {}".format(out, self._args.array,
+                                                      format, image))
 
 
 def rxnset_for_vis(mm, subset_file, exclude):
@@ -245,15 +334,16 @@ def rxnset_for_vis(mm, subset_file, exclude):
         final_rxn_set = set()
         cpd_set = set()
         rxn_set = set()
-        for l in subset_file.readlines():
-            value = l.strip()
-            if value in all_cpds:
-                cpd_set.add(value)
-            elif mm.has_reaction(value):
-                rxn_set.add(value)
-            else:
-                raise ValueError('{} is in subset file but is '
-                                 'not a compound or reaction ID'.format(value))
+        for line in subset_file.readlines():
+            if not line.startswith('#'):
+                value = line.strip()
+                if value in all_cpds:
+                    cpd_set.add(value)
+                elif mm.has_reaction(value):
+                    rxn_set.add(value)
+                else:
+                    raise ValueError('{} is in subset file but is not a '
+                                     'compound or reaction ID'.format(value))
 
         if all(i > 0 for i in [len(cpd_set), len(rxn_set)]):
             raise ValueError('Subset file is a mixture of reactions and '
@@ -311,6 +401,28 @@ def add_biomass_rxns(g, nm_bio_reaction):
             if c in product_list:
                 g.add_edge(graph.Edge(node_bio, g.get_node(text_type(c)),
                                       {'dir': direction}))
+    return g
+
+
+def add_ex_cpd(g, mm_cpd, nm_cpd, compound_formula, element):
+    node_dict = {'id': text_type(mm_cpd),
+                 'entry': [nm_cpd],
+                 'compartment': mm_cpd.compartment,
+                 'type': 'cpd'}
+    if element is not None:
+        if mm_cpd.name not in compound_formula:
+            logger.error('Compound formulas are required for fpp or specific '
+                         'element visualizations, but compound {} does not '
+                         'have valid formula, add its formula, or try '
+                         '--element all to visualize all pathways without '
+                         'compound formula input.'.format(mm_cpd.name))
+        else:
+            if Atom(element) in compound_formula[mm_cpd.name]:
+                node = graph.Node(node_dict)
+                g.add_node(node)
+    else:
+        node = graph.Node(node_dict)
+        g.add_node(node)
     return g
 
 
@@ -407,8 +519,7 @@ def add_node_label(g, cpd_detail, rxn_detail):
         if cpd_detail is not None:
             if node.props['type'] == 'cpd':
                 pre_label = '\n'.join(
-                    (str(node.props['entry'][0].properties.get(value)).encode(
-                        'ascii', 'backslashreplace').decode('ascii')) for
+                    (str(node.props['entry'][0].properties.get(value))) for
                     value
                     in cpd_detail[0] if
                     value != 'id' and value in node.props['entry'][
@@ -422,9 +533,8 @@ def add_node_label(g, cpd_detail, rxn_detail):
             if node.props['type'] == 'rxn':
                 if len(node.props['entry']) == 1:
                     pre_label = '\n'.join(
-                        (str(node.props['entry'][0].properties.get(value)
-                             ).encode('ascii', 'backslashreplace').decode(
-                            'ascii')) for value in rxn_detail[0] if
+                        (str(node.props['entry'][0].properties.get(value)))
+                        for value in rxn_detail[0] if
                         value != 'id' and value in
                         node.props['entry'][0].properties)
                     if 'id' in rxn_detail[0]:

@@ -25,6 +25,7 @@ from fractions import Fraction
 from functools import partial
 import logging
 import re
+import sys
 import json
 from collections import OrderedDict, Counter
 
@@ -50,7 +51,6 @@ from ..expression.boolean import Expression, And, Or, Variable
 from .. import util
 
 logger = logging.getLogger(__name__)
-
 
 # Level 1 namespaces
 SBML_NS_L1 = 'http://www.sbml.org/sbml/level1'
@@ -908,6 +908,7 @@ class SBMLWriter(object):
             "'": '_APOS_'
         }
 
+        id = id.encode('ascii', 'backslashreplace').decode('ascii')
         id = re.sub(r'\(([a-z])\)$', '_\\1', id)
         for symbol, escape in iteritems(substitutions):
             id = id.replace(symbol, escape)
@@ -1141,7 +1142,7 @@ class SBMLWriter(object):
             species_tag.set(self._sbml_tag('id'), 'M_' + species_id)
             species_tag.set(
                 self._sbml_tag('name'),
-                compound_name.get(species.name, species.name))
+                text_type(compound_name.get(species.name, species.name)))
             species_tag.set(
                 self._sbml_tag('compartment'),
                 model_compartments[species.compartment])
@@ -1259,10 +1260,14 @@ class SBMLWriter(object):
             self._indent(root)
 
         write_options = dict(
-            encoding='utf-8',
-            default_namespace=self._namespace)
+            encoding='UTF-8',
+            default_namespace=self._namespace,
+            xml_declaration=True
+        )
         if PY3:
             write_options['encoding'] = 'unicode'
+
+
         tree.write(file, **write_options)
 
 

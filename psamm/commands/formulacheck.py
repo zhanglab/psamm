@@ -20,7 +20,7 @@ from __future__ import unicode_literals
 
 import logging
 
-from ..command import Command, FilePrefixAppendAction
+from ..command import Command, FilePrefixAppendAction, convert_to_unicode
 from ..formula import Formula
 from ..balancecheck import formula_balance
 
@@ -39,7 +39,7 @@ class FormulaBalanceCommand(Command):
     def init_parser(cls, parser):
         parser.add_argument(
             '--exclude', metavar='reaction', action=FilePrefixAppendAction,
-            type=str, default=[], help='Exclude reaction from balance check')
+            type=convert_to_unicode, default=[], help='Exclude reaction from balance check')
         super(FormulaBalanceCommand, cls).init_parser(parser)
 
     def run(self):

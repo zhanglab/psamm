@@ -15,6 +15,7 @@
 #
 # Copyright 2016-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2020-2020  Elysha Sameth <esameth1@my.uri.edu>
 
 """Representation of compound/reaction entries in models."""
 

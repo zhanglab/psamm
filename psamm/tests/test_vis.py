@@ -16,7 +16,7 @@
 #
 # Copyright 2018-2020  Ke Zhang <kzhang@my.uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@uri.edu>
-# Copyright 2020       Elysha Sameth <esameth@my.uri.edu>
+# Copyright 2020-2020  Elysha Sameth <esameth@my.uri.edu>
 
 from __future__ import unicode_literals
 from graphviz import FORMATS
@@ -37,6 +37,7 @@ from psamm import graph
 from psamm.datasource.native import NativeModel, ReactionEntry, CompoundEntry
 from psamm.datasource import native, sbml
 from psamm.lpsolver import generic
+
 
 # 2019-08-30 new test cases for vis
 class TestMakeSubset(unittest.TestCase):
@@ -734,14 +735,14 @@ class TestAddBiomassRnxs(unittest.TestCase):
         self.assertTrue(all(i in g3.edges for i in final_edges))
 
 
-class TestAddExchangeRxns(unittest.TestCase):
+class TestAddExchange(unittest.TestCase):
     def setUp(self):
         native_model = NativeModel()
         native_model.reactions.add_entry(ReactionEntry({
             'id': 'rxn1', 'equation': parse_reaction(
                 'fum[c] + h2o[c] <=> mal_L[c]')}))
-        cpd_a = CompoundEntry({
-            'id': 'A', 'name': 'compound A', 'formula': 'XYZ', 'charge': 0})
+        self.cpd_a = CompoundEntry({
+            'id': 'A', 'name': 'compound A', 'formula': 'CO2', 'charge': 0})
         cpd_c = CompoundEntry({
             'id': 'C', 'name': 'compound C', 'formula': 'MNO', 'charge': 0})
         rxn1 = entry.DictReactionEntry({
@@ -758,7 +759,7 @@ class TestAddExchangeRxns(unittest.TestCase):
         })
 
         node_a = graph.Node({
-            'id': 'A[c]', 'entry': [cpd_a], 'compartment': 'c', 'type': 'cpd',
+            'id': 'A[c]', 'entry': [self.cpd_a], 'compartment': 'c', 'type': 'cpd',
             'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf',
             'label': 'A[c]'})
         node_c = graph.Node({
@@ -766,7 +767,7 @@ class TestAddExchangeRxns(unittest.TestCase):
             'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf',
             'label': 'C[c]'})
         self.node_a_extracell = graph.Node({
-            'id': 'A[e]', 'entry': [cpd_a], 'compartment': 'e', 'type': 'cpd',
+            'id': 'A[e]', 'entry': [self.cpd_a], 'compartment': 'e', 'type': 'cpd',
             'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf',
             'label': 'A[e]'})
         self.node_c_extracell = graph.Node({
@@ -777,7 +778,7 @@ class TestAddExchangeRxns(unittest.TestCase):
             'id': 'rxn1_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'entry': [rxn1], 'compartment': 'c',
             'fillcolor': '#c9fccd', 'label': 'rxn1'})
-        node_aa = graph.Node({
+        self.node_aa = graph.Node({
             'id': 'rxn2_1', 'shape': 'box', 'style': 'filled', 'type': 'rxn',
             'entry': [rxn2], 'compartment': 'c', 'fillcolor': '#90f998',
             'label': 'rxn2'})
@@ -787,16 +788,16 @@ class TestAddExchangeRxns(unittest.TestCase):
             'label': 'rxn3'})
         edge_a_r1 = graph.Edge(node_a, node_ac, {'dir': 'both'})
         edge_r1_c = graph.Edge(node_ac, node_c, {'dir': 'both'})
-        edge_a_r2 = graph.Edge(self.node_a_extracell, node_aa, {'dir': 'forward'})
-        edge_r2_a = graph.Edge(node_aa, node_a, {'dir': 'forward'})
+        self.edge_a_r2 = graph.Edge(self.node_a_extracell, self.node_aa, {'dir': 'forward'})
+        self.edge_r2_a = graph.Edge(self.node_aa, node_a, {'dir': 'forward'})
         edge_c_r3 = graph.Edge(self.node_c_extracell, node_cc, {'dir': 'back'})
         edge_r3_c = graph.Edge(node_cc, node_c, {'dir': 'back'})
 
         self.g = graph.Graph()
-        self.edge_list = [edge_a_r1, edge_r1_c, edge_a_r2, edge_r2_a,
+        self.edge_list = [edge_a_r1, edge_r1_c, self.edge_a_r2, self.edge_r2_a,
                           edge_c_r3, edge_r3_c]
         self.node_list = [node_a, node_c, self.node_a_extracell,
-                          self.node_c_extracell, node_ac, node_aa, node_cc]
+                          self.node_c_extracell, node_ac, self.node_aa, node_cc]
         for node in self.node_list:
             self.g.add_node(node)
         for edge in self.edge_list:
@@ -835,6 +836,100 @@ class TestAddExchangeRxns(unittest.TestCase):
 
         self.assertTrue(all(i in self.edge_list for i in g2.edges))
         self.assertTrue(all(i in g2.edges for i in self.edge_list))
+
+    def test3_addExrCpd(self):
+        cpd_formula = {'A': Formula({Atom('O'): 2, Atom('C'): 1})}
+        mm_a = Compound('A', 'e')
+        new_node_a_extra = graph.Node({'id': 'A[e]', 'entry': [self.cpd_a],
+                                       'compartment': 'e', 'type': 'cpd'})
+        g_missA = graph.Graph()
+        node_list_missA = [n for n in self.node_list if n not in [
+            self.node_aa, self.node_a_extracell]]
+        edge_list_missA = [e for e in self.edge_list if e not in [
+            self.edge_a_r2, self.edge_r2_a]]
+        for node in node_list_missA:
+            g_missA.add_node(node)
+        for edge in edge_list_missA:
+            g_missA.add_edge(edge)
+        g3 = vis.add_ex_cpd(g_missA, mm_a, self.cpd_a, cpd_formula, 'C')
+        node_list_missA.append(new_node_a_extra)
+
+        # for i in g3.nodes:
+        #     print(i, i.props)
+        # print('fen ge')
+        # for i in node_list_missA:
+        #     print(i, i.props)
+
+        self.assertTrue(all(i in node_list_missA for i in g3.nodes))
+        self.assertTrue(all(i in g3.nodes for i in node_list_missA))
+
+        self.assertTrue(all(i in edge_list_missA for i in g3.edges))
+        self.assertTrue(all(i in g3.edges for i in edge_list_missA))
+
+    def test4_addExrCpd_noEle(self):
+        cpd_formula = {'A': Formula({Atom('O'): 2, Atom('C'): 1})}
+        mm_a = Compound('A', 'e')
+
+        g_missA = graph.Graph()
+        node_list_missA = [n for n in self.node_list if n not in [
+            self.node_aa, self.node_a_extracell]]
+        edge_list_missA = [e for e in self.edge_list if e not in [
+            self.edge_a_r2, self.edge_r2_a]]
+        for node in node_list_missA:
+            g_missA.add_node(node)
+        for edge in edge_list_missA:
+            g_missA.add_edge(edge)
+        g4 = vis.add_ex_cpd(g_missA, mm_a, self.cpd_a, cpd_formula, 'N')
+
+        self.assertTrue(all(i in node_list_missA for i in g4.nodes))
+        self.assertTrue(all(i in g4.nodes for i in node_list_missA))
+
+        self.assertTrue(all(i in edge_list_missA for i in g4.edges))
+        self.assertTrue(all(i in g4.edges for i in edge_list_missA))
+
+    def test5_addExrCpd_noFormula(self):
+        cpd_formula = {}
+        mm_a = Compound('A', 'e')
+
+        g_missA = graph.Graph()
+        node_list_missA = [n for n in self.node_list if n not in [
+            self.node_aa, self.node_a_extracell]]
+        edge_list_missA = [e for e in self.edge_list if e not in [
+            self.edge_a_r2, self.edge_r2_a]]
+        for node in node_list_missA:
+            g_missA.add_node(node)
+        for edge in edge_list_missA:
+            g_missA.add_edge(edge)
+        g5 = vis.add_ex_cpd(g_missA, mm_a, self.cpd_a, cpd_formula, 'C')
+
+        self.assertTrue(all(i in node_list_missA for i in g5.nodes))
+        self.assertTrue(all(i in g5.nodes for i in node_list_missA))
+
+        self.assertTrue(all(i in edge_list_missA for i in g5.edges))
+        self.assertTrue(all(i in g5.edges for i in edge_list_missA))
+
+    def test6_addExrCpd_EleNone(self):
+        cpd_formula = {'A': Formula({Atom('O'): 2, Atom('C'): 1})}
+        mm_a = Compound('A', 'e')
+        new_node_a_extra = graph.Node({'id': 'A[e]', 'entry': [self.cpd_a],
+                                       'compartment': 'e', 'type': 'cpd'})
+        g_missA = graph.Graph()
+        node_list_missA = [n for n in self.node_list if n not in [
+            self.node_aa, self.node_a_extracell]]
+        edge_list_missA = [e for e in self.edge_list if e not in [
+            self.edge_a_r2, self.edge_r2_a]]
+        for node in node_list_missA:
+            g_missA.add_node(node)
+        for edge in edge_list_missA:
+            g_missA.add_edge(edge)
+        g6 = vis.add_ex_cpd(g_missA, mm_a, self.cpd_a, cpd_formula, None)
+        node_list_missA.append(new_node_a_extra)
+
+        self.assertTrue(all(i in node_list_missA for i in g6.nodes))
+        self.assertTrue(all(i in g6.nodes for i in node_list_missA))
+
+        self.assertTrue(all(i in edge_list_missA for i in g6.edges))
+        self.assertTrue(all(i in g6.edges for i in edge_list_missA))
 
 
 class TestMakeCptTree(unittest.TestCase):
@@ -937,6 +1032,137 @@ class TestGetCptBoundaries(unittest.TestCase):
         e4_extra_res = 'e'
         self.assertTrue(all(i in e4_bound for i in e4_bound_res))
         self.assertEqual(e4_extra, e4_extra_res)
+
+
+class TestFlux(unittest.TestCase):
+    def setUp(self):
+        native_model = NativeModel()
+        native_model.reactions.add_entry(ReactionEntry({
+            'id': 'rxn1', 'equation': parse_reaction(
+                'fum[c] + h2o[c] <=> mal_L[c]')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'fum', 'formula': 'C4H2O4'}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'h2o', 'formula': 'H2O'}))
+        native_model.compounds.add_entry(CompoundEntry(
+            {'id': 'mal_L', 'formula': 'C4H4O5'}))
+        native_model.reactions.add_entry(ReactionEntry({
+            'id': 'rxn2', 'equation': parse_reaction(
+                'q8[c] + succ[c] => fum[c] + q8h2[c]')}))
+        native_model.compounds.add_entry(CompoundEntry(
+            {'id': 'q8', 'formula': 'C49H74O4'}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'q8h2', 'formula': 'C49H76O4'}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'succ', 'formula': 'C4H4O4'}))
+        native_model.reactions.add_entry(ReactionEntry({
+            'id': 'rxn3', 'equation': parse_reaction(
+                'h2o[c] <=> h2o[e]')}))
+        native_model.compounds.add_entry(CompoundEntry({
+            'id': 'h2o', 'formula': 'H2O'}))
+        self.native = native_model
+        self.mm = native_model.create_metabolic_model()
+
+    def test1_neg_flux_fba(self):
+        reaction_dict = {'rxn1': (-20, 1)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                        reaction_dict=reaction_dict, analysis='fba')
+        self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('solid', style_flux_dict['rxn1'][0])
+        self.assertEqual(5, style_flux_dict['rxn1'][1])
+
+    def test2_pos_flux_fba(self):
+        reaction_dict = {'rxn1': (10, 1)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                              reaction_dict=reaction_dict, analysis='fba')
+        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('solid', style_flux_dict['rxn1'][0])
+        self.assertEqual(5, style_flux_dict['rxn1'][1])
+
+    def test3_0_flux_fba(self):
+        reaction_dict = {'rxn1': (0, 1)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                              reaction_dict=reaction_dict, analysis='fba')
+        self.assertEqual(Direction.Both, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('dotted', style_flux_dict['rxn1'][0])
+        self.assertEqual(1, style_flux_dict['rxn1'][1])
+
+    def test4_neg_flux_fva(self):
+        reaction_dict = {'rxn1': (-10, 1)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                        reaction_dict=reaction_dict, analysis='fva')
+        self.assertEqual(Direction.Both, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('dotted', style_flux_dict['rxn2'][0])
+        self.assertEqual(5, style_flux_dict['rxn1'][1])
+
+    def test5_pos_flux_neg_fva(self):
+        reaction_dict = {'rxn1': (-10, -10)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                        reaction_dict=reaction_dict, analysis='fva')
+        self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('solid', style_flux_dict['rxn1'][0])
+        self.assertEqual(5, style_flux_dict['rxn1'][1])
+
+    def test6_pos_flux_pos_fva(self):
+        reaction_dict = {'rxn1': (10, 10)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                              reaction_dict=reaction_dict, analysis='fva')
+        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('solid', style_flux_dict['rxn1'][0])
+        self.assertEqual(5, style_flux_dict['rxn1'][1])
+
+    def test7_lower_0_flux_fva(self):
+        reaction_dict = {'rxn1': (0, 10)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                        reaction_dict=reaction_dict, analysis='fva')
+        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('solid', style_flux_dict['rxn1'][0])
+        self.assertEqual(1, style_flux_dict['rxn1'][1])
+
+    def test8_upper_0_flux_fva(self):
+        reaction_dict = {'rxn1': (-10, 0)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                              reaction_dict=reaction_dict, analysis='fva')
+        self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('solid', style_flux_dict['rxn1'][0])
+        self.assertEqual(1, style_flux_dict['rxn1'][1])
+
+    def test9_both_0_flux_fva(self):
+        reaction_dict = {'rxn1': (0, 0)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                              reaction_dict=reaction_dict, analysis='fva')
+        self.assertEqual(Direction.Both, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual('dotted', style_flux_dict['rxn1'][0])
+        self.assertEqual(1, style_flux_dict['rxn1'][1])
+
+    def test10_mult_rxn_fba(self):
+        reaction_dict = {'rxn1': (2, 1), 'rxn2': (-4, 1), 'rxn3': (6, 1)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                                   reaction_dict=reaction_dict, analysis='fba')
+        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn2']][1])
+        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn3']][1])
+        self.assertEqual('solid', style_flux_dict['rxn1'][0])
+        self.assertEqual('solid', style_flux_dict['rxn2'][0])
+        self.assertEqual('solid', style_flux_dict['rxn3'][0])
+        self.assertEqual(2.5, style_flux_dict['rxn1'][1])
+        self.assertEqual(5, style_flux_dict['rxn2'][1])
+        self.assertEqual(7.5, style_flux_dict['rxn3'][1])
+
+    def test11_mult_rxn_fva(self):
+        reaction_dict = {'rxn1': (0, 2), 'rxn2': (-4, 1), 'rxn3': (-1, -1)}
+        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
+                                                                   reaction_dict=reaction_dict, analysis='fva')
+        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual(Direction.Both, full_pairs_dict[self.native.reactions['rxn2']][1])
+        self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn3']][1])
+        self.assertEqual('solid', style_flux_dict['rxn1'][0])
+        self.assertEqual('solid', style_flux_dict['rxn2'][0])
+        self.assertEqual('solid', style_flux_dict['rxn3'][0])
+        self.assertEqual(1, style_flux_dict['rxn1'][1])
+        self.assertEqual(8, style_flux_dict['rxn2'][1])
+        self.assertEqual(2, style_flux_dict['rxn3'][1])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -15,6 +15,7 @@
 #
 # Copyright 2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2020-2020  Elysha Sameth <esameth@my.uri.edu>
 
 from __future__ import unicode_literals
 
@@ -26,7 +27,7 @@ import tempfile
 from contextlib import contextmanager
 import unittest
 
-from six import StringIO, BytesIO
+from six import StringIO, BytesIO, text_type
 
 from psamm.command import (main, Command, MetabolicMixin, SolverCommandMixin,
                            CommandError)
@@ -597,7 +598,6 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
 
     def test_run_tableexport_compounds(self):
         f = self.run_command(ExportTableCommand, ['compounds'])
-
         self.assertTableOutputEqual(f.getvalue(), [
             ['id', 'name', 'charge', 'formula', 'in_model'],
             ['A_\u2206', 'Compound A', '0', '', 'true'],
@@ -636,8 +636,8 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
     def test_run_vis(self):
         self.run_solver_command(VisualizationCommand)
 
-    def test_run_vis_element_none(self):
-        self.run_solver_command(VisualizationCommand, ["--element", "none"])
+    def test_run_vis_element_all(self):
+        self.run_solver_command(VisualizationCommand, ["--element", "all"])
 
     def test_run_vis_hide_edges(self):
         path = os.path.join(tempfile.mkdtemp(), 'hide_edges.csv')
@@ -648,7 +648,7 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
     def test_run_vis_recolor(self):
         path = os.path.join(tempfile.mkdtemp(), 'color.csv')
         with open(path, 'w') as f:
-            f.write('{}\t{}'.format('A_\u2206', '#f4fc55').encode('ascii', 'ignore').decode('ascii'))
+            f.write('{}\t{}'.format('B', '#f4fc55'))
         self.run_solver_command(VisualizationCommand, ["--color", path])
 
     def test_run_vis_output(self):
@@ -656,6 +656,30 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
 
     def test_run_vis_compartment(self):
         self.run_solver_command(VisualizationCommand, ['--compartment'])
+
+    def test_run_vis_fba(self):
+        path = os.path.join(tempfile.mkdtemp(), 'fba.tsv')
+        with open(path, 'w') as f:
+            f.write('{}\t{}'.format('rxn_1', -0.000001))
+        self.run_solver_command(VisualizationCommand, ['--fba', path])
+
+    def test_run_vis_fba_invalid_flux(self):
+        path = os.path.join(tempfile.mkdtemp(), 'fba.tsv')
+        with open(path, 'w') as f:
+            f.write('{}\t{}'.format('rxn_1', 'a'))
+        self.run_solver_command(VisualizationCommand, ['--fba', path])
+
+    def test_run_vis_fva(self):
+        path = os.path.join(tempfile.mkdtemp(), 'fva.tsv')
+        with open(path, 'w') as f:
+            f.write('{}\t{}\t{}'.format('rxn_1', -0.000001, 0.000001))
+        self.run_solver_command(VisualizationCommand, ['--fva', path])
+
+    def test_run_vis_fva_invalid_flux(self):
+        path = os.path.join(tempfile.mkdtemp(), 'fva.tsv')
+        with open(path, 'w') as f:
+            f.write('{}\t{}\t{}'.format('rxn_1', 'a', -0.000001))
+        self.run_solver_command(VisualizationCommand, ['--fva', path])
 
     def test_command_main(self):
         self.run_command(MockCommand)
