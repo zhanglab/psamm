@@ -412,6 +412,31 @@ The combine 2 option will update the image to look like the following:
 
 .. image:: 04-combine2.dot.png
 
+Rearrange graph components in the image
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In some cases, the network images contain many connected components,
+while these components aren't connected with each other. This may cause the
+image too wide and difficult to read. To create a better view, ``--array``
+option could be used. It can decompress graphs into their connected components,
+then arrange these components with specific array setting. ``--array`` is
+followed by an integer, for example, ``--array 2`` indicates placing two
+connected components per row. For graphs that contains many small connected
+components, ``--array 4`` could be a better option because you can get most
+of the important larger components in the top few rows of the image, and
+all the smaller components will just be spread out below them. Example of
+applying this option see below:
+
+
+.. code-block:: shell
+
+   (psamm-env) $ psamm-model vis --image png --array 2
+
+Then the exported image "reactions.dot.png" will look like the figure below:
+
+.. image:: 16-array2.dot.png
+
+
 Show Cellular Compartments
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
