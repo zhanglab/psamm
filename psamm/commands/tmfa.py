@@ -69,6 +69,11 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
     def run(self):
         """Run TMFA command."""
         solver = self._get_solver()
+        if solver._properties['name'] not in ['cplex', 'gurobi']:
+            raise ImportError(
+                'Unable to find an LP solver that satisfy the requirement of '
+                'TMFA function (TMFA requires Cplex or Gurobi as LP solver)')
+
         mm = self._mm
         which_command = self._args.which
 

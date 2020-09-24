@@ -62,7 +62,7 @@ class Solver(BaseSolver):
 
     def __init__(self):
         super(Solver, self).__init__()
-        logger.warn('Support for GLPK solver is experimental!')
+        logger.warning('Support for GLPK solver is experimental!')
 
     def create_problem(self, **kwargs):
         """Create a new LP-problem using the solver."""

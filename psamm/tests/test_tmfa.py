@@ -27,6 +27,13 @@ from decimal import Decimal
 from psamm.lpsolver import lp
 
 
+test_solver = generic.Solver()
+requires_solver = unittest.skipIf(test_solver._properties['name'] not in [
+    'cplex', 'gurobi'], 'Unable to find an LP solver for tests (TMFA requires '
+                        'Cplex or Gurobi as LP solver')
+
+
+@requires_solver
 class TestTMFA(unittest.TestCase):
     def setUp(self):
         self.database = DictDatabase()
@@ -115,6 +122,7 @@ class TestTMFA(unittest.TestCase):
         self.assertEqual(dgr_dict, {'rxn_1': (Decimal(1), Decimal(2))})
 
 
+@requires_solver
 class TestSolving(unittest.TestCase):
     def setUp(self):
         self.database = DictDatabase()
