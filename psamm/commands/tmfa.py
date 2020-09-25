@@ -284,7 +284,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                     else:
                         print('{}\tGood Constraint'.format(rx))
                 quit()
-        # Run simulaiton based functions
+        # Run simulation based functions
         elif which_command == 'simulation':
             prob, cpd_xij_dict = add_conc_constraints(
                 xij, prob, cpd_conc_dict, cp_list,
@@ -627,7 +627,7 @@ def add_conc_constraints(xij, problem, cpd_conc_dict,
                 conc_limits = cpd_conc_dict[str(cp)]
                 if conc_limits[0] > conc_limits[1]:
                     logger.error('lower bound for {} concentration\
-                        higher than upper bound'.format(conc_limits))
+                        higher than upper bound'.format(str(cp)))
                     quit()
                 if Decimal(conc_limits[0]) == Decimal(conc_limits[1]):
                     problem.add_linear_constraints(
