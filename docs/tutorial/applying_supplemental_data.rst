@@ -217,6 +217,9 @@ TMFA requires additional data to be prepared beforehand. For details on all
 of these input files, see the command line interface section related to the
 TMFA command :ref:`commands-tmfa`.
 
+Note that TMFA is only compartible with the Gurobi and CPLEX LP solvers out
+of the four supported by PSAMM.
+
 For this tutorial example ``tmfa`` data has been provided based based on the
 available data from another *E. coli* model in [Henry07]_. Since multiple
 files are required to run ``tmfa``, the command has been set up to use a
