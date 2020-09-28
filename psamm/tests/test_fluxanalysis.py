@@ -211,6 +211,11 @@ class TestFluxVariability(unittest.TestCase):
             self.skipTest('Unable to find an LP solver for tests')
 
     def test_flux_variability(self):
+        if self.solver.properties['name'] == 'qsoptex':
+            # QSopt_ex returns status code 100 for this example. It seems that
+            # it is unable to determine whether the problem is unbounded.
+            self.skipTest('Skipping because of known issue with QSopt_ex')
+
         fluxes = dict(fluxanalysis.flux_variability(
             self.model, self.model.reactions, {'rxn_6': 200},
             tfba=False, solver=self.solver))
