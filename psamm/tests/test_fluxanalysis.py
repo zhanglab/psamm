@@ -211,10 +211,10 @@ class TestFluxVariability(unittest.TestCase):
             self.skipTest('Unable to find an LP solver for tests')
 
     def test_flux_variability(self):
-        try:
-            self.solver = generic.Solver(integrality_tolerance=True)
-        except generic.RequirementsError:
-            self.skipTest('Unable to find an LP solver for tests')
+        if self.solver.properties['name'] == 'qsoptex':
+            self.skipTest('Skipping because of known issue with QSopt_ex ('
+                          'cannot assign value to integrality tolerance when '
+                          'QSopt_ex is the sole LP solver)')
 
         fluxes = dict(fluxanalysis.flux_variability(
             self.model, self.model.reactions, {'rxn_6': 200},
@@ -283,6 +283,8 @@ class TestFluxVariabilityThermodynamic(unittest.TestCase):
             self.skipTest('Unable to find an MILP solver for tests')
 
     def test_flux_variability_thermodynamic(self):
+        if self.solver.properties['name'] == 'glpk':
+            self.skipTest('Skipping because of known issue with GLPK')
         fluxes = dict(fluxanalysis.flux_variability(
             self.model, self.model.reactions, {'rxn_6': 200},
             tfba=True, solver=self.solver))
