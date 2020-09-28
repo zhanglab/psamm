@@ -212,9 +212,9 @@ class TestFluxVariability(unittest.TestCase):
 
     def test_flux_variability(self):
         if self.solver.properties['name'] == 'qsoptex':
-            # QSopt_ex returns status code 100 for this example. It seems that
-            # it is unable to determine whether the problem is unbounded.
-            self.skipTest('Skipping because of known issue with QSopt_ex')
+            self.skipTest('Skipping because of known issue with QSopt_ex ('
+                          'cannot assign value to integrality tolerance when '
+                          'QSopt_ex is the sole LP solver)')
 
         fluxes = dict(fluxanalysis.flux_variability(
             self.model, self.model.reactions, {'rxn_6': 200},
