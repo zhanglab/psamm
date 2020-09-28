@@ -1497,3 +1497,33 @@ class ModelWriter(object):
         """
         self._write_entries(
             stream, reactions, self.convert_reaction_entry, properties)
+
+def reaction_signature(eq, direction=False, stoichiometry=False):
+    """Return unique signature object for :class:`Reaction`.
+
+    Signature objects are hashable, and compare equal only if the reactions
+    are considered the same according to the specified rules.
+
+    Args:
+        direction: Include reaction directionality when considering equality.
+        stoichiometry: Include stoichiometry when considering equality.
+    """
+    def compounds_sig(compounds):
+        if stoichiometry:
+            return tuple(sorted(compounds))
+        else:
+            return tuple(sorted(compound for compound, _ in compounds))
+
+    left = compounds_sig(eq.left)
+    right = compounds_sig(eq.right)
+
+    if left < right:
+        reaction_sig = left, right
+        direction_sig = eq.direction
+    else:
+        reaction_sig = right, left
+        direction_sig = eq.direction.flipped()
+
+    if direction:
+        return reaction_sig, direction_sig
+    return reaction_sig
