@@ -655,9 +655,11 @@ def parse_compound(compound_def, context=None):
     Returns a CompoundEntry."""
     compound_id = convert_to_unicode(compound_def.get('id'))
     _check_id(compound_id, 'Compound')
-    compound_props = {key: (convert_to_unicode(value)) for key, value in compound_def.items() if key != 'charge'}
-    if 'charge' in compound_def.keys():
-        compound_props['charge'] = compound_def.get('charge')
+
+    compound_props = {}
+    for key, value in compound_def.items():
+        compound_props[key] = convert_to_unicode(value) if isinstance(value, str) else value
+
     mark = FileMark(context, None, None)
     return CompoundEntry(compound_props, mark)
 
@@ -822,17 +824,20 @@ def parse_reaction(reaction_def, default_compartment, context=None):
     """
     reaction_id = convert_to_unicode(reaction_def.get('id'))
     _check_id(reaction_id, 'Reaction')
-    reaction_props = {key: convert_to_unicode(value) for key, value in reaction_def.items()
-                      if key != 'equation' and key != 'genes'}
+
+    reaction_props = {}
+    for key, value in reaction_def.items():
+        reaction_props[key] = convert_to_unicode(value) if isinstance(value, str) else value
+
     if 'genes' in reaction_def.keys():
         if isinstance(reaction_def['genes'], list):
             reaction_props['genes'] = [convert_to_unicode(gene) for gene in reaction_def['genes']]
-        else:
-            reaction_props['genes'] = convert_to_unicode(reaction_def['genes'])
+
     # Parse reaction equation
     if 'equation' in reaction_def.keys():
         reaction_props['equation'] = parse_reaction_equation(
             reaction_def['equation'], default_compartment)
+
     mark = FileMark(context, None, None)
     return ReactionEntry(reaction_props, mark)
 
