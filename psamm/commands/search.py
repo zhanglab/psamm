@@ -189,7 +189,7 @@ class SearchCommand(Command):
                     continue
 
             if self._args.key is not None:
-                # prepare s list of all reaction properties
+                # prepare a list of all reaction properties
                 raw_reaction_prop_list = [
                     reaction.properties[key] for key in reaction.properties]
                 reaction_prop_list = []

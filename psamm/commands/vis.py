@@ -302,7 +302,6 @@ class VisualizationCommand(MetabolicMixin,
                     out = '{}.dot'.format(output)
                     format = self._args.image
                     image = '{}.dot.{}'.format(output, format)
-                    print('test output name: {}'.format(out))
                     os.system("ccomps -x {} |dot |gvpack -array{} |neato "
                               "-T{} -n2 -o {}".format(out, self._args.array,
                                                       format, image))

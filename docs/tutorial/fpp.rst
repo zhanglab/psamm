@@ -527,10 +527,11 @@ This resulting image "reactions.dot.png" looks like the following:
 This image only contains reactions listed in the subset file and any associated
 exchange reactions.
 
-The other usage for using the subset argument is to provide a list of metabolite IDs.
-This option will generate an image containing all of the reactions that contain any
-of given metabolites in their equation. For example, the following subset file could
-be used to generate a network image of all reactions that contains pyruvate.
+The other usage for using the subset argument is to provide a list of metabolite
+IDs (with compartment). This option will generate an image containing all of the
+reactions that contain any of given metabolites in their equation. For example,
+the following subset file could be used to generate a network image of all
+reactions that contain pyruvate.
 
 .. code-block:: shell
 

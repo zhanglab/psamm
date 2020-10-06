@@ -341,8 +341,7 @@ class Reaction(object):
         return Reaction(self._direction, compounds)
 
     def convert_str(self):
-        s = self.__str__()
-        return s.decode(sys.stdin.encoding)
+        return self.__str__()
 
     def __str__(self):
         # Use the same format as ModelSEED
