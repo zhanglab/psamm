@@ -1503,6 +1503,7 @@ class ModelWriter(object):
         self._write_entries(
             stream, reactions, self.convert_reaction_entry, properties)
 
+
 def reaction_signature(eq, direction=False, stoichiometry=False):
     """Return unique signature object for :class:`Reaction`.
 
