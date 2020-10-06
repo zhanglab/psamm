@@ -58,6 +58,7 @@ _HAS_YAML_LIBRARY = None
 
 _REACTION_PARSER = ReactionParser()
 
+
 class ParseError(Exception):
     """Exception used to signal errors while parsing"""
 
@@ -430,6 +431,27 @@ class ModelReader(object):
 
         for limit in self.parse_limits():
             model.limits[limit[0]] = limit
+            dir = model.reactions.get(limit[0]).properties['equation'].direction
+            if str(dir) == 'Direction.Forward':
+                v_min = 0
+                v_max = model.default_flux_limit
+            elif str(dir) == 'Direction.Both':
+                v_min = -model.default_flux_limit
+                v_max = model.default_flux_limit
+            else:
+                logger.warning('Reaction {} has invalid direction: {}'.format(
+                        limit[0], dir))
+            if (limit[1] is not None and limit[1] < v_min) or \
+                    (limit[2] is not None and limit[2] > v_max):
+                specify_vmin = limit[1] if limit[1] is not None else \
+                    -model.default_flux_limit
+                specify_vmax = limit[2] if limit[2] is not None else \
+                    -model.default_flux_limit
+                logger.warning(
+                    "Flux limits for reaction {} override default flux "
+                    "limits set by reaction direction (current flux limits: "
+                    "[{}, {}]; default limits: [{}, {}]).".format(
+                        limit[0], specify_vmin, specify_vmax, v_min, v_max))
 
         if self.has_model_definition():
             for model_reaction in self.parse_model():
@@ -937,6 +959,7 @@ def get_limits(compound_def):
         upper = compound_def.get('upper', None)
     return lower, upper
 
+
 def parse_exchange(exchange_def, default_compartment):
     """Parse a structured exchange definition as obtained from a YAML file.
 
@@ -1080,6 +1103,7 @@ parse_medium_file = parse_exchange_file
    Use :func:`parse_exchange_file` instead.
 """
 
+
 def parse_limit(limit_def):
     """Parse a structured flux limit definition as obtained from a YAML file
 
@@ -1108,6 +1132,7 @@ def parse_limits_list(path, limits):
                 yield limit
         else:
             yield parse_limit(limit_def)
+
 
 def parse_limits_table_file(f):
     """Parse a space-separated file containing reaction flux limits
@@ -1190,6 +1215,7 @@ def parse_model_group(path, group):
     for reaction_id in parse_model_group_list(
             context, group.get('groups', [])):
         yield reaction_id
+
 
 def parse_model_group_list(path, groups):
     """Parse a structured list of model groups as obtained from a YAML file
