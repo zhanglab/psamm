@@ -528,6 +528,12 @@ def add_node_label(g, cpd_detail, rxn_detail):
                     label = '{}\n{}'.format(node.props['id'], pre_label)
                 else:
                     label = pre_label
+
+                # if all required properties are not in the compound entry,
+                # then print compound id
+                if label == '':
+                    label = node.props['id']
+
                 node.props['label'] = label
         if rxn_detail is not None:
             if node.props['type'] == 'rxn':
@@ -542,6 +548,12 @@ def add_node_label(g, cpd_detail, rxn_detail):
                             node.props['entry'][0].properties['id'], pre_label)
                     else:
                         label = pre_label
+
+                    # if all required properties are not in the reaction entry,
+                    # then print reaction id
+                    if label == '':
+                        label = node.props['id']
+
                     node.props['label'] = label
     return g
 
