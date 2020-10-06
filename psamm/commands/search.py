@@ -121,8 +121,8 @@ class SearchCommand(Command):
                 for cpd_property in compound.properties.values():
                     if isinstance(cpd_property, list):
                         for i in cpd_property:
-                            if isinstance(rxn_property, Compound):
-                                reaction_prop_list.append(i.convert_str().lower())
+                            if isinstance(cpd_property, Compound):
+                                compound_prop_list.append(i.convert_str().lower())
                             else:
                                 compound_prop_list.append(text_type(i).lower())
                     else:
