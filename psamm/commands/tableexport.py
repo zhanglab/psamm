@@ -164,6 +164,8 @@ class ExportTableCommand(Command):
     def _gene_export(self):
         gene_assoc = defaultdict(list)
 
+        model_reactions = set(self._model.model)
+
         for reaction in self._model.reactions:
             assoc = None
             if reaction.genes is None:
@@ -177,6 +179,19 @@ class ExportTableCommand(Command):
             for gene in assoc.variables:
                 gene_assoc[gene].append(reaction.id)
 
+        print('{}\t{}\t{}'.format(
+            'gene_id', 'reaction_in_model', 'reaction_not_in_model'))
+
         for gene, reaction in gene_assoc.items():
-            print('{}\t{}'.format(str(gene), (
-                '#'.join([_encode_value(value) for value in reaction]))))
+            in_model = []
+            not_in_model = []
+            for r in reaction:
+                if r in model_reactions:
+                    in_model.append(r)
+                else:
+                    not_in_model.append(r)
+            print('{}\t{}\t{}'.format(
+                str(gene), '#'.join([_encode_value(rxn) for rxn in in_model]),
+                '#'.join([_encode_value(rxn) for rxn in not_in_model])))
+            # print('{}\t{}'.format(str(gene), (
+            #     '#'.join([_encode_value(value) for value in reaction]))))
