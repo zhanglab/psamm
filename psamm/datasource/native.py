@@ -432,10 +432,10 @@ class ModelReader(object):
         for limit in self.parse_limits():
             model.limits[limit[0]] = limit
             dir = model.reactions.get(limit[0]).properties['equation'].direction
-            if str(dir) == 'Direction.Forward':
+            if str(dir) == 'Direction.Forward' or str(dir) == 'Direction.Right':
                 v_min = 0
                 v_max = model.default_flux_limit
-            elif str(dir) == 'Direction.Both':
+            elif str(dir) == 'Direction.Both'  or str(dir) == 'Direction.Bidir':
                 v_min = -model.default_flux_limit
                 v_max = model.default_flux_limit
             else:
