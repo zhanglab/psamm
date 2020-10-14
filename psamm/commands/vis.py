@@ -105,14 +105,14 @@ class VisualizationCommand(MetabolicMixin,
         group = parser.add_mutually_exclusive_group()
         group.add_argument(
             '--fba', type=argparse.FileType('rU'), default=None,
-            help='Visualize fba reaction flux')
+            help='File containing fba reaction flux')
         group.add_argument(
             '--fva', type=argparse.FileType('rU'), default=None,
-            help='Visualize fva reaction flux')
+            help='File containing fva reaction flux')
         group.add_argument(
             '--array', type=int, default=None,
-            help='determine how many isolated islands per row in final network'
-                 'image')
+            help='Fallowed by an integer, which determine how many isolated '
+                 'islands per row in final network image')
 
         super(VisualizationCommand, cls).init_parser(parser)
 
