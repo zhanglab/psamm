@@ -518,11 +518,9 @@ def add_node_label(g, cpd_detail, rxn_detail):
         if cpd_detail is not None:
             if node.props['type'] == 'cpd':
                 pre_label = '\n'.join(
-                    (str(node.props['entry'][0].properties.get(value))) for
-                    value
-                    in cpd_detail[0] if
-                    value != 'id' and value in node.props['entry'][
-                        0].properties)
+                    (node.props['entry'][0].properties.get(value)) for
+                    value in cpd_detail[0] if value != 'id' and
+                    value in node.props['entry'][0].properties)
                 if 'id' in cpd_detail[0]:
                     label = '{}\n{}'.format(node.props['id'], pre_label)
                 else:
@@ -538,7 +536,7 @@ def add_node_label(g, cpd_detail, rxn_detail):
             if node.props['type'] == 'rxn':
                 if len(node.props['entry']) == 1:
                     pre_label = '\n'.join(
-                        (str(node.props['entry'][0].properties.get(value)))
+                        (node.props['entry'][0].properties.get(value))
                         for value in rxn_detail[0] if
                         value != 'id' and value in
                         node.props['entry'][0].properties)
