@@ -111,8 +111,8 @@ class VisualizationCommand(MetabolicMixin,
             help='File containing fva reaction flux')
         group.add_argument(
             '--array', type=int, default=None,
-            help='Fallowed by an integer, which determine how many isolated '
-                 'islands per row in final network image')
+            help='Fallowed by an positive integer, which determine how '
+                 'many columns to use in final network image')
 
         super(VisualizationCommand, cls).init_parser(parser)
 
@@ -128,6 +128,13 @@ class VisualizationCommand(MetabolicMixin,
 
         vis_rxns = rxnset_for_vis(
             self._mm, self._args.subset, self._args.exclude)
+
+        if self._args.array <= 0:
+            logger.error(
+                "'--array' should be followed by a positive integer, number "
+                "'{}' is invalid. Visualization has stopped, please fix the "
+                "number first".format(self._args.array))
+            quit()
 
         if self._args.element.lower() == 'all':
             self._args.element = None
