@@ -305,6 +305,12 @@ class VisualizationCommand(MetabolicMixin,
                     os.system("ccomps -x {} |dot |gvpack -array{} |neato "
                               "-T{} -n2 -o {}".format(out, self._args.array,
                                                       format, image))
+        else:
+            if self._args.array is not None:
+                out = '{}.dot'.format(output)
+                os.system("ccomps -x {} |dot |gvpack -array{} "
+                          ">{}_new.dot".format(out, self._args.array, output))
+                os.system("mv {}_new.dot {}.dot".format(output, output))
 
 
 def rxnset_for_vis(mm, subset_file, exclude):
