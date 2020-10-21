@@ -926,3 +926,16 @@ def map_model_reactions(model1, model2, cpd_map, cpd_score, nproc=1,
             bayes_posterior(reaction_prior, reaction_name_likelihoods),
             bayes_posterior(reaction_prior, reaction_equation_likelihoods),
             bayes_posterior(reaction_prior, reaction_genes_likelihoods))
+
+
+def check_cpd_charge(compound, source):
+    if compound.charge is not None:
+        try:
+            int(compound.charge)
+            return 'TRUE'
+        except ValueError:
+            print("WARNING: Compound charge should be an integer, however, "
+                  "charge of compound {} in {} is '{}', which is invalid. Please "
+                  "remove or fix it before running modelmapping "
+                  "command.".format(compound.id, source, compound.charge))
+            return 'FALSE'
