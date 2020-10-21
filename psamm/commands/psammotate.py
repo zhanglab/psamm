@@ -62,11 +62,11 @@ class PsammotateCommand(Command):
         g.add_argument(
             '--export-model', type=str, default=None,
             help='Path to directory for full model export. Cannot be specified'
-                 'with --output option.')
+                 ' with --output option.')
         g.add_argument(
             '--output', type=str, default='homolo_reactions',
             help=('The prefix of output YAML file, '
-                  '(default: homolo_reactions). Cannot be specified with'
+                  '(default: homolo_reactions). Cannot be specified with '
                   '--export-model option.'))
         super(PsammotateCommand, cls).init_parser(parser)
 
