@@ -215,7 +215,7 @@ def model_loader(nm, ignore_na, translation_dict, suffix=None):
                 id = entry.id
                 if suffix is not None:
                     id = id + '_{}'.format(suffix)
-                print('{}\t{}\t{}\t{}'.format(
+                print(u'{}\t{}\t{}\t{}'.format(
                     id, entry.genes, 'None',
                     not ignore_na))
             elif entry.genes is not None:
@@ -236,7 +236,7 @@ def model_loader(nm, ignore_na, translation_dict, suffix=None):
                 id = entry.id
                 if suffix is not None:
                     id = id + '_{}'.format(suffix)
-                print('{}\t{}\t{}\t{}'.format(
+                print(u'{}\t{}\t{}\t{}'.format(
                     id, entry.genes, genes, e_1.value))
                 translated_genes[entry] = [genes_1, genes, e_1.value]
     return translated_genes

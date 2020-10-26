@@ -1370,7 +1370,7 @@ class ModelWriter(object):
     def __init__(self):
         self._yaml_args = {
             'default_flow_style': False,
-            'encoding': 'ascii',
+            'encoding': 'utf-8',
             'allow_unicode': True,
             'width': 79
         }
