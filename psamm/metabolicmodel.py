@@ -29,13 +29,13 @@ from .util import create_unique_id
 
 def create_exchange_id(existing_ids, compound):
     """Create unique ID for exchange of compound."""
-    return create_unique_id('EX_{}'.format(compound), existing_ids)
+    return create_unique_id(u'EX_{}'.format(compound), existing_ids)
 
 
 def create_transport_id(existing_ids, compound_1, compound_2):
     """Create unique ID for transport reaction of compounds."""
     return create_unique_id(
-        'TP_{}_{}'.format(compound_1, compound_2), existing_ids)
+        u'TP_{}_{}'.format(compound_1, compound_2), existing_ids)
 
 
 class FluxBounds(object):
@@ -133,7 +133,7 @@ class FluxBounds(object):
         return not self == other
 
     def __repr__(self):
-        return str('{}({!r}, {!r})').format(
+        return u'{}({!r}, {!r})'.format(
             self.__class__.__name__, self.lower, self.upper)
 
 
@@ -209,19 +209,19 @@ class MetabolicModel(MetabolicDatabase):
 
     def get_reaction(self, reaction_id):
         if reaction_id not in self._reaction_set:
-            raise ValueError('Reaction not in model: {}'.format(reaction_id))
+            raise ValueError(u'Reaction not in model: {}'.format(reaction_id))
         return self._database.get_reaction(reaction_id)
 
     def get_reaction_values(self, reaction_id):
         """Return stoichiometric values of reaction as a dictionary"""
         if reaction_id not in self._reaction_set:
-            raise ValueError('Unknown reaction: {}'.format(repr(reaction_id)))
+            raise ValueError(u'Unknown reaction: {}'.format(repr(reaction_id)))
         return self._database.get_reaction_values(reaction_id)
 
     def get_compound_reactions(self, compound_id):
         """Iterate over all reaction ids the includes the given compound"""
         if compound_id not in self._compound_set:
-            raise ValueError('Compound not in model: {}'.format(compound_id))
+            raise ValueError(u'Compound not in model: {}'.format(compound_id))
 
         for reaction_id in self._database.get_compound_reactions(compound_id):
             if reaction_id in self._reaction_set:
@@ -230,7 +230,7 @@ class MetabolicModel(MetabolicDatabase):
     def is_reversible(self, reaction_id):
         """Whether the given reaction is reversible"""
         if reaction_id not in self._reaction_set:
-            raise ValueError('Reaction not in model: {}'.format(reaction_id))
+            raise ValueError(u'Reaction not in model: {}'.format(reaction_id))
         return self._database.is_reversible(reaction_id)
 
     def is_exchange(self, reaction_id):
@@ -366,8 +366,8 @@ class MetabolicModel(MetabolicDatabase):
             if rxn not in exclude_list:
                 r = Reaction(Direction.Forward, reaction.left, reaction.right)
                 r2 = Reaction(Direction.Forward, reaction.right, reaction.left)
-                r_id = str('{}_forward'.format(rxn))
-                r2_id = str('{}_reverse'.format(rxn))
+                r_id = u'{}_forward'.format(rxn)
+                r2_id = u'{}_reverse'.format(rxn)
                 if reaction.direction == Direction.Forward:
                     if all_reversible is False:
                         reversible_gene_dict[rxn] = gene_dict.get(rxn)
@@ -427,8 +427,8 @@ class MetabolicModel(MetabolicDatabase):
                     lumped_rxns.append(rxn)
                     r = Reaction(Direction.Forward, reaction.left, reaction.right)
                     r2 = Reaction(Direction.Forward, reaction.right, reaction.left)
-                    r_id = str('{}_forward'.format(rxn))
-                    r2_id = str('{}_reverse'.format(rxn))
+                    r_id = u'{}_forward'.format(rxn)
+                    r2_id = u'{}_reverse'.format(rxn)
                     mm_irrev.remove_reaction(rxn)
                     mm_irrev.database.set_reaction(r_id, r)
                     mm_irrev.database.set_reaction(r2_id, r2)
@@ -449,9 +449,9 @@ class MetabolicModel(MetabolicDatabase):
                         lumped_rxns.append(subrxn)
                         subreaction = mm.get_reaction(subrxn)
                         sub_r1 = Reaction(Direction.Forward, subreaction.left, subreaction.right)
-                        sub_r1_id = '{}_forward'.format(subrxn)
+                        sub_r1_id = u'{}_forward'.format(subrxn)
                         sub_r2 = Reaction(Direction.Forward, subreaction.right, subreaction.left)
-                        sub_r2_id = '{}_reverse'.format(subrxn)
+                        sub_r2_id = u'{}_reverse'.format(subrxn)
 
                         split_reversible.append((sub_r1_id, sub_r2_id))
                         if dir == 1:
