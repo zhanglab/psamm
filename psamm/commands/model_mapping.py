@@ -294,13 +294,13 @@ class ModelMappingCommand(Command):
         # Parse and output raw mapping
         if self._args.raw:
             cpd_bayes_pred.get_raw_map().to_csv(
-                self._args.outpath + '/bayes_compounds.tsv', sep='\t')
+                self._args.outpath + '/bayes_compounds.tsv', sep='\t', encoding='utf-8')
 
         # Output best mapping
         compound_best = cpd_bayes_pred.get_best_map(
             self._args.threshold_compound)
         compound_best.to_csv(
-            self._args.outpath + '/bayes_compounds_best.tsv', sep='\t')
+            self._args.outpath + '/bayes_compounds_best.tsv', sep='\t', encoding='utf-8')
         print('It took %.2f seconds to write output...' % (time.time() - t))
         sys.stdout.flush()
 
@@ -330,13 +330,13 @@ class ModelMappingCommand(Command):
         # Parse and output raw mapping
         if self._args.raw:
             rxn_bayes_pred.get_raw_map().to_csv(
-                self._args.outpath + '/bayes_reactions.tsv', sep='\t')
+                self._args.outpath + '/bayes_reactions.tsv', sep='\t', encoding='utf-8')
 
         # Output best mapping
         reaction_best = rxn_bayes_pred.get_best_map(
             self._args.threshold_reaction)
         reaction_best.to_csv(
-            self._args.outpath + '/bayes_reactions_best.tsv', sep='\t')
+            self._args.outpath + '/bayes_reactions_best.tsv', sep='\t', encoding='utf-8')
         print('It took %.2f seconds to write output...' % (time.time() - t))
         sys.stdout.flush()
 
