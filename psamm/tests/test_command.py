@@ -634,52 +634,52 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         ])
 
     def test_run_vis(self):
-        self.run_solver_command(VisualizationCommand)
+        self.run_command(VisualizationCommand)
 
     def test_run_vis_element_all(self):
-        self.run_solver_command(VisualizationCommand, ["--element", "all"])
+        self.run_command(VisualizationCommand, ["--element", "all"])
 
     def test_run_vis_hide_edges(self):
         path = os.path.join(tempfile.mkdtemp(), 'hide_edges.csv')
         with open(path, 'w') as f:
             f.write('{}\t{}'.format('D[c]', 'E[c]'))
-        self.run_solver_command(VisualizationCommand, ["--hide-edges", path])
+        self.run_command(VisualizationCommand, ["--hide-edges", path])
 
     def test_run_vis_recolor(self):
         path = os.path.join(tempfile.mkdtemp(), 'color.csv')
         with open(path, 'w') as f:
             f.write('{}\t{}'.format('B', '#f4fc55'))
-        self.run_solver_command(VisualizationCommand, ["--color", path])
+        self.run_command(VisualizationCommand, ["--color", path])
 
     def test_run_vis_output(self):
-        self.run_solver_command(VisualizationCommand, ['--output', 'test'])
+        self.run_command(VisualizationCommand, ['--output', 'test'])
 
     def test_run_vis_compartment(self):
-        self.run_solver_command(VisualizationCommand, ['--compartment'])
+        self.run_command(VisualizationCommand, ['--compartment'])
 
     def test_run_vis_fba(self):
         path = os.path.join(tempfile.mkdtemp(), 'fba.tsv')
         with open(path, 'w') as f:
             f.write('{}\t{}'.format('rxn_1', -0.000001))
-        self.run_solver_command(VisualizationCommand, ['--fba', path])
+        self.run_command(VisualizationCommand, ['--fba', path])
 
     def test_run_vis_fba_invalid_flux(self):
         path = os.path.join(tempfile.mkdtemp(), 'fba.tsv')
         with open(path, 'w') as f:
             f.write('{}\t{}'.format('rxn_1', 'a'))
-        self.run_solver_command(VisualizationCommand, ['--fba', path])
+        self.run_command(VisualizationCommand, ['--fba', path])
 
     def test_run_vis_fva(self):
         path = os.path.join(tempfile.mkdtemp(), 'fva.tsv')
         with open(path, 'w') as f:
             f.write('{}\t{}\t{}'.format('rxn_1', -0.000001, 0.000001))
-        self.run_solver_command(VisualizationCommand, ['--fva', path])
+        self.run_command(VisualizationCommand, ['--fva', path])
 
     def test_run_vis_fva_invalid_flux(self):
         path = os.path.join(tempfile.mkdtemp(), 'fva.tsv')
         with open(path, 'w') as f:
             f.write('{}\t{}\t{}'.format('rxn_1', 'a', -0.000001))
-        self.run_solver_command(VisualizationCommand, ['--fva', path])
+        self.run_command(VisualizationCommand, ['--fva', path])
 
     def test_command_main(self):
         self.run_command(MockCommand)

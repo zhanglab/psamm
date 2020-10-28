@@ -111,8 +111,8 @@ class VisualizationCommand(MetabolicMixin,
             help='File containing fva reaction flux')
         group.add_argument(
             '--array', type=int, default=None,
-            help='Fallowed by an positive integer, which determine how '
-                 'many columns to use in final network image')
+            help='The number of columns to use in the final '
+                 'network image')
 
         super(VisualizationCommand, cls).init_parser(parser)
 
@@ -129,7 +129,7 @@ class VisualizationCommand(MetabolicMixin,
         vis_rxns = rxnset_for_vis(
             self._mm, self._args.subset, self._args.exclude)
 
-        if self._args.array <= 0:
+        if self._args.array and self._args.array <= 0:
             logger.error(
                 "'--array' should be followed by a positive integer, number "
                 "'{}' is invalid. Visualization has stopped, please fix the "
@@ -216,18 +216,17 @@ class VisualizationCommand(MetabolicMixin,
             if self._mm.is_exchange(rid) and rid != \
                     self._model.biomass_reaction:
                 exchange_rxn = self._mm.get_reaction(rid)
-                # print('test exchange:', rid, exchange_rxn)
                 for c, _ in exchange_rxn.compounds:
-                    if text_type(c) not in g.nodes_id_dict:
+                    if c not in g.nodes_id_dict:
                         g = add_ex_cpd(g, c, model_compound_entries[c.name],
                                        compound_formula, self._args.element)
-                    exchange_cpds.add(text_type(c))
+                    exchange_cpds.add(c)
                 g = add_exchange_rxns(g, rid, exchange_rxn)
 
         recolor_dict = {}
         if self._args.color is not None:
             for f in self._args.color:
-                for row in csv.reader(f, delimiter=str(u'\t')):
+                for row in csv.reader(f, delimiter=str('\t')):
                     recolor_dict[row[0]] = row[1]
         g = add_node_props(g, recolor_dict)
         g = add_node_label(g, self._args.cpd_detail, self._args.rxn_detail)
@@ -335,7 +334,7 @@ def rxnset_for_vis(mm, subset_file, exclude):
     """
     all_cpds = set()
     for cpd in mm.compounds:
-        all_cpds.add(str(cpd))
+        all_cpds.add(text_type(cpd))
     if subset_file is None:
         if len(exclude) == 0:
             final_rxn_set = set(mm.reactions)
@@ -347,14 +346,14 @@ def rxnset_for_vis(mm, subset_file, exclude):
         cpd_set = set()
         rxn_set = set()
         for line in subset_file.readlines():
-            if not line.startswith('#'):
-                value = line.strip()
+            if not convert_to_unicode(line).startswith('#'):
+                value = convert_to_unicode(line).strip()
                 if value in all_cpds:
                     cpd_set.add(value)
                 elif mm.has_reaction(value):
                     rxn_set.add(value)
                 else:
-                    raise ValueError('{} is in subset file but is not a '
+                    raise ValueError(u'{} is in subset file but is not a '
                                      'compound or reaction ID'.format(value))
 
         if all(i > 0 for i in [len(cpd_set), len(rxn_set)]):
@@ -364,7 +363,7 @@ def rxnset_for_vis(mm, subset_file, exclude):
             if len(cpd_set) > 0:
                 for rx in mm.reactions:
                     rxn = mm.get_reaction(rx)
-                    if any(str(c) in cpd_set for (c, _) in rxn.compounds):
+                    if any(text_type(c) in cpd_set for (c, _) in rxn.compounds):
                         final_rxn_set.add(rx)
             elif len(rxn_set) > 0:
                 final_rxn_set = rxn_set
@@ -396,7 +395,7 @@ def add_biomass_rxns(g, nm_bio_reaction):
         if text_type(c) in g.nodes_id_dict:
             bio_pair[biomass_rxn_id] += 1
             node_bio = graph.Node({
-                'id': '{}_{}'.format(biomass_rxn_id,
+                'id': u'{}_{}'.format(biomass_rxn_id,
                                      bio_pair[biomass_rxn_id]),
                 'entry': [nm_bio_reaction],
                 'shape': 'box',
@@ -423,7 +422,7 @@ def add_ex_cpd(g, mm_cpd, nm_cpd, compound_formula, element):
                  'type': 'cpd'}
     if element is not None:
         if mm_cpd.name not in compound_formula:
-            logger.error('Compound formulas are required for fpp or specific '
+            logger.error(u'Compound formulas are required for fpp or specific '
                          'element visualizations, but compound {} does not '
                          'have valid formula, add its formula, or try '
                          '--element all to visualize all pathways without '
@@ -535,7 +534,7 @@ def add_node_label(g, cpd_detail, rxn_detail):
                     value in cpd_detail[0] if value != 'id' and
                     value in node.props['entry'][0].properties)
                 if 'id' in cpd_detail[0]:
-                    label = '{}\n{}'.format(node.props['id'], pre_label)
+                    label = u'{}\n{}'.format(node.props['id'], pre_label)
                 else:
                     label = pre_label
 
@@ -545,19 +544,24 @@ def add_node_label(g, cpd_detail, rxn_detail):
                     label = node.props['id']
 
                 node.props['label'] = label
+
         if rxn_detail is not None:
             if node.props['type'] == 'rxn':
                 if len(node.props['entry']) == 1:
-                    pre_label = '\n'.join(
-                        (node.props['entry'][0].properties.get(value))
+                    pre_label = u'\n'.join(
+                        node.props['entry'][0].properties.get(value)
                         for value in rxn_detail[0] if
+                        value != 'equation' and
                         value != 'id' and value in
                         node.props['entry'][0].properties)
                     if 'id' in rxn_detail[0]:
-                        label = '{}\n{}'.format(
+                        label = u'{}\n{}'.format(
                             node.props['entry'][0].properties['id'], pre_label)
                     else:
                         label = pre_label
+
+                    if 'equation' in rxn_detail[0]:
+                        label += u'\n{}'.format(node.props['entry'][0].properties.get('equation'))
 
                     # if all required properties are not in the reaction entry,
                     # then print reaction id
@@ -599,8 +603,8 @@ def make_cpt_tree(boundaries, extracellular):
                        .format(etmp[0]))
     for cpt in compartments:
         for (j, k) in boundaries:
-            j = str(j)
-            k = str(k)
+            j = text_type(j)
+            k = text_type(k)
             if j == cpt:
                 children[cpt].add(k)
             elif k == cpt:

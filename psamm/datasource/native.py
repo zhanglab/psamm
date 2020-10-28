@@ -972,6 +972,8 @@ def parse_exchange(exchange_def, default_compartment):
         compartment = compound_def.get('compartment', default_compartment)
         compound = Compound(convert_to_unicode(compound_def['id']), compartment=compartment)
         reaction = compound_def.get('reaction')
+        if reaction:
+            reaction = convert_to_unicode(reaction)
         lower, upper = get_limits(compound_def)
         yield compound, reaction, lower, upper
 
