@@ -27,7 +27,7 @@ import logging
 import re
 import sys
 import json
-from collections import OrderedDict, Counter
+from collections import OrderedDict, Counter, defaultdict
 
 # Import ElementTree XML parser. The lxml etree implementation may also be
 # used with SBMLReader but has compatiblity issues with SBMLWriter.
@@ -308,7 +308,188 @@ class SBMLReactionEntry(_SBMLEntry, BaseReactionEntry):
                     elif bound.operation == 'greaterEqual':
                         self._lower_flux = bound.value
 
+            # if self._root.get('id') == 'R_2FUCLAC_FUCASEe':
+            #     entry = self._root.find(_tag('geneProductAssociation', FBC_V2))
+            #     element_and = entry.find(_tag('and', FBC_V2))
+            #     element_or = entry.find(_tag('or', FBC_V2))
+            #     element_generef = entry.find(_tag('geneProductRef', FBC_V2))
+            #     if any(i is not None for i in [element_and, element_or, element_generef]):
+            #         print('test entry no gene: ', type(entry), entry)
+            #     else:
+            #         print('all is None')
+            # if self._root.get('id') == 'R_2MMALD':
+            # if self._root.get('id') == 'R_ARABINOGALASEe':
+            # if self._root.find(_tag('geneProductAssociation', FBC_V2)) is not None:
+            entry = self._root.find(_tag('geneProductAssociation', FBC_V2))
+            element_and = entry.find(_tag('and', FBC_V2))
+            element_or = entry.find(_tag('or', FBC_V2))
+            element_generef = entry.find(_tag('geneProductRef', FBC_V2))
+            if any(i is not None for i in [element_and, element_or, element_generef]):
+            # if self._root.get('id') == 'R_2FUCLAC_FUCASEe':
+                # print('Test Reaction ID: ', self._root.get('id'))
+                gene_dict = defaultdict(list)
+                if element_and is not None:
+                    gene_dict[(1, 'and')] = []
+                elif element_or is not None:
+                    gene_dict[(1, 'or')] = []
+                raw_gene_dict = self._parse_genes_l3(
+                    self._root.get('id'), self._root.find(
+                        _tag('geneProductAssociation', FBC_V2)), gene_dict, None, 0)
+                # gene_assoc = self._root.find(_tag('geneProductAssociation', FBC_V2))
+                # print('test gene assoc type: ', type(gene_assoc))
+                # l1 = gene_assoc.find(_tag('and', FBC_V2))
+                # print('test l1 type: ', type(l1))
+                # l2 = l1.find(_tag('or', FBC_V2))
+                # print('test l2 type: ', type(l2))
+                # l3 = l2.find(_tag('geneProductRef', FBC_V2))
+                # print('test l3 type: ', type(l3))
+                # for i in l2.findall(_tag('geneProductRef', FBC_V2)):
+                #     print('test gene: ', i.get(_tag('geneProduct', FBC_V2)))
+                # gene_test = '(BT_0360 or BT_0367 or BT_0368 or BT_0369) and (BT_4152 or BT_4667 or BT_4668) and (BT_4153 or BT_4170) and (BT_4175 or BT_4176) and ((BT_0361 and BT_0362) or (BT_4164 and BT_4165) or (BT_0363 and BT_0364) or (BT_4670 and BT_4671) or (BT_3680 and BT_3681))'
+                # gene_expression = Expression(gene_test)
+                # print(' |--> test gene expression: ', type(gene_expression), gene_expression)
+                #
+                # print(' |--> test gene expression root: ', gene_expression.root)
+                # print(' |--> test gene expression variable: ', gene_expression.variables, len(gene_expression.variables))
+                # print('      |--> test final gene_dict: ', len(raw_gene_dict), raw_gene_dict)
+                gene_dict = OrderedDict(sorted(raw_gene_dict.items(), key=lambda k: k[0]))
+                # print('test new gene_dict: ', gene_dict)
+                if len(gene_dict) == 1:
+                    (level, logical), gene_list = gene_dict.popitem()
+                    # print('logical: ', logical)
+                    if logical is not None:
+                        genes_str = (' {} '.format(logical)).join(gene_list)
+                    else:
+                        if len(gene_list) == 1:
+                            genes_str = gene_list[0]
+                        else:
+                            logger.error('In SBML input file, reaction {} has '
+                                         'invalid gene association'.format(
+                                self._root.get('id')))
+                            quit()
+                else:
+                    while len(gene_dict) > 1:
+
+                        # get last item in gene_dict
+                        (level_1, logical_1), gene_list_1 = gene_dict.popitem()
+
+                        # get second last item in gene_dict
+                        (level_2, logical_2), gene_list_2 = gene_dict.popitem()
+
+                        # combine last two element
+                        if logical_2 == 'or':
+                            if logical_1 == 'and':
+                                combine = '({})'.format(
+                                    ' {} '.format(logical_2).join(gene_list_1))
+                            elif logical_1 == 'or':
+                            # combine = '({})'.format(' {} '.format(logical_2).join(gene_list_1))
+                                combine = ' {} '.format(logical_2).join(gene_list_1)
+                        elif logical_2 == 'and':
+                            if logical_1 == 'or':
+                                combine = '({})'.format(
+                                    ' {} '.format(logical_2).join(gene_list_1))
+                            elif logical_1 == 'and':
+                                combine = ' {} '.format(logical_2).join(gene_list_1)
+                        gene_list_2.append(combine)
+
+                        # add combined element to the gene_dict
+                        gene_dict[(level_2, logical_2)] = gene_list_2
+                        # print('test gene list 2 after: ', gene_list_2)
+                        # print('test gene dict after: ', gene_dict)
+
+                    # print gene string when gene_dict only have one element
+                    (level, logical), gene_list = gene_dict.popitem()
+                    genes_str = ' {} '.format(logical).join(gene_list)
+                    # print('test self._genes:', type(self._genes), self._genes)
+
+                # print('      |--> test final gene_str: ', type(genes_str), genes_str)
+                print('{}\t{}'.format(self._root.get('id'), genes_str))
+                # gene = Expression('a or b or c')
+                # print('      |--> test gene expression None: ', gene.root, gene.variables)
+
         self._filemark = filemark
+
+    def _parse_genes_l3(self, r_id, parent, gene_list, logical, level):
+        gene_string = "None"
+        # gene_test = '(BT_0360 or BT_0367 or BT_0368 or BT_0369) and (BT_4152 or BT_4667 or BT_4668) and (BT_4153 or BT_4170) and (BT_4175 or BT_4176) and ((BT_0361 and BT_0362) or (BT_4164 and BT_4165) or (BT_0363 and BT_0364) or (BT_4670 and BT_4671) or (BT_3680 and BT_3681))'
+        # gene_expression = Expression(gene_test)
+        # print(' |--> test gene expression: ', gene_expression)
+        # print(' |--> test gene expression root: ', gene_expression)
+        # print(' |--> test gene assoc: ', type(gene_assoc), gene_assoc)
+        # loop = True
+        # gene_list = []
+        if parent.get(_tag('geneProduct', FBC_V2)) is not None:
+            gene = parent.get(_tag('geneProduct', FBC_V2))
+            gene_list[(level, logical)].append(gene)
+        elif parent.find(_tag('and', FBC_V2)) is not None or parent.find(_tag('or', FBC_V2)) is not None:
+            for entry in parent.findall(_tag('geneProductRef', FBC_V2)):
+                # print('test gene product ref: ', entry, level)
+                gene_list = self._parse_genes_l3(r_id, entry, gene_list, logical, level)
+            level = level + 1
+            for entry in parent.findall(_tag('and', FBC_V2)):
+                # print('test and: ', entry, level)
+                gene_list = self._parse_genes_l3(r_id, entry, gene_list, 'and', level)
+            for entry in parent.findall(_tag('or', FBC_V2)):
+                gene_list = self._parse_genes_l3(r_id, entry, gene_list, 'or', level)
+
+
+            # parent = parent.find(_tag('and', FBC_V2))
+            # print(' |--> true-test and: ', parent.find(_tag('and', FBC_V2)),
+            #       parent.find(_tag('or', FBC_V2)))
+            # loop=True
+        # elif parent.find(_tag('or', FBC_V2)) is not None:
+        #     # print(' |--> true-test or: ', parent.find(_tag('and', FBC_V2)),
+        #     #       parent.find(_tag('or', FBC_V2)))
+        #     for entry in parent.findall(_tag('geneProductRef', FBC_V2)):
+        #         print('test gene product ref: ', entry, level)
+        #         gene_list = self._parse_genes_l3(r_id, entry, gene_list, logical, level)
+        #     level = level + 1
+        #     for entry in parent.findall(_tag('or', FBC_V2)):
+        #         gene_list = self._parse_genes_l3(r_id, entry, gene_list, 'or', level)
+        #     for entry in parent.findall(_tag('and', FBC_V2)):
+        #         gene_list = self._parse_genes_l3(r_id, entry, gene_list, 'and', level)
+            # parent = parent.find(_tag('and', FBC_V2))
+            # loop = True
+        elif parent.find(_tag('geneProductRef', FBC_V2)) is not None:
+            gene_segment = []
+            for gene_entry in parent.findall(_tag('geneProductRef', FBC_V2)):
+                gene = gene_entry.get(_tag('geneProduct', FBC_V2))
+                gene_segment.append(gene)
+                # print('test gene_segment:', gene_segment)
+            if logical == 'and':
+                if level != 1 and len(gene_segment) > 1:
+                    gene_str = '({})'.format(' and '.join(gene_segment))
+                else:
+                    gene_str = ' and '.join(gene_segment)
+            elif logical == 'or':
+                if level != 1 and len(gene_segment) > 1:
+                    gene_str = '({})'.format(' or '.join(gene_segment))
+                else:
+                    gene_str = ' or '.join(gene_segment)
+            elif logical is None:
+                gene_str = ','.join(gene_segment)
+            else:
+                print('In SBML input file, reaction {} has invalid gene '
+                      'association'.format(r_id))
+            gene_list[(level, logical)].append((gene_str))
+                # print('      |--> test gene: ', gene)
+            # loop = False
+        # print('      |--> real genes (false-test and/or): ', gene_list)
+
+        return gene_list
+
+    # def _parse_genes_product(self, parent, gene_list):
+    #     if parent.find(_tag('and', FBC_V2)) is not None:
+    #         parent = parent.find(_tag('and', FBC_V2))
+    #         return parent
+    #     elif parent.find(_tag('or', FBC_V2)) is not None:
+    #         parent = parent.find(_tag('or', FBC_V2))
+    #         return parent
+    #     elif parent.find(_tag('geneProductRef', FBC_V2)) is not None:
+    #         for gene_entry in parent.findall(_tag('geneProductRef', FBC_V2)):
+    #             gene = gene_entry.get(_tag('geneProduct', FBC_V2))
+    #             gene_list.append(gene)
+    #         return gene_list
 
     def _parse_species_references(self, name):
         """Yield species id and parsed value for a speciesReference list"""
@@ -945,15 +1126,24 @@ class SBMLWriter(object):
 
     def _add_gene_associations(self, r_id, r_genes, gene_ids, r_tag):
         """Adds all the different kinds of genes into a list."""
+        print('---> test inputs of _add_gene_associations():')
+        print('        test r_id: ', r_id)
+        print('        test r_genes: ', r_genes)
+        print('        test gene_ids at beginning: ', gene_ids)
+        print('        test r_tag: ', r_tag)
         genes = ET.SubElement(
             r_tag, _tag('geneProductAssociation', FBC_V2))
+        print('        test genes (using r_tag): ', type(genes), genes)
         if isinstance(r_genes, list):
             e = Expression(And(*(Variable(i) for i in r_genes)))
         else:
             e = Expression(r_genes)
+        print('        test gene expression: ', type(e), e, e.root)
         gene_stack = [(e.root, genes)]
+        print('        test initial gene_stack: ', gene_stack)
         while len(gene_stack) > 0:
             current, parent = gene_stack.pop()
+            print('        test current and parent: ', type(current), current, type(parent), parent)
             if isinstance(current, Or):
                 gene_tag = ET.SubElement(parent, _tag('or', FBC_V2))
             elif isinstance(current, And):
@@ -966,9 +1156,14 @@ class SBMLWriter(object):
                         self._make_safe_id(current.symbol), gene_ids)
                     gene_ids[id] = current.symbol
                     gene_tag.set(_tag('geneProduct', FBC_V2), id)
+            print('        current: ', type(current), '\t', current)
+            print('        gene_tag: ', type(gene_tag), '\t', gene_tag)
             if isinstance(current, (Or, And)):
                 for item in current:
+                    print('        test item in current: ', item)
                     gene_stack.append((item, gene_tag))
+                print('        test gene_stack after for loop: ', gene_stack )
+        print('        test gene_ids at beginning: ', gene_ids)
 
     def _add_fbc_objective(self, model_tag, obj_id):
         """Adds the objective(s) to the sbml document."""
