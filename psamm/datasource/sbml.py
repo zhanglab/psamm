@@ -315,6 +315,7 @@ class SBMLReactionEntry(_SBMLEntry, BaseReactionEntry):
             element_generef = entry.find(_tag('geneProductRef', FBC_V2))
             if any(i is not None for i in [element_and, element_or,
                                            element_generef]):
+            # if self._root.get('id') == 'R_FE2abc':
                 gene_dict = defaultdict(list)
                 if element_and is not None:
                     gene_dict[(1, 'and')] = []
@@ -324,6 +325,7 @@ class SBMLReactionEntry(_SBMLEntry, BaseReactionEntry):
                     self._root.get('id'), self._root.find(
                         _tag('geneProductAssociation', FBC_V2)), gene_dict,
                     None, 0)
+                # print('test raw gene_dict: ', raw_gene_dict)
                 gene_dict = OrderedDict(sorted(raw_gene_dict.items(),
                                                key=lambda k: k[0]))
                 if len(gene_dict) == 1:
@@ -340,7 +342,6 @@ class SBMLReactionEntry(_SBMLEntry, BaseReactionEntry):
                             quit()
                 else:
                     while len(gene_dict) > 1:
-
                         # get last item in gene_dict
                         (level_1, logical_1), gene_list_1 = gene_dict.popitem()
 
@@ -348,20 +349,10 @@ class SBMLReactionEntry(_SBMLEntry, BaseReactionEntry):
                         (level_2, logical_2), gene_list_2 = gene_dict.popitem()
 
                         # combine values of last two items
-                        if logical_2 == 'or':
-                            if logical_1 == 'and':
-                                combine = '({})'.format(
-                                    ' {} '.format(logical_2).join(gene_list_1))
-                            elif logical_1 == 'or':
-                                combine = ' {} '.format(logical_2).join(
-                                    gene_list_1)
-                        elif logical_2 == 'and':
-                            if logical_1 == 'or':
-                                combine = '({})'.format(
-                                    ' {} '.format(logical_2).join(gene_list_1))
-                            elif logical_1 == 'and':
-                                combine = ' {} '.format(logical_2).join(
-                                    gene_list_1)
+                        if len(gene_list_2) == 0 or len(gene_list_1) == 1:
+                            combine = ' {} '.format(logical_2).join(gene_list_1)
+                        else:
+                            combine = '({})'.format(' {} '.format(logical_2).join(gene_list_1))
                         gene_list_2.append(combine)
 
                         # add combined element to the gene_dict
@@ -415,7 +406,7 @@ class SBMLReactionEntry(_SBMLEntry, BaseReactionEntry):
             else:
                 print('In SBML input file, reaction {} has invalid gene '
                       'association'.format(r_id))
-            gene_list[(level, logical)].append((gene_str))
+            gene_list[(level, logical)].append(gene_str)
 
         return gene_list
 
