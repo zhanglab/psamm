@@ -27,7 +27,7 @@ import logging
 import re
 import sys
 import json
-from collections import OrderedDict, Counter, defaultdict
+from collections import OrderedDict, Counter
 
 # Import ElementTree XML parser. The lxml etree implementation may also be
 # used with SBMLReader but has compatiblity issues with SBMLWriter.
@@ -308,107 +308,7 @@ class SBMLReactionEntry(_SBMLEntry, BaseReactionEntry):
                     elif bound.operation == 'greaterEqual':
                         self._lower_flux = bound.value
 
-            self._genes = None
-            entry = self._root.find(_tag('geneProductAssociation', FBC_V2))
-            element_and = entry.find(_tag('and', FBC_V2))
-            element_or = entry.find(_tag('or', FBC_V2))
-            element_generef = entry.find(_tag('geneProductRef', FBC_V2))
-            if any(i is not None for i in [element_and, element_or,
-                                           element_generef]):
-            # if self._root.get('id') == 'R_FE2abc':
-                gene_dict = defaultdict(list)
-                if element_and is not None:
-                    gene_dict[(1, 'and')] = []
-                elif element_or is not None:
-                    gene_dict[(1, 'or')] = []
-                raw_gene_dict = self._parse_genes_l3(
-                    self._root.get('id'), self._root.find(
-                        _tag('geneProductAssociation', FBC_V2)), gene_dict,
-                    None, 0)
-                # print('test raw gene_dict: ', raw_gene_dict)
-                gene_dict = OrderedDict(sorted(raw_gene_dict.items(),
-                                               key=lambda k: k[0]))
-                if len(gene_dict) == 1:
-                    (level, logical), gene_list = gene_dict.popitem()
-                    if logical is not None:
-                        genes_str = (' {} '.format(logical)).join(gene_list)
-                    else:
-                        if len(gene_list) == 1:
-                            genes_str = gene_list[0]
-                        else:
-                            logger.error('In SBML input file, reaction {} has '
-                                         'invalid gene association'.format(
-                                self._root.get('id')))
-                            quit()
-                else:
-                    while len(gene_dict) > 1:
-                        # get last item in gene_dict
-                        (level_1, logical_1), gene_list_1 = gene_dict.popitem()
-
-                        # get second last item in gene_dict
-                        (level_2, logical_2), gene_list_2 = gene_dict.popitem()
-
-                        # combine values of last two items
-                        if len(gene_list_2) == 0 or len(gene_list_1) == 1:
-                            combine = ' {} '.format(logical_2).join(gene_list_1)
-                        else:
-                            combine = '({})'.format(' {} '.format(logical_2).join(gene_list_1))
-                        gene_list_2.append(combine)
-
-                        # add combined element to the gene_dict
-                        gene_dict[(level_2, logical_2)] = gene_list_2
-
-                    # print gene string when gene_dict only have one element
-                    (level, logical), gene_list = gene_dict.popitem()
-                    genes_str = ' {} '.format(logical).join(gene_list)
-
-                # print('{}\t{}'.format(self._root.get('id'), genes_str))
-                self._genes = genes_str
         self._filemark = filemark
-
-    def _parse_genes_l3(self, r_id, parent, gene_list, logical, level):
-
-        if parent.get(_tag('geneProduct', FBC_V2)) is not None:
-            gene = parent.get(_tag('geneProduct', FBC_V2))
-            gene_list[(level, logical)].append(gene)
-        elif parent.find(_tag('and', FBC_V2)) is not None or parent.find(
-                _tag('or', FBC_V2)) is not None:
-            for entry in parent.findall(_tag('geneProductRef', FBC_V2)):
-                # print('test gene product ref: ', entry, level)
-                gene_list = self._parse_genes_l3(r_id, entry, gene_list,
-                                                 logical, level)
-            level = level + 1
-            for entry in parent.findall(_tag('and', FBC_V2)):
-                # print('test and: ', entry, level)
-                gene_list = self._parse_genes_l3(r_id, entry, gene_list,
-                                                 'and', level)
-            for entry in parent.findall(_tag('or', FBC_V2)):
-                gene_list = self._parse_genes_l3(r_id, entry, gene_list,
-                                                 'or', level)
-        elif parent.find(_tag('geneProductRef', FBC_V2)) is not None:
-            gene_segment = []
-            for gene_entry in parent.findall(_tag('geneProductRef', FBC_V2)):
-                gene = gene_entry.get(_tag('geneProduct', FBC_V2))
-                gene_segment.append(gene)
-                # print('test gene_segment:', gene_segment)
-            if logical == 'and':
-                if level != 1 and len(gene_segment) > 1:
-                    gene_str = '({})'.format(' and '.join(gene_segment))
-                else:
-                    gene_str = ' and '.join(gene_segment)
-            elif logical == 'or':
-                if level != 1 and len(gene_segment) > 1:
-                    gene_str = '({})'.format(' or '.join(gene_segment))
-                else:
-                    gene_str = ' or '.join(gene_segment)
-            elif logical is None:
-                gene_str = ','.join(gene_segment)
-            else:
-                print('In SBML input file, reaction {} has invalid gene '
-                      'association'.format(r_id))
-            gene_list[(level, logical)].append(gene_str)
-
-        return gene_list
 
     def _parse_species_references(self, name):
         """Yield species id and parsed value for a speciesReference list"""
@@ -481,11 +381,6 @@ class SBMLReactionEntry(_SBMLEntry, BaseReactionEntry):
         return self._equation
 
     @property
-    def genes(self):
-        """Reaction genes is a string"""
-        return self._genes
-
-    @property
     def kinetic_law_reaction_parameters(self):
         """Iterator over the values of kinetic law reaction parameters"""
 
@@ -512,8 +407,6 @@ class SBMLReactionEntry(_SBMLEntry, BaseReactionEntry):
             properties['lower_flux'] = self._lower_flux
         if self._upper_flux is not None:
             properties['upper_flux'] = self._upper_flux
-        if self._genes is not None:
-            properties['genes'] = self._genes
 
         return properties
 

@@ -443,9 +443,7 @@ def count_genes(model):
         if isinstance(reaction.genes, boolean.Expression):
             genes.update(v.symbol for v in reaction.genes.variables)
         else:
-            gene_exp = boolean.Expression(reaction.genes)
-            genes.update(v.symbol for v in gene_exp.variables)
-            # genes.update(reaction.genes)
+            genes.update(reaction.genes)
 
     return len(genes)
 
