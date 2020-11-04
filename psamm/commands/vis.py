@@ -102,6 +102,10 @@ class VisualizationCommand(MetabolicMixin,
             default=('None', 'None'), nargs=2, type=float,
             help='Set the width and height of the graph image. '
                  '(width height)(inches)')
+        parser.add_argument(
+            '--array', type=int, default=None,
+            help='The number of columns to use in the final '
+                 'network image')
         group = parser.add_mutually_exclusive_group()
         group.add_argument(
             '--fba', type=argparse.FileType('rU'), default=None,
@@ -109,10 +113,6 @@ class VisualizationCommand(MetabolicMixin,
         group.add_argument(
             '--fva', type=argparse.FileType('rU'), default=None,
             help='File containing fva reaction flux')
-        group.add_argument(
-            '--array', type=int, default=None,
-            help='The number of columns to use in the final '
-                 'network image')
 
         super(VisualizationCommand, cls).init_parser(parser)
 
@@ -221,7 +221,8 @@ class VisualizationCommand(MetabolicMixin,
                         g = add_ex_cpd(g, c, model_compound_entries[c.name],
                                        compound_formula, self._args.element)
                     exchange_cpds.add(c)
-                g = add_exchange_rxns(g, rid, exchange_rxn)
+                g = add_exchange_rxns(
+                    g, rid, exchange_rxn, style_flux_dict)
 
         recolor_dict = {}
         if self._args.color is not None:
@@ -437,42 +438,6 @@ def add_ex_cpd(g, mm_cpd, nm_cpd, compound_formula, element):
     return g
 
 
-def add_exchange_rxns(g, rxn_id, reaction):
-    """ Add exchange reaction nodes and edges to graph object.
-
-    This function is used to add nodes and edges of exchange reactions to
-    the graph object. It will return an updated graph object that contains
-    nodes representing exchange reactions.
-
-    Args:
-        g: A graph object that contains a set of nodes and some edges.
-        rxn_id: Exchange reaction id,
-        reaction: Exchange reaction object(metabolic model reaction),
-            class 'psamm.reaction.Reaction'.
-    """
-    for c, _ in reaction.compounds:
-        if text_type(c) in g.nodes_id_dict:
-            node_ex = graph.Node({
-                'id': text_type(rxn_id),
-                'entry': [reaction],
-                'shape': 'box',
-                'style': 'filled',
-                'label': rxn_id,
-                'type': 'Ex_rxn',
-                'fillcolor': ACTIVE_COLOR,
-                'compartment': c.compartment})
-            g.add_node(node_ex)
-
-            direction = graph.dir_value(reaction.direction)
-            for c1, _ in reaction.left:
-                g.add_edge(graph.Edge(
-                    g.get_node(text_type(c1)), node_ex, {'dir': direction}))
-            for c2, _ in reaction.right:
-                g.add_edge(graph.Edge(
-                    node_ex, g.get_node(text_type(c2)), {'dir': direction}))
-    return g
-
-
 def add_node_props(g, recolor_dict):
     """ Update node color in Graph object based on a mapping dictionary
 
@@ -639,3 +604,51 @@ def get_cpt_boundaries(model):
                 cpd_cpt = list(cpd_cpt)
                 boundaries.add(tuple(sorted((cpd_cpt[0], cpd_cpt[1]))))
     return boundaries, extracellular
+
+
+def add_exchange_rxns(g, rxn_id, reaction, style_flux_dict):
+    """ Add exchange reaction nodes and edges to graph object.
+
+    This function is used to add nodes and edges of exchange reactions to
+    the graph object. It will return an updated graph object that contains
+    nodes representing exchange reactions.
+
+    Args:
+        g: A graph object that contains a set of nodes and some edges.
+        rxn_id: Exchange reaction id,
+        reaction: Exchange reaction object(metabolic model reaction),
+            class 'psamm.reaction.Reaction'.
+        style_flux_dict: dictionary of reaction ID maps to edge style and
+            edge width.
+        analysis: "None" type or a string indicates if FBA or FVA file is
+            given in command line.
+    """
+    direction = graph.dir_value(reaction.direction)
+    for c, _ in reaction.compounds:
+        if text_type(c) in g.nodes_id_dict:
+            node_ex = graph.Node({
+                'id': text_type(rxn_id),
+                'entry': [reaction],
+                'shape': 'box',
+                'style': 'filled',
+                'label': rxn_id,
+                'type': 'Ex_rxn',
+                'fillcolor': ACTIVE_COLOR,
+                'compartment': c.compartment})
+            g.add_node(node_ex)
+
+            for c1, _ in reaction.left:
+                g.add_edge(graph.Edge(
+                    g.get_node(text_type(c1)), node_ex, {
+                        'dir': direction,
+                        'style': style_flux_dict[rxn_id][0],
+                        'penwidth': style_flux_dict[rxn_id][1]
+                    }))
+            for c2, _ in reaction.right:
+                g.add_edge(graph.Edge(
+                    node_ex, g.get_node(text_type(c2)), {
+                        'dir': direction,
+                        'style': style_flux_dict[rxn_id][0],
+                        'penwidth': style_flux_dict[rxn_id][1]
+                    }))
+    return g

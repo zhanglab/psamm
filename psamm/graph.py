@@ -31,6 +31,7 @@ import logging
 from .formula import Formula, Atom, ParseError
 from .reaction import Direction, Reaction
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -439,6 +440,10 @@ def make_network_dict(nm, mm, subset=None, method='fpp', element=None,
         element: Symbol of chemical atom, such as 'C' ('C' indicates carbon).
         excluded_reactions: a list that contains reactions excluded from
             visualization.
+        reaction_dict: dictionary of FBA or FVA results. By default it is an
+            empty dictionary.
+        analysis: "None" type or a string indicates if FBA or FVA file is
+            given in command line.
     """
     compound_formula = get_compound_dict(nm)
     if not compound_formula and (method == 'fpp' or element):
@@ -449,28 +454,29 @@ def make_network_dict(nm, mm, subset=None, method='fpp', element=None,
         exit(1)
 
     if subset is not None:
-        testing_list = []
+        testing_list_raw = []
         for rxn in mm.reactions:
-            if rxn in nm.reactions:
+            if rxn in nm.reactions or mm.is_exchange(rxn):
                 if rxn in subset:
                     if rxn not in excluded_reactions:
-                        testing_list.append(rxn)
+                        testing_list_raw.append(rxn)
                     else:
                         logger.warning(
                             'Reaction {} is in the subset and exclude file. '
                             'Reaction will be excluded.'.format(rxn))
     else:
-        testing_list = [rxn for rxn in mm.reactions if
-                        rxn in nm.reactions and rxn
+        testing_list_raw = [rxn for rxn in mm.reactions if (
+                rxn in nm.reactions or mm.is_exchange(rxn)) and rxn
                         not in excluded_reactions]
 
     reaction_data = {}
     style_flux_dict = {}
 
-    for rxn in testing_list:
+    for rxn in testing_list_raw:
         flux = 0
         style = 'solid' if analysis is None else 'dotted'
-        direction = nm.reactions[rxn].equation.direction
+        # direction = nm.reactions[rxn].equation.direction
+        direction = mm.get_reaction(rxn).direction
         if rxn in reaction_dict:
             style = 'solid'
             reaction = mm.get_reaction(rxn)
@@ -497,13 +503,17 @@ def make_network_dict(nm, mm, subset=None, method='fpp', element=None,
             mm.remove_reaction(rxn)
             mm.database.set_reaction(r_id, r)
             mm.add_reaction(r_id)
-            nm.reactions[rxn].equation = r
-        reaction_data[rxn] = (nm.reactions[rxn], direction)
+            if rxn in nm.reactions:
+                nm.reactions[rxn].equation = r
+        if rxn in nm.reactions:
+            reaction_data[rxn] = (nm.reactions[rxn], direction)
         style_flux_dict[rxn] = (style, abs(flux))
 
     flux_list = sorted([flux for style, flux in style_flux_dict.values()])
     median = 1
     flux_list = list(filter(lambda x: x != 0, flux_list))
+
+    testing_list = [rxn for rxn in testing_list_raw if not mm.is_exchange(rxn)]
 
     if flux_list:
         mid = len(flux_list) // 2
@@ -824,6 +834,10 @@ def make_bipartite_graph_object(cpairs_dict, new_id_mapping, method,
                 By default split = False.
             args_combine: Command line argument, an
                 integer(could be 0, 1 or 2).
+            new_style_flux_dict: A dictsionary of reaction is maps to edge
+                style and edge width.
+            analysis: "None" type or a string indicates if FBA or FVA file is
+                given in command line.
         """
         edge_list = []
         for (c1, c2), value in iteritems(cpairs_dict):
@@ -922,3 +936,4 @@ def dir_value(direction):
         return 'back'
     else:
         return 'both'
+
