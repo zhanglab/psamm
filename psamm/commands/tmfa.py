@@ -810,7 +810,6 @@ def add_reaction_constraints(
         hamilton: True or False for using Hamilton TMFA method.
 
     """
-    print('lumps', lump_rxn_list)
     dgf_scaling = {}
     if scaled_compounds is not None:
         scaled_compounds.seek(0)
