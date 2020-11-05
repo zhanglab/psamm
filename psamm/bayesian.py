@@ -143,9 +143,9 @@ class MappingModel(object):
                             'in compound list before running modelmapping'
                         ).format(compound.name, reaction.id))
                         consistent = False
-        if len(undefined_cpds) != 0:
-            quit()
         return consistent
+
+
 
 
 class BayesianCompoundPredictor(object):
