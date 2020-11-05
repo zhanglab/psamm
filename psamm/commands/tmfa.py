@@ -313,14 +313,19 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                     v(self._get_objective()) == max_biomass)
                 logger.info('Set biomass based on maxbiomass to {}'.format(
                     max_biomass))
-
+            split_reversible_list = []
+            for (f,r) in split_reversible:
+                split_reversible_list.append(f)
+                split_reversible_list.append(r)
             if self._args.single_solution is not None:
                 print_fba(self._args.single_solution, prob,
                           self._get_objective(), v, zi, dgri, xij,
-                          mm_irreversible, cp_list, excluded_compounds)
+                          mm_irreversible, cp_list, excluded_compounds,
+                          split_reversible_list)
             else:
                 print_fva(prob, mm_irreversible, cp_list, exclude_unknown_list,
-                          v, dgri, zi, xij, excluded_compounds)
+                          v, dgri, zi, xij, excluded_compounds,
+                          split_reversible_list)
         quit()
 
 
@@ -394,7 +399,7 @@ def get_var_bound(prob, var, objective_sense):
 
 
 def print_fva(prob, mm_irreversible, cp_list, exclude_unknown_list,
-              _v, _dgri, _zi, _xij, excluded_compounds):
+              _v, _dgri, _zi, _xij, excluded_compounds, split_reversible_list):
     """Prints FVA like result from TMFA problem.
 
     This function will take a TMFA problem along with the associated
@@ -412,6 +417,7 @@ def print_fva(prob, mm_irreversible, cp_list, exclude_unknown_list,
         _zi: variables namespace for indicator variables
         _xij: variable namespace for concentrations
         excluded_compounds: list of compounds that are not constrained
+        split_reversible_list: list of all split reactions
 
     """
     for step, reaction in enumerate(sorted(mm_irreversible.reactions)):
@@ -422,10 +428,25 @@ def print_fva(prob, mm_irreversible, cp_list, exclude_unknown_list,
                                  lp.ObjectiveSense.Maximize)
         print('Flux\t{}\t{}\t{}'.format(reaction, min_flux, max_flux))
         if reaction not in exclude_unknown_list:
-            min_dgr = get_var_bound(prob, _dgri(reaction),
-                                    lp.ObjectiveSense.Minimize)
-            max_dgr = get_var_bound(prob, _dgri(reaction),
-                                    lp.ObjectiveSense.Maximize)
+            if reaction in split_reversible_list:
+                if '_reverse' in reaction:
+                    rxn_f = reaction
+                    rxn_f = rxn_f.replace('_reverse', '')
+                    rxn_f += '_forward'
+                    max_dgr = -1*get_var_bound(prob, _dgri(rxn_f),
+                                            lp.ObjectiveSense.Minimize)
+                    min_dgr = -1*get_var_bound(prob, _dgri(rxn_f),
+                                            lp.ObjectiveSense.Maximize)
+                else:
+                    min_dgr = get_var_bound(prob, _dgri(reaction),
+                                            lp.ObjectiveSense.Minimize)
+                    max_dgr = get_var_bound(prob, _dgri(reaction),
+                                            lp.ObjectiveSense.Maximize)
+            else:
+                min_dgr = get_var_bound(prob, _dgri(reaction),
+                                        lp.ObjectiveSense.Minimize)
+                max_dgr = get_var_bound(prob, _dgri(reaction),
+                                        lp.ObjectiveSense.Maximize)
             min_zi = get_var_bound(prob, _zi(reaction),
                                    lp.ObjectiveSense.Minimize)
             max_zi = get_var_bound(prob, _zi(reaction),
@@ -447,7 +468,7 @@ def print_fva(prob, mm_irreversible, cp_list, exclude_unknown_list,
 
 
 def print_fba(simulation, prob, objective, _v, _zi, _dgri, _xij, mm,
-              cp_list, excluded_compounds):
+              cp_list, excluded_compounds, split_reversible_list):
     """Prints FBA like result from TMFA problem.
 
     This function will take a TMFA problem along with the associated
@@ -469,6 +490,7 @@ def print_fba(simulation, prob, objective, _v, _zi, _dgri, _xij, mm,
         _zi: variables namespace for indicator variables
         _xij: variable namespace for concentrations
         excluded_compounds: list of compounds that are not constrained
+        split_reversible_list: list of all split reactions
     """
     prob.set_objective(_v(objective))
     result = prob.solve_unchecked(lp.ObjectiveSense.Maximize)
@@ -478,7 +500,19 @@ def print_fba(simulation, prob, objective, _v, _zi, _dgri, _xij, mm,
     if simulation == 'fba':
         for rxn in mm.reactions:
             print('Flux\t{}\t{}'.format(rxn, result.get_value(_v(rxn))))
-            print('DGR\t{}\t{}'.format(rxn, result.get_value(_dgri(rxn))))
+            if rxn in split_reversible_list:
+                if '_reverse' in rxn:
+                    rxn_f = rxn
+                    rxn_f = rxn_f.replace('_reverse', '')
+                    rxn_f += '_forward'
+                    print('DGR\t{}\t{}'.format(rxn,
+                        -1*result.get_value(_dgri(rxn_f))))
+                else:
+                    print('DGR\t{}\t{}'.format(rxn,
+                        result.get_value(_dgri(rxn))))
+            else:
+                print('DGR\t{}\t{}'.format(rxn,
+                    result.get_value(_dgri(rxn))))
             print('Zi\t{}\t{}'.format(rxn, result.get_value(_zi(rxn))))
         for cp in cp_list:
             if cp not in excluded_compounds:
@@ -499,7 +533,19 @@ def print_fba(simulation, prob, objective, _v, _zi, _dgri, _xij, mm,
             quit()
         for rxn in mm.reactions:
             print('Flux\t{}\t{}'.format(rxn, result.get_value(_v(rxn))))
-            print('DGR\t{}\t{}'.format(rxn, result.get_value(_dgri(rxn))))
+            if rxn in split_reversible_list:
+                if '_reverse' in rxn:
+                    rxn_f = rxn
+                    rxn_f = rxn_f.replace('_reverse', '')
+                    rxn_f += '_forward'
+                    print('DGR\t{}\t{}'.format(rxn,
+                        -1*result.get_value(_dgri(rxn_f))))
+                else:
+                    print('DGR\t{}\t{}'.format(rxn,
+                        result.get_value(_dgri(rxn))))
+            else:
+                print('DGR\t{}\t{}'.format(rxn,
+                    result.get_value(_dgri(rxn))))
             print('Zi\t{}\t{}'.format(rxn, result.get_value(_zi(rxn))))
         for cp in cp_list:
             if cp not in excluded_compounds:
@@ -519,7 +565,19 @@ def print_fba(simulation, prob, objective, _v, _zi, _dgri, _xij, mm,
         result = prob.solve_unchecked()
         for rxn in mm.reactions:
             print('Flux\t{}\t{}'.format(rxn, result.get_value(_v(rxn))))
-            print('DGR\t{}\t{}'.format(rxn, result.get_value(_dgri(rxn))))
+            if rxn in split_reversible_list:
+                if '_reverse' in rxn:
+                    rxn_f = rxn
+                    rxn_f = rxn_f.replace('_reverse', '')
+                    rxn_f += '_forward'
+                    print('DGR\t{}\t{}'.format(rxn,
+                        -1*result.get_value(_dgri(rxn_f))))
+                else:
+                    print('DGR\t{}\t{}'.format(rxn,
+                        result.get_value(_dgri(rxn))))
+            else:
+                print('DGR\t{}\t{}'.format(rxn,
+                    result.get_value(_dgri(rxn))))
             print('Zi\t{}\t{}'.format(rxn, result.get_value(_zi(rxn))))
         for cp in cp_list:
             if cp not in excluded_compounds:
@@ -752,7 +810,7 @@ def add_reaction_constraints(
         hamilton: True or False for using Hamilton TMFA method.
 
     """
-#    print('lumps', lump_rxn_list)
+    print('lumps', lump_rxn_list)
     dgf_scaling = {}
     if scaled_compounds is not None:
         scaled_compounds.seek(0)
@@ -791,13 +849,13 @@ def add_reaction_constraints(
     logger.info('using water {}'.format(water))
     split_list = []
 
-    for (f, r) in split_rxns:
-        split_list.append(f)
-        split_list.append(r)
-        if f not in exclude_unknown:
-            dgrif = _dgri(f)
-            dgrir = _dgri(r)
-            problem.add_linear_constraints(dgrif == dgrir * -1)
+    # for (f, r) in split_rxns:
+    #     split_list.append(f)
+    #     split_list.append(r)
+    #     if f not in exclude_unknown:
+    #         dgrif = _dgri(f)
+    #         dgrir = _dgri(r)
+    #         problem.add_linear_constraints(dgrif == dgrir * -1)
 
     new_excluded_reactions = []
     for reaction in mm.reactions:
@@ -816,7 +874,19 @@ def add_reaction_constraints(
                 new_excluded_reactions.append(reaction)
 
             zi = _zi(reaction)
-            dgri = _dgri(reaction)
+            split_rxns_l = []
+            for (f,r) in split_rxns:
+                split_rxns_l.append(f)
+                split_rxns_l.append(r)
+            if reaction in split_rxns_l:
+                if '_reverse' in reaction:
+                    f_rxn = reaction.replace('_reverse', '')
+                    f_rxn = f_rxn+'_forward'
+                    dgri = -1*_dgri(reaction)
+                else:
+                    dgri = _dgri(reaction)
+            else:
+                dgri = _dgri(reaction)
             vi = _v(reaction)
             vmax = mm.limits[reaction].upper
             if reaction in testing_list:
