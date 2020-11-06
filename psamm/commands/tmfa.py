@@ -80,31 +80,29 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
         if which_command == 'util':
             if self._args.generate_config:
                 with open('./example-config.yaml', mode='w') as f:
-                    f.write('deltaG: <path to deltaG input \
-                        file>\n')
-                    f.write('exclude: <path to excluded \
-                        reactions file>\n')
-                    f.write('transporters: <path to transporter \
-                        parameters file>\n')
-                    f.write('concentrations: <path to set concentrations \
-                        file>\n')
-                    f.write('proton-in: <id of the internal proton. \
-                        example cpd_h[c]>\n')
-                    f.write('proton-out: <id of the external proton. example \
-                        cpd_h[p]>\n')
+                    f.write('deltaG: <path to deltaG input file>\n')
+                    f.write('exclude: <path to excluded reactions file>\n')
+                    f.write('transporters: <path to transporter parameters '
+                            'file>\n')
+                    f.write('concentrations: <path to set concentrations '
+                            'file>\n')
+                    f.write('proton-in: <id of the internal proton. '
+                            'example cpd_h[c]>\n')
+                    f.write('proton-out: <id of the external proton. '
+                            'example cpd_h[p]>\n')
                     f.write('proton-other:\n')
-                    f.write('  - <id of other proton compounds in other \
-                        compartments>\n')
+                    f.write('  - <id of other proton compounds in other '
+                            'compartments>\n')
                     f.write('water:\n')
-                    f.write('  - <id of water compounds example cpd_h2o[c]. \
-                        list one per line\n')
-                logger.info('Generated example config file\
-                    example-config.yaml')
+                    f.write('  - <id of water compounds example cpd_h2o[c]. '
+                            'list one per line\n')
+                logger.info('Generated example config file '
+                            'example-config.yaml')
                 quit()
 
         if self._args.config is None:
-            logger.warning('No configuration file was\
-                provided with --config option')
+            logger.warning('No configuration file was provided with'
+                           ' --config option')
             quit()
         else:
             config_dict = yaml.safe_load(self._args.config)
@@ -116,7 +114,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                 base_exclude_list.append(line.rstrip())
 
         # Parse set of reactions that will have their deltaG
-        # constrainted only by deltaG of the transport component.
+        # constrained only by deltaG of the transport component.
         ph_difference_rxn = []
         if config_dict.get('rxn_conc_only') is not None:
             for line in open(config_dict.get('rxn_conc_only')).readlines():
@@ -217,7 +215,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                 config_dict.get('deltaG')), mm_irreversible)
             print('using dgr file')
         elif config_dict.get('deltaGf') is not None:
-            # Parse the deltaGf values for all metaobolites
+            # Parse the deltaGf values for all metabolites
             # from a supplied file.
             dgf_dict = parse_dgf(mm_irreversible, open(
                 config_dict.get('deltaGf')))
@@ -304,8 +302,8 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
             if self._args.threshold is not None:
                 prob.add_linear_constraints(
                     v(self._get_objective()) == self._args.threshold)
-                logger.info('Set biomass based on\
-                    threshold to {}'.format(self._args.threshold))
+                logger.info('Set biomass based on threshold to '
+                            '{}'.format(self._args.threshold))
             else:
                 max_biomass = get_var_bound(prob, v(self._get_objective()),
                                             lp.ObjectiveSense.Maximize)
@@ -615,7 +613,7 @@ def lump_parser(lump_file):
 def parse_tparam_file(file):
     '''Parse a transport paramter file.
 
-    This file conatains reaction IDs, net charge transported into
+    This file contains reaction IDs, net charge transported into
     the cell, and net protons transported into the cell.
 
     '''
@@ -649,9 +647,9 @@ def parse_dgf(mm, dgf_file):
                 derr = Decimal(row[2])
                 cpd_dgf_dict[Compound(row[0], cpt)] = (dg, derr)
             except:
-                logger.info('Compound {} has an assigned detltGf value \
-                            of {}. This is not an number and will be treated \
-                            as a missing value.'.format(
+                logger.info('Compound {} has an assigned detltGf value '
+                            'of {}. This is not an number and will be treated '
+                            'as a missing value.'.format(
                             Compound(row[0], cpt), row[1]))
     return cpd_dgf_dict
 
@@ -686,8 +684,8 @@ def add_conc_constraints(xij, problem, cpd_conc_dict,
             if str(cp) not in excluded_cpd_list:
                 conc_limits = cpd_conc_dict[str(cp)]
                 if conc_limits[0] > conc_limits[1]:
-                    logger.error('lower bound for {} concentration\
-                        higher than upper bound'.format(str(cp)))
+                    logger.error('lower bound for {} concentration higher '
+                                 'than upper bound'.format(str(cp)))
                     quit()
                 if Decimal(conc_limits[0]) == Decimal(conc_limits[1]):
                     problem.add_linear_constraints(
@@ -752,9 +750,9 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions,
                     if j[0] not in dgf_dict.keys():
                         print(j[0])
                 if reaction not in ph_difference_rxn:
-                    logger.error('Reaction {} contains at least 1\
-                        compound with an unknown deltaGf\
-                        value'.format(reaction))
+                    logger.error('Reaction {} contains at least 1 compound '
+                                 'with an unknown deltaGf '
+                                 'value'.format(reaction))
                     quit()
             else:
                 dgr = 0
