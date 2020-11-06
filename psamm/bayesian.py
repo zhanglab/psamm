@@ -146,8 +146,6 @@ class MappingModel(object):
         return consistent
 
 
-
-
 class BayesianCompoundPredictor(object):
     """Predict model compound mappings based on a Bayesian model.
 

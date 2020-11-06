@@ -257,8 +257,7 @@ class ModelMappingCommand(Command):
 
         # Check models
         if (not (model1.check_reaction_compounds()
-                 and model2.check_reaction_compounds())
-                and self._args.consistency_check):
+                 and model2.check_reaction_compounds())):
             quit((
                 '\nError: '
                 'equations have something not listed in compounds.yaml, '
@@ -266,7 +265,7 @@ class ModelMappingCommand(Command):
 
         mkdir_p(self._args.outpath)
 
-        if (actual_compound_mapping is not None):
+        if actual_compound_mapping is not None:
             mkdir_p(self._args.outpath + '/roc')
 
         # Bayesian classifier
@@ -283,7 +282,7 @@ class ModelMappingCommand(Command):
         sys.stdout.flush()
         t = time.time()
         # Write out ROC curve results
-        if (actual_compound_mapping is not None):
+        if actual_compound_mapping is not None:
             with open(self._args.outpath
                       + '/roc/compound_bayes.tsv', 'w') as f:
                 write_roc_curve(f, cpd_bayes_pred.model1.compounds,
@@ -319,7 +318,7 @@ class ModelMappingCommand(Command):
         sys.stdout.flush()
         t = time.time()
         # Write out ROC curve results
-        if (actual_reaction_mapping is not None):
+        if actual_reaction_mapping is not None:
             with open(self._args.outpath
                       + '/roc/reaction_bayes.tsv', 'w') as f:
                 write_roc_curve(f, rxn_bayes_pred.model1.reactions,
