@@ -437,9 +437,9 @@ Then the exported image "reactions.dot.png" will look like the figure below:
 .. image:: 16-array2.dot.png
 
 Moreover, if  `vis` command contains ``--array`` but doesn't contain ``--image``,
-it will still exported the DOT file. However, in this case, when converting DOT
+it will still exports the DOT file. However, in this case, when converting DOT
 file to a network image, to make ``--array`` effective, another `Graphviz`
-program command (see below) is required instead  of ``dot`` command we
+program command (see below) is required instead of ``dot`` command we
 showed before:
 
 .. code-block:: shell

@@ -767,7 +767,7 @@ def calculate_dgr(mm, dgf_dict, excluded_reactions,
                         dgscale = dgf_scaling[cpd_0]
                     else:
                         dgscale = 1
-                    (dg, dge) = dgf_dict[cpd[0]]
+                    (dg, dge) = dgf_dict[cpd[0].name]
                     dgs = Decimal(dg) * (Decimal(cpd[1])*dgscale)
                     dgr += dgs
                     dgerr += Decimal(cpd[1])*Decimal(dgscale) * dge
