@@ -129,7 +129,7 @@ class VisualizationCommand(MetabolicMixin,
         vis_rxns = rxnset_for_vis(
             self._mm, self._args.subset, self._args.exclude)
 
-        if self._args.array and self._args.array <= 0:
+        if self._args.array is not None and int(self._args.array) <= 0:
             logger.error(
                 "'--array' should be followed by a positive integer, number "
                 "'{}' is invalid. Visualization has stopped, please fix the "
