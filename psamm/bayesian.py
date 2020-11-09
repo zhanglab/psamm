@@ -34,6 +34,9 @@ from psamm.formula import Formula
 from psamm.expression.boolean import Expression
 from functools import reduce
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 CompoundEntry = namedtuple(
     'CompoundEntry',
@@ -128,14 +131,17 @@ class MappingModel(object):
         """Check that reaction compounds are defined in the model"""
         print('Checking model: {}'.format(self.name))
         consistent = True
+        undefined_cpds = []
         for reaction in itervalues(self.reactions):
             if reaction.equation is not None:
                 for compound, value in reaction.equation.compounds:
                     if compound.name not in self.compounds:
-                        print((
-                            '{} in reaction {} '
-                            'is not in compound list').format(
-                                compound.name, reaction.id))
+                        undefined_cpds.append(compound.name)
+                        logger.error((
+                            '{} in reaction {} is not defined in compound '
+                            'list (such as compounds.yaml), please define it '
+                            'in compound list before running modelmapping'
+                        ).format(compound.name, reaction.id))
                         consistent = False
         return consistent
 
@@ -926,3 +932,17 @@ def map_model_reactions(model1, model2, cpd_map, cpd_score, nproc=1,
             bayes_posterior(reaction_prior, reaction_name_likelihoods),
             bayes_posterior(reaction_prior, reaction_equation_likelihoods),
             bayes_posterior(reaction_prior, reaction_genes_likelihoods))
+
+
+def check_cpd_charge(compound, source):
+    if compound.charge is not None:
+        try:
+            int(compound.charge)
+            return 'TRUE'
+        except ValueError:
+            logger.warning(
+                "Compound charge should be an integer, however, charge of "
+                "compound {} in {} is '{}', which is invalid. Please remove "
+                "or fix it before running modelmapping command.".format(
+                    compound.id, source, compound.charge))
+            return 'FALSE'

@@ -23,7 +23,8 @@ import time
 import logging
 
 from ..command import (Command, MetabolicMixin, LoopRemovalMixin,
-                       ObjectiveMixin, SolverCommandMixin, ParallelTaskMixin)
+                       ObjectiveMixin, SolverCommandMixin,
+                       ParallelTaskMixin, convert_to_unicode)
 from .. import fluxanalysis
 
 from six.moves import range
@@ -59,7 +60,7 @@ class RobustnessCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
             '--all-reaction-fluxes',
             help='Print reaction flux for all model reactions',
             action='store_true')
-        parser.add_argument('varying', help='Reaction to vary')
+        parser.add_argument('varying', type=convert_to_unicode, help='Reaction to vary')
         parser.add_argument(
             '--fva', action='store_true',
             help='Run FVA and print flux range instead of flux value')

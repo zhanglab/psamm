@@ -806,12 +806,15 @@ class TestAddExchange(unittest.TestCase):
         self.EX_C = Reaction(Direction.Both, {Compound('C', 'e'): 5})
 
     def test1_addExrRxn_cpdA(self):
-        g1 = vis.add_exchange_rxns(self.g, 'test_EX_A', self.EX_A)
+        g1 = vis.add_exchange_rxns(self.g, 'test_EX_A', self.EX_A,
+                                   {'test_EX_A': ('solid', 1)})
         node_ex = graph.Node({
             'id': 'test_EX_A', 'entry': [self.EX_A], 'shape': 'box',
             'style': 'filled', 'label': 'test_EX_A', 'type': 'Ex_rxn',
             'fillcolor': '#90f998', 'compartment': 'e'})
-        edge_ex = graph.Edge(self.node_a_extracell, node_ex, {'dir': 'both'})
+        edge_ex = graph.Edge(self.node_a_extracell, node_ex,
+                             {'dir': 'both', 'style': 'solid',
+                              'penwidth': 1})
         self.node_list.append(node_ex)
         self.edge_list.append(edge_ex)
 
@@ -822,12 +825,15 @@ class TestAddExchange(unittest.TestCase):
         self.assertTrue(all(i in g1.edges for i in self.edge_list))
 
     def test2_addExrRxn_right(self):
-        g2 = vis.add_exchange_rxns(self.g, 'test_EX_C', self.EX_C)
+        g2 = vis.add_exchange_rxns(self.g, 'test_EX_C', self.EX_C,
+                                   {'test_EX_C': ('solid', 1)})
         node_ex = graph.Node({
             'id': 'test_EX_C', 'entry': [self.EX_C], 'shape': 'box',
             'style': 'filled', 'label': 'test_EX_C', 'type': 'Ex_rxn',
             'fillcolor': '#90f998', 'compartment': 'e'})
-        edge_ex = graph.Edge(node_ex, self.node_c_extracell, {'dir': 'both'})
+        edge_ex = graph.Edge(node_ex, self.node_c_extracell,
+                             {'dir': 'both', 'style': 'solid',
+                              'penwidth': 1})
         self.node_list.append(node_ex)
         self.edge_list.append(edge_ex)
 

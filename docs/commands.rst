@@ -792,6 +792,23 @@ following:
 
     $ psamm-model vis --array {integer that is larger than 0}
 
+
+Then the exported DOT file could be converted to network image through
+the command below:
+
+.. code-block:: shell
+
+    $ neato -O -Tpdf -n2 {path to DOT file}
+
+"pdf" in "-Tpdf" in the command above can be replaced by any other image
+format that supported by  `Graphviz` program.
+
+You can also generate the network image through the `vis` command directly:
+
+.. code-block:: shell
+
+    $ psamm-model vis --array {integer that is larger than 0} --image {format (pdf, eps, svg, etc.)}
+
 The final graph image can also be modified to show the reactions and
 metabolites in different compartments based on the compartment information
 provided in the model's reactions. This can be done through using the

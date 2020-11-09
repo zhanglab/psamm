@@ -23,7 +23,6 @@ import re
 
 from six import text_type
 
-from ..reaction import Reaction, Compound
 from ..command import Command, FilePrefixAppendAction, convert_to_unicode
 from ..datasource.reaction import parse_compound
 
@@ -121,15 +120,9 @@ class SearchCommand(Command):
                 for cpd_property in compound.properties.values():
                     if isinstance(cpd_property, list):
                         for i in cpd_property:
-                            if isinstance(rxn_property, Compound):
-                                reaction_prop_list.append(i.convert_str().lower())
-                            else:
-                                compound_prop_list.append(text_type(i).lower())
+                            compound_prop_list.append(convert_to_unicode(text_type(i)).lower())
                     else:
-                        if isinstance(cpd_property, Compound):
-                            compound_prop_list.append(cpd_property.convert_str().lower())
-                        else:
-                            compound_prop_list.append(text_type(cpd_property).lower())
+                        compound_prop_list.append(convert_to_unicode(text_type(cpd_property)).lower())
 
                 # find compound entry based on given property argument
                 if self._args.exact:
@@ -196,15 +189,11 @@ class SearchCommand(Command):
                 for rxn_property in raw_reaction_prop_list:
                     if isinstance(rxn_property, list):
                         for i in rxn_property:
-                            if isinstance(rxn_property, Reaction):
-                                reaction_prop_list.append(i.convert_str().lower())
-                            else:
-                                reaction_prop_list.append(text_type(i).lower())
+                            reaction_prop_list.append(convert_to_unicode(text_type(i)).lower())
+
                     else:
-                        if isinstance(rxn_property, Reaction):
-                            reaction_prop_list.append(rxn_property.convert_str().lower())
-                        else:
-                            reaction_prop_list.append(text_type(rxn_property).lower())
+                        reaction_prop_list.append(convert_to_unicode(text_type(rxn_property)).lower())
+
                 # find reaction based on given property argument
                 if self._args.exact:
                     if self._args.key.lower() in reaction_prop_list:

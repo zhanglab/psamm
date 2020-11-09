@@ -62,11 +62,11 @@ class PsammotateCommand(Command):
         g.add_argument(
             '--export-model', type=str, default=None,
             help='Path to directory for full model export. Cannot be specified'
-                 'with --output option.')
+                 ' with --output option.')
         g.add_argument(
             '--output', type=str, default='homolo_reactions',
             help=('The prefix of output YAML file, '
-                  '(default: homolo_reactions). Cannot be specified with'
+                  '(default: homolo_reactions). Cannot be specified with '
                   '--export-model option.'))
         super(PsammotateCommand, cls).init_parser(parser)
 
@@ -215,7 +215,7 @@ def model_loader(nm, ignore_na, translation_dict, suffix=None):
                 id = entry.id
                 if suffix is not None:
                     id = id + '_{}'.format(suffix)
-                print('{}\t{}\t{}\t{}'.format(
+                print(u'{}\t{}\t{}\t{}'.format(
                     id, entry.genes, 'None',
                     not ignore_na))
             elif entry.genes is not None:
@@ -236,7 +236,7 @@ def model_loader(nm, ignore_na, translation_dict, suffix=None):
                 id = entry.id
                 if suffix is not None:
                     id = id + '_{}'.format(suffix)
-                print('{}\t{}\t{}\t{}'.format(
+                print(u'{}\t{}\t{}\t{}'.format(
                     id, entry.genes, genes, e_1.value))
                 translated_genes[entry] = [genes_1, genes, e_1.value]
     return translated_genes

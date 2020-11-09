@@ -181,6 +181,27 @@ class ModelMappingCommand(Command):
 
     def run(self):
         """Run model mapping command."""
+
+        # Parse models
+        model_1 = ModelReader.reader_from_path(self._args.model).create_model()
+        model_2 = ModelReader.reader_from_path(
+            self._args.dest_model).create_model()
+
+        # check if all compound charge can be converted to an integer
+        invalid_cpd = []
+        for compound in model_1.compounds:
+            result = bayesian.check_cpd_charge(compound, 'your model')
+            if result == 'FALSE':
+                invalid_cpd.append(compound.id)
+
+        for compound in model_2.compounds:
+            result = bayesian.check_cpd_charge(compound, 'dest model')
+            if result == 'FALSE':
+                invalid_cpd.append(compound.id)
+
+        if len(invalid_cpd) != 0:
+            quit()
+
         which_command = self._args.which
         if which_command == 'mm':
             self._model_mapping()
@@ -236,8 +257,7 @@ class ModelMappingCommand(Command):
 
         # Check models
         if (not (model1.check_reaction_compounds()
-                 and model2.check_reaction_compounds())
-                and self._args.consistency_check):
+                 and model2.check_reaction_compounds())):
             quit((
                 '\nError: '
                 'equations have something not listed in compounds.yaml, '
@@ -245,7 +265,7 @@ class ModelMappingCommand(Command):
 
         mkdir_p(self._args.outpath)
 
-        if (actual_compound_mapping is not None):
+        if actual_compound_mapping is not None:
             mkdir_p(self._args.outpath + '/roc')
 
         # Bayesian classifier
@@ -262,7 +282,7 @@ class ModelMappingCommand(Command):
         sys.stdout.flush()
         t = time.time()
         # Write out ROC curve results
-        if (actual_compound_mapping is not None):
+        if actual_compound_mapping is not None:
             with open(self._args.outpath
                       + '/roc/compound_bayes.tsv', 'w') as f:
                 write_roc_curve(f, cpd_bayes_pred.model1.compounds,
@@ -273,13 +293,13 @@ class ModelMappingCommand(Command):
         # Parse and output raw mapping
         if self._args.raw:
             cpd_bayes_pred.get_raw_map().to_csv(
-                self._args.outpath + '/bayes_compounds.tsv', sep='\t')
+                self._args.outpath + '/bayes_compounds.tsv', sep='\t', encoding='utf-8')
 
         # Output best mapping
         compound_best = cpd_bayes_pred.get_best_map(
             self._args.threshold_compound)
         compound_best.to_csv(
-            self._args.outpath + '/bayes_compounds_best.tsv', sep='\t')
+            self._args.outpath + '/bayes_compounds_best.tsv', sep='\t', encoding='utf-8')
         print('It took %.2f seconds to write output...' % (time.time() - t))
         sys.stdout.flush()
 
@@ -298,7 +318,7 @@ class ModelMappingCommand(Command):
         sys.stdout.flush()
         t = time.time()
         # Write out ROC curve results
-        if (actual_reaction_mapping is not None):
+        if actual_reaction_mapping is not None:
             with open(self._args.outpath
                       + '/roc/reaction_bayes.tsv', 'w') as f:
                 write_roc_curve(f, rxn_bayes_pred.model1.reactions,
@@ -309,13 +329,13 @@ class ModelMappingCommand(Command):
         # Parse and output raw mapping
         if self._args.raw:
             rxn_bayes_pred.get_raw_map().to_csv(
-                self._args.outpath + '/bayes_reactions.tsv', sep='\t')
+                self._args.outpath + '/bayes_reactions.tsv', sep='\t', encoding='utf-8')
 
         # Output best mapping
         reaction_best = rxn_bayes_pred.get_best_map(
             self._args.threshold_reaction)
         reaction_best.to_csv(
-            self._args.outpath + '/bayes_reactions_best.tsv', sep='\t')
+            self._args.outpath + '/bayes_reactions_best.tsv', sep='\t', encoding='utf-8')
         print('It took %.2f seconds to write output...' % (time.time() - t))
         sys.stdout.flush()
 
@@ -331,7 +351,7 @@ class ModelMappingCommand(Command):
             self._args.compound_map, self._args.reaction_map,
             self._args.curated_compound_map, self._args.curated_reaction_map)
 
-        # read commpartment map
+        # read compartment map
         compartment_map = {}
         if self._args.compartment_map is not None:
             with open(self._args.compartment_map) as f:

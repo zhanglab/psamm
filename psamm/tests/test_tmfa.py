@@ -72,7 +72,6 @@ class TestTMFA(unittest.TestCase):
     def test_mm_irrev_exclude(self):
         mm_irreversible, _, split_reversible, new_lump_rxn_dict = \
             self.model.make_irreversible({}, ['rxn_2'], {}, False)
-        print([i for i in mm_irreversible.reactions])
         self.assertTrue('rxn_2_forward' not in [i for i in
             mm_irreversible.reactions])
         self.assertTrue('rxn_2_reverse' not in [i for i in
@@ -398,10 +397,14 @@ class TestSolving(unittest.TestCase):
                 tmfa.get_var_bound(self.prob, self.dgri(reaction),
                 lp.ObjectiveSense.Maximize))
 
-        self.assertEqual(dgr_dict['rxn1_forward'],
-            (-dgr_dict['rxn1_reverse'][1], -dgr_dict['rxn1_reverse'][0]))
-        self.assertEqual(dgr_dict['rxn2_forward'],
-            (-dgr_dict['rxn2_reverse'][1], -dgr_dict['rxn2_reverse'][0]))
+        self.assertAlmostEqual(dgr_dict['rxn1_forward'][1],
+            (dgr_dict['rxn1_reverse'][0], dgr_dict['rxn1_reverse'][1])[1], places=6)
+        self.assertAlmostEqual(dgr_dict['rxn2_forward'][1],
+            (dgr_dict['rxn2_reverse'][0], dgr_dict['rxn2_reverse'][1])[1], places=6)
+        self.assertAlmostEqual(dgr_dict['rxn1_forward'][1],
+            (dgr_dict['rxn1_reverse'][0], dgr_dict['rxn1_reverse'][1])[1], places=6)
+        self.assertAlmostEqual(dgr_dict['rxn2_forward'][1],
+            (dgr_dict['rxn2_reverse'][0], dgr_dict['rxn2_reverse'][1])[1], places=6)
 
     def test_reversibleflux(self):
         flux_dict = {}
@@ -471,7 +474,7 @@ class TestSolving(unittest.TestCase):
             tmfa.get_var_bound(self.err_prob, self.err_dgri(reaction),
             lp.ObjectiveSense.Maximize))
         self.assertAlmostEqual(dgr_dict['rxn1_forward'][0],
-            (9.999999974752427e-07, 77.28332553115047)[0], places=6)
+            (-7.999998999999999, 77.28332553115047)[0], places=6)
         self.assertAlmostEqual(dgr_dict['rxn1_forward'][1],
             (9.999999974752427e-07, 77.28332553115047)[1], places=6)
         self.assertAlmostEqual(dgr_dict['rxn4'][0],

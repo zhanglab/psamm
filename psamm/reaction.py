@@ -29,7 +29,7 @@ import numbers
 from collections import Counter
 
 import six
-from six import text_type, iteritems
+from six import text_type, iteritems, PY3
 
 @six.python_2_unicode_compatible
 @functools.total_ordering
@@ -82,10 +82,6 @@ class Compound(object):
         Compound('H+', 'e')
         """
         return self.__class__(self._name, compartment, self._arguments)
-
-    def convert_str(self):
-        s = self.__str__()
-        return s.decode('utf-8')
 
     def __eq__(self, other):
         return (isinstance(other, Compound) and
@@ -339,9 +335,6 @@ class Reaction(object):
         compounds = ((compound.translate(translate), value)
                      for compound, value in self.compounds)
         return Reaction(self._direction, compounds)
-
-    def convert_str(self):
-        return self.__str__()
 
     def __str__(self):
         # Use the same format as ModelSEED
