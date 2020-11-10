@@ -334,7 +334,7 @@ a graphical representation of what is in the 'reactions.dot'. This graph will lo
 .. image:: 01-entireEcoli.dot.png
 
 In this default version of the network image, there are two sets of nodes: oval orange
-nodes, which represent metabolites and rectangular green nodes, which represent reactions.
+nodes, which represent metabolites, and rectangular green nodes, which represent reactions.
 These nodes are connected by edges which indicate reaction directionality.
 
 The rest of the tutorial will detail how to modify the default version of network
@@ -437,9 +437,9 @@ Then the exported image "reactions.dot.png" will look like the figure below:
 .. image:: 16-array2.dot.png
 
 Moreover, if  `vis` command contains ``--array`` but doesn't contain ``--image``,
-it will still exports the DOT file. However, in this case, when converting DOT
+it will still exported the DOT file. However, in this case, when converting DOT
 file to a network image, to make ``--array`` effective, another `Graphviz`
-program command (see below) is required instead of ``dot`` command we
+program command (see below) is required instead  of ``dot`` command we
 showed before:
 
 .. code-block:: shell

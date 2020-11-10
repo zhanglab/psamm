@@ -640,7 +640,7 @@ option followed by an input file that contains a list of reaction IDs:
 
 .. code-block:: shell
 
-    $ psamm-model vis --exlcude @{path to file}
+    $ psamm-model vis --exclude @{path to file}
 
 Running this command, `PSAMM-vis` only produces three files described above.
 Graph image generating softwares can convert these files to
@@ -781,9 +781,9 @@ condensed into one combined node.
     $ psamm-model vis --combine {0,1,2}
 
 
-In some cases the exported image contains many small isolated component
-that may cause the image too wide and hard to view. ``--array`` option
-can be used in this cases to get a better layout. This option is
+In some cases the exported image contains many small isolated components
+that may cause the image to be too wide and hard to view. The ``--array``
+option can be used in this cases to get a better layout. This option is
 followed by an integer that is larger than 0, which indicates how many
 isolated components will be placed per row. The command looks like the
 following:
@@ -801,7 +801,7 @@ the command below:
     $ neato -O -Tpdf -n2 {path to DOT file}
 
 "pdf" in "-Tpdf" in the command above can be replaced by any other image
-format that supported by  `Graphviz` program.
+format that supported by the `Graphviz` program.
 
 You can also generate the network image through the `vis` command directly:
 
@@ -834,12 +834,35 @@ The image file produced from the ``vis`` will be automatically sized by
 the `Graphviz` programs used to generate the image file. If a specific
 size is desired the ``--image-size`` argument can be used to supple a
 width and height in inches that the final image file should be. For
-example to generate a graph that will be made into a 5" width by 10"
+example, to generate a graph that will be made into a 5" width by 10"
 height image the following command can be used:
 
 .. code-block:: shell
 
     $ psamm-model vis --image {format (pdf, eps, svg, etc.)} --image-size 5 10
+
+The FBA and FVA values of a model can be visualized to show the flow of
+metabolites through the model. The ``--fba`` or ``--fva`` option (both cannot
+be used together) followed by a file path will allow you to do this. The FBA file
+should be a tab-separated file with the reaction name and a flux value, and can be
+created using the `fba` command. The FBA option can be used as follows:
+
+.. code-block:: shell
+
+   (psamm-env) $ psamm-model vis --fba {path to FBA file}
+
+Meanwhile, the FVA file should be a tab-separated file with the reaction name,
+lower flux value, and upper flux value, and can be created using the `fva` command.
+For example, to generate a graph that uses FVA values, the following command can be used:
+
+.. code-block:: shell
+
+   (psamm-env) $ psamm-model vis --fva {path to FVA file}
+
+These fluxes can be visualized by adding the ``--image`` option. Reactions with a
+flux of zero will have a dotted edge while non-zero fluxes will be solid. The flux
+values are proportional to the thickness of the edge and may help highlight reactions
+that contribute the most to the objective.
 
 
 SBML Export (``sbmlexport``)
