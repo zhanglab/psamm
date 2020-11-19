@@ -444,7 +444,7 @@ showed before:
 
 .. code-block:: shell
 
-   (psamm-env) $ neato -O -Tpdf -n reactions.dot
+   (psamm-env) $ neato -O -Tpdf -n2 reactions.dot
 
 
 Show Cellular Compartments
