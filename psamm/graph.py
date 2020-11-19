@@ -537,7 +537,7 @@ def make_network_dict(nm, mm, subset=None, method='fpp', element=None,
                 testing_list_update.append(r)
             else:
                 logger.warning(
-                    'Reaction {} is excluded from visualization due to'
+                    'Reaction {} is excluded from visualization due to '
                     'missing or undefined compound formula'.format(r))
         reaction_pairs = [(r, nm.reactions[r].equation)
                           for r in testing_list_update]
