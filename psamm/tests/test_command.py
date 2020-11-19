@@ -634,52 +634,141 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         ])
 
     def test_run_vis(self):
-        self.run_command(VisualizationCommand)
+        dest = tempfile.mkdtemp()
+        dest_path = os.path.join(dest, 'reactions')
+        dest_path_dot = os.path.join(dest, 'reactions.dot')
+        dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
+        dest_path_edges = os.path.join(dest, 'reactions.edges.tsv')
+        self.run_command(VisualizationCommand, ['--output', dest_path])
+        self.assertTrue(os.path.isfile(dest_path_dot))
+        self.assertTrue(os.path.isfile(dest_path_nodes))
+        self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_element_all(self):
-        self.run_command(VisualizationCommand, ["--element", "all"])
+        dest = tempfile.mkdtemp()
+        dest_path = os.path.join(dest, 'reactions')
+        dest_path_dot = os.path.join(dest, 'reactions.dot')
+        dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
+        dest_path_edges = os.path.join(dest, 'reactions.edges.tsv')
+        self.run_command(VisualizationCommand, ['--output', dest_path,
+                                                "--element", "all"])
+        self.assertTrue(os.path.isfile(dest_path_dot))
+        self.assertTrue(os.path.isfile(dest_path_nodes))
+        self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_hide_edges(self):
         path = os.path.join(tempfile.mkdtemp(), 'hide_edges.csv')
         with open(path, 'w') as f:
             f.write('{}\t{}'.format('D[c]', 'E[c]'))
-        self.run_command(VisualizationCommand, ["--hide-edges", path])
+
+        dest = tempfile.mkdtemp()
+        dest_path = os.path.join(dest, 'reactions')
+        dest_path_dot = os.path.join(dest, 'reactions.dot')
+        dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
+        dest_path_edges = os.path.join(dest, 'reactions.edges.tsv')
+        self.run_command(VisualizationCommand, ['--output', dest_path,
+                                                "--hide-edges", path])
+        self.assertTrue(os.path.isfile(dest_path_dot))
+        self.assertTrue(os.path.isfile(dest_path_nodes))
+        self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_recolor(self):
         path = os.path.join(tempfile.mkdtemp(), 'color.csv')
         with open(path, 'w') as f:
             f.write('{}\t{}'.format('B', '#f4fc55'))
-        self.run_command(VisualizationCommand, ["--color", path])
+        dest = tempfile.mkdtemp()
+        dest_path = os.path.join(dest, 'reactions')
+        dest_path_dot = os.path.join(dest, 'reactions.dot')
+        dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
+        dest_path_edges = os.path.join(dest, 'reactions.edges.tsv')
+        self.run_command(VisualizationCommand, ['--output', dest_path,
+                                                "--color", path])
+        self.assertTrue(os.path.isfile(dest_path_dot))
+        self.assertTrue(os.path.isfile(dest_path_nodes))
+        self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_output(self):
-        self.run_command(VisualizationCommand, ['--output', 'test'])
+        dest = tempfile.mkdtemp()
+        dest_path = os.path.join(dest, 'test')
+        dest_path_dot = os.path.join(dest, 'test.dot')
+        dest_path_nodes = os.path.join(dest, 'test.nodes.tsv')
+        dest_path_edges = os.path.join(dest, 'test.edges.tsv')
+        self.run_command(VisualizationCommand, ['--output', dest_path])
+        self.assertTrue(os.path.isfile(dest_path_dot))
+        self.assertTrue(os.path.isfile(dest_path_nodes))
+        self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_compartment(self):
-        self.run_command(VisualizationCommand, ['--compartment'])
+        dest = tempfile.mkdtemp()
+        dest_path = os.path.join(dest, 'reactions')
+        dest_path_dot = os.path.join(dest, 'reactions.dot')
+        dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
+        dest_path_edges = os.path.join(dest, 'reactions.edges.tsv')
+        self.run_command(VisualizationCommand, ['--output', dest_path,
+                                                '--compartment'])
+        self.assertTrue(os.path.isfile(dest_path_dot))
+        self.assertTrue(os.path.isfile(dest_path_nodes))
+        self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_fba(self):
         path = os.path.join(tempfile.mkdtemp(), 'fba.tsv')
         with open(path, 'w') as f:
             f.write('{}\t{}'.format('rxn_1', -0.000001))
-        self.run_command(VisualizationCommand, ['--fba', path])
+        dest = tempfile.mkdtemp()
+        dest_path = os.path.join(dest, 'reactions')
+        dest_path_dot = os.path.join(dest, 'reactions.dot')
+        dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
+        dest_path_edges = os.path.join(dest, 'reactions.edges.tsv')
+        self.run_command(VisualizationCommand, ['--output', dest_path,
+                                                '--fba', path])
+        self.assertTrue(os.path.isfile(dest_path_dot))
+        self.assertTrue(os.path.isfile(dest_path_nodes))
+        self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_fba_invalid_flux(self):
         path = os.path.join(tempfile.mkdtemp(), 'fba.tsv')
         with open(path, 'w') as f:
             f.write('{}\t{}'.format('rxn_1', 'a'))
-        self.run_command(VisualizationCommand, ['--fba', path])
+        dest = tempfile.mkdtemp()
+        dest_path = os.path.join(dest, 'reactions')
+        dest_path_dot = os.path.join(dest, 'reactions.dot')
+        dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
+        dest_path_edges = os.path.join(dest, 'reactions.edges.tsv')
+        self.run_command(VisualizationCommand, ['--output', dest_path,
+                                                '--fba', path])
+        self.assertTrue(os.path.isfile(dest_path_dot))
+        self.assertTrue(os.path.isfile(dest_path_nodes))
+        self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_fva(self):
         path = os.path.join(tempfile.mkdtemp(), 'fva.tsv')
         with open(path, 'w') as f:
             f.write('{}\t{}\t{}'.format('rxn_1', -0.000001, 0.000001))
-        self.run_command(VisualizationCommand, ['--fva', path])
+        dest = tempfile.mkdtemp()
+        dest_path = os.path.join(dest, 'reactions')
+        dest_path_dot = os.path.join(dest, 'reactions.dot')
+        dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
+        dest_path_edges = os.path.join(dest, 'reactions.edges.tsv')
+        self.run_command(VisualizationCommand, ['--output', dest_path,
+                                                '--fva', path])
+        self.assertTrue(os.path.isfile(dest_path_dot))
+        self.assertTrue(os.path.isfile(dest_path_nodes))
+        self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_fva_invalid_flux(self):
         path = os.path.join(tempfile.mkdtemp(), 'fva.tsv')
         with open(path, 'w') as f:
             f.write('{}\t{}\t{}'.format('rxn_1', 'a', -0.000001))
-        self.run_command(VisualizationCommand, ['--fva', path])
+        dest = tempfile.mkdtemp()
+        dest_path = os.path.join(dest, 'reactions')
+        dest_path_dot = os.path.join(dest, 'reactions.dot')
+        dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
+        dest_path_edges = os.path.join(dest, 'reactions.edges.tsv')
+        self.run_command(VisualizationCommand, ['--output', dest_path,
+                                                '--fva', path])
+        self.assertTrue(os.path.isfile(dest_path_dot))
+        self.assertTrue(os.path.isfile(dest_path_nodes))
+        self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_command_main(self):
         self.run_command(MockCommand)
