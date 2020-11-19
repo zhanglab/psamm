@@ -75,7 +75,9 @@ class VisualizationCommand(MetabolicMixin,
                             'nodes.')
         parser.add_argument(
             '--subset', type=argparse.FileType('rU'), default=None,
-            help='File containing a subset of reactions to visualize')
+            help='File containing a list of reactions IDs or compound IDs '
+                 '(with compartment). This file determines which reactions '
+                 'will be visualized')
         parser.add_argument(
             '--color', type=argparse.FileType('rU'), default=None, nargs='+',
             help='File containing node color mappings')
@@ -159,8 +161,7 @@ class VisualizationCommand(MetabolicMixin,
                 else:
                     logger.warning(
                         'Reaction {} in input fba file was excluded from '
-                        'visualization due to not being defined in the '
-                        'model'.format(row[0]))
+                        'visualization'.format(row[0]))
 
         if self._args.fva is not None:
             self.analysis = 'fva'
