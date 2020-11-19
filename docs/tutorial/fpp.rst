@@ -727,15 +727,27 @@ The resulting image looks like:
 Specifying A File Name
 ______________________
 
-The ``vis`` command allows users to specify the name of resulting file through
-the ``--output`` option. This option should be followed by a string and that string
-is the name of output files (without the file extension). For example, the
-following command will export 4 files: "Ecolicore.dot", "Ecolicore.dot.png",
-"Ecolicore.nodes.tsv" and "Ecolicore.edges.tsv":
+The ``vis`` command allows users to specify the directory and name of
+outputs through the ``--output`` option. This option should be followed
+by a string and this string is the full path with the prefix of outputs
+(without the file extension). For example, the following command will
+export 4 files in your current working directory : "Ecolicore.dot",
+"Ecolicore.dot.png", "Ecolicore.nodes.tsv" and "Ecolicore.edges.tsv":
 
 .. code-block:: shell
 
    (psamm-env) $ psamm-model vis --image png --output Ecolicore
+
+
+If you run the following two commands, you will get 4 files in the new
+folder named "test-output": "Ecolicore.dot", "Ecolicore.dot.png",
+"Ecolicore.nodes.tsv" and "Ecolicore.edges.tsv":
+
+.. code-block:: shell
+
+   (psamm-env) $ mkdir test-output
+
+   (psamm-env) $ psamm-model vis --image png --output test-output/Ecolicore
 
 Changing Pair Prediction Methods
 ________________________________

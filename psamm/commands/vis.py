@@ -98,7 +98,10 @@ class VisualizationCommand(MetabolicMixin,
             '--compartment', action='store_true',
             help='Include compartments in final visualization')
         parser.add_argument(
-            '--output', type=str, help='Output file name.')
+            '--output', type=str,
+            help='Full path for visualization outputs, including prefix of '
+                 'output files. '
+                 'e.g. "--output <output-directory-path>/output-prefix"')
         parser.add_argument(
             '--image-size', metavar=('Width', 'Height'),
             default=('None', 'None'), nargs=2, type=float,
