@@ -31,7 +31,7 @@ from ..command import MetabolicMixin, Command, FilePrefixAppendAction, \
     convert_to_unicode
 from .. import graph
 import sys
-from ..formula import Atom
+from ..formula import Atom, _AtomType
 try:
     from graphviz import render, FORMATS
 except ImportError:
@@ -143,6 +143,14 @@ class VisualizationCommand(MetabolicMixin,
 
         if self._args.element.lower() == 'all':
             self._args.element = None
+        else:
+            if self._args.element not in _AtomType._ELEMENTS:
+                logger.error(
+                    "Given element '{}' doesn't represent any chemical element"
+                    ", visualization has terminated. Please check your "
+                    "--element parameter".format(self._args.element))
+                quit()
+
 
         self.analysis = None
         reaction_dict = {}
