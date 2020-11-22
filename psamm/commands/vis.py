@@ -31,7 +31,7 @@ from ..command import MetabolicMixin, Command, FilePrefixAppendAction, \
     convert_to_unicode
 from .. import graph
 import sys
-from ..formula import Atom
+from ..formula import Atom, _AtomType
 try:
     from graphviz import render, FORMATS
 except ImportError:
@@ -75,7 +75,9 @@ class VisualizationCommand(MetabolicMixin,
                             'nodes.')
         parser.add_argument(
             '--subset', type=argparse.FileType('rU'), default=None,
-            help='File containing a subset of reactions to visualize')
+            help='File containing a list of reactions IDs or compound IDs '
+                 '(with compartment). This file determines which reactions '
+                 'will be visualized')
         parser.add_argument(
             '--color', type=argparse.FileType('rU'), default=None, nargs='+',
             help='File containing node color mappings')
@@ -96,7 +98,10 @@ class VisualizationCommand(MetabolicMixin,
             '--compartment', action='store_true',
             help='Include compartments in final visualization')
         parser.add_argument(
-            '--output', type=str, help='Output file name.')
+            '--output', type=str,
+            help='Full path for visualization outputs, including prefix of '
+                 'output files. '
+                 'e.g. "--output <output-directory-path>/output-prefix"')
         parser.add_argument(
             '--image-size', metavar=('Width', 'Height'),
             default=('None', 'None'), nargs=2, type=float,
@@ -138,6 +143,14 @@ class VisualizationCommand(MetabolicMixin,
 
         if self._args.element.lower() == 'all':
             self._args.element = None
+        else:
+            if self._args.element not in _AtomType._ELEMENTS:
+                logger.error(
+                    "Given element '{}' doesn't represent any chemical element"
+                    ", visualization has terminated. Please check your "
+                    "--element parameter".format(self._args.element))
+                quit()
+
 
         self.analysis = None
         reaction_dict = {}
@@ -159,8 +172,7 @@ class VisualizationCommand(MetabolicMixin,
                 else:
                     logger.warning(
                         'Reaction {} in input fba file was excluded from '
-                        'visualization due to not being defined in the '
-                        'model'.format(row[0]))
+                        'visualization'.format(row[0]))
 
         if self._args.fva is not None:
             self.analysis = 'fva'

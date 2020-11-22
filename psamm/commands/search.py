@@ -53,7 +53,7 @@ class SearchCommand(Command):
             '--key', dest='key', metavar='key',
             type=convert_to_unicode, default=None,
             help='String to search for within compound '
-                 'properties. (case insensitive)')
+                 'properties. (case insensitive). Only one --key allowed')
         parser_compound.add_argument(
             '--exact', action='store_true',
             help='Match full compound property')
@@ -76,8 +76,8 @@ class SearchCommand(Command):
         parser_reaction.add_argument(
             '--key', dest='key', metavar='key',
             type=convert_to_unicode, default=None,
-            help='String to search for within reaction '
-                 'properties. (case insensitive)')
+            help='String to search for within reaction properties. '
+                 '(case insensitive). Only one --key allowed')
         parser_reaction.add_argument(
             '--exact', action='store_true',
             help='Match full reaction property')

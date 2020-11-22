@@ -859,6 +859,17 @@ class TestMakeNetworks(unittest.TestCase):
 		self.assertTrue(all(i in node_list for i in bipartite_graph.nodes))
 		self.assertTrue(all(i in edge_list for i in bipartite_graph.edges))
 
+	def test_bipartite_graph_filter3(self):
+		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=None, method='fpp', element=None,
+										   excluded_reactions=[], reaction_dict={}, analysis=None)
+		cpairs, new_id, new_style_flux_dict = graph.make_cpair_dict(net_dict, 'fpp', 0, style_flux_dict)
+		bipartite_graph = graph.make_bipartite_graph_object(cpairs, new_id, 'fpp', 0, self.model_compound_entries, new_style_flux_dict)
+		edge_list = [self.edge_bip_1, self.edge_bip_2, self.edge_bip_3, self.edge_bip_4, self.edge_bip_5, self.edge_bip_6, self.edge_bip_7, self.edge_bip_8]
+		self.assertTrue(all(i in bipartite_graph.nodes for i in self.node_list))
+		self.assertTrue(all(i in bipartite_graph.edges for i in edge_list))
+		self.assertTrue(all(i in self.node_list for i in bipartite_graph.nodes))
+		self.assertTrue(all(i in edge_list for i in bipartite_graph.edges))
+
 	def test_bipartite_graph_subset(self):
 		net_dict, style_flux_dict = graph.make_network_dict(self.native_model, self.mm, subset=['rxn1'], method='fpp', element=None,
 										   excluded_reactions=[], reaction_dict={}, analysis=None)
@@ -1050,7 +1061,6 @@ class TestCompExit(unittest.TestCase):
 	def test_with_element(self):
 		with self.assertRaises(SystemExit):
 			graph.make_network_dict(self.native, self.mm, method='no-fpp', element='C')
-
 
 
 if __name__ == '__main__':

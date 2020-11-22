@@ -19,13 +19,10 @@
 # Copyright 2020-2020  Elysha Sameth <esameth@my.uri.edu>
 
 from __future__ import unicode_literals
-from graphviz import FORMATS
 
 import unittest
 import os
 import tempfile
-import argparse
-import sys
 
 from psamm.formula import Formula, Atom
 from psamm.commands import vis
@@ -35,8 +32,6 @@ from psamm.datasource.reaction import parse_reaction, parse_compound
 from psamm.datasource import entry
 from psamm import graph
 from psamm.datasource.native import NativeModel, ReactionEntry, CompoundEntry
-from psamm.datasource import native, sbml
-from psamm.lpsolver import generic
 
 
 # 2019-08-30 new test cases for vis
