@@ -1,3 +1,16 @@
+v1.1 (2020-12-11)
+------------------
+
+- Adds the new `vis` command for visualizing metabolic pathways and 
+  networks
+- Adds the new `tmfa` command to implement the approach as described 
+  in Henry et al., 2007 (PMID: 17172310) and Hamilton et al., 2013 
+  (PMID: 23870272).
+- Performance updates to the `model-mapping` command
+- Updates to export full models from `gimme` and `psammotate`
+- Added the --fva option to the `robustness` command
+
+
 v1.0 (2020-03-03)
 ------------------
 
