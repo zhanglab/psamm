@@ -81,12 +81,12 @@ class PsammotateCommand(Command):
             if row_length < query:
                 logger.error("Target model gene is in column {} of the RBH "
                              "file , but row '{}' only contains {} "
-                             "columns".format(query, row, row_length, row))
+                             "columns".format(query, row, row_length))
                 quit()
             if row_length < template:
                 logger.error("Template model gene is in column {} of the RBH "
                              "file , but row '{}' only contains {} "
-                             "columns".format(template, row, row_length, row))
+                             "columns".format(template, row, row_length))
                 quit()
 
         if self._args.export_model is None:

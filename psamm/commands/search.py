@@ -26,8 +26,10 @@ from six import text_type
 from ..command import Command, FilePrefixAppendAction, convert_to_unicode
 from ..datasource.reaction import parse_compound
 
+
 def filter_search_term(s):
     return re.sub(r'[^a-z0-9]+', '', s.lower())
+
 
 class SearchCommand(Command):
     """Search for reactions and compounds in the model."""
@@ -120,9 +122,11 @@ class SearchCommand(Command):
                 for cpd_property in compound.properties.values():
                     if isinstance(cpd_property, list):
                         for i in cpd_property:
-                            compound_prop_list.append(convert_to_unicode(text_type(i)).lower())
+                            compound_prop_list.append(convert_to_unicode(
+                                text_type(i)).lower())
                     else:
-                        compound_prop_list.append(convert_to_unicode(text_type(cpd_property)).lower())
+                        compound_prop_list.append(convert_to_unicode(
+                            text_type(cpd_property)).lower())
 
                 # find compound entry based on given property argument
                 if self._args.exact:
@@ -189,10 +193,12 @@ class SearchCommand(Command):
                 for rxn_property in raw_reaction_prop_list:
                     if isinstance(rxn_property, list):
                         for i in rxn_property:
-                            reaction_prop_list.append(convert_to_unicode(text_type(i)).lower())
+                            reaction_prop_list.append(convert_to_unicode(
+                                text_type(i)).lower())
 
                     else:
-                        reaction_prop_list.append(convert_to_unicode(text_type(rxn_property)).lower())
+                        reaction_prop_list.append(convert_to_unicode(
+                            text_type(rxn_property)).lower())
 
                 # find reaction based on given property argument
                 if self._args.exact:

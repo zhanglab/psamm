@@ -26,6 +26,7 @@ from ..balancecheck import charge_balance
 
 logger = logging.getLogger(__name__)
 
+
 class ChargeBalanceCommand(Command):
     """Check whether compound charge is balanced.
 
@@ -37,7 +38,8 @@ class ChargeBalanceCommand(Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            '--exclude', metavar='reaction', type=convert_to_unicode, action=FilePrefixAppendAction,
+            '--exclude', metavar='reaction', type=convert_to_unicode,
+            action=FilePrefixAppendAction,
             default=[], help='Exclude reaction from balance check')
         parser.add_argument(
             '--epsilon', metavar='epsilon', type=float, default=1e-6,

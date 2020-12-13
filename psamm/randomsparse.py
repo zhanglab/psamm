@@ -223,6 +223,7 @@ def random_sparse(strategy, prob, obj_reaction, flux_threshold):
 
     return essential, deleted
 
+
 def random_sparse_return_all(strategy, prob, obj_reaction, flux_threshold):
     """Find a random minimal network of model reactions.
 

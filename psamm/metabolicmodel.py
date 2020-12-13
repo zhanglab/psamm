@@ -337,8 +337,8 @@ class MetabolicModel(MetabolicDatabase):
         {rxnid}_forward or {rxnid}_reverse as the IDs.
 
         Args:
-            mm: A metabolicmodel object
-            gene_dict: A dictionary stores reacion ids as keys and
+            self: A metabolicmodel object
+            gene_dict: A dictionary stores reaction ids as keys and
                        corresponding gene association as values, it's
                        required only in GIMME function
             exclude_list: list of reactions to exclude in TMFA simulation
@@ -349,8 +349,8 @@ class MetabolicModel(MetabolicDatabase):
             gene_dict_reversible: A dictionary mapping irreversible reaction
                                   ids to gene associations, used only
                                   in GIMME function
-            split_rxns: A list of splited reactions, each element is a tuple of
-                     ({rxnid}_forward, {rxnid}_reverse)
+            split_rxns: A list of splitted reactions, each element is a tuple
+                        of ({rxnid}_forward, {rxnid}_reverse)
         """
         split_reversible = set()
         mm_irrev = self.copy()
@@ -410,7 +410,7 @@ class MetabolicModel(MetabolicDatabase):
                 final_sub_rxn_list = []
                 sub = lumped_rxns[rxn]
                 check = 0
-                for (x,y) in sub:
+                for (x, y) in sub:
                     rn = mm_irrev.get_reaction(x)
                     if rn.direction != Direction.Both:
                         check += 1
@@ -419,14 +419,15 @@ class MetabolicModel(MetabolicDatabase):
                     mm_irrev.limits[rxn].lower = 0
                     sub_rxn_list = lumped_rxns[rxn]
                     for entry in sub_rxn_list:
-                        (subrxn, dir)= entry
+                        (subrxn, dir) = entry
                         final_sub_rxn_list.append(subrxn)
                     new_lump_rxn_dict[rxn] = final_sub_rxn_list
                 elif reaction.direction == Direction.Both:
                     # split the lump reaction itself
-                    lumped_rxns.append(rxn)
-                    r = Reaction(Direction.Forward, reaction.left, reaction.right)
-                    r2 = Reaction(Direction.Forward, reaction.right, reaction.left)
+                    r = Reaction(Direction.Forward, reaction.left,
+                                 reaction.right)
+                    r2 = Reaction(Direction.Forward, reaction.right,
+                                  reaction.left)
                     r_id = u'{}_forward'.format(rxn)
                     r2_id = u'{}_reverse'.format(rxn)
                     mm_irrev.remove_reaction(rxn)
@@ -434,7 +435,7 @@ class MetabolicModel(MetabolicDatabase):
                     mm_irrev.database.set_reaction(r2_id, r2)
                     mm_irrev.add_reaction(r_id)
                     mm_irrev.add_reaction(r2_id)
-                    split_reversible.append((r_id, r2_id))
+                    split_reversible.add((r_id, r2_id))
 
                     sub_rxn_list = lumped_rxns[rxn]
                     for_sub_rxn_list = []
@@ -446,14 +447,16 @@ class MetabolicModel(MetabolicDatabase):
                     for entry in sub_rxn_list:
                         (subrxn, dir) = entry
                         dir = int(dir)
-                        lumped_rxns.append(subrxn)
-                        subreaction = mm.get_reaction(subrxn)
-                        sub_r1 = Reaction(Direction.Forward, subreaction.left, subreaction.right)
+                        # subreaction = mm.get_reaction(subrxn)
+                        subreaction = self.get_reaction(subrxn)
+                        sub_r1 = Reaction(Direction.Forward,
+                                          subreaction.left, subreaction.right)
                         sub_r1_id = u'{}_forward'.format(subrxn)
-                        sub_r2 = Reaction(Direction.Forward, subreaction.right, subreaction.left)
+                        sub_r2 = Reaction(Direction.Forward,
+                                          subreaction.right, subreaction.left)
                         sub_r2_id = u'{}_reverse'.format(subrxn)
 
-                        split_reversible.append((sub_r1_id, sub_r2_id))
+                        split_reversible.add((sub_r1_id, sub_r2_id))
                         if dir == 1:
                             for_sub_rxn_list.append(sub_r1_id)
                             rev_sub_rxn_list.append(sub_r2_id)
@@ -475,7 +478,8 @@ class MetabolicModel(MetabolicDatabase):
                     new_lump_rxn_dict[r_id] = for_sub_rxn_list
                     new_lump_rxn_dict[r2_id] = rev_sub_rxn_list
 
-        return mm_irrev, reversible_gene_dict, split_reversible, new_lump_rxn_dict
+        return \
+            mm_irrev, reversible_gene_dict, split_reversible, new_lump_rxn_dict
 
 
 class FlipableFluxBounds(FluxBounds):

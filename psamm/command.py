@@ -46,12 +46,16 @@ from .datasource import native, sbml
 from .datasource.context import FilePathContext
 from .lpsolver import generic
 
-logger = logging.getLogger(__name__)
-
 import codecs
+
+if PY3:
+    unicode = str
 if not PY3:
     if sys.stdout.encoding != 'UTF-8':
         sys.stdout = codecs.getwriter('utf-8')(sys.stdout, 'strict')
+
+logger = logging.getLogger(__name__)
+
 
 def convert_to_unicode(str_, encoding='UTF-8'):
     if PY3 or bool(re.search(r'\\u', str_)):
@@ -60,9 +64,11 @@ def convert_to_unicode(str_, encoding='UTF-8'):
         except:
             pass
         return str_
-    if isinstance(str_, unicode):
-        return str_
-    return unicode(str_, encoding)
+    else:
+        if isinstance(str_, unicode):
+            return str_
+        return unicode(str_, encoding)
+
 
 class CommandError(Exception):
     """Error from running a command.
@@ -118,6 +124,7 @@ class Command(object):
             logger.debug('Command failure caused by exception!', exc_info=exc)
         sys.exit(1)
 
+
 class MetabolicMixin(object):
     """Mixin for commands that use a metabolic model representation."""
 
@@ -139,6 +146,7 @@ class MetabolicMixin(object):
                 ', '.join(sorted(to_check)))
         self.fail(message, exc)
 
+
 class ObjectiveMixin(object):
     """Mixin for commands that use biomass as objective.
 
@@ -146,7 +154,8 @@ class ObjectiveMixin(object):
     """
     @classmethod
     def init_parser(cls, parser):
-        parser.add_argument('--objective', type=convert_to_unicode, help='Reaction to use as objective')
+        parser.add_argument('--objective', type=convert_to_unicode,
+                            help='Reaction to use as objective')
         super(ObjectiveMixin, cls).init_parser(parser)
 
     def _get_objective(self, log=True):
@@ -161,6 +170,7 @@ class ObjectiveMixin(object):
             logger.info('Using {} as objective'.format(reaction))
 
         return reaction
+
 
 class LoopRemovalMixin(object):
     """Mixin for commands that perform loop removal."""

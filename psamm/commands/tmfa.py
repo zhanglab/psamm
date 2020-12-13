@@ -312,7 +312,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                 logger.info(u'Set biomass based on maxbiomass to {}'.format(
                     max_biomass))
             split_reversible_list = []
-            for (f,r) in split_reversible:
+            for (f, r) in split_reversible:
                 split_reversible_list.append(f)
                 split_reversible_list.append(r)
             if self._args.single_solution is not None:
@@ -432,9 +432,9 @@ def print_fva(prob, mm_irreversible, cp_list, exclude_unknown_list,
                     rxn_f = rxn_f.replace('_reverse', '')
                     rxn_f += '_forward'
                     max_dgr = -1*get_var_bound(prob, _dgri(rxn_f),
-                                            lp.ObjectiveSense.Minimize)
+                                               lp.ObjectiveSense.Minimize)
                     min_dgr = -1*get_var_bound(prob, _dgri(rxn_f),
-                                            lp.ObjectiveSense.Maximize)
+                                               lp.ObjectiveSense.Maximize)
                 else:
                     min_dgr = get_var_bound(prob, _dgri(reaction),
                                             lp.ObjectiveSense.Minimize)
@@ -503,14 +503,13 @@ def print_fba(simulation, prob, objective, _v, _zi, _dgri, _xij, mm,
                     rxn_f = rxn
                     rxn_f = rxn_f.replace('_reverse', '')
                     rxn_f += '_forward'
-                    print(u'DGR\t{}\t{}'.format(rxn,
-                        -1*result.get_value(_dgri(rxn_f))))
+                    print(u'DGR\t{}\t{}'.format(
+                        rxn, -1*result.get_value(_dgri(rxn_f))))
                 else:
-                    print(u'DGR\t{}\t{}'.format(rxn,
-                        result.get_value(_dgri(rxn))))
+                    print(u'DGR\t{}\t{}'.format(
+                        rxn, result.get_value(_dgri(rxn))))
             else:
-                print(u'DGR\t{}\t{}'.format(rxn,
-                    result.get_value(_dgri(rxn))))
+                print(u'DGR\t{}\t{}'.format(rxn, result.get_value(_dgri(rxn))))
             print(u'Zi\t{}\t{}'.format(rxn, result.get_value(_zi(rxn))))
         for cp in cp_list:
             if cp not in excluded_compounds:
@@ -536,14 +535,14 @@ def print_fba(simulation, prob, objective, _v, _zi, _dgri, _xij, mm,
                     rxn_f = rxn
                     rxn_f = rxn_f.replace('_reverse', '')
                     rxn_f += '_forward'
-                    print(u'DGR\t{}\t{}'.format(rxn,
-                        -1*result.get_value(_dgri(rxn_f))))
+                    print(u'DGR\t{}\t{}'.format(
+                        rxn, -1*result.get_value(_dgri(rxn_f))))
                 else:
-                    print(u'DGR\t{}\t{}'.format(rxn,
-                        result.get_value(_dgri(rxn))))
+                    print(u'DGR\t{}\t{}'.format(
+                        rxn, result.get_value(_dgri(rxn))))
             else:
-                print(u'DGR\t{}\t{}'.format(rxn,
-                    result.get_value(_dgri(rxn))))
+                print(u'DGR\t{}\t{}'.format(
+                    rxn, result.get_value(_dgri(rxn))))
             print(u'Zi\t{}\t{}'.format(rxn, result.get_value(_zi(rxn))))
         for cp in cp_list:
             if cp not in excluded_compounds:
@@ -568,14 +567,13 @@ def print_fba(simulation, prob, objective, _v, _zi, _dgri, _xij, mm,
                     rxn_f = rxn
                     rxn_f = rxn_f.replace('_reverse', '')
                     rxn_f += '_forward'
-                    print(u'DGR\t{}\t{}'.format(rxn,
-                        -1*result.get_value(_dgri(rxn_f))))
+                    print(u'DGR\t{}\t{}'.format(
+                        rxn, -1*result.get_value(_dgri(rxn_f))))
                 else:
-                    print(u'DGR\t{}\t{}'.format(rxn,
-                        result.get_value(_dgri(rxn))))
+                    print(u'DGR\t{}\t{}'.format(
+                        rxn, result.get_value(_dgri(rxn))))
             else:
-                print(u'DGR\t{}\t{}'.format(rxn,
-                    result.get_value(_dgri(rxn))))
+                print(u'DGR\t{}\t{}'.format(rxn, result.get_value(_dgri(rxn))))
             print(u'Zi\t{}\t{}'.format(rxn, result.get_value(_zi(rxn))))
         for cp in cp_list:
             if cp not in excluded_compounds:
@@ -650,15 +648,15 @@ def parse_dgf(mm, dgf_file):
             except:
                 logger.info(u'Compound {} has an assigned detltGf value '
                             'of {}. This is not an number and will be treated '
-                            'as a missing value.'.format(
-                            Compound(row[0], cpt), row[1]))
+                            'as a missing '
+                            'value.'.format(Compound(row[0], cpt), row[1]))
     return cpd_dgf_dict
 
 
 def add_conc_constraints(xij, problem, cpd_conc_dict,
                          cp_list, water, hin, hout, hother):
     '''Add concentration constraints to TMFA problem
-    based on parsed conetration dictionary.
+    based on parsed concentration dictionary.
 
     '''
     # Water and hydrogen need to be excluded from
@@ -847,7 +845,6 @@ def add_reaction_constraints(
     logger.info(u'using h in {}'.format(hin))
     logger.info(u'using h out {}'.format(hout))
     logger.info(u'using water {}'.format(water))
-    split_list = []
 
     # for (f, r) in split_rxns:
     #     split_list.append(f)
@@ -875,7 +872,7 @@ def add_reaction_constraints(
 
             zi = _zi(reaction)
             split_rxns_l = []
-            for (f,r) in split_rxns:
+            for (f, r) in split_rxns:
                 split_rxns_l.append(f)
                 split_rxns_l.append(r)
             if reaction in split_rxns_l:
@@ -930,8 +927,8 @@ def add_reaction_constraints(
                         problem.add_linear_constraints(vi <= zi * vmax)
 
         if reaction in lump_rxn_list.keys():
-            problem.define(u'yi_{}'.format(reaction), lower=int(0), upper=int(1),
-                      types=lp.VariableType.Binary)
+            problem.define(u'yi_{}'.format(reaction), lower=int(0),
+                           upper=int(1), types=lp.VariableType.Binary)
             yi = problem.var(u'yi_{}'.format(reaction))
             if reaction not in new_excluded_reactions:
                 vi = _v(reaction)

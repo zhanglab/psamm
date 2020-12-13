@@ -465,9 +465,9 @@ def make_network_dict(nm, mm, subset=None, method='fpp', element=None,
                             'Reaction {} is in the subset and exclude file. '
                             'Reaction will be excluded.'.format(rxn))
     else:
-        testing_list_raw = [rxn for rxn in mm.reactions if (
-                rxn in nm.reactions or mm.is_exchange(rxn)) and rxn
-                        not in excluded_reactions]
+        testing_list_raw = [rxn for rxn in mm.reactions
+                            if (rxn in nm.reactions or mm.is_exchange(rxn))
+                            and rxn not in excluded_reactions]
 
     reaction_data = {}
     style_flux_dict = {}
@@ -509,7 +509,7 @@ def make_network_dict(nm, mm, subset=None, method='fpp', element=None,
             reaction_data[rxn] = (nm.reactions[rxn], direction)
         style_flux_dict[rxn] = (style, abs(flux))
 
-    flux_list = sorted([flux for style, flux in style_flux_dict.values()])
+    flux_list = sorted([f for s, f in style_flux_dict.values()])
     median = 1
     flux_list = list(filter(lambda x: x != 0, flux_list))
 
@@ -936,4 +936,3 @@ def dir_value(direction):
         return 'back'
     else:
         return 'both'
-

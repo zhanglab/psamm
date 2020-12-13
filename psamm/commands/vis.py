@@ -151,7 +151,6 @@ class VisualizationCommand(MetabolicMixin,
                     "--element parameter".format(self._args.element))
                 quit()
 
-
         self.analysis = None
         reaction_dict = {}
         if self._args.fba is not None:
@@ -376,7 +375,8 @@ def rxnset_for_vis(mm, subset_file, exclude):
             if len(cpd_set) > 0:
                 for rx in mm.reactions:
                     rxn = mm.get_reaction(rx)
-                    if any(text_type(c) in cpd_set for (c, _) in rxn.compounds):
+                    if any(text_type(c) in cpd_set
+                           for (c, _) in rxn.compounds):
                         final_rxn_set.add(rx)
             elif len(rxn_set) > 0:
                 final_rxn_set = rxn_set
@@ -409,7 +409,7 @@ def add_biomass_rxns(g, nm_bio_reaction):
             bio_pair[biomass_rxn_id] += 1
             node_bio = graph.Node({
                 'id': u'{}_{}'.format(biomass_rxn_id,
-                                     bio_pair[biomass_rxn_id]),
+                                      bio_pair[biomass_rxn_id]),
                 'entry': [nm_bio_reaction],
                 'shape': 'box',
                 'style': 'filled',
@@ -538,7 +538,8 @@ def add_node_label(g, cpd_detail, rxn_detail):
                         label = pre_label
 
                     if 'equation' in rxn_detail[0]:
-                        label += u'\n{}'.format(node.props['entry'][0].properties.get('equation'))
+                        label += u'\n{}'.format(
+                            node.props['entry'][0].properties.get('equation'))
 
                     # if all required properties are not in the reaction entry,
                     # then print reaction id

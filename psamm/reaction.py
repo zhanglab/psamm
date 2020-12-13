@@ -21,7 +21,6 @@
 
 from __future__ import unicode_literals
 
-import sys
 import re
 import functools
 import enum
@@ -29,7 +28,8 @@ import numbers
 from collections import Counter
 
 import six
-from six import text_type, iteritems, PY3
+from six import text_type, iteritems
+
 
 @six.python_2_unicode_compatible
 @functools.total_ordering

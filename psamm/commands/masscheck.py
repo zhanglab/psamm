@@ -23,8 +23,8 @@ import logging
 
 from six import iteritems
 
-from ..command import (Command, SolverCommandMixin,
-                       MetabolicMixin, FilePrefixAppendAction, convert_to_unicode)
+from ..command import (Command, SolverCommandMixin, MetabolicMixin,
+                       FilePrefixAppendAction, convert_to_unicode)
 from .. import massconsistency
 from ..reaction import Compound
 
