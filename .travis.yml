@@ -46,6 +46,12 @@ matrix:
     python: '3.6'
   - env: TOXENV=py36-qsoptex,coverage
     python: '3.6'
+  - env: TOXENV=py37-nosolver,coverage
+    python: '3.7'
+  - env: TOXENV=py37-glpk,coverage
+    python: '3.7'
+  - env: TOXENV=py37-qsoptex,coverage
+    python: '3.7'
   - env: TOXENV=docs
 deploy:
   provider: pypi
