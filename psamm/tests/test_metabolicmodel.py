@@ -246,5 +246,80 @@ class TestMetabolicModelFlipableView(unittest.TestCase):
         self.assertEqual(self.model.limits['rxn_1'].bounds, (-500, 20))
 
 
+class TestMetabolicModelMakeIreversible(unittest.TestCase):
+    def setUp(self):
+        self.database = DictDatabase()
+        self.database.set_reaction('rxn_1', parse_reaction('|A| <=> |B|'))
+        self.database.set_reaction('rxn_2', parse_reaction('|A| => |D|'))
+
+        self.model = MetabolicModel.load_model(self.database,
+            self.database.reactions)
+
+    def test_make_irreversible(self):
+        mm_irrev, reversible_gene_dict, \
+        split_reversible, new_lump_rxn_dict = self.model.make_irreversible()
+        rxn_list = [i for i in mm_irrev.reactions]
+        self.assertTrue(str(mm_irrev.get_reaction('rxn_1_forward')) == 'A => B')
+        self.assertTrue(str(mm_irrev.get_reaction('rxn_1_reverse')) == 'B => A')
+        self.assertTrue(mm_irrev.has_reaction('rxn_1_forward'))
+        self.assertTrue(mm_irrev.has_reaction('rxn_1_reverse'))
+        self.assertFalse(mm_irrev.has_reaction('rxn_1'))
+
+    def test_make_irreversible_exclude(self):
+        mm_irrev, reversible_gene_dict, \
+        split_reversible, new_lump_rxn_dict = self.model.make_irreversible(
+            exclude_list=['rxn_1'])
+        rxn_list = [i for i in mm_irrev.reactions]
+        self.assertFalse(mm_irrev.has_reaction('rxn_1_forward'))
+        self.assertFalse(mm_irrev.has_reaction('rxn_1_reverse'))
+
+    def test_make_irreversible_genes(self):
+        mm_irrev, reversible_gene_dict, \
+        split_reversible, new_lump_rxn_dict = self.model.make_irreversible(
+            gene_dict={'rxn_1': 'gene_1'})
+        rxn_list = [i for i in mm_irrev.reactions]
+        self.assertTrue(reversible_gene_dict.get('rxn_1_forward') == 'gene_1')
+        self.assertTrue(reversible_gene_dict.get('rxn_1_reverse') == 'gene_1')
+
+    def test_make_irreversible_allrev(self):
+        mm_irrev, reversible_gene_dict, \
+        split_reversible, new_lump_rxn_dict = self.model.make_irreversible(
+            all_reversible=True)
+        rxn_list = [i for i in mm_irrev.reactions]
+        self.assertTrue(str(mm_irrev.get_reaction('rxn_1_forward')) == 'A => B')
+        self.assertTrue(str(mm_irrev.get_reaction('rxn_1_reverse')) == 'B => A')
+        self.assertTrue(mm_irrev.has_reaction('rxn_1_forward'))
+        self.assertTrue(mm_irrev.has_reaction('rxn_1_reverse'))
+        self.assertTrue(str(mm_irrev.get_reaction('rxn_2_forward')) == 'A => D')
+        self.assertTrue(str(mm_irrev.get_reaction('rxn_2_reverse')) == 'D => A')
+        self.assertTrue(mm_irrev.has_reaction('rxn_2_forward'))
+        self.assertTrue(mm_irrev.has_reaction('rxn_2_reverse'))
+
+    def test_make_irreversible_allrev(self):
+        mm_irrev, reversible_gene_dict, \
+        split_reversible, new_lump_rxn_dict = self.model.make_irreversible(
+            all_reversible=True)
+        rxn_list = [i for i in mm_irrev.reactions]
+        self.assertTrue(str(mm_irrev.get_reaction('rxn_1_forward')) == 'A => B')
+        self.assertTrue(str(mm_irrev.get_reaction('rxn_1_reverse')) == 'B => A')
+        self.assertTrue(mm_irrev.has_reaction('rxn_1_forward'))
+        self.assertTrue(mm_irrev.has_reaction('rxn_1_reverse'))
+        self.assertTrue(str(mm_irrev.get_reaction('rxn_2_forward')) == 'A => D')
+        self.assertTrue(str(mm_irrev.get_reaction('rxn_2_reverse')) == 'D => A')
+        self.assertTrue(mm_irrev.has_reaction('rxn_2_forward'))
+        self.assertTrue(mm_irrev.has_reaction('rxn_2_reverse'))
+
+    def test_make_irreversible_allrev(self):
+        mm_irrev, reversible_gene_dict, \
+        split_reversible, new_lump_rxn_dict = self.model.make_irreversible(
+            lumped_rxns={'rxn_1': [('rxn_2', 1)]},
+            exclude_list=['rxn_1', 'rxn_2'])
+        rxn_list = [i for i in mm_irrev.reactions]
+        print(new_lump_rxn_dict)
+        self.assertTrue(new_lump_rxn_dict == {'rxn_1': ['rxn_2']})
+
+
+
+
 if __name__ == '__main__':
     unittest.main()
