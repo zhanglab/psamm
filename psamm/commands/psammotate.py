@@ -73,22 +73,6 @@ class PsammotateCommand(Command):
     def run(self):
         """Run psammotate command"""
 
-        # check the maximum columns of --rbh input
-        query = self._args.target
-        template = self._args.template
-        for row in csv.reader(self._args.rbh, delimiter='\t'):
-            row_length = len(row)
-            if row_length < query:
-                logger.error("Target model gene is in column {} of the RBH "
-                             "file , but row '{}' only contains {} "
-                             "columns".format(query, row, row_length))
-                quit()
-            if row_length < template:
-                logger.error("Template model gene is in column {} of the RBH "
-                             "file , but row '{}' only contains {} "
-                             "columns".format(template, row, row_length))
-                quit()
-
         if self._args.export_model is None:
             if path.exists('{}.yaml'.format(self._args.output)):
                 logger.warning('File {}.yaml already exists. '
