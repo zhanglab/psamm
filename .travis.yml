@@ -1,4 +1,4 @@
-dist: trusty
+dist: xenial
 language: python
 cache:
   directories:
@@ -28,12 +28,6 @@ after_success: coveralls
 matrix:
   include:
   - env: TOXENV=flake
-  - env: TOXENV=py27-nosolver,coverage
-    python: '2.7'
-  - env: TOXENV=py27-glpk,coverage
-    python: '2.7'
-  - env: TOXENV=py27-qsoptex,coverage
-    python: '2.7'
   - env: TOXENV=py35-nosolver,coverage
     python: '3.5'
   - env: TOXENV=py35-glpk,coverage
