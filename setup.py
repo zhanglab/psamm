@@ -120,7 +120,7 @@ setup(
     test_suite='psamm.tests',
 
     install_requires=[
-        'PyYAML~=3.11',
+        'pyyaml>=4.2b1',
         'six',
         'xlsxwriter',
         'numpy',

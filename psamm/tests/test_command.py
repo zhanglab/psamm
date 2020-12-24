@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # This file is part of PSAMM.
 #
 # PSAMM is free software: you can redistribute it and/or modify
@@ -570,7 +571,13 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
                 model=self._infeasible_model)
 
     def test_run_sbmlexport(self):
-        self.run_command(SBMLExport)
+        dest = tempfile.mkdtemp()
+        try:
+            dest_path = os.path.join(dest, 'model.xml')
+            self.run_command(SBMLExport, [dest_path])
+            self.assertTrue(os.path.isfile(dest_path))
+        finally:
+            shutil.rmtree(dest)
 
     def test_run_search_compound(self):
         self.run_command(SearchCommand, ['compound', '--id', 'A_\u2206'])
