@@ -181,10 +181,10 @@ class TestYAMLDataSource(unittest.TestCase):
                 'equation': {
                     'reversible': True,
                     'left': [
-                        { 'id': 'A', 'value': 1 },
-                        { 'id': 'B', 'value': 2 } ],
+                        {'id': 'A', 'value': 1},
+                        {'id': 'B', 'value': 2}],
                     'right': [
-                        { 'id': 'C', 'value': 1 }
+                        {'id': 'C', 'value': 1}
                     ]
                 }
             }
@@ -199,12 +199,12 @@ class TestYAMLDataSource(unittest.TestCase):
 
     def test_parse_reaction_list_missing_value(self):
         with self.assertRaises(native.ParseError):
-            reactions = list(native.parse_reaction_list('./test.yaml', [
+            reaction = list(native.parse_reaction_list('./test.yaml', [
                 {
                     'id': 'rxn1',
                     'equation': {
                         'left': [
-                            { 'id': 'A' }
+                            {'id': 'A'}
                         ]
                     }
                 }
@@ -237,7 +237,8 @@ co2     e       -       50
         }, 'e'))
 
         self.assertEqual(len(exchange), 5)
-        self.assertEqual(exchange[0], (Compound(('ac'), ('e')), None, None, None))
+        self.assertEqual(exchange[0], (Compound(('ac'), ('e')),
+                                       None, None, None))
         self.assertEqual(exchange[1], (Compound('glcD', 'e'), None, -10, None))
         self.assertEqual(exchange[2], (Compound('co2', 'e'), None, None, 50))
         self.assertEqual(
@@ -325,28 +326,26 @@ class TestYAMLFileSystemData(unittest.TestCase):
                  'genes': [
                     'gene_1',
                     'gene_2']
-                },
+                 },
                 {'id': 'rxn_2_\u03c0',
                  'equation': '|B[c]| => |C[e]|',
                  'genes': 'gene_3 or (gene_4 and gene_5)'
-                }
-                ],
+                 }],
             'compounds': [
                 {'id': 'A_\u2206'},
                 {'id': 'B'},
-                {'id': 'C'}
-              ],
+                {'id': 'C'}],
             'exchange': [
                 {'compartment': 'e',
-                 'compounds':[
-                    {'id': 'A_\u2206'},
-                    {'id': 'C'}]
-                }],
-            'limits':[
+                 'compounds': [
+                     {'id': 'A_\u2206'},
+                     {'id': 'C'}]
+                 }],
+            'limits': [
                 {'reaction': 'rxn_2_\u03c0',
                  'upper': 100
-                }]
-            }
+                 }]
+        }
 
         dmodel = native.ModelReader(dict_model)
         self.assertEqual(dmodel.name, 'Test model')
@@ -470,7 +469,6 @@ class TestYAMLFileSystemData(unittest.TestCase):
         ]))
 
         reactions = list(native.parse_reaction_file(path))
-        print('REACTION: ', reactions[0].equation)
         self.assertEqual(len(reactions), 2)
 
         self.assertEqual(reactions[0].id, 'rxn_1')
@@ -531,9 +529,9 @@ class TestYAMLFileSystemData(unittest.TestCase):
 
     def test_get_limits_invalid_fixed(self):
         d = {
-            'fixed' : 10,
-            'upper' : 20
-            }
+            'fixed': 10,
+            'upper': 20
+        }
         with self.assertRaises(native.ParseError):
             native.get_limits(d)
 

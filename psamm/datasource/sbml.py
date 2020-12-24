@@ -25,7 +25,6 @@ from fractions import Fraction
 from functools import partial
 import logging
 import re
-import sys
 import json
 from collections import OrderedDict, Counter
 
@@ -1266,7 +1265,6 @@ class SBMLWriter(object):
         )
         if PY3:
             write_options['encoding'] = 'unicode'
-
 
         tree.write(file, **write_options)
 

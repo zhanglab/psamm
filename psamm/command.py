@@ -62,12 +62,11 @@ def convert_to_unicode(str_, encoding='UTF-8'):
         try:
             return str_.encode('latin-1').decode('unicode-escape')
         except:
-            pass
-        return str_
+            return str_
     else:
         if isinstance(str_, unicode):
             return str_
-        return unicode(str_, encoding)
+        return str_.decode(encoding)
 
 
 class CommandError(Exception):

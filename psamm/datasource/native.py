@@ -431,16 +431,18 @@ class ModelReader(object):
 
         for limit in self.parse_limits():
             model.limits[limit[0]] = limit
-            dir = model.reactions.get(limit[0]).properties['equation'].direction
-            if str(dir) == 'Direction.Forward' or str(dir) == 'Direction.Right':
+            dir = model.reactions.get(limit[0]).properties[
+                'equation'].direction
+            if str(dir) == 'Direction.Forward' or \
+                    str(dir) == 'Direction.Right':
                 v_min = 0
                 v_max = model.default_flux_limit
-            elif str(dir) == 'Direction.Both'  or str(dir) == 'Direction.Bidir':
+            elif str(dir) == 'Direction.Both' or str(dir) == 'Direction.Bidir':
                 v_min = -model.default_flux_limit
                 v_max = model.default_flux_limit
             else:
                 logger.warning('Reaction {} has invalid direction: {}'.format(
-                        limit[0], dir))
+                    limit[0], dir))
             if (limit[1] is not None and limit[1] < v_min) or \
                     (limit[2] is not None and limit[2] > v_max):
                 specify_vmin = limit[1] if limit[1] is not None else \
@@ -680,7 +682,10 @@ def parse_compound(compound_def, context=None):
 
     compound_props = {}
     for key, value in compound_def.items():
-        compound_props[key] = convert_to_unicode(value) if isinstance(value, str) else value
+        if isinstance(value, str):
+            compound_props[key] = convert_to_unicode(value)
+        else:
+            compound_props[key] = value
 
     mark = FileMark(context, None, None)
     return CompoundEntry(compound_props, mark)
@@ -703,6 +708,7 @@ def parse_compound_list(path, compounds):
         else:
             yield parse_compound(compound_dict, context)
 
+
 def parse_compound_table_file(path, f):
     """Parse a tab-separated file containing compound IDs and properties
 
@@ -713,7 +719,8 @@ def parse_compound_table_file(path, f):
     context = FilePathContext(path)
 
     for i, row in enumerate(csv.DictReader(f, delimiter=str('\t'))):
-        if text_type('id') not in row or text_type(convert_to_unicode(row['id'].strip())) == '':
+        if text_type('id') not in row or \
+                text_type(convert_to_unicode(row['id'].strip())) == '':
             raise ParseError('Expected `id` column in table')
 
         props = {key: text_type(convert_to_unicode(value))
@@ -805,9 +812,9 @@ def parse_reaction_equation(equation_def, default_compartment):
 
     Returns a Reaction.
     """
-    def parse_compound_list(l, compartment):
+    def parse_compound_list(compound_list, compartment):
         """Parse a list of reactants or metabolites"""
-        for compound_def in l:
+        for compound_def in compound_list:
             compound_id = convert_to_unicode(compound_def.get('id'))
             _check_id(compound_id, 'Compound')
 
@@ -849,11 +856,15 @@ def parse_reaction(reaction_def, default_compartment, context=None):
 
     reaction_props = {}
     for key, value in reaction_def.items():
-        reaction_props[key] = convert_to_unicode(value) if isinstance(value, str) else value
+        if isinstance(value, str):
+            reaction_props[key] = convert_to_unicode(value)
+        else:
+            reaction_props[key] = value
 
     if 'genes' in reaction_def.keys():
         if isinstance(reaction_def['genes'], list):
-            reaction_props['genes'] = [convert_to_unicode(gene) for gene in reaction_def['genes']]
+            reaction_props['genes'] = [convert_to_unicode(gene)
+                                       for gene in reaction_def['genes']]
 
     # Parse reaction equation
     if 'equation' in reaction_def.keys():
@@ -902,7 +913,8 @@ def parse_reaction_table_file(path, f, default_compartment):
     context = FilePathContext(path)
 
     for lineno, row in enumerate(csv.DictReader(f, delimiter=str('\t'))):
-        if text_type('id') not in row or text_type(convert_to_unicode(row['id'].strip())) == '':
+        if text_type('id') not in row or \
+                text_type(convert_to_unicode(row['id'].strip())) == '':
             raise ParseError('Expected `id` column in table')
 
         props = {key: convert_to_unicode(value)
@@ -952,7 +964,7 @@ def get_limits(compound_def):
         lower = fixed
         upper = fixed
     elif ('fixed' in compound_def and
-            ('lower'in compound_def or 'upper' in compound_def)):
+            ('lower' in compound_def or 'upper' in compound_def)):
         raise ParseError('Cannot use fixed and a lower or upper bound')
     else:
         lower = compound_def.get('lower', None)
@@ -970,7 +982,8 @@ def parse_exchange(exchange_def, default_compartment):
 
     for compound_def in exchange_def.get('compounds', []):
         compartment = compound_def.get('compartment', default_compartment)
-        compound = Compound(convert_to_unicode(compound_def['id']), compartment=compartment)
+        compound = Compound(convert_to_unicode(compound_def['id']),
+                            compartment=compartment)
         reaction = compound_def.get('reaction')
         if reaction:
             reaction = convert_to_unicode(reaction)
@@ -1030,6 +1043,7 @@ parse_medium_yaml_file = parse_exchange_yaml_file
 .. deprecated:: 0.28
    Use :func:`parse_exchange_yaml_file` instead.
 """
+
 
 def parse_exchange_table_file(f):
     """Parse a space-separated file containing exchange compound flux limits.

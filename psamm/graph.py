@@ -694,8 +694,8 @@ def make_cpair_dict(filter_dict, args_method, args_combine, style_flux_dict,
                     if c1 not in have_visited:
                         if c2 not in have_visited:
                             rxn_count[rxn] += 1
-                            rxn_id = str('{}_{}'.format(
-                                rxn.id, rxn_count[rxn]))
+                            rxn_id = '{}_{}'.format(
+                                rxn.id, rxn_count[rxn])
                             new_id_mapping[rxn_id] = rxn
                             new_style_flux_dict[rxn_id] = \
                                 style_flux_dict[rxn.id]
