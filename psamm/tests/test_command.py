@@ -554,17 +554,18 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
                 RobustnessCommand, ['--steps=0', 'rxn_2_\u03c0'])
 
     def test_run_robustness_with_loop_removal_fva(self):
+        self.skip_test_if_no_solver()
         with self.assertRaises(SystemExit):
             self.run_solver_command(
                 RobustnessCommand, ['--loop-removal=tfba', '--fva', 'rxn_2_\u03c0'])
 
     def test_run_robustness_min_greater(self):
+        self.skip_test_if_no_solver()
         with self.assertRaises(CommandError):
             self.run_solver_command(
                 RobustnessCommand, ['--minimum=50', '--maximum=20', 'rxn_2_\u03c0'])
 
     def test_run_robustness_with_infeasible(self):
-        self.skip_test_if_no_solver()
         with self.assertRaises(SystemExit):
             self.run_solver_command(
                 RobustnessCommand, ['rxn_2_\u03c0'],

@@ -27,10 +27,13 @@ from decimal import Decimal
 from psamm.lpsolver import lp
 
 
-test_solver = generic.Solver()
-requires_solver = unittest.skipIf(test_solver._properties['name'] not in [
-    'cplex', 'gurobi'], 'Unable to find an LP solver for tests (TMFA requires '
-                        'Cplex or Gurobi as LP solver')
+try:
+    test_solver = generic.Solver()
+    requires_solver = unittest.skipIf(test_solver._properties['name'] not in [
+        'cplex', 'gurobi'], 'Unable to find an LP solver for tests (TMFA requires '
+                            'Cplex or Gurobi as LP solver')
+except generic.RequirementsError:
+    requires_solver = unittest.skip('Unable to find an LP solver for tests')
 
 
 @requires_solver
