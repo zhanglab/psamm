@@ -129,6 +129,7 @@ a file that must have two columns (among other potential information):
 (1) a list of genes from the organism you are drafting a model for
 (2) genes from the reference organism that are mapped to (i.e. share a row with)
     genes from the draft organism based on some annotation
+(3) using ‘-’ as the no mapping indicator
 This will allow you to create a model based on the curations of the reference
 organism and the annotations of the draft organism based on the gene associations.
 These columns need not be in any particular location within a table, as you will
