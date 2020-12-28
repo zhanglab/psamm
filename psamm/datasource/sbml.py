@@ -29,11 +29,11 @@ import json
 from collections import OrderedDict, Counter
 
 # Import ElementTree XML parser. The lxml etree implementation may also be
-# used with SBMLReader but has compatiblity issues with SBMLWriter.
+# used with SBMLReader but has compatibility issues with SBMLWriter.
 try:
-    import xml.etree.cElementTree as ET
+    import xml.etree.cElementTree as ETree
 except ImportError:
-    import xml.etree.ElementTree as ET
+    import xml.etree.ElementTree as ETree
 
 from six import itervalues, iteritems, text_type, PY3
 
@@ -581,7 +581,7 @@ class SBMLReader(object):
     def __init__(self, file, strict=False, ignore_boundary=True,
                  context=None):
         # Parse SBML file
-        tree = ET.parse(file)
+        tree = ETree.parse(file)
         root = tree.getroot()
 
         self._strict = strict
@@ -944,7 +944,7 @@ class SBMLWriter(object):
 
     def _add_gene_associations(self, r_id, r_genes, gene_ids, r_tag):
         """Adds all the different kinds of genes into a list."""
-        genes = ET.SubElement(
+        genes = ETree.SubElement(
             r_tag, _tag('geneProductAssociation', FBC_V2))
         if isinstance(r_genes, list):
             e = Expression(And(*(Variable(i) for i in r_genes)))
@@ -954,11 +954,11 @@ class SBMLWriter(object):
         while len(gene_stack) > 0:
             current, parent = gene_stack.pop()
             if isinstance(current, Or):
-                gene_tag = ET.SubElement(parent, _tag('or', FBC_V2))
+                gene_tag = ETree.SubElement(parent, _tag('or', FBC_V2))
             elif isinstance(current, And):
-                gene_tag = ET.SubElement(parent, _tag('and', FBC_V2))
+                gene_tag = ETree.SubElement(parent, _tag('and', FBC_V2))
             elif isinstance(current, Variable):
-                gene_tag = ET.SubElement(parent, _tag(
+                gene_tag = ETree.SubElement(parent, _tag(
                     'geneProductRef', FBC_V2))
                 if current.symbol not in gene_ids:
                     id = 'g_' + util.create_unique_id(
@@ -971,33 +971,33 @@ class SBMLWriter(object):
 
     def _add_fbc_objective(self, model_tag, obj_id):
         """Adds the objective(s) to the sbml document."""
-        objective_list = ET.SubElement(model_tag, _tag(
+        objective_list = ETree.SubElement(model_tag, _tag(
             'listOfObjectives', FBC_V2))
         objective_list.set(_tag('activeObjective', FBC_V2), 'O_1')
-        objective_tag = ET.SubElement(
+        objective_tag = ETree.SubElement(
             objective_list, _tag('objective', FBC_V2))
         objective_tag.set(_tag('id', FBC_V2), 'O_1')
         objective_tag.set(_tag('type', FBC_V2), 'maximize')
-        flux_objective_list = ET.SubElement(objective_tag, _tag(
+        flux_objective_list = ETree.SubElement(objective_tag, _tag(
             'listOfFluxObjectives', FBC_V2))
-        flux_objective_tag = ET.SubElement(flux_objective_list, _tag(
+        flux_objective_tag = ETree.SubElement(flux_objective_list, _tag(
             'fluxObjective', FBC_V2))
         flux_objective_tag.set(_tag('reaction', FBC_V2), 'R_' + obj_id)
         flux_objective_tag.set(_tag('coefficient', FBC_V2), '1')
 
     def _add_gene_list(self, parent_tag, gene_id_dict):
         """Create list of all gene products as sbml readable elements."""
-        list_all_genes = ET.SubElement(parent_tag, _tag(
+        list_all_genes = ETree.SubElement(parent_tag, _tag(
             'listOfGeneProducts', FBC_V2))
         for id, label in sorted(iteritems(gene_id_dict)):
-            gene_tag = ET.SubElement(
+            gene_tag = ETree.SubElement(
                 list_all_genes, _tag('geneProduct', FBC_V2))
             gene_tag.set(_tag('id', FBC_V2), id)
             gene_tag.set(_tag('label', FBC_V2), label)
 
     def _add_properties_notes(self, parent_tag, properties):
         for prop, value in sorted(iteritems(properties)):
-            p_tag = ET.SubElement(parent_tag, _tag('p', XHTML_NS))
+            p_tag = ETree.SubElement(parent_tag, _tag('p', XHTML_NS))
             try:
                 s = json.dumps(value)
             except TypeError:
@@ -1027,9 +1027,9 @@ class SBMLWriter(object):
             model: Instance of :class:`NativeModel` to write.
             pretty: Whether to format the XML output for readability.
         """
-        ET.register_namespace('mathml', MATHML_NS)
-        ET.register_namespace('xhtml', XHTML_NS)
-        ET.register_namespace('fbc', FBC_V2)
+        ETree.register_namespace('mathml', MATHML_NS)
+        ETree.register_namespace('xhtml', XHTML_NS)
+        ETree.register_namespace('fbc', FBC_V2)
 
         # Load compound information
         compound_name = {}
@@ -1082,17 +1082,17 @@ class SBMLWriter(object):
                     'id': compound.name
                 }
 
-        root = ET.Element(self._sbml_tag('sbml'))
+        root = ETree.Element(self._sbml_tag('sbml'))
         root.set(self._sbml_tag('level'), '3')
         root.set(self._sbml_tag('version'), '1')
         root.set(_tag('required', FBC_V2), 'false')
         if model.version_string is not None:
-            notes_tag = ET.SubElement(root, self._sbml_tag('notes'))
-            body_tag = ET.SubElement(notes_tag, _tag('body', XHTML_NS))
+            notes_tag = ETree.SubElement(root, self._sbml_tag('notes'))
+            body_tag = ETree.SubElement(notes_tag, _tag('body', XHTML_NS))
             self._add_properties_notes(
                 body_tag, {'model version': model.version_string})
 
-        model_tag = ET.SubElement(root, self._sbml_tag('model'))
+        model_tag = ETree.SubElement(root, self._sbml_tag('model'))
         model_tag.set(_tag('strict', FBC_V2), 'true')
         if model.name is not None:
             model_tag.set(self._sbml_tag('name'), model.name)
@@ -1123,21 +1123,21 @@ class SBMLWriter(object):
                             model_compartments)
 
         # Create list of compartments
-        compartments = ET.SubElement(
+        compartments = ETree.SubElement(
             model_tag, self._sbml_tag('listOfCompartments'))
         for _, compartment_id in iteritems(model_compartments):
-            compartment_tag = ET.SubElement(
+            compartment_tag = ETree.SubElement(
                 compartments, self._sbml_tag('compartment'))
             compartment_tag.set(self._sbml_tag('id'), compartment_id)
             compartment_tag.set(self._sbml_tag('constant'), 'true')
 
         # Create list of species
-        species_list = ET.SubElement(
+        species_list = ETree.SubElement(
             model_tag, self._sbml_tag('listOfSpecies'))
         for species, species_id in sorted(
                 iteritems(model_species), key=lambda x: x[1]):
-            species_tag = ET.SubElement(species_list,
-                                        self._sbml_tag('species'))
+            species_tag = ETree.SubElement(species_list,
+                                           self._sbml_tag('species'))
             species_tag.set(self._sbml_tag('id'), 'M_' + species_id)
             species_tag.set(
                 self._sbml_tag('name'),
@@ -1156,12 +1156,12 @@ class SBMLWriter(object):
                     'chemicalFormula', FBC_V2), text_type(
                         compound_properties[species.name]['formula']))
 
-            notes_tag = ET.SubElement(species_tag, self._sbml_tag('notes'))
-            body_tag = ET.SubElement(notes_tag, _tag('body', XHTML_NS))
+            notes_tag = ETree.SubElement(species_tag, self._sbml_tag('notes'))
+            body_tag = ETree.SubElement(notes_tag, _tag('body', XHTML_NS))
             self._add_properties_notes(
                 body_tag, compound_properties[species.name])
 
-        params_list = ET.SubElement(
+        params_list = ETree.SubElement(
             model_tag, self._sbml_tag('listOfParameters'))
 
         # Create mapping for reactions containing flux limit definitions
@@ -1175,9 +1175,11 @@ class SBMLWriter(object):
             self._add_fbc_objective(model_tag, biomass_id)
 
         # Create list of reactions
-        reactions = ET.SubElement(model_tag, self._sbml_tag('listOfReactions'))
+        reactions = ETree.SubElement(
+            model_tag, self._sbml_tag('listOfReactions'))
         for eq_id, properties in sorted(iteritems(reaction_properties)):
-            reaction_tag = ET.SubElement(reactions, self._sbml_tag('reaction'))
+            reaction_tag = ETree.SubElement(reactions,
+                                            self._sbml_tag('reaction'))
             equation = properties['equation']
 
             reaction_tag.set(self._sbml_tag('id'), 'R_' + eq_id)
@@ -1201,16 +1203,16 @@ class SBMLWriter(object):
                     eq_id, properties['genes'], gene_ids, reaction_tag)
 
             if any(value < 0 for _, value in equation.compounds):
-                reactants = ET.SubElement(
+                reactants = ETree.SubElement(
                     reaction_tag, self._sbml_tag('listOfReactants'))
 
             if any(value > 0 for _, value in equation.compounds):
-                products = ET.SubElement(
+                products = ETree.SubElement(
                     reaction_tag, self._sbml_tag('listOfProducts'))
 
             for compound, value in sorted(equation.compounds):
                 dest_list = reactants if value < 0 else products
-                spec_ref = ET.SubElement(
+                spec_ref = ETree.SubElement(
                     dest_list, self._sbml_tag('speciesReference'))
                 spec_ref.set(
                     self._sbml_tag('species'), 'M_' + model_species[compound])
@@ -1219,27 +1221,27 @@ class SBMLWriter(object):
                 spec_ref.set(
                     self._sbml_tag('stoichiometry'), text_type(abs(value)))
 
-            notes_tag = ET.SubElement(reaction_tag, self._sbml_tag('notes'))
-            body_tag = ET.SubElement(notes_tag, _tag('body', XHTML_NS))
+            notes_tag = ETree.SubElement(reaction_tag, self._sbml_tag('notes'))
+            body_tag = ETree.SubElement(notes_tag, _tag('body', XHTML_NS))
             self._add_properties_notes(body_tag, reaction_properties[eq_id])
 
             if self._cobra_flux_bounds is True:
                 # Create COBRA-compliant parameter list
-                kl_tag = ET.SubElement(
+                kl_tag = ETree.SubElement(
                     reaction_tag, self._sbml_tag('kineticLaw'))
-                math_tag = ET.SubElement(kl_tag, self._sbml_tag('math'))
-                ci_tag = ET.SubElement(math_tag, _tag('ci', MATHML_NS))
+                math_tag = ETree.SubElement(kl_tag, self._sbml_tag('math'))
+                ci_tag = ETree.SubElement(math_tag, _tag('ci', MATHML_NS))
                 ci_tag.text = 'FLUX_VALUE'
-                param_list = ET.SubElement(
+                param_list = ETree.SubElement(
                     kl_tag, self._sbml_tag('listOfParameters'))
 
-                ET.SubElement(param_list, self._sbml_tag('parameter'), {
+                ETree.SubElement(param_list, self._sbml_tag('parameter'), {
                     self._sbml_tag('id'): 'LOWER_BOUND',
                     self._sbml_tag('name'): 'LOWER_BOUND',
                     self._sbml_tag('value'): lower_str,
                     self._sbml_tag('constant'): 'true'
                 })
-                ET.SubElement(param_list, self._sbml_tag('parameter'), {
+                ETree.SubElement(param_list, self._sbml_tag('parameter'), {
                     self._sbml_tag('id'): 'UPPER_BOUND',
                     self._sbml_tag('name'): 'UPPER_BOUND',
                     self._sbml_tag('value'): upper_str,
@@ -1247,14 +1249,15 @@ class SBMLWriter(object):
                 })
 
         for val, id in iteritems(params):
-            param_tag = ET.SubElement(params_list, self._sbml_tag('parameter'))
+            param_tag = ETree.SubElement(
+                params_list, self._sbml_tag('parameter'))
             param_tag.set(self._sbml_tag('id'), id)
             param_tag.set(self._sbml_tag('value'), val)
             param_tag.set(self._sbml_tag('constant'), 'true')
 
         self._add_gene_list(model_tag, gene_ids)
 
-        tree = ET.ElementTree(root)
+        tree = ETree.ElementTree(root)
         if pretty:
             self._indent(root)
 

@@ -609,12 +609,12 @@ def lump_parser(lump_file):
 
 
 def parse_tparam_file(file):
-    '''Parse a transport paramter file.
+    """Parse a transport parameter file.
 
     This file contains reaction IDs, net charge transported into
     the cell, and net protons transported into the cell.
 
-    '''
+    """
     t_param = {}
     if file is not None:
         for row in csv.reader(file, delimiter=str('\t')):
@@ -655,10 +655,10 @@ def parse_dgf(mm, dgf_file):
 
 def add_conc_constraints(xij, problem, cpd_conc_dict,
                          cp_list, water, hin, hout, hother):
-    '''Add concentration constraints to TMFA problem
+    """Add concentration constraints to TMFA problem
     based on parsed concentration dictionary.
 
-    '''
+    """
     # Water and hydrogen need to be excluded from
     # these concentration constraints.
     excluded_cpd_list = []
@@ -791,14 +791,13 @@ def add_reaction_constraints(
         _dgri: variable namespace for gibbs free energy variables
         _zi: variables namespace for indicator variables
         _xij: variable namespace for concentrations
-        cp_list: List of compounds in the metabolic model.
         exclude_unknown: List of reactions excluded from thermo constraints.
         exclude_lumps_unknown: List of excluded reactions and lumped reactions.
         dgr_dict: dictionary where keys are reaction ids and values
             are deltag values.
         lump_rxn_list: List of lump reaction IDs.
-        split_reactions: List of tuples of (reaction_forward, reaction_reverse)
-        transport_paramters: dictionary of reaction IDs to proton
+        split_rxns: List of tuples of (reaction_forward, reaction_reverse)
+        transport_parameters: dictionary of reaction IDs to proton
             transport and charge transport values.
         testing_list: List of reactions to add deltaG constraints for.
         water: list of water compound IDs.
@@ -815,9 +814,13 @@ def add_reaction_constraints(
         for row in csv.reader(scaled_compounds, delimiter=str('\t')):
             dgf_scaling[row[0]] = Decimal(row[1])
 
-    R = Decimal(8.3144621 / 1000)  # kJ/mol
+    # "idg" is the ideal gas constant in units of kJ/mol
+    idg = Decimal(8.3144621 / 1000)  # kJ/mol
     # R = Decimal(1.987 / 1000) kcal/mol
-    T = Decimal(temp) + Decimal(273.15)
+
+    # "tkelvin" is the temperature on the Kelvin scale
+    tkelvin = Decimal(temp) + Decimal(273.15)
+
     k = 500
     epsilon = 0.000001
 
@@ -832,7 +835,9 @@ def add_reaction_constraints(
     problem.add_linear_constraints(h_c <= 11)
     delta_ph = (h_c - h_p)
 
-    F = Decimal(0.02306)
+    # "fc" is the Faraday constant in units of kcal/(mV*mol)
+    fc = Decimal(0.02306)
+
     excluded_cpd_list = []
     excluded_cpd_list.append(hin)
     excluded_cpd_list.append(hout)
@@ -841,7 +846,7 @@ def add_reaction_constraints(
     for wat in water:
         excluded_cpd_list.append(wat)
     logger.info(u'Excluded compounds: {}'.format(','.join(excluded_cpd_list)))
-    logger.info(u'Temperature: {}'.format(T))
+    logger.info(u'Temperature: {}'.format(tkelvin))
     logger.info(u'using h in {}'.format(hin))
     logger.info(u'using h out {}'.format(hout))
     logger.info(u'using water {}'.format(water))
@@ -889,9 +894,9 @@ def add_reaction_constraints(
             if reaction in testing_list:
                 if reaction in transport_parameters.keys():
                     (c, h) = transport_parameters[reaction]
-                    ddph = Decimal(-2.3)*Decimal(h)*R*T*delta_ph
+                    ddph = Decimal(-2.3)*Decimal(h)*idg*tkelvin*delta_ph
                     dpsi = Decimal(33.33) * delta_ph - Decimal(143.33)
-                    ddpsi = dpsi * Decimal(c) * Decimal(F)
+                    ddpsi = dpsi * Decimal(c) * Decimal(fc)
                     dgr_trans = ddph + ddpsi
                 else:
                     dgr_trans = 0
@@ -915,7 +920,8 @@ def add_reaction_constraints(
                         ssxi += _xij(cpd) * Decimal(stoich) * scale
 
                 problem.add_linear_constraints(
-                    dgri == dgr0 + (R * T * (ssxi)) + dgr_err + dgr_trans)
+                    dgri == dgr0 + (idg * tkelvin * ssxi
+                                    ) + dgr_err + dgr_trans)
                 if hamilton:
                     problem.add_linear_constraints(dgri <= 300-epsilon)
                     problem.add_linear_constraints(dgri >= -300+epsilon)
@@ -929,7 +935,6 @@ def add_reaction_constraints(
         if reaction in lump_rxn_list.keys():
             problem.define(u'yi_{}'.format(reaction), lower=int(0),
                            upper=int(1), types=lp.VariableType.Binary)
-            yi = problem.var(u'yi_{}'.format(reaction))
             if reaction not in new_excluded_reactions:
                 vi = _v(reaction)
                 yi = problem.var(u'yi_{}'.format(reaction))

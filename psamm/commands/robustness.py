@@ -164,7 +164,7 @@ class RobustnessCommand(MetabolicMixin, LoopRemovalMixin, ObjectiveMixin,
         # Run FVA on model at different fixed flux values
         else:
             executor_fva = self._create_executor(
-                RobustnessTaskHandler_fva, handler_args, cpus_per_worker=2)
+                RobustnessTaskHandlerFva, handler_args, cpus_per_worker=2)
             with executor_fva:
                 for task, result in executor_fva.imap_unordered(
                         iter_tasks(), 16):
@@ -221,7 +221,7 @@ class RobustnessTaskHandler(object):
             c.delete()
 
 
-class RobustnessTaskHandler_fva(object):
+class RobustnessTaskHandlerFva(object):
     def __init__(self, model, solver, loop_removal, all_reactions):
         self._problem = fluxanalysis.FluxBalanceProblem(model, solver)
 

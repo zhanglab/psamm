@@ -25,7 +25,7 @@ from psamm.datasource import native
 from psamm.database import DictDatabase
 from psamm.metabolicmodel import MetabolicModel
 from psamm.datasource.reaction import parse_reaction
-from psamm.commands.robustness import RobustnessTaskHandler, RobustnessTaskHandler_fva
+from psamm.commands.robustness import RobustnessTaskHandler, RobustnessTaskHandlerFva
 
 from six import itervalues
 
@@ -92,7 +92,7 @@ class TestRobustnessTaskHandler(unittest.TestCase):
         self.assertEqual(fluxes, 10)
 
 
-class TestRobustnessTaskHandler_fva(unittest.TestCase):
+class TestRobustnessTaskHandlerFva(unittest.TestCase):
     def setUp(self):
         self.database = DictDatabase()
         self.database.set_reaction('rxn_1', parse_reaction('=> (2) |A|'))
@@ -117,7 +117,7 @@ class TestRobustnessTaskHandler_fva(unittest.TestCase):
         self._reactions = list(self.model.reactions)
 
     def test1_loop_removal_none(self):
-        fluxes = RobustnessTaskHandler_fva.handle_task(RobustnessTaskHandler_fva(self.model, self.solver, 'none', self._reactions),
+        fluxes = RobustnessTaskHandlerFva.handle_task(RobustnessTaskHandlerFva(self.model, self.solver, 'none', self._reactions),
                                                        ['rxn_6', 200], 'rxn_6')
 
         for bounds in itervalues(fluxes):
@@ -142,7 +142,7 @@ class TestRobustnessTaskHandler_fva(unittest.TestCase):
         except generic.RequirementsError:
             self.skipTest('Unable to find an MIQP solver for tests')
 
-        fluxes = RobustnessTaskHandler_fva.handle_task(RobustnessTaskHandler_fva(self.model, self.solver, 'tfba', self._reactions),
+        fluxes = RobustnessTaskHandlerFva.handle_task(RobustnessTaskHandlerFva(self.model, self.solver, 'tfba', self._reactions),
                                                        ['rxn_6', 200], 'rxn_3')
 
         for bounds in itervalues(fluxes):
@@ -165,7 +165,7 @@ class TestRobustnessTaskHandler_fva(unittest.TestCase):
 
     def test3_no_reactions(self):
         self._reactions2 = None
-        fluxes = RobustnessTaskHandler_fva.handle_task(RobustnessTaskHandler_fva(self.model, self.solver, 'none', self._reactions2),
+        fluxes = RobustnessTaskHandlerFva.handle_task(RobustnessTaskHandlerFva(self.model, self.solver, 'none', self._reactions2),
                                                        ['rxn_6', 200], 'rxn_6')
 
         for bounds in itervalues(fluxes):
