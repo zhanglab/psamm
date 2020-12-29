@@ -1262,7 +1262,7 @@ class SBMLWriter(object):
             self._indent(root)
 
         write_options = dict(
-            encoding='UTF-8',
+            encoding='ascii',
             default_namespace=self._namespace,
             xml_declaration=True
         )

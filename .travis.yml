@@ -17,9 +17,9 @@ install:
 - if echo "$TOXENV" | grep -q "qsoptex"; then
     version=$(python -V 3>&1); 
     if [ -n "$version" ]; then 
-      pip install cython; 
+      pip install Cython; 
     fi;
-    if [ ! -f "$HOME/qsopt_ex-2.5.10.3/bin/esolver"]; then 
+    if [ ! -f "$HOME/qsopt_ex-2.5.10.3/bin/esolver" ]; then 
       ( mkdir src && cd src/; 
         curl -LO https://github.com/jonls/qsopt-ex/releases/download/v2.5.10.3/qsopt_ex-2.5.10.3.tar.xz;
         tar -xvaf qsopt_ex-2.5.10.3.tar.xz; 
