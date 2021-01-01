@@ -30,6 +30,7 @@ install:
           ./bootstrap;
           mkdir build && cd build;
           ../configure --prefix="$HOME/qsopt-ex" && make install );
+          cd ../../
       fi;
       if [ ! -f "$HOME/python-qsoptex" ]; then
         ( cd src/;
