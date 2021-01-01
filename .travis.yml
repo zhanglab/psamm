@@ -29,14 +29,15 @@ install:
           cd qsopt-ex/;
           ./bootstrap;
           mkdir build && cd build;
-          ../configure --prefix="$HOME/qsopt-ex" && make install );
-          cd ../../
+          ../configure --prefix="$HOME/qsopt-ex" && make install;
+          cd $HOME );
       fi;
       if [ ! -f "$HOME/python-qsoptex" ]; then
         ( cd src/;
           git clone https://github.com/jonls/python-qsoptex.git;
           cd python-qsoptex/;
-          ./setup.py install );
+          ./setup.py install;
+          cd $HOME );
       fi;
       export CPATH="$HOME/qsopt-ex/include:$CPATH";
       export LIBRARY_PATH="$HOME/qsopt-ex/lib:$LIBRARY_PATH";
