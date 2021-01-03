@@ -20,7 +20,7 @@ install:
     if [ ! -f "src" ]; then
       mkdir src;
     fi;
-    version=$(python -V 3>&1);
+    version=$(python -V 3>&1)
     if [ -n "$version" ]; then 
       pip install Cython; 
       if [ ! -f "$HOME/qsopt-ex/esolver" ]; then
@@ -39,6 +39,7 @@ install:
           ./setup.py install;
           cd $HOME );
       fi;
+      pip install python-qsoptex;
       export CPATH="$HOME/qsopt-ex/include:$CPATH";
       export LIBRARY_PATH="$HOME/qsopt-ex/lib:$LIBRARY_PATH";
       export LD_LIBRARY_PATH="$HOME/qsopt-ex/lib:$LD_LIBRARY_PATH";
