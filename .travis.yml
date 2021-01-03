@@ -23,25 +23,7 @@ install:
     version=$(python -V 3>&1);
     if [ -n "$version" ]; then 
       pip install Cython; 
-      if [ ! -f "$HOME/qsopt-ex/esolver" ]; then
-        ( cd src/;
-          git clone https://github.com/jonls/qsopt-ex.git;
-          cd qsopt-ex/;
-          ./bootstrap;
-          mkdir build && cd build;
-          ../configure --prefix="$HOME/qsopt-ex" && make install;
-          cd $HOME );
-      fi;
-      if [ ! -f "$HOME/python-qsoptex" ]; then
-        ( cd src/;
-          git clone https://github.com/jonls/python-qsoptex.git;
-          cd python-qsoptex/;
-          ./setup.py install;
-          cd $HOME );
-      fi;
-      export CPATH="$HOME/qsopt-ex/include:$CPATH";
-      export LIBRARY_PATH="$HOME/qsopt-ex/lib:$LIBRARY_PATH";
-      export LD_LIBRARY_PATH="$HOME/qsopt-ex/lib:$LD_LIBRARY_PATH";
+      pip install python-qsoptex;
     else 
       if [ ! -f "$HOME/qsopt_ex-2.5.10.3/bin/esolver" ]; then 
         ( cd src/; 
