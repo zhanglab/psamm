@@ -91,7 +91,7 @@ matrix:
   - env: TOXENV=docs
 deploy:
   provider: pypi
-  user: __psamm__
+  user: psamm
   password:
     secure: fcdPBMEMDrH+OjNiW5NQgnIEh4txSJi8r/g2mSwBFbnbINvABQDatPbMLkEEPEl44Jtt0ETd+IGyaivH8nVmP8JCQ1CBQQoIVEqDONWgyDAx/pbO+SyAo+cR/jfXMXWZKyK/2ZbDgPCxYm49LuQ92ff5r6giGjVPFf3Yf0zAp/a+0k/loLAgFCW81HLCvSwCBWMD0pKm1E5bePhFiE0HlmlRmqN0yyr/FRQSKqI3C/MGv+RMFxJgF2EWQlR8axolgT8CPNMQqw0XlbGvs+rpEoDvca7U7TrnKtlfCXyZQuF7T+al98oQojlUU2wUud+T+Xv16HpiZK9nuMVY5jY16ih7Lmc9zHSmyKr/yEjWWkeGu1GUDrLw7yMHLKVdInxena7sVBe+yM/wPJ3CzuFW+W+o2YBcWsok/jpGluqJcMAq+kka5bW3Cc4KjbY8ijtd2DhlncAbv0fH/GXnEAP2k1Gl4S6p24pUxwznZZ02EYpFC3rLJ8AabQ3QHWBT+cSt9wv9yvvPcH4WHRcX5ySMRdnrxKhfrAzvS6xcx2q31HOs33DeYZTqunC2z9Ub9K/t7UlL1CgvesvTcIGSqkxLhuJgP9wKg2hPjvDKr2Rxm7dDcdNgSpR6na9dKsrnuTvLc6abUtSJLIusLsABAS+tlu6Jm5DiXCWZi92UI+WgT6Y=
   on:
