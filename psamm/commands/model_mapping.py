@@ -182,26 +182,6 @@ class ModelMappingCommand(Command):
     def run(self):
         """Run model mapping command."""
 
-        # Parse models
-        model_1 = ModelReader.reader_from_path(self._args.model).create_model()
-        model_2 = ModelReader.reader_from_path(
-            self._args.dest_model).create_model()
-
-        # check if all compound charge can be converted to an integer
-        invalid_cpd = []
-        for compound in model_1.compounds:
-            result = bayesian.check_cpd_charge(compound, 'your model')
-            if result == 'FALSE':
-                invalid_cpd.append(compound.id)
-
-        for compound in model_2.compounds:
-            result = bayesian.check_cpd_charge(compound, 'dest model')
-            if result == 'FALSE':
-                invalid_cpd.append(compound.id)
-
-        if len(invalid_cpd) != 0:
-            quit()
-
         which_command = self._args.which
         if which_command == 'mm':
             self._model_mapping()
@@ -217,6 +197,19 @@ class ModelMappingCommand(Command):
             self._args.model).create_model()
         model2 = ModelReader.reader_from_path(
             self._args.dest_model).create_model()
+
+        # Check if any compound charge is not integer
+        invalid_cpd = []
+        for compound in model1.compounds:
+            result = bayesian.check_cpd_charge(compound, model1.name)
+            if not result:
+                invalid_cpd.append(compound.id)
+        for compound in model2.compounds:
+            result = bayesian.check_cpd_charge(compound, model2.name)
+            if not result:
+                invalid_cpd.append(compound.id)
+        if len(invalid_cpd) != 0:
+            quit()
 
         # Read model into internal format
         model1 = bayesian.MappingModel(model1)

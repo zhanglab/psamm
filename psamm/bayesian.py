@@ -936,13 +936,12 @@ def map_model_reactions(model1, model2, cpd_map, cpd_score, nproc=1,
 
 def check_cpd_charge(compound, source):
     if compound.charge is not None:
-        try:
-            int(compound.charge)
-            return 'TRUE'
-        except ValueError:
+        if isinstance(compound.charge, int):
+            return True
+        else:
             logger.warning(
                 "Compound charge should be an integer, however, charge of "
-                "compound {} in {} is '{}', which is invalid. Please remove "
-                "or fix it before running modelmapping command.".format(
-                    compound.id, source, compound.charge))
-            return 'FALSE'
+                "compound '{}' in '{}' model is '{}', which is invalid. "
+                "Please remove or fix it before running modelmapping "
+                "command.".format(compound.id, source, compound.charge))
+            return False
