@@ -1,3 +1,10 @@
+v1.1.1 (2020-12-18)
+------------------
+
+- Fix bug where the `psamm modelmapping translate_id` command requires 
+  the undefined parameter `--dest-model`
+
+
 v1.1 (2020-12-11)
 ------------------
 
