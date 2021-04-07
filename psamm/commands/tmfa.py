@@ -49,6 +49,12 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                             help='run model using Hamilton TMFA method')
         parser.add_argument('--err', action='store_true',
                             help='use error estimates when running TMFA')
+        parser.add_argument('--phin', default='4,11',
+                            help='Allowable range for internal compartment pH '
+                            'format: Lower,Upper')
+        parser.add_argument('--phout', default='4,11',
+                            help='Allowable range for external compartment pH '
+                            'format: Lower,Upper')
 
         subparsers = parser.add_subparsers(title='Functions', dest='which')
         parser_util = subparsers.add_parser('util', help='Utility functions')
@@ -233,6 +239,15 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
         prob, v, zi, dgri, xij, cp_list = make_tmfa_problem(
             mm_irreversible, solver)
 
+        # Parse pH settings from command line
+        phin_s = self._args.phin
+        phout_s = self._args.phout
+        phinsplit = phin_s.split(',')
+        phoutsplit = phout_s.split(',')
+        phin = (float(phinsplit[0]), float(phinsplit[1]))
+        phout = (float(phoutsplit[0]), float(phoutsplit[1]))
+        ph_bounds = [phin, phout]
+
         # Run Utility based functions
         if which_command == 'util':
             if self._args.random_addition:
@@ -263,7 +278,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                         config_dict.get('scaled_compounds'),
                         config_dict.get('water'), config_dict.get('proton-in'),
                         config_dict.get('proton-out'),
-                        config_dict.get('proton-other'),
+                        config_dict.get('proton-other'), ph_bounds,
                         self._args.temp, self._args.err)
                     try:
                         biomass = get_var_bound(prob, v(self._get_objective()),
@@ -296,7 +311,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                 transport_parameters, testing_list_tmp,
                 config_dict.get('scaled_compounds'), config_dict.get('water'),
                 config_dict.get('proton-in'), config_dict.get('proton-out'),
-                config_dict.get('proton-other'),
+                config_dict.get('proton-other'), ph_bounds,
                 self._args.temp, self._args.err)
 
             if self._args.threshold is not None:
@@ -777,7 +792,7 @@ def add_reaction_constraints(
         problem, _v, _zi, _dgri, _xij, mm, exclude_lumps, exclude_unknown,
         exclude_lumps_unknown, dgr_dict, lump_rxn_list, split_rxns,
         transport_parameters, testing_list, scaled_compounds, water, hin,
-        hout, hother, temp, err_est=False, hamilton=False):
+        hout, hother, ph, temp, err_est=False, hamilton=False):
     """Adds reaction constraints to a TMFA problem
 
     This function will add in gibbs free energy constraints to a TMFA flux
@@ -803,7 +818,10 @@ def add_reaction_constraints(
         water: list of water compound IDs.
         hin: ID of proton compound from inside cell compartment
         hout: ID of proton compound from outside cell compartment
-        hother: List of other proton IDs.
+        hother: List of other proton IDs
+        ph: list of two tuples containing pH bounds. [(in_lower, in_upper),
+            (out_lower, out_upper)]
+        temp: Temperature in Celsius
         err_est: True or False for using error estimates for deltaG values.
         hamilton: True or False for using Hamilton TMFA method.
 
@@ -823,16 +841,17 @@ def add_reaction_constraints(
 
     k = 500
     epsilon = 0.000001
-
+    ph_in = ph[0]
+    ph_out = ph[0]
     h_p = _xij(str(hout))
 
-    problem.add_linear_constraints(h_p <= 11)
-    problem.add_linear_constraints(h_p >= 4)
+    problem.add_linear_constraints(h_p <= ph_out[1])
+    problem.add_linear_constraints(h_p >= ph_out[0])
 
     h_c = _xij(str(hin))
 
-    problem.add_linear_constraints(h_c >= 4)
-    problem.add_linear_constraints(h_c <= 11)
+    problem.add_linear_constraints(h_c >= ph_in[0])
+    problem.add_linear_constraints(h_c <= ph_in[1])
     delta_ph = (h_c - h_p)
 
     # "fc" is the Faraday constant in units of kcal/(mV*mol)
@@ -850,7 +869,10 @@ def add_reaction_constraints(
     logger.info(u'using h in {}'.format(hin))
     logger.info(u'using h out {}'.format(hout))
     logger.info(u'using water {}'.format(water))
-
+    logger.info(u'using ph range of {} to {} for internal compartment'.format(
+        ph_in[0], ph_in[1]))
+    logger.info(u'using ph range of {} to {} for external compartment'.format(
+        ph_out[0], ph_out[1]))    
     # for (f, r) in split_rxns:
     #     split_list.append(f)
     #     split_list.append(r)

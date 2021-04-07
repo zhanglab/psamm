@@ -1246,6 +1246,18 @@ temperature is provided in Celsius.
 
     $ psamm-model tmfa --config ./config.yaml --temp 27 simulation
 
+pH Settings
+^^^^^^^^^^^
+pH affects the transport into the cytosolic space in the model by adjusting
+the thermodynamic favorability of the transport reactions. The allowable pH
+range for the internal and external compartments can be set through the
+following command line parameters by providing the lower then upper bound
+for the pH.
+
+.. code-block:: shell
+
+  $ $ psamm-model tmfa --config ./config.yaml --phin 6,7 --phout 6,8 simulation
+
 
 Biomass Flux
 ^^^^^^^^^^^^^

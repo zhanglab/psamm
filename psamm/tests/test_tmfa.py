@@ -195,7 +195,8 @@ class TestSolving(unittest.TestCase):
              {}, self.split_reversible, self.trans_param,
              [i for i in self.mm_irreversible.reactions],
              None, ['h2o', 'h2o[e]'], 'h[c]',
-             'h[e]', '', 275, err_est=False, hamilton=False)
+             'h[e]', '', [(float(4), float(11)), (float(4), float(11))],
+             275, err_est=False, hamilton=False)
 
         self.ham_prob, self.ham_v, self.ham_zi, self.ham_dgri, \
             self.ham_xij, self.ham_cp_list = tmfa.make_tmfa_problem(
@@ -211,7 +212,8 @@ class TestSolving(unittest.TestCase):
              {}, self.split_reversible, self.trans_param,
              [i for i in self.mm_irreversible.reactions],
              None, ['h2o', 'h2o[e]'], 'h[c]',
-             'h[e]', '', 275, err_est=False, hamilton=True)
+             'h[e]', '', [(float(4), float(11)), (float(4), float(11))],
+             275, err_est=False, hamilton=True)
 
         self.err_prob, self.err_v, self.err_zi, self.err_dgri, self.err_xij, \
             self.err_cp_list = tmfa.make_tmfa_problem(
@@ -227,7 +229,8 @@ class TestSolving(unittest.TestCase):
              {}, self.split_reversible, self.trans_param,
              [i for i in self.mm_irreversible.reactions],
              None, ['h2o', 'h2o[e]'], 'h[c]',
-             'h[e]', '', 275, err_est=True, hamilton=False)
+             'h[e]', '', [(float(4), float(11)), (float(4), float(11))],
+             275, err_est=True, hamilton=False)
 
     def test_addconc_constraints_default(self):
         prob, cpd_xij_dict = tmfa.add_conc_constraints(self.empty_xij,
@@ -241,7 +244,8 @@ class TestSolving(unittest.TestCase):
              {}, self.split_reversible, self.trans_param,
              [i for i in self.mm_irreversible.reactions],
              None, ['h2o', 'h2o[e]'], 'h[c]',
-             'h[e]', '', 275, err_est=False, hamilton=False)
+             'h[e]', '', [(float(4), float(11)), (float(4), float(11))],
+             275, err_est=False, hamilton=False)
 
         cpd_range_dict = {}
         for cpd in ['A[c]', 'B[c]', 'C[c]']:
@@ -275,7 +279,8 @@ class TestSolving(unittest.TestCase):
              {}, self.split_reversible, self.trans_param,
              [i for i in self.mm_irreversible.reactions],
              None, ['h2o', 'h2o[e]'], 'h[c]',
-             'h[e]', '', 275, err_est=False, hamilton=False)
+             'h[e]', '', [(float(4), float(11)), (float(4), float(11))],
+             275, err_est=False, hamilton=False)
 
         cpd_range_dict = {}
         for cpd in ['A[c]', 'B[c]', 'C[c]']:
