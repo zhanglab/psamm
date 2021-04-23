@@ -16,6 +16,7 @@
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2018-2020  Jing Wang <wjingsjtu@gmail.com>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
+# Copyright 2020-2021  Elysha Sameth <esameth1@uri.edu>
 
 from __future__ import print_function
 from __future__ import division
@@ -77,6 +78,11 @@ class Curator(object):
             self.false_reaction_map_file, [0, 1])
         self.ignore_compound = read_ignore(self.ignore_compound_file)
         self.ignore_reaction = read_ignore(self.ignore_reaction_file)
+
+        self.num_curated_compounds = len(self.curated_compound_map.index)
+        self.num_curated_compounds_left = len(self.compound_map.index) - self.num_curated_compounds
+        self.num_curated_reactions = len(self.curated_reaction_map.index)
+        self.num_curated_reactions_left = len(self.reaction_map.index) - self.num_curated_reactions
 
     def reaction_checked(self, id):
         """Return True if reaction pair has been checked.
@@ -225,11 +231,11 @@ def search_compound(model, id):
     # Show results
     for compound in selected_compounds:
         props = set(compound.properties) - {'id'}
+        if compound.filemark is not None:
+            print('Defined in {}'.format(compound.filemark))
         print('id: {}'.format(compound.id))
         for prop in sorted(props):
             print('{}: {}'.format(prop, compound.properties[prop]))
-        if compound.filemark is not None:
-            print('Defined in {}'.format(compound.filemark))
         print('\n')
 
 
@@ -249,6 +255,8 @@ def search_reaction(model, ids):
     # Show results
     for reaction in selected_reactions:
         props = set(reaction.properties) - {'id', 'equation'}
+        if reaction.filemark is not None:
+            print('Defined in {}'.format(reaction.filemark))
         print('id: {}'.format(reaction.id))
         print('equation: {}'.format(
             reaction.equation))
@@ -259,7 +267,5 @@ def search_reaction(model, ids):
                 translated_equation))
         for prop in sorted(props):
             print('{}: {}'.format(prop, reaction.properties[prop]))
-        if reaction.filemark is not None:
-            print('Defined in {}'.format(reaction.filemark))
         print('\n')
         yield [c for c, v in reaction.equation.compounds]

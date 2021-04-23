@@ -15,6 +15,7 @@
 #
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2018-2020  Jing Wang <wjingsjtu@gmail.com>
+# Copyright 2020-2021  Elysha Sameth <esameth1@uri.edu>
 
 # -*- coding: utf-8 -*-
 
@@ -366,6 +367,9 @@ class ModelMappingCommand(Command):
         print('Type "stop" to stop\n')
         # iterate through reaction mapping
         for rmap in curator.reaction_map.iterrows():
+            print('You have mapped %i reactions. There are %i reactions unmapped'
+                  % (curator.num_curated_reactions, curator.num_curated_reactions_left))
+            print('\n')
             # skip already curated reactions
             if (curator.reaction_checked(rmap[0])
                     or curator.reaction_ignored(rmap[0][0])):
@@ -375,8 +379,12 @@ class ModelMappingCommand(Command):
             compounds = [c.name for c in next(compounds)]
             dest_compounds = curation.search_reaction(model2, [rmap[0][1]])
             dest_compounds = [c.name for c in next(dest_compounds)]
+            print('\n', '*' * 10, '\n')
             print('Below are the compound mapping involved:\n')
             for compound in compounds:
+                print('You have mapped %i compounds. There are %i compounds unmapped'
+                      % (curator.num_curated_compounds, curator.num_curated_compounds_left))
+                print('\n')
                 for cmap in curator.compound_map.loc[compound].iterrows():
                     if (cmap is None
                             or cmap[0] not in dest_compounds
@@ -407,6 +415,8 @@ class ModelMappingCommand(Command):
                                 'c',
                                 True
                             )
+                            curator.num_curated_compounds += 1
+                            curator.num_curated_compounds_left -= 1
                             break
                         if ask.lower() == 'ignore':
                             curator.add_ignore(compound, 'c')
@@ -469,6 +479,8 @@ class ModelMappingCommand(Command):
                     break
                 if ask.lower() == 'y':
                     curator.add_mapping(rmap[0], 'r', True)
+                    curator.num_curated_reactions += 1
+                    curator.num_curated_reactions_left -= 1
                     break
                 if ask.lower() == 'ignore':
                     curator.add_ignore(rmap[0][0], 'r')
@@ -478,11 +490,14 @@ class ModelMappingCommand(Command):
                     exit(0)
                 if ask.lower() == 'save':
                     curator.save()
-            print('\n', '=' * 50, '\n')
+            print('\n', '=' * 60, '\n')
         curator.save()
 
     def _curate_compound(self, curator, model1, model2):
         for cmap in curator.compound_map.iterrows():
+            print('You have mapped %i compounds. There are %i compounds unmapped'
+                  % (curator.num_curated_compounds, curator.num_curated_compounds_left))
+            print('\n')
             if (curator.compound_checked(cmap[0])
                     or curator.compound_ignored(cmap[0][0])):
                 continue
@@ -510,6 +525,8 @@ class ModelMappingCommand(Command):
                         'c',
                         True
                     )
+                    curator.num_curated_compounds += 1
+                    curator.num_curated_compounds_left -= 1
                     break
                 if ask.lower() == 'ignore':
                     curator.add_ignore(cmap[0][0], 'c')
@@ -519,7 +536,7 @@ class ModelMappingCommand(Command):
                     exit(0)
                 if ask.lower() == 'save':
                     curator.save()
-            print('\n', '=' * 50, '\n')
+            print('\n', '=' * 60, '\n')
 
     def _translate_id(self):
         """Translate ids"""
