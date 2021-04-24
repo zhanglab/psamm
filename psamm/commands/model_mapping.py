@@ -367,22 +367,22 @@ class ModelMappingCommand(Command):
         print('Type "stop" to stop\n')
         # iterate through reaction mapping
         for rmap in curator.reaction_map.iterrows():
-            print('You have mapped %i reactions. There are %i reactions unmapped'
-                  % (curator.num_curated_reactions, curator.num_curated_reactions_left))
-            print('\n')
             # skip already curated reactions
             if (curator.reaction_checked(rmap[0])
                     or curator.reaction_ignored(rmap[0][0])):
                 continue
+            print('You have mapped %i reactions. There are %i reactions unmapped.'
+                  % (curator.num_curated_reactions, curator.num_curated_reactions_left))
+            print('\n')
             # check the compound mapping in current reaction
             compounds = curation.search_reaction(model1, [rmap[0][0]])
             compounds = [c.name for c in next(compounds)]
             dest_compounds = curation.search_reaction(model2, [rmap[0][1]])
             dest_compounds = [c.name for c in next(dest_compounds)]
-            print('\n', '*' * 10, '\n')
+            print('\n', '*' * 60, '\n')
             print('Below are the compound mapping involved:\n')
             for compound in compounds:
-                print('You have mapped %i compounds. There are %i compounds unmapped'
+                print('You have mapped %i compounds. There are %i compounds unmapped.'
                       % (curator.num_curated_compounds, curator.num_curated_compounds_left))
                 print('\n')
                 for cmap in curator.compound_map.loc[compound].iterrows():
@@ -391,7 +391,9 @@ class ModelMappingCommand(Command):
                             or curator.compound_checked((compound, cmap[0]))
                             or curator.compound_ignored(compound)):
                         continue
+                    print('-' * 30)
                     print(cmap[1])
+                    print('-' * 30)
                     print('\n')
                     curation.search_compound(model1, [compound])
                     curation.search_compound(model2, [cmap[0]])
@@ -428,8 +430,13 @@ class ModelMappingCommand(Command):
                             curator.save()
 
                     print('\n')
+            print('You have mapped %i reactions. There are %i reactions unmapped.'
+                  % (curator.num_curated_reactions, curator.num_curated_reactions_left))
+            print('\n')
             print('Here is the reaction mapping:')
+            print('-' * 30)
             print(rmap[1])
+            print('-' * 30)
             print('\n')
             compounds = curation.search_reaction(model1, [rmap[0][0]])
             compounds = [c for c in next(compounds)]
@@ -495,7 +502,7 @@ class ModelMappingCommand(Command):
 
     def _curate_compound(self, curator, model1, model2):
         for cmap in curator.compound_map.iterrows():
-            print('You have mapped %i compounds. There are %i compounds unmapped'
+            print('You have mapped %i compounds. There are %i compounds unmapped.'
                   % (curator.num_curated_compounds, curator.num_curated_compounds_left))
             print('\n')
             if (curator.compound_checked(cmap[0])
