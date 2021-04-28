@@ -382,15 +382,15 @@ class ModelMappingCommand(Command):
             print('\n', '*' * 60, '\n')
             print('Below are the compound mapping involved:\n')
             for compound in compounds:
-                print('You have mapped %i compounds. There are %i compounds unmapped.'
-                      % (curator.num_curated_compounds, curator.num_curated_compounds_left))
-                print('\n')
                 for cmap in curator.compound_map.loc[compound].iterrows():
                     if (cmap is None
                             or cmap[0] not in dest_compounds
                             or curator.compound_checked((compound, cmap[0]))
                             or curator.compound_ignored(compound)):
                         continue
+                    print('You have mapped %i compounds. There are %i compounds unmapped.'
+                          % (curator.num_curated_compounds, curator.num_curated_compounds_left))
+                    print('\n')
                     print('-' * 30)
                     print(cmap[1])
                     print('-' * 30)
@@ -502,13 +502,14 @@ class ModelMappingCommand(Command):
 
     def _curate_compound(self, curator, model1, model2):
         for cmap in curator.compound_map.iterrows():
-            print('You have mapped %i compounds. There are %i compounds unmapped.'
-                  % (curator.num_curated_compounds, curator.num_curated_compounds_left))
-            print('\n')
             if (curator.compound_checked(cmap[0])
                     or curator.compound_ignored(cmap[0][0])):
                 continue
+            print('You have mapped %i compounds. There are %i compounds unmapped.'
+                  % (curator.num_curated_compounds, curator.num_curated_compounds_left))
+            print('-' * 30)
             print(cmap[1])
+            print('-' * 30)
             print('\n')
             curation.search_compound(model1, [cmap[0][0]])
             curation.search_compound(model2, [cmap[0][1]])

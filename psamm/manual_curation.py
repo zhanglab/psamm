@@ -80,9 +80,9 @@ class Curator(object):
         self.ignore_reaction = read_ignore(self.ignore_reaction_file)
 
         self.num_curated_compounds = len(self.curated_compound_map.index)
-        self.num_curated_compounds_left = len(self.compound_map.index) - self.num_curated_compounds
+        self.num_curated_compounds_left = self.compound_map.index.get_level_values(0).nunique() - self.num_curated_compounds
         self.num_curated_reactions = len(self.curated_reaction_map.index)
-        self.num_curated_reactions_left = len(self.reaction_map.index) - self.num_curated_reactions
+        self.num_curated_reactions_left = self.reaction_map.index.get_level_values(0).nunique() - self.num_curated_reactions
 
     def reaction_checked(self, id):
         """Return True if reaction pair has been checked.
