@@ -1,3 +1,11 @@
+v1.1.2 (2021-05-10)  
+------------------
+  
+- Adds the --phin and --phout options to the `tmfa` command
+- Adds descriptive counts of the number of reactions and compounds
+  curated in the _manual curation_ option of `modelmapping`
+
+
 v1.1.1 (2020-12-18)
 ------------------
 
