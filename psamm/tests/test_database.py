@@ -70,7 +70,7 @@ class TestMetabolicDatabase(unittest.TestCase):
             {'rxn_1', 'rxn_2', 'rxn_3', 'rxn_4'})
 
     def test_reversible(self):
-        self.assertEqual(set(self.database.reversible), { 'rxn_2' })
+        self.assertEqual(set(self.database.reversible), {'rxn_2'})
 
     def test_get_reaction(self):
         reaction = parse_reaction('A + (2) B => C')
@@ -123,6 +123,7 @@ class TestMetabolicDatabase(unittest.TestCase):
     def test_matrix_len(self):
         self.assertEqual(len(self.database.matrix), 11)
 
+
 class TestChainedDatabase(unittest.TestCase):
     def setUp(self):
         database1 = DictDatabase()
@@ -159,19 +160,19 @@ class TestChainedDatabase(unittest.TestCase):
 
     def test_get_compound_reactions_in_upper(self):
         reactions = set(self.database.get_compound_reactions(Compound('H')))
-        self.assertEqual(reactions, { 'rxn_5' })
+        self.assertEqual(reactions, {'rxn_5'})
 
     def test_get_compound_reactions_in_lower(self):
         reactions = set(self.database.get_compound_reactions(Compound('A')))
-        self.assertEqual(reactions, { 'rxn_1' })
+        self.assertEqual(reactions, {'rxn_1'})
 
     def test_get_compound_reactions_in_both(self):
         reactions = set(self.database.get_compound_reactions(Compound('B')))
-        self.assertEqual(reactions, { 'rxn_1', 'rxn_2' })
+        self.assertEqual(reactions, {'rxn_1', 'rxn_2'})
 
     def test_get_compound_reactions_in_both_and_shadowed(self):
         reactions = set(self.database.get_compound_reactions(Compound('D')))
-        self.assertEqual(reactions, { 'rxn_3' })
+        self.assertEqual(reactions, {'rxn_3'})
 
 
 if __name__ == '__main__':

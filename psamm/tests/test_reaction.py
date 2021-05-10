@@ -101,10 +101,12 @@ class TestCompound(unittest.TestCase):
         self.assertNotEqual(c, Compound('Polyphosphate', arguments=[5]))
 
     def test_compounds_sorted(self):
-        l = sorted([Compound('A', arguments=[10]), Compound('A'), Compound('B'),
+        l = sorted([Compound('A', arguments=[10]),
+                    Compound('A'), Compound('B'),
                     Compound('A', arguments=[4]), Compound('A', 'e')])
         self.assertEqual(l, [Compound('A'), Compound('A', arguments=[4]),
-                              Compound('A', arguments=[10]), Compound('A', 'e'), Compound('B')])
+                             Compound('A', arguments=[10]),
+                             Compound('A', 'e'), Compound('B')])
 
     def test_compound_str_basic(self):
         self.assertEqual(text_type(Compound('Phosphate')), 'Phosphate')
@@ -293,7 +295,7 @@ class TestReaction(unittest.TestCase):
         rt = r.translated_compounds(lambda name: name.lower())
         self.assertEqual(
             rt, Reaction(Direction.Forward, [(Compound('pb'), 1)],
-            [(Compound('au'), 1)]))
+                         [(Compound('au'), 1)]))
 
     def test_reaction_format_simple(self):
         r = Reaction(

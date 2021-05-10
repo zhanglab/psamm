@@ -466,8 +466,8 @@ def make_network_dict(nm, mm, subset=None, method='fpp', element=None,
                             'Reaction will be excluded.'.format(rxn))
     else:
         testing_list_raw = [rxn for rxn in mm.reactions
-                            if (rxn in nm.reactions or mm.is_exchange(rxn))
-                            and rxn not in excluded_reactions]
+                            if (rxn in nm.reactions or mm.is_exchange(rxn)) and
+                            rxn not in excluded_reactions]
 
     reaction_data = {}
     style_flux_dict = {}

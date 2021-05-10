@@ -77,8 +77,8 @@ class Importer(BaseImporter):
                      if k not in ['__header__', '__version__', '__globals__']]
             modelnames = list()
             for i in names:
-                if (isinstance(model_doc[i], np.ndarray)
-                        and len(model_doc[i].dtype) > 1):
+                if (isinstance(model_doc[i], np.ndarray) and
+                        len(model_doc[i].dtype) > 1):
                     modelnames.append(i)
             if len(modelnames) == 1:
                 name = str(modelnames[0])
@@ -95,8 +95,8 @@ class Importer(BaseImporter):
                 raise ModelLoadError('Incorrect model name specified')
             else:
                 model_doc = model_doc[name]
-                if not (isinstance(model_doc, np.ndarray)
-                        and len(model_doc.dtype) > 1):
+                if not (isinstance(model_doc, np.ndarray) and
+                        len(model_doc.dtype) > 1):
                     raise ModelLoadError('Incorrect format')
         model = native.NativeModel()
         model.name = name

@@ -111,14 +111,16 @@ class TestMakeSubset(unittest.TestCase):
         with open(path, 'w') as f:
             f.write('{}\n{}'.format('h2o[c]', 'rxn1'))
         sub_file = open(path, 'r')
-        self.assertRaises(ValueError, vis.rxnset_for_vis, self.mm, sub_file, self.exclude)
+        self.assertRaises(ValueError, vis.rxnset_for_vis,
+                          self.mm, sub_file, self.exclude)
 
     def test7_not_in_model(self):
         path = os.path.join(tempfile.mkdtemp(), 'subset')
         with open(path, 'w') as f:
             f.write('{}'.format('h3o'))
         sub_file = open(path, 'r')
-        self.assertRaises(ValueError, vis.rxnset_for_vis, self.mm, sub_file, self.exclude)
+        self.assertRaises(ValueError, vis.rxnset_for_vis,
+                          self.mm, sub_file, self.exclude)
 
     def test8_exclude(self):
         exclude = ['rxn3']
@@ -129,6 +131,7 @@ class TestMakeSubset(unittest.TestCase):
         exclude = ['rxn1', 'rxn3']
         subset = vis.rxnset_for_vis(self.mm, self.sub, exclude)
         self.assertEqual(subset, set(['rxn2']))
+
 
 class TestAddNodeProps(unittest.TestCase):
     def setUp(self):
@@ -143,31 +146,12 @@ class TestAddNodeProps(unittest.TestCase):
         self.cpd_e = CompoundEntry({
             'id': 'E', 'name': 'compound E', 'formula': 'NNNN', 'charge': 0})
 
-        # RXN1: A + B => (2) C + D; RXN2: B => C + E; RXN3: E[c] => E[e]
-        # rxn1 = entry.DictReactionEntry({
-        #     'id': 'rxn1',
-        #     'name': 'Reaction 1',
-        #     'equation': Reaction(
-        #         Direction.Both, {Compound('A', 'c'): -1, Compound('B', 'c'): -1,
-        #                          Compound('C', 'c'): 2, Compound('D', 'c'): 1}),
-        #     'genes': 'gene1 and gene2'})
-        # rxn2 = entry.DictReactionEntry({
-        #     'id': 'rxn2',
-        #     'name': 'Reaction 2',
-        #     'equation': Reaction(Direction.Both, {
-        #         Compound('B', 'c'): -1, Compound('C', 'c'): 1, Compound('E', 'e'): 1}),
-        #     'genes': 'gene3'})
-        # rxn3 = entry.DictReactionEntry({
-        #     'id': 'rxn3',
-        #     'name': 'Reaction 3',
-        #     'equation': Reaction(Direction.Both, {
-        #         Compound('E', 'c'): -1, Compound('E', 'e'): 1})})
-
         # new rxn used to test: rxn1: A => B; rxn2: A => B; rxn3: C <=> B + D
         self.rxn1 = entry.DictReactionEntry({
             'id': 'rxn1', 'name': 'Reaction 1', 'genes': 'gene1 and gene2',
             'equation': Reaction(
-                Direction.Forward, {Compound('A', 'c'): -1, Compound('B', 'c'): 1}),
+                Direction.Forward, {Compound('A', 'c'): -1,
+                                    Compound('B', 'c'): 1}),
             })
         self.rxn2 = entry.DictReactionEntry({
             'id': 'rxn2', 'name': 'Reaction 2', 'genes': 'gene3',
@@ -177,40 +161,28 @@ class TestAddNodeProps(unittest.TestCase):
         self.rxn3 = entry.DictReactionEntry({
             'id': 'rxn3', 'name': 'Reaction 3',
             'equation': Reaction(Direction.Both, {
-                Compound('C', 'c'): -1, Compound('B', 'c'): 1, Compound('D', 'c'): 1})
+                Compound('C', 'c'): -1, Compound('B', 'c'): 1,
+                Compound('D', 'c'): 1})
         })
 
         self.node_a = graph.Node({
-            'id': 'A[c]', 'entry': [self.cpd_a], 'type': 'cpd', 'compartment': 'c'})
+            'id': 'A[c]', 'entry': [self.cpd_a],
+            'type': 'cpd', 'compartment': 'c'})
         self.node_b = graph.Node({
-            'id': 'B[c]', 'entry': [self.cpd_b], 'type': 'cpd', 'compartment': 'c'})
+            'id': 'B[c]', 'entry': [self.cpd_b],
+            'type': 'cpd', 'compartment': 'c'})
         self.node_c = graph.Node({
-            'id': 'C[c]', 'entry': [self.cpd_c], 'type': 'cpd', 'compartment': 'c'})
+            'id': 'C[c]', 'entry': [self.cpd_c],
+            'type': 'cpd', 'compartment': 'c'})
         self.node_d = graph.Node({
-            'id': 'D[c]', 'entry': [self.cpd_d], 'type': 'cpd', 'compartment': 'c'})
-        # node_e = graph.Node({
-        #     'id': 'E[c]', 'entry': [cpd_e], 'type': 'cpd', 'compartment': 'c'})
-        # node_e_extra = graph.Node({
-        #     'id': 'E[e]', 'entry': [cpd_e], 'type': 'cpd', 'compartment': 'e'})
-        # node_ac = graph.Node({
-        #     'id': 'rxn1_1', 'entry': [rxn1], 'compartment': 'c', 'type': 'rxn',
-        #     'style': 'filled', 'shape': 'box', 'fillcolor': '#c9fccd'})
+            'id': 'D[c]', 'entry': [self.cpd_d],
+            'type': 'cpd', 'compartment': 'c'})
         self.node_ab = graph.Node({
             'id': 'rxn1_1, rxn2_1', 'entry': [self.rxn1, self.rxn2],
             'compartment': 'c', 'type': 'rxn'})
         self.node_cb = graph.Node({
             'id': 'rxn3_1', 'entry': [self.rxn3], 'compartment': 'c',
             'type': 'rxn'})
-        # node_bd = graph.Node({
-        #     'id': 'rxn1_4', 'entry': [rxn1], 'compartment': 'c', 'type': 'rxn'})
-        # node_rxn1_comb1 = graph.Node({
-        #     'id': 'rxn1_1', 'entry': [rxn1], 'compartment': 'c', 'type': 'rxn'})
-        # node_rxn2_comb1 = graph.Node({
-        #     'id': 'rxn2_1', 'entry': [rxn2], 'compartment': 'c', 'type': 'rxn'})
-        # node_ac_comb = graph.Node({
-        #     'id': 'rxn1_1,rxn2_1', 'shape': 'box', 'style': 'filled',
-        #     'type': 'rxn', 'original_id': ['rxn1', 'rxn2'],
-        #     'compartment': 'c', 'fillcolor': '#c9fccd'})
 
         self.edge1 = graph.Edge(self.node_a, self.node_ab, {'dir': 'forward'})
         self.edge2 = graph.Edge(self.node_ab, self.node_b, {'dir': 'forward'})
@@ -223,38 +195,45 @@ class TestAddNodeProps(unittest.TestCase):
                           self.node_ab, self.node_cb]
         for node in self.node_list:
             self.g.add_node(node)
-        self.edge_list = [self.edge1, self.edge2, self.edge3, self.edge4, self.edge5]
+        self.edge_list = [self.edge1, self.edge2,
+                          self.edge3, self.edge4, self.edge5]
         for edge in self.edge_list:
             self.g.add_edge(edge)
 
-        # self.g_comb = graph.Graph()
-        # self.node_list_comb = [node_a, node_c, node_d, node_ac_comb, node_ad]
-        # for node in self.node_list_comb:
-        #     self.g_comb.add_node(node)
-
-        self.recolor_dict = {'A': '#f4fc55', 'rxn1': '#ef70de', 'rxn3': '#64b3f4'}
+        self.recolor_dict = {'A': '#f4fc55', 'rxn1': '#ef70de',
+                             'rxn3': '#64b3f4'}
 
     def test1_DefaultRecolor(self):
         g1 = vis.add_node_props(self.g, {})
         node_a = graph.Node({
-            'id': 'A[c]', 'entry': [self.cpd_a], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
+            'id': 'A[c]', 'entry': [self.cpd_a],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf'})
         node_b = graph.Node({
-            'id': 'B[c]', 'entry': [self.cpd_b], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
+            'id': 'B[c]', 'entry': [self.cpd_b],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf'})
         node_c = graph.Node({
-            'id': 'C[c]', 'entry': [self.cpd_c], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
+            'id': 'C[c]', 'entry': [self.cpd_c],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf'})
         node_d = graph.Node({
-            'id': 'D[c]', 'entry': [self.cpd_d], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
+            'id': 'D[c]', 'entry': [self.cpd_d],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf'})
         node_ab = graph.Node({
             'id': 'rxn1_1, rxn2_1', 'entry': [self.rxn1, self.rxn2],
             'compartment': 'c', 'type': 'rxn', 'style': 'filled',
             'shape': 'box', 'fillcolor': '#c9fccd'})
         node_cb = graph.Node({
-            'id': 'rxn3_1', 'entry': [self.rxn3], 'compartment': 'c', 'type': 'rxn',
-            'style': 'filled', 'shape': 'box', 'fillcolor': '#c9fccd'})
+            'id': 'rxn3_1', 'entry': [self.rxn3],
+            'compartment': 'c', 'type': 'rxn',
+            'style': 'filled', 'shape': 'box',
+            'fillcolor': '#c9fccd'})
         node_list = [node_a, node_b, node_c, node_d, node_ab, node_cb]
         self.assertTrue(all(i in node_list for i in g1.nodes))
         self.assertTrue(all(i in g1.nodes for i in node_list))
@@ -262,24 +241,34 @@ class TestAddNodeProps(unittest.TestCase):
     def test2_Recolor(self):
         g2 = vis.add_node_props(self.g, self.recolor_dict)
         node_a = graph.Node({
-            'id': 'A[c]', 'entry': [self.cpd_a], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#f4fc55'})
+            'id': 'A[c]', 'entry': [self.cpd_a],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#f4fc55'})
         node_b = graph.Node({
-            'id': 'B[c]', 'entry': [self.cpd_b], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
+            'id': 'B[c]', 'entry': [self.cpd_b],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf'})
         node_c = graph.Node({
-            'id': 'C[c]', 'entry': [self.cpd_c], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
+            'id': 'C[c]', 'entry': [self.cpd_c],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf'})
         node_d = graph.Node({
-            'id': 'D[c]', 'entry': [self.cpd_d], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
+            'id': 'D[c]', 'entry': [self.cpd_d],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf'})
         node_ab = graph.Node({
             'id': 'rxn1_1, rxn2_1', 'entry': [self.rxn1, self.rxn2],
             'compartment': 'c', 'type': 'rxn', 'style': 'filled',
             'shape': 'box', 'fillcolor': '#c9fccd'})
         node_cb = graph.Node({
-            'id': 'rxn3_1', 'entry': [self.rxn3], 'compartment': 'c', 'type': 'rxn',
-            'style': 'filled', 'shape': 'box', 'fillcolor': '#64b3f4'})
+            'id': 'rxn3_1', 'entry': [self.rxn3],
+            'compartment': 'c', 'type': 'rxn',
+            'style': 'filled', 'shape': 'box',
+            'fillcolor': '#64b3f4'})
         node_list = [node_a, node_b, node_c, node_d, node_ab, node_cb]
         self.assertTrue(all(i in node_list for i in g2.nodes))
         self.assertTrue(all(i in g2.nodes for i in node_list))
@@ -288,27 +277,38 @@ class TestAddNodeProps(unittest.TestCase):
         recolor_dict = {'A': '#f4fc55', 'rxn1': '#ef70de', 'rxn2': '#64b3f4'}
         g3 = vis.add_node_props(self.g, recolor_dict)
         node_a = graph.Node({
-            'id': 'A[c]', 'entry': [self.cpd_a], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#f4fc55'})
+            'id': 'A[c]', 'entry': [self.cpd_a],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#f4fc55'})
         node_b = graph.Node({
-            'id': 'B[c]', 'entry': [self.cpd_b], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
+            'id': 'B[c]', 'entry': [self.cpd_b],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf'})
         node_c = graph.Node({
-            'id': 'C[c]', 'entry': [self.cpd_c], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
+            'id': 'C[c]', 'entry': [self.cpd_c],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf'})
         node_d = graph.Node({
-            'id': 'D[c]', 'entry': [self.cpd_d], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
+            'id': 'D[c]', 'entry': [self.cpd_d],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf'})
         node_ab = graph.Node({
             'id': 'rxn1_1, rxn2_1', 'entry': [self.rxn1, self.rxn2],
             'compartment': 'c', 'type': 'rxn', 'style': 'filled',
             'shape': 'box', 'fillcolor': '#c9fccd'})
         node_cb = graph.Node({
-            'id': 'rxn3_1', 'entry': [self.rxn3], 'compartment': 'c', 'type': 'rxn',
-            'style': 'filled', 'shape': 'box', 'fillcolor': '#c9fccd'})
+            'id': 'rxn3_1', 'entry': [self.rxn3],
+            'compartment': 'c', 'type': 'rxn',
+            'style': 'filled', 'shape': 'box',
+            'fillcolor': '#c9fccd'})
         node_list = [node_a, node_b, node_c, node_d, node_ab, node_cb]
         self.assertTrue(all(i in node_list for i in g3.nodes))
         self.assertTrue(all(i in g3.nodes for i in node_list))
+
 
 class TestAddNodeLabel(unittest.TestCase):
     def setUp(self):
@@ -327,7 +327,8 @@ class TestAddNodeLabel(unittest.TestCase):
         self.rxn1 = entry.DictReactionEntry({
             'id': 'rxn1', 'name': 'Reaction 1', 'genes': 'gene1 and gene2',
             'equation': Reaction(
-                Direction.Forward, {Compound('A', 'c'): -1, Compound('B', 'c'): 1}),
+                Direction.Forward, {Compound('A', 'c'): -1,
+                                    Compound('B', 'c'): 1}),
         })
         self.rxn2 = entry.DictReactionEntry({
             'id': 'rxn2', 'name': 'Reaction 2',
@@ -337,72 +338,53 @@ class TestAddNodeLabel(unittest.TestCase):
         self.rxn3 = entry.DictReactionEntry({
             'id': 'rxn3', 'name': 'Reaction 3', 'genes': 'gene3',
             'equation': Reaction(Direction.Both, {
-                Compound('C', 'c'): -1, Compound('B', 'c'): 1, Compound('D', 'c'): 1})
+                Compound('C', 'c'): -1, Compound('B', 'c'): 1,
+                Compound('D', 'c'): 1})
         })
 
         self.node_a = graph.Node({
-            'id': 'A[c]', 'entry': [self.cpd_a], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
+            'id': 'A[c]', 'entry': [self.cpd_a],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf'})
         self.node_b = graph.Node({
-            'id': 'B[c]', 'entry': [self.cpd_b], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
+            'id': 'B[c]', 'entry': [self.cpd_b],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf'})
         self.node_c = graph.Node({
-            'id': 'C[c]', 'entry': [self.cpd_c], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
+            'id': 'C[c]', 'entry': [self.cpd_c],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf'})
         self.node_d = graph.Node({
-            'id': 'D[c]', 'entry': [self.cpd_d], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
+            'id': 'D[c]', 'entry': [self.cpd_d],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf'})
         self.node_ab = graph.Node({
             'id': 'rxn1_1, rxn2_1', 'entry': [self.rxn1, self.rxn2],
             'compartment': 'c', 'type': 'rxn', 'style': 'filled',
             'shape': 'box', 'fillcolor': '#c9fccd'})
         self.node_cb = graph.Node({
-            'id': 'rxn3_1', 'entry': [self.rxn3], 'compartment': 'c', 'type': 'rxn',
-            'style': 'filled', 'shape': 'box', 'fillcolor': '#c9fccd'})
+            'id': 'rxn3_1', 'entry': [self.rxn3],
+            'compartment': 'c', 'type': 'rxn',
+            'style': 'filled', 'shape': 'box',
+            'fillcolor': '#c9fccd'})
         self.edge1 = graph.Edge(self.node_a, self.node_ab, {'dir': 'forward'})
         self.edge2 = graph.Edge(self.node_ab, self.node_b, {'dir': 'forward'})
         self.edge3 = graph.Edge(self.node_c, self.node_cb, {'dir': 'both'})
         self.edge4 = graph.Edge(self.node_cb, self.node_b, {'dir': 'both'})
         self.edge5 = graph.Edge(self.node_cb, self.node_d, {'dir': 'both'})
 
-        # a = graph.Node({
-        #     'id': 'A[c]', 'entry': [self.cpd_a], 'type': 'cpd', 'compartment': 'c',
-        #     'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
-        # b = graph.Node({
-        #     'id': 'B[c]', 'entry': [self.cpd_b], 'type': 'cpd', 'compartment': 'c',
-        #     'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
-        # c = graph.Node({
-        #     'id': 'C[c]', 'entry': [self.cpd_c], 'type': 'cpd', 'compartment': 'c',
-        #     'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
-        # d = graph.Node({
-        #     'id': 'D[c]', 'entry': [self.cpd_d], 'type': 'cpd', 'compartment': 'c',
-        #     'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf'})
-        # ab = graph.Node({
-        #     'id': 'rxn1_1, rxn2_1', 'entry': [self.rxn1, self.rxn2],
-        #     'compartment': 'c', 'type': 'rxn', 'style': 'filled',
-        #     'shape': 'box', 'fillcolor': '#c9fccd'})
-        # cb = graph.Node({
-        #     'id': 'rxn3_1', 'entry': [self.rxn3], 'compartment': 'c', 'type': 'rxn',
-        #     'style': 'filled', 'shape': 'box', 'fillcolor': '#c9fccd'})
-        # self.edge1 = graph.Edge(a, ab, {'dir': 'forward'})
-        # self.edge2 = graph.Edge(ab, b, {'dir': 'forward'})
-        # self.edge3 = graph.Edge(c, cb, {'dir': 'both'})
-        # self.edge4 = graph.Edge(cb, b, {'dir': 'both'})
-        # self.edge5 = graph.Edge(cb, d, {'dir': 'both'})
-        #
-        # self.node_a = a
-        # self.node_b = b
-        # self.node_c = c
-        # self.node_d = d
-        # self.node_ab = ab
-        # self.node_cb = cb
-
         self.g = graph.Graph()
-        node_list = [self.node_a, self.node_b, self.node_c, self.node_d, self.node_ab, self.node_cb]
+        node_list = [self.node_a, self.node_b,
+                     self.node_c, self.node_d, self.node_ab, self.node_cb]
         # node_list = [a, b, c, d, ab, cb]
         for node in node_list:
             self.g.add_node(node)
-        edge_list = [self.edge1, self.edge2, self.edge3, self.edge4, self.edge5]
+        edge_list = [self.edge1, self.edge2,
+                     self.edge3, self.edge4, self.edge5]
         for edge in edge_list:
             self.g.add_edge(edge)
 
@@ -419,24 +401,34 @@ class TestAddNodeLabel(unittest.TestCase):
         #                self.node_ab, self.node_cb]
 
         a = graph.Node({
-            'id': 'A[c]', 'entry': [self.cpd_a], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'A[c]'})
+            'id': 'A[c]', 'entry': [self.cpd_a],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'A[c]'})
         b = graph.Node({
-            'id': 'B[c]', 'entry': [self.cpd_b], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'B[c]'})
+            'id': 'B[c]', 'entry': [self.cpd_b],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'B[c]'})
         c = graph.Node({
-            'id': 'C[c]', 'entry': [self.cpd_c], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'C[c]'})
+            'id': 'C[c]', 'entry': [self.cpd_c],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'C[c]'})
         d = graph.Node({
-            'id': 'D[c]', 'entry': [self.cpd_d], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'D[c]'})
+            'id': 'D[c]', 'entry': [self.cpd_d],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'D[c]'})
         ab = graph.Node({
             'id': 'rxn1_1, rxn2_1', 'entry': [self.rxn1, self.rxn2],
             'compartment': 'c', 'type': 'rxn', 'style': 'filled',
             'shape': 'box', 'fillcolor': '#c9fccd', 'label': 'rxn1\nrxn2'})
         cb = graph.Node({
-            'id': 'rxn3_1', 'entry': [self.rxn3], 'compartment': 'c', 'type': 'rxn',
-            'style': 'filled', 'shape': 'box', 'fillcolor': '#c9fccd', 'label': 'rxn3'})
+            'id': 'rxn3_1', 'entry': [self.rxn3],
+            'compartment': 'c', 'type': 'rxn',
+            'style': 'filled', 'shape': 'box',
+            'fillcolor': '#c9fccd', 'label': 'rxn3'})
         node_list_1 = [a, b, c, d, ab, cb]
         # for i in g1.nodes:
         #     print('in g1:', i.props)
@@ -448,7 +440,8 @@ class TestAddNodeLabel(unittest.TestCase):
         self.assertTrue(all(i in g1.nodes for i in node_list_1))
 
     def test2_detail_id_name(self):
-        """test vis codes when both --cpd-detail and --rxn-detail are ['id', 'name']"""
+        """test vis codes when both --cpd-detail
+        and --rxn-detail are ['id', 'name']"""
         g2 = vis.add_node_label(self.g, [['id', 'name']], [['id', 'name']])
         # self.node_a.props['label'] = 'A[c]\ncompound A'
         # self.node_b.props['label'] = 'B[c]\ncompound B'
@@ -460,24 +453,34 @@ class TestAddNodeLabel(unittest.TestCase):
         #                self.node_ab, self.node_cb]
 
         a = graph.Node({
-            'id': 'A[c]', 'entry': [self.cpd_a], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'A[c]\ncompound A'})
+            'id': 'A[c]', 'entry': [self.cpd_a],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'A[c]\ncompound A'})
         b = graph.Node({
-            'id': 'B[c]', 'entry': [self.cpd_b], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'B[c]\ncompound B'})
+            'id': 'B[c]', 'entry': [self.cpd_b],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'B[c]\ncompound B'})
         c = graph.Node({
-            'id': 'C[c]', 'entry': [self.cpd_c], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'C[c]\ncompound C'})
+            'id': 'C[c]', 'entry': [self.cpd_c],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'C[c]\ncompound C'})
         d = graph.Node({
-            'id': 'D[c]', 'entry': [self.cpd_d], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'D[c]\ncompound D'})
+            'id': 'D[c]', 'entry': [self.cpd_d],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'D[c]\ncompound D'})
         ab = graph.Node({
             'id': 'rxn1_1, rxn2_1', 'entry': [self.rxn1, self.rxn2],
             'compartment': 'c', 'type': 'rxn', 'style': 'filled',
             'shape': 'box', 'fillcolor': '#c9fccd', 'label': 'rxn1\nrxn2'})
         cb = graph.Node({
-            'id': 'rxn3_1', 'entry': [self.rxn3], 'compartment': 'c', 'type': 'rxn',
-            'style': 'filled', 'shape': 'box', 'fillcolor': '#c9fccd', 'label': 'rxn3\nReaction 3'})
+            'id': 'rxn3_1', 'entry': [self.rxn3],
+            'compartment': 'c', 'type': 'rxn',
+            'style': 'filled', 'shape': 'box',
+            'fillcolor': '#c9fccd', 'label': 'rxn3\nReaction 3'})
         node_list_2 = [a, b, c, d, ab, cb]
         for i in g2.nodes:
             if i not in node_list_2:
@@ -486,7 +489,8 @@ class TestAddNodeLabel(unittest.TestCase):
         self.assertTrue(all(i in g2.nodes for i in node_list_2))
 
     def test3_id_formula_genes(self):
-        """test vis codes when --cpd-detail and --rxn-detail are ['id', 'formula', 'genes'] """
+        """test vis codes when --cpd-detail and
+        --rxn-detail are ['id', 'formula', 'genes']"""
         g3 = vis.add_node_label(self.g, [['id', 'formula', 'genes']],
                                 [['id', 'formula', 'genes']])
         # self.node_a.props['label'] = 'A[c]\ncompound A'
@@ -499,24 +503,34 @@ class TestAddNodeLabel(unittest.TestCase):
         #                self.node_ab, self.node_cb]
 
         a = graph.Node({
-            'id': 'A[c]', 'entry': [self.cpd_a], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'A[c]\nXXXX'})
+            'id': 'A[c]', 'entry': [self.cpd_a],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'A[c]\nXXXX'})
         b = graph.Node({
-            'id': 'B[c]', 'entry': [self.cpd_b], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'B[c]\nYYYY'})
+            'id': 'B[c]', 'entry': [self.cpd_b],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'B[c]\nYYYY'})
         c = graph.Node({
-            'id': 'C[c]', 'entry': [self.cpd_c], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'C[c]\nZZZZ'})
+            'id': 'C[c]', 'entry': [self.cpd_c],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'C[c]\nZZZZ'})
         d = graph.Node({
-            'id': 'D[c]', 'entry': [self.cpd_d], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'D[c]\nMMMM'})
+            'id': 'D[c]', 'entry': [self.cpd_d],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'D[c]\nMMMM'})
         ab = graph.Node({
             'id': 'rxn1_1, rxn2_1', 'entry': [self.rxn1, self.rxn2],
             'compartment': 'c', 'type': 'rxn', 'style': 'filled',
             'shape': 'box', 'fillcolor': '#c9fccd', 'label': 'rxn1\nrxn2'})
         cb = graph.Node({
-            'id': 'rxn3_1', 'entry': [self.rxn3], 'compartment': 'c', 'type': 'rxn',
-            'style': 'filled', 'shape': 'box', 'fillcolor': '#c9fccd', 'label': 'rxn3\ngene3'})
+            'id': 'rxn3_1', 'entry': [self.rxn3],
+            'compartment': 'c', 'type': 'rxn',
+            'style': 'filled', 'shape': 'box',
+            'fillcolor': '#c9fccd', 'label': 'rxn3\ngene3'})
         node_list_3 = [a, b, c, d, ab, cb]
         self.assertTrue(all(i in node_list_3 for i in g3.nodes))
         self.assertTrue(all(i in g3.nodes for i in node_list_3))
@@ -535,24 +549,34 @@ class TestAddNodeLabel(unittest.TestCase):
         #                self.node_ab, self.node_cb]
 
         a = graph.Node({
-            'id': 'A[c]', 'entry': [self.cpd_a], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'compound A'})
+            'id': 'A[c]', 'entry': [self.cpd_a],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'compound A'})
         b = graph.Node({
-            'id': 'B[c]', 'entry': [self.cpd_b], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'compound B'})
+            'id': 'B[c]', 'entry': [self.cpd_b],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'compound B'})
         c = graph.Node({
-            'id': 'C[c]', 'entry': [self.cpd_c], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'compound C'})
+            'id': 'C[c]', 'entry': [self.cpd_c],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'compound C'})
         d = graph.Node({
-            'id': 'D[c]', 'entry': [self.cpd_d], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'compound D'})
+            'id': 'D[c]', 'entry': [self.cpd_d],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'compound D'})
         ab = graph.Node({
             'id': 'rxn1_1, rxn2_1', 'entry': [self.rxn1, self.rxn2],
             'compartment': 'c', 'type': 'rxn', 'style': 'filled',
             'shape': 'box', 'fillcolor': '#c9fccd', 'label': 'rxn1\nrxn2'})
         cb = graph.Node({
-            'id': 'rxn3_1', 'entry': [self.rxn3], 'compartment': 'c', 'type': 'rxn',
-            'style': 'filled', 'shape': 'box', 'fillcolor': '#c9fccd', 'label': 'Reaction 3\ngene3'})
+            'id': 'rxn3_1', 'entry': [self.rxn3],
+            'compartment': 'c', 'type': 'rxn',
+            'style': 'filled', 'shape': 'box',
+            'fillcolor': '#c9fccd', 'label': 'Reaction 3\ngene3'})
         node_list_4 = [a, b, c, d, ab, cb]
         self.assertTrue(all(i in node_list_4 for i in g4.nodes))
         self.assertTrue(all(i in g4.nodes for i in node_list_4))
@@ -570,24 +594,34 @@ class TestAddNodeLabel(unittest.TestCase):
         #                self.node_ab, self.node_cb]
 
         a = graph.Node({
-            'id': 'A[c]', 'entry': [self.cpd_a], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'compound A'})
+            'id': 'A[c]', 'entry': [self.cpd_a],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'compound A'})
         b = graph.Node({
-            'id': 'B[c]', 'entry': [self.cpd_b], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'compound B'})
+            'id': 'B[c]', 'entry': [self.cpd_b],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'compound B'})
         c = graph.Node({
-            'id': 'C[c]', 'entry': [self.cpd_c], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'compound C'})
+            'id': 'C[c]', 'entry': [self.cpd_c],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'compound C'})
         d = graph.Node({
-            'id': 'D[c]', 'entry': [self.cpd_d], 'type': 'cpd', 'compartment': 'c',
-            'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf', 'label': 'compound D'})
+            'id': 'D[c]', 'entry': [self.cpd_d],
+            'type': 'cpd', 'compartment': 'c',
+            'style': 'filled', 'shape': 'ellipse',
+            'fillcolor': '#ffd8bf', 'label': 'compound D'})
         ab = graph.Node({
             'id': 'rxn1_1, rxn2_1', 'entry': [self.rxn1, self.rxn2],
             'compartment': 'c', 'type': 'rxn', 'style': 'filled',
             'shape': 'box', 'fillcolor': '#c9fccd', 'label': 'rxn1\nrxn2'})
         cb = graph.Node({
-            'id': 'rxn3_1', 'entry': [self.rxn3], 'compartment': 'c', 'type': 'rxn',
-            'style': 'filled', 'shape': 'box', 'fillcolor': '#c9fccd', 'label': 'rxn3'})
+            'id': 'rxn3_1', 'entry': [self.rxn3],
+            'compartment': 'c', 'type': 'rxn',
+            'style': 'filled', 'shape': 'box',
+            'fillcolor': '#c9fccd', 'label': 'rxn3'})
         node_list_5 = [a, b, c, d, ab, cb]
         self.assertTrue(all(i in node_list_5 for i in g5.nodes))
         self.assertTrue(all(i in g5.nodes for i in node_list_5))
@@ -606,7 +640,8 @@ class TestAddBiomassRnxs(unittest.TestCase):
         rxn1 = entry.DictReactionEntry({
             'id': 'rxn1', 'name': 'Reaction 1', 'genes': 'gene1 and gene2',
             'equation': Reaction(
-                Direction.Both, {Compound('A', 'c'): -1, Compound('C', 'c'): 1}),
+                Direction.Both, {Compound('A', 'c'): -1,
+                                 Compound('C', 'c'): 1}),
         })
 
         self.node_a = graph.Node({
@@ -633,7 +668,8 @@ class TestAddBiomassRnxs(unittest.TestCase):
         self.edge_C_rxn = graph.Edge(self.node_rxn1, self.node_c,
                                      {'dir': 'both'})
         self.g = graph.Graph()
-        for node in [self.node_a, self.node_b, self.node_c, self.node_d, self.node_rxn1]:
+        for node in [self.node_a, self.node_b,
+                     self.node_c, self.node_d, self.node_rxn1]:
             self.g.add_node(node)
         self.g.add_edge(self.edge_A_rxn)
         self.g.add_edge(self.edge_C_rxn)
@@ -660,8 +696,10 @@ class TestAddBiomassRnxs(unittest.TestCase):
         edge_bio_b = graph.Edge(self.node_b, bio_b, {'dir': 'forward'})
         edge_bio_d = graph.Edge(bio_d, self.node_d, {'dir': 'forward'})
 
-        self.assertTrue(all(i in [self.node_a, self.node_b, self.node_c, self.node_d,
-                                  self.node_rxn1, bio_a, bio_b, bio_d] for i in g1.nodes))
+        self.assertTrue(all(i in [self.node_a, self.node_b,
+                                  self.node_c, self.node_d,
+                                  self.node_rxn1, bio_a, bio_b, bio_d]
+                            for i in g1.nodes))
         self.assertTrue(all(i in g1.nodes for i in [
             self.node_a, self.node_b, self.node_c, self.node_d, self.node_rxn1,
             bio_a, bio_b, bio_d]))
@@ -669,7 +707,8 @@ class TestAddBiomassRnxs(unittest.TestCase):
         self.assertTrue(all(i in [self.edge_A_rxn, self.edge_C_rxn, edge_bio_a,
                                   edge_bio_b, edge_bio_d] for i in g1.edges))
         self.assertTrue(all(i in g1.edges for i in [
-            self.edge_A_rxn, self.edge_C_rxn, edge_bio_a, edge_bio_b, edge_bio_d]))
+            self.edge_A_rxn, self.edge_C_rxn,
+            edge_bio_a, edge_bio_b, edge_bio_d]))
 
     def test2_TwoCpdsRight(self):
         biorxn = ReactionEntry({
@@ -723,7 +762,8 @@ class TestAddBiomassRnxs(unittest.TestCase):
         edge_bio_b = graph.Edge(self.node_b, bio_b, {'dir': 'forward'})
         final_nodes = [self.node_a, self.node_b, self.node_c, self.node_d,
                        self.node_rxn1, bio_a, bio_b]
-        final_edges = [self.edge_A_rxn, self.edge_C_rxn, edge_bio_a, edge_bio_b]
+        final_edges = [self.edge_A_rxn, self.edge_C_rxn,
+                       edge_bio_a, edge_bio_b]
         self.assertTrue(all(i in final_nodes for i in g3.nodes))
         self.assertTrue(all(i in g3.nodes for i in final_nodes))
         self.assertTrue(all(i in final_edges for i in g3.edges))
@@ -742,19 +782,23 @@ class TestAddExchange(unittest.TestCase):
             'id': 'C', 'name': 'compound C', 'formula': 'MNO', 'charge': 0})
         rxn1 = entry.DictReactionEntry({
             'id': 'rxn1', 'name': 'Reaction 1', 'equation': Reaction(
-                Direction.Forward, {Compound('A', 'c'): -1, Compound('C', 'c'): 1})
+                Direction.Forward, {Compound('A', 'c'): -1,
+                                    Compound('C', 'c'): 1})
         })
         rxn2 = entry.DictReactionEntry({
             'id': 'rxn2', 'name': 'Reaction 2', 'equation': Reaction(
-                Direction.Forward, {Compound('A', 'e'): -1, Compound('A', 'c'): 1}),
+                Direction.Forward, {Compound('A', 'e'): -1,
+                                    Compound('A', 'c'): 1}),
         })
         rxn3 = entry.DictReactionEntry({
             'id': 'rxn3', 'name': 'Reaction 3', 'equation': Reaction(
-                Direction.Forward, {Compound('C', 'c'): 1, Compound('C', 'e'): 1}),
+                Direction.Forward, {Compound('C', 'c'): 1,
+                                    Compound('C', 'e'): 1}),
         })
 
         node_a = graph.Node({
-            'id': 'A[c]', 'entry': [self.cpd_a], 'compartment': 'c', 'type': 'cpd',
+            'id': 'A[c]', 'entry': [self.cpd_a],
+            'compartment': 'c', 'type': 'cpd',
             'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf',
             'label': 'A[c]'})
         node_c = graph.Node({
@@ -762,7 +806,8 @@ class TestAddExchange(unittest.TestCase):
             'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf',
             'label': 'C[c]'})
         self.node_a_extracell = graph.Node({
-            'id': 'A[e]', 'entry': [self.cpd_a], 'compartment': 'e', 'type': 'cpd',
+            'id': 'A[e]', 'entry': [self.cpd_a],
+            'compartment': 'e', 'type': 'cpd',
             'style': 'filled', 'shape': 'ellipse', 'fillcolor': '#ffd8bf',
             'label': 'A[e]'})
         self.node_c_extracell = graph.Node({
@@ -783,7 +828,8 @@ class TestAddExchange(unittest.TestCase):
             'label': 'rxn3'})
         edge_a_r1 = graph.Edge(node_a, node_ac, {'dir': 'both'})
         edge_r1_c = graph.Edge(node_ac, node_c, {'dir': 'both'})
-        self.edge_a_r2 = graph.Edge(self.node_a_extracell, self.node_aa, {'dir': 'forward'})
+        self.edge_a_r2 = graph.Edge(self.node_a_extracell,
+                                    self.node_aa, {'dir': 'forward'})
         self.edge_r2_a = graph.Edge(self.node_aa, node_a, {'dir': 'forward'})
         edge_c_r3 = graph.Edge(self.node_c_extracell, node_cc, {'dir': 'back'})
         edge_r3_c = graph.Edge(node_cc, node_c, {'dir': 'back'})
@@ -792,7 +838,8 @@ class TestAddExchange(unittest.TestCase):
         self.edge_list = [edge_a_r1, edge_r1_c, self.edge_a_r2, self.edge_r2_a,
                           edge_c_r3, edge_r3_c]
         self.node_list = [node_a, node_c, self.node_a_extracell,
-                          self.node_c_extracell, node_ac, self.node_aa, node_cc]
+                          self.node_c_extracell, node_ac,
+                          self.node_aa, node_cc]
         for node in self.node_list:
             self.g.add_node(node)
         for edge in self.edge_list:
@@ -1066,83 +1113,115 @@ class TestFlux(unittest.TestCase):
 
     def test1_neg_flux_fba(self):
         reaction_dict = {'rxn1': (-20, 1)}
-        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
-                                                        reaction_dict=reaction_dict, analysis='fba')
-        self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn1']][1])
+        full_pairs_dict, style_flux_dict = \
+            graph.make_network_dict(self.native, self.mm,
+                                    reaction_dict=reaction_dict,
+                                    analysis='fba')
+        self.assertEqual(Direction.Reverse,
+                         full_pairs_dict[self.native.reactions['rxn1']][1])
         self.assertEqual('solid', style_flux_dict['rxn1'][0])
         self.assertEqual(5, style_flux_dict['rxn1'][1])
 
     def test2_pos_flux_fba(self):
         reaction_dict = {'rxn1': (10, 1)}
-        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
-                                                              reaction_dict=reaction_dict, analysis='fba')
-        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
+        full_pairs_dict, style_flux_dict = \
+            graph.make_network_dict(self.native, self.mm,
+                                    reaction_dict=reaction_dict,
+                                    analysis='fba')
+        self.assertEqual(Direction.Forward,
+                         full_pairs_dict[self.native.reactions['rxn1']][1])
         self.assertEqual('solid', style_flux_dict['rxn1'][0])
         self.assertEqual(5, style_flux_dict['rxn1'][1])
 
     def test3_0_flux_fba(self):
         reaction_dict = {'rxn1': (0, 1)}
-        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
-                                                              reaction_dict=reaction_dict, analysis='fba')
-        self.assertEqual(Direction.Both, full_pairs_dict[self.native.reactions['rxn1']][1])
+        full_pairs_dict, style_flux_dict = \
+            graph.make_network_dict(self.native, self.mm,
+                                    reaction_dict=reaction_dict,
+                                    analysis='fba')
+        self.assertEqual(Direction.Both,
+                         full_pairs_dict[self.native.reactions['rxn1']][1])
         self.assertEqual('dotted', style_flux_dict['rxn1'][0])
         self.assertEqual(1, style_flux_dict['rxn1'][1])
 
     def test4_neg_flux_fva(self):
         reaction_dict = {'rxn1': (-10, 1)}
-        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
-                                                        reaction_dict=reaction_dict, analysis='fva')
-        self.assertEqual(Direction.Both, full_pairs_dict[self.native.reactions['rxn1']][1])
+        full_pairs_dict, style_flux_dict = \
+            graph.make_network_dict(self.native, self.mm,
+                                    reaction_dict=reaction_dict,
+                                    analysis='fva')
+        self.assertEqual(Direction.Both,
+                         full_pairs_dict[self.native.reactions['rxn1']][1])
         self.assertEqual('dotted', style_flux_dict['rxn2'][0])
         self.assertEqual(5, style_flux_dict['rxn1'][1])
 
     def test5_pos_flux_neg_fva(self):
         reaction_dict = {'rxn1': (-10, -10)}
-        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
-                                                        reaction_dict=reaction_dict, analysis='fva')
-        self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn1']][1])
+        full_pairs_dict, style_flux_dict = \
+            graph.make_network_dict(self.native, self.mm,
+                                    reaction_dict=reaction_dict,
+                                    analysis='fva')
+        self.assertEqual(Direction.Reverse,
+                         full_pairs_dict[self.native.reactions['rxn1']][1])
         self.assertEqual('solid', style_flux_dict['rxn1'][0])
         self.assertEqual(5, style_flux_dict['rxn1'][1])
 
     def test6_pos_flux_pos_fva(self):
         reaction_dict = {'rxn1': (10, 10)}
-        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
-                                                              reaction_dict=reaction_dict, analysis='fva')
-        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
+        full_pairs_dict, style_flux_dict = \
+            graph.make_network_dict(self.native, self.mm,
+                                    reaction_dict=reaction_dict,
+                                    analysis='fva')
+        self.assertEqual(Direction.Forward,
+                         full_pairs_dict[self.native.reactions['rxn1']][1])
         self.assertEqual('solid', style_flux_dict['rxn1'][0])
         self.assertEqual(5, style_flux_dict['rxn1'][1])
 
     def test7_lower_0_flux_fva(self):
         reaction_dict = {'rxn1': (0, 10)}
-        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
-                                                        reaction_dict=reaction_dict, analysis='fva')
-        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
+        full_pairs_dict, style_flux_dict = \
+            graph.make_network_dict(self.native, self.mm,
+                                    reaction_dict=reaction_dict,
+                                    analysis='fva')
+        self.assertEqual(Direction.Forward,
+                         full_pairs_dict[self.native.reactions['rxn1']][1])
         self.assertEqual('solid', style_flux_dict['rxn1'][0])
         self.assertEqual(1, style_flux_dict['rxn1'][1])
 
     def test8_upper_0_flux_fva(self):
         reaction_dict = {'rxn1': (-10, 0)}
-        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
-                                                              reaction_dict=reaction_dict, analysis='fva')
-        self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn1']][1])
+        full_pairs_dict, style_flux_dict = \
+            graph.make_network_dict(self.native, self.mm,
+                                    reaction_dict=reaction_dict,
+                                    analysis='fva')
+        self.assertEqual(Direction.Reverse,
+                         full_pairs_dict[self.native.reactions['rxn1']][1])
         self.assertEqual('solid', style_flux_dict['rxn1'][0])
         self.assertEqual(1, style_flux_dict['rxn1'][1])
 
     def test9_both_0_flux_fva(self):
         reaction_dict = {'rxn1': (0, 0)}
-        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
-                                                              reaction_dict=reaction_dict, analysis='fva')
-        self.assertEqual(Direction.Both, full_pairs_dict[self.native.reactions['rxn1']][1])
+        full_pairs_dict, style_flux_dict = \
+            graph.make_network_dict(self.native, self.mm,
+                                    reaction_dict=reaction_dict,
+                                    analysis='fva')
+        self.assertEqual(Direction.Both,
+                         full_pairs_dict[self.native.reactions['rxn1']][1])
         self.assertEqual('dotted', style_flux_dict['rxn1'][0])
         self.assertEqual(1, style_flux_dict['rxn1'][1])
 
     def test10_mult_rxn_fba(self):
         reaction_dict = {'rxn1': (2, 1), 'rxn2': (-4, 1), 'rxn3': (6, 1)}
-        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
-                                                                   reaction_dict=reaction_dict, analysis='fba')
-        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
-        self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn2']][1])
-        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn3']][1])
+        full_pairs_dict, style_flux_dict = \
+            graph.make_network_dict(self.native, self.mm,
+                                    reaction_dict=reaction_dict,
+                                    analysis='fba')
+        self.assertEqual(Direction.Forward,
+                         full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual(Direction.Reverse,
+                         full_pairs_dict[self.native.reactions['rxn2']][1])
+        self.assertEqual(Direction.Forward,
+                         full_pairs_dict[self.native.reactions['rxn3']][1])
         self.assertEqual('solid', style_flux_dict['rxn1'][0])
         self.assertEqual('solid', style_flux_dict['rxn2'][0])
         self.assertEqual('solid', style_flux_dict['rxn3'][0])
@@ -1152,11 +1231,16 @@ class TestFlux(unittest.TestCase):
 
     def test11_mult_rxn_fva(self):
         reaction_dict = {'rxn1': (0, 2), 'rxn2': (-4, 1), 'rxn3': (-1, -1)}
-        full_pairs_dict, style_flux_dict = graph.make_network_dict(self.native, self.mm,
-                                                                   reaction_dict=reaction_dict, analysis='fva')
-        self.assertEqual(Direction.Forward, full_pairs_dict[self.native.reactions['rxn1']][1])
-        self.assertEqual(Direction.Both, full_pairs_dict[self.native.reactions['rxn2']][1])
-        self.assertEqual(Direction.Reverse, full_pairs_dict[self.native.reactions['rxn3']][1])
+        full_pairs_dict, style_flux_dict = \
+            graph.make_network_dict(self.native, self.mm,
+                                    reaction_dict=reaction_dict,
+                                    analysis='fva')
+        self.assertEqual(Direction.Forward,
+                         full_pairs_dict[self.native.reactions['rxn1']][1])
+        self.assertEqual(Direction.Both,
+                         full_pairs_dict[self.native.reactions['rxn2']][1])
+        self.assertEqual(Direction.Reverse,
+                         full_pairs_dict[self.native.reactions['rxn3']][1])
         self.assertEqual('solid', style_flux_dict['rxn1'][0])
         self.assertEqual('solid', style_flux_dict['rxn2'][0])
         self.assertEqual('solid', style_flux_dict['rxn3'][0])
