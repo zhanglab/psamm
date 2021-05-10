@@ -16,6 +16,12 @@ addons:
     - glpk-utils
     - swig
 install:
+- if [ ! -f "$HOME/get-pip.py" ]; then
+    ( cd src/;
+      curl -O https://bootstrap.pypa.io/pip/2.7/get-pip.py
+      python get-pip.py
+      python -m pip install --upgrade "pip < 21.0" );
+  fi;
 - if echo "$TOXENV" | grep -q "qsoptex"; then
     if [ ! -f "src" ]; then
       mkdir src;
