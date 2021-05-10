@@ -48,7 +48,7 @@ install:
       ( cd src/;
         curl -O https://bootstrap.pypa.io/pip/2.7/get-pip.py;
         python get-pip.py;
-        python -m pip install --upgrade "pip < 21.0" );
+        python -m pip install --upgrade "pip < 19.2" );
       fi;
       if [ ! -f "$HOME/qsopt_ex-2.5.10.3/bin/esolver" ]; then 
         ( cd src/; 
