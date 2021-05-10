@@ -171,8 +171,8 @@ class TestFluxBalanceThermodynamic(unittest.TestCase):
 
         self.model = MetabolicModel.load_model(
             self.database, self.database.reactions)
-        self.model.limits['ex_A'].lower = -10 # Low uptake
-        self.model.limits['ex_D'].lower = 0 # No uptake
+        self.model.limits['ex_A'].lower = -10  # Low uptake
+        self.model.limits['ex_D'].lower = 0  # No uptake
 
         try:
             self.solver = generic.Solver(integer=True)

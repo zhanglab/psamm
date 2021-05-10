@@ -51,7 +51,7 @@ class TestFastcoreSimpleVlassisModel(unittest.TestCase):
         p.lp10({'rxn_6'}, {'rxn_1', 'rxn_3', 'rxn_4', 'rxn_5'})
         supp = set(reaction_id for reaction_id in self.model.reactions
                    if abs(p.get_flux(reaction_id)) >= 0.999 * 0.001 / scaling)
-        self.assertEqual(supp, { 'rxn_1', 'rxn_3', 'rxn_6' })
+        self.assertEqual(supp, {'rxn_1', 'rxn_3', 'rxn_6'})
 
     def test_lp10_weighted(self):
         p = fastcore.FastcoreProblem(self.model, self.solver, epsilon=0.001)
@@ -177,7 +177,7 @@ class TestFastcoreTinyBiomassModel(unittest.TestCase):
         self.database = DictDatabase()
         self.database.set_reaction('rxn_1', parse_reaction('=> |A|'))
         self.database.set_reaction('rxn_2',
-            parse_reaction('(0.000001) |A| =>'))
+                                   parse_reaction('(0.000001) |A| =>'))
         self.model = MetabolicModel.load_model(
             self.database, self.database.reactions)
 

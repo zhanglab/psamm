@@ -522,7 +522,6 @@ class TestMatlabImporter(unittest.TestCase):
         savemat(os.path.join(self.dest, 'models', 'model2.mat'),
                 {'model1': model1, 'model2': model2})
 
-
     def tearDown(self):
         shutil.rmtree(self.dest)
 

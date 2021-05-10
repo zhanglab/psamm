@@ -56,8 +56,8 @@ def name_similar(name1, name2):
     name1 = re.sub(pattern, '', name1)
     name2 = re.sub(pattern, '', name2)
     return max(0.01,
-               (1 - float(levenshtein(name1, name2))
-                / max(len(name1), len(name2))))
+               (1 - float(levenshtein(name1, name2)) /
+                max(len(name1), len(name2))))
 
 
 def formula_equals(f1, f2, charge1, charge2):

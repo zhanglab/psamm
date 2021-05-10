@@ -872,7 +872,7 @@ def add_reaction_constraints(
     logger.info(u'using ph range of {} to {} for internal compartment'.format(
         ph_in[0], ph_in[1]))
     logger.info(u'using ph range of {} to {} for external compartment'.format(
-        ph_out[0], ph_out[1]))    
+        ph_out[0], ph_out[1]))
     # for (f, r) in split_rxns:
     #     split_list.append(f)
     #     split_list.append(r)

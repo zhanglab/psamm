@@ -56,6 +56,7 @@ from psamm.commands.search import SearchCommand
 from psamm.commands.tableexport import ExportTableCommand
 from psamm.commands.vis import VisualizationCommand
 
+
 @contextmanager
 def redirected_stdout(target=None):
     stdout = sys.stdout
@@ -459,11 +460,13 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
 
     def test_run_genedelete_with_moma(self):
         self.run_solver_command(
-            GeneDeletionCommand, ['--gene=gene_1', '--method=moma'], {'quadratic': True})
+            GeneDeletionCommand, ['--gene=gene_1', '--method=moma'],
+            {'quadratic': True})
 
     def test_run_genedelete_with_moma2(self):
         self.run_solver_command(
-            GeneDeletionCommand, ['--gene=gene_1', '--method=moma2'], {'quadratic': True})
+            GeneDeletionCommand, ['--gene=gene_1', '--method=moma2'],
+            {'quadratic': True})
 
     def test_run_genedelete_with_infeasible(self):
         self.skip_test_if_no_solver()
@@ -557,13 +560,15 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         self.skip_test_if_no_solver()
         with self.assertRaises(SystemExit):
             self.run_solver_command(
-                RobustnessCommand, ['--loop-removal=tfba', '--fva', 'rxn_2_\u03c0'])
+                RobustnessCommand, ['--loop-removal=tfba', '--fva',
+                                    'rxn_2_\u03c0'])
 
     def test_run_robustness_min_greater(self):
         self.skip_test_if_no_solver()
         with self.assertRaises(CommandError):
             self.run_solver_command(
-                RobustnessCommand, ['--minimum=50', '--maximum=20', 'rxn_2_\u03c0'])
+                RobustnessCommand, ['--minimum=50', '--maximum=20',
+                                    'rxn_2_\u03c0'])
 
     def test_run_robustness_with_infeasible(self):
         with self.assertRaises(SystemExit):

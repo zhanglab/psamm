@@ -25,7 +25,8 @@ from psamm.datasource import native
 from psamm.database import DictDatabase
 from psamm.metabolicmodel import MetabolicModel
 from psamm.datasource.reaction import parse_reaction
-from psamm.commands.robustness import RobustnessTaskHandler, RobustnessTaskHandlerFva
+from psamm.commands.robustness import RobustnessTaskHandler, \
+    RobustnessTaskHandlerFva
 
 from six import itervalues
 
@@ -47,20 +48,23 @@ class TestRobustnessTaskHandler(unittest.TestCase):
         except generic.RequirementsError:
             self.skipTest('Unable to find an LP solver for tests')
 
-        self._problem = fluxanalysis.FluxBalanceProblem(self.model, self.solver)
+        self._problem = fluxanalysis.FluxBalanceProblem(
+            self.model, self.solver)
         self._reactions = list(self.model.reactions)
 
     def test1_loop_removal_none(self):
-        fluxes = RobustnessTaskHandler.handle_task(RobustnessTaskHandler(self.model, self.solver, 'none', self._reactions),
-                                                   ['rxn_6', 1000], 'rxn_6')
+        fluxes = RobustnessTaskHandler.handle_task(RobustnessTaskHandler(
+            self.model, self.solver, 'none', self._reactions),
+            ['rxn_6', 1000], 'rxn_6')
 
         self.assertAlmostEqual(fluxes['rxn_1'], 500)
         self.assertAlmostEqual(fluxes['rxn_2'], 0)
         self.assertAlmostEqual(fluxes['rxn_6'], 1000)
 
     def test2_loop_removal_l1min(self):
-        fluxes = RobustnessTaskHandler.handle_task(RobustnessTaskHandler(self.model, self.solver, 'l1min', self._reactions),
-                                                   ['rxn_6', 1000], 'rxn_6')
+        fluxes = RobustnessTaskHandler.handle_task(RobustnessTaskHandler(
+            self.model, self.solver, 'l1min', self._reactions),
+            ['rxn_6', 1000], 'rxn_6')
 
         self.assertAlmostEqual(fluxes['rxn_1'], 500)
         self.assertAlmostEqual(fluxes['rxn_2'], 0)
@@ -75,8 +79,9 @@ class TestRobustnessTaskHandler(unittest.TestCase):
         except generic.RequirementsError:
             self.skipTest('Unable to find an MIQP solver for tests')
 
-        fluxes = RobustnessTaskHandler.handle_task(RobustnessTaskHandler(self.model, self.solver, 'tfba', self._reactions),
-                                                   ['rxn_3', 100], 'rxn_1')
+        fluxes = RobustnessTaskHandler.handle_task(RobustnessTaskHandler(
+            self.model, self.solver, 'tfba', self._reactions),
+            ['rxn_3', 100], 'rxn_1')
 
         self.assertAlmostEqual(fluxes['rxn_1'], 500)
         self.assertAlmostEqual(fluxes['rxn_2'], 0)
@@ -87,8 +92,9 @@ class TestRobustnessTaskHandler(unittest.TestCase):
 
     def test4_no_reactions(self):
         self._reactions2 = None
-        fluxes = RobustnessTaskHandler.handle_task(RobustnessTaskHandler(self.model, self.solver, 'none', self._reactions2),
-                                                   ['rxn_6', 10], 'rxn_6')
+        fluxes = RobustnessTaskHandler.handle_task(RobustnessTaskHandler(
+            self.model, self.solver, 'none', self._reactions2),
+            ['rxn_6', 10], 'rxn_6')
         self.assertEqual(fluxes, 10)
 
 
@@ -113,12 +119,14 @@ class TestRobustnessTaskHandlerFva(unittest.TestCase):
         except generic.RequirementsError:
             self.skipTest('Unable to find an LP solver for tests')
 
-        self._problem = fluxanalysis.FluxBalanceProblem(self.model, self.solver)
+        self._problem = fluxanalysis.FluxBalanceProblem(
+            self.model, self.solver)
         self._reactions = list(self.model.reactions)
 
     def test1_loop_removal_none(self):
-        fluxes = RobustnessTaskHandlerFva.handle_task(RobustnessTaskHandlerFva(self.model, self.solver, 'none', self._reactions),
-                                                       ['rxn_6', 200], 'rxn_6')
+        fluxes = RobustnessTaskHandlerFva.handle_task(RobustnessTaskHandlerFva(
+            self.model, self.solver, 'none', self._reactions),
+            ['rxn_6', 200], 'rxn_6')
 
         for bounds in itervalues(fluxes):
             self.assertEqual(len(bounds), 2)
@@ -142,8 +150,9 @@ class TestRobustnessTaskHandlerFva(unittest.TestCase):
         except generic.RequirementsError:
             self.skipTest('Unable to find an MIQP solver for tests')
 
-        fluxes = RobustnessTaskHandlerFva.handle_task(RobustnessTaskHandlerFva(self.model, self.solver, 'tfba', self._reactions),
-                                                       ['rxn_6', 200], 'rxn_3')
+        fluxes = RobustnessTaskHandlerFva.handle_task(RobustnessTaskHandlerFva(
+            self.model, self.solver, 'tfba', self._reactions),
+            ['rxn_6', 200], 'rxn_3')
 
         for bounds in itervalues(fluxes):
             self.assertEqual(len(bounds), 2)
@@ -165,8 +174,9 @@ class TestRobustnessTaskHandlerFva(unittest.TestCase):
 
     def test3_no_reactions(self):
         self._reactions2 = None
-        fluxes = RobustnessTaskHandlerFva.handle_task(RobustnessTaskHandlerFva(self.model, self.solver, 'none', self._reactions2),
-                                                       ['rxn_6', 200], 'rxn_6')
+        fluxes = RobustnessTaskHandlerFva.handle_task(RobustnessTaskHandlerFva(
+            self.model, self.solver, 'none', self._reactions2),
+            ['rxn_6', 200], 'rxn_6')
 
         for bounds in itervalues(fluxes):
             self.assertEqual(len(bounds), 2)
