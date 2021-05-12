@@ -1,8 +1,10 @@
-v1.1.2 (2021-05-10)  
+
+v1.1.2 (2021-05-10)
 ------------------
-  
+
+- Drops support for Python 2.7 (deprecated Jan. 01, 2020), 3.3, and 3.4
 - Adds the --phin and --phout options to the `tmfa` command
-- Adds descriptive counts of the number of reactions and compounds
+- Adds descriptive counts of the number of reactions and compounds 
   curated in the _manual curation_ option of `modelmapping`
 
 

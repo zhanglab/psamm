@@ -73,13 +73,7 @@ the ``psamm-tutorial`` folder:
 In this command, ``<PATH>`` should be substituted by the directory path to
 where you created the ``psamm-tutorial``. This will change your current
 directory to the ``psamm-tutorial`` directory. Then, you can create a virtual
-environment for Python 2 in the ``psamm-tutorial`` directory:
-
-.. code-block:: shell
-
-    $ virtualenv psamm-env
-
-For Python 3, use the following command instead:
+environment in the ``psamm-tutorial`` directory:
 
 .. code-block:: shell
 
@@ -235,19 +229,21 @@ will be different):
     (psamm-env) $ cd /Library/gurobi604/mac64/
     (psamm-env) $ python setup.py install
 
-The QSopt_ex solver can also be used with PSAMM. To install this solver, Python 3.4 or
-lower is required. You will first need to install Qsopt_ex on your computer and
+The QSopt_ex solver can also be used with PSAMM. To install this solver, Python 3.5 or
+higher is required. You will first need to install Qsopt_ex on your computer and
 afterwards the Python bindings (`python-qsoptex`) can be installed in the virtual
 environment:
 
 .. code-block:: shell
 
-    (psamm-env) $ pip install python-qsoptex
+    (env) $ pip install cython
+    (env) $ pip install python-qsoptex
 
 Please see the `python-qsoptex documentation`_ for more information on
 installing both the library and the Python bindings.
 
-.. _`python-qsoptex documentation`: https://github.com/jonls/python-qsoptex
+.. _python-qsoptex_higherPython: https://github.com/jonls/python-qsoptex.git
+.. _QSopt_ex_higherPython: https://github.com/jonls/qsopt-ex.git
 
 .. note::
     The QSopt_ex solver does not support Integer LP problems and as a result

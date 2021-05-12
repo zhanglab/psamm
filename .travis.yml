@@ -20,47 +20,28 @@ install:
     if [ ! -f "src" ]; then
       mkdir src;
     fi;
-    version=$(python -V 3>&1);
-    if [ -n "$version" ]; then 
-      pip install Cython; 
-      if [ ! -f "$HOME/qsopt-ex/esolver" ]; then
-        ( cd src/;
-          git clone https://github.com/jonls/qsopt-ex.git;
-          cd qsopt-ex/;
-          ./bootstrap;
-          mkdir build && cd build;
-          ../configure --prefix="$HOME/qsopt-ex" && make install;
-          cd $HOME );
-      fi;
-      if [ ! -f "$HOME/python-qsoptex" ]; then
-        ( cd src/;
-          git clone https://github.com/jonls/python-qsoptex.git;
-          cd python-qsoptex/;
-          ./setup.py install;
-          cd $HOME );
-      fi;
-      pip install python-qsoptex;
-      export CPATH="$HOME/qsopt-ex/include:$CPATH";
-      export LIBRARY_PATH="$HOME/qsopt-ex/lib:$LIBRARY_PATH";
-      export LD_LIBRARY_PATH="$HOME/qsopt-ex/lib:$LD_LIBRARY_PATH";
-    else 
-      if [ ! -f "$HOME/get-pip.py" ]; then
+    
+    pip install Cython; 
+    if [ ! -f "$HOME/qsopt-ex/esolver" ]; then
       ( cd src/;
-        curl -O https://bootstrap.pypa.io/pip/2.7/get-pip.py;
-        python get-pip.py;
-        python -m pip install --upgrade "pip < 19.2" );
-      fi;
-      if [ ! -f "$HOME/qsopt_ex-2.5.10.3/bin/esolver" ]; then 
-        ( cd src/; 
-          curl -LO https://github.com/jonls/qsopt-ex/releases/download/v2.5.10.3/qsopt_ex-2.5.10.3.tar.xz;
-          tar -xvaf qsopt_ex-2.5.10.3.tar.xz; 
-          cd qsopt_ex-2.5.10.3/; 
-          ./configure --prefix="$HOME/qsopt_ex-2.5.10.3" && make install ); 
-      fi;
-      export CPATH="$HOME/qsopt_ex-2.5.10.3/include:$CPATH"; 
-      export LIBRARY_PATH="$HOME/qsopt_ex-2.5.10.3/lib:$LIBRARY_PATH"; 
-      export LD_LIBRARY_PATH="$HOME/qsopt_ex-2.5.10.3/lib:$LD_LIBRARY_PATH";
+        git clone https://github.com/jonls/qsopt-ex.git;
+        cd qsopt-ex/;
+        ./bootstrap;
+        mkdir build && cd build;
+        ../configure --prefix="$HOME/qsopt-ex" && make install;
+        cd $HOME );
     fi;
+    if [ ! -f "$HOME/python-qsoptex" ]; then
+      ( cd src/;
+        git clone https://github.com/jonls/python-qsoptex.git;
+        cd python-qsoptex/;
+        ./setup.py install;    
+        cd $HOME );
+    fi;
+    pip install python-qsoptex;
+    export CPATH="$HOME/qsopt-ex/include:$CPATH";
+    export LIBRARY_PATH="$HOME/qsopt-ex/lib:$LIBRARY_PATH";
+    export LD_LIBRARY_PATH="$HOME/qsopt-ex/lib:$LD_LIBRARY_PATH";
   fi;
 - pip install tox coveralls
 - pip install tox-travis
@@ -70,18 +51,6 @@ after_success: coveralls
 matrix:
   include:
   - env: TOXENV=flake
-  - env: TOXENV=py27-nosolver,coverage
-    python: '2.7'
-  - env: TOXENV=py27-glpk,coverage
-    python: '2.7'
-  - env: TOXENV=py27-qsoptex,coverage
-    python: '2.7'
-  - env: TOXENV=py35-nosolver,coverage
-    python: '3.5'
-  - env: TOXENV=py35-glpk,coverage
-    python: '3.5'
-  - env: TOXENV=py35-qsoptex,coverage
-    python: '3.5'
   - env: TOXENV=py36-nosolver,coverage
     python: '3.6'
   - env: TOXENV=py36-glpk,coverage

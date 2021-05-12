@@ -67,7 +67,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'PSAMM'
-copyright = u'2015-2017, PSAMM developers'
+copyright = u'2015-2021, PSAMM developers'
 author = u'PSAMM developers'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -124,7 +124,7 @@ pygments_style = 'sphinx'
 todo_include_todos = False
 
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/2.7', None)
+    'python': ('https://docs.python.org/3', None)
 }
 
 autodoc_member_order = 'bysource'
