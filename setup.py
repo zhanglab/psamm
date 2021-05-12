@@ -51,7 +51,7 @@ else:
 
 setup(
     name='psamm',
-    version='1.1.1',
+    version='1.1.2',
     description='PSAMM metabolic modeling tools',
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
@@ -65,9 +65,6 @@ setup(
         (
             'License :: OSI Approved :: '
             'GNU General Public License v3 or later (GPLv3+)'),
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
@@ -129,7 +126,5 @@ setup(
         'pandas'
     ],
     extras_require={
-        'docs': ['sphinx', 'sphinx_rtd_theme', 'mock'],
-        ':python_version=="2.7"': ['enum34'],
-        ':python_version=="3.3"': ['enum34']
+        'docs': ['sphinx', 'sphinx_rtd_theme', 'mock']
     })

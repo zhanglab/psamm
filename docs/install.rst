@@ -64,7 +64,7 @@ the virtual environment:
 1. Locate the directory where Cplex was installed (e.g. ``/path/to/IBM/ILOG/CPLEX_StudioXXX``).
 2. Locate the appropriate subdirectory based on your platform and Python
    version: ``cplex/python/<version>/<platform>``
-   (e.g. ``cplex/python/2.7/x86-64_osx``).
+   (e.g. ``cplex/python/3.7/x86-64_osx``).
 3. Use ``pip`` to install the package from this directory using the following
    command.
 
@@ -76,11 +76,6 @@ the virtual environment:
 Further documentation on installing Cplex can be found in
 `the Cplex documentation <http://www-01.ibm.com/support/docview.wss?uid=swg21444285>`_.
 
-.. note::
-
-    Python 3 support was added in a recent release of Cplex. Older versions
-    only support Python 2. If you are using Python 3 make sure that you have
-    the latest version of Cplex installed.
 
 Gurobi
 ------
@@ -111,23 +106,8 @@ Python bindings are required for PSAMM to use the GLPK library.
 QSopt_ex
 --------
 
-QSopt_ex is supported through `python-qsoptex`_ which requires `GnuMP`_ and
-the `QSopt_ex library`_. After installing these libraries the Python bindings
-can be installed using ``pip``:
-
-.. code-block:: shell
-
-    (env) $ pip install python-qsoptex
-
-.. _Virtualenv: https://virtualenv.pypa.io/
-.. _python-qsoptex: https://pypi.python.org/pypi/python-qsoptex
-.. _GnuMP: https://gmplib.org/
-.. _QSopt_ex library: https://github.com/jonls/qsopt-ex
-
-The installation method	detailed above is only supported on Python 3.4 or lower.
-If you want to use this	solver with later versions of Python, you must first   
-install this `python-qsoptex_higherPython`_, a different library for this solver,
-and different bindings from `QSopt_ex_higherPython`_ 
+QSopt_ex is supported through `python-qsoptex`_ which requires `python-qsoptex_higherPython`_
+and `QSopt_ex_higherPython`_ . This can be installed using ``pip``:
 
 .. code-block:: shell
 
@@ -148,7 +128,6 @@ is shown below:
    :header-rows: 1
 
    * - Solver
-     - Python 2.7
      - Python 3.5
      - Python 3.6
      - Python 3.7
@@ -158,21 +137,17 @@ is shown below:
      - Yes
      - Yes
      - Yes
-     - Yes
    * - Qsopt_ex
-     - Yes
      - Yes
      - Yes
      - Yes
      - Yes
    * - Gurobi
      - Yes
-     - Yes
      - No
      - No
      - No
    * - GLPK
-     - Yes
      - No
      - Yes
      - Yes
@@ -192,7 +167,7 @@ global parameters you might require before choosing a solver.
    * - Solver
      - feasibility tolerance
      - optimality tolerance
-     - inegrality tolerance
+     - integrality tolerance
      - threads
    * - Cplex
      - Yes
