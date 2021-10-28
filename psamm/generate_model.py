@@ -35,6 +35,7 @@ from psamm.datasource.context import FileMark
 from psamm.datasource.reaction import Reaction, Compound
 from psamm.expression.affine import Expression
 from psamm.formula import Formula
+import time
 logger = logging.getLogger(__name__)
 
 
@@ -382,6 +383,8 @@ def _parse_kegg_entries(out, rxn_mapping, entry_class, context=None):
                     request = REST.kegg_get(reactions)
                 except:
                     f.write("".join(["  - ",reactions,"\n"]))
+                    # sleep to give time to exit code
+                    time.sleep(0.5)
                     continue
                 entry_line = None
                 section_id = None
@@ -472,6 +475,7 @@ def main(args=None):
     else:
         logging.basicConfig(
             level=logging.INFO, format='%(levelname)s: %(message)s')
+
 
     # Check the validity of the input information
     if not args.annotations:
