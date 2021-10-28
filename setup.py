@@ -79,6 +79,7 @@ setup(
         psamm-list-lpsolvers = psamm.lpsolver.generic:list_solvers
         psamm-import = psamm.importer:main
         psamm-import-bigg = psamm.importer:main_bigg
+        psamm-generate-model = psamm.generate_model:main
 
         [psamm.commands]
         chargecheck = psamm.commands.chargecheck:ChargeBalanceCommand
@@ -123,7 +124,8 @@ setup(
         'numpy',
         'scipy',
         'future',
-        'pandas'
+        'pandas',
+        'biopython'
     ],
     extras_require={
         'docs': ['sphinx', 'sphinx_rtd_theme', 'mock']
