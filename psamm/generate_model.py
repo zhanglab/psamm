@@ -52,31 +52,26 @@ def dict_constructor(loader, node):
 
 def parse_orthology(orthology, type):
     # Dictionary of reactions to genes
-    ortho_dict=defaultdict(list)
+    asso_dict=defaultdict(lambda:[])
     # Populate the dictionary
     with open(orthology, "r") as infile:
         for line in infile:
-            if line[0]!="#":
-                line=line.rstrip()
-                listall=re.split("\t", line)
-                if type == "R":
-                    if listall[11]!='':
-                        rxns=re.split(",", listall[11])
-                        for i in rxns:
-                            ortho_dict[i].append(listall[0])
-                elif type == "EC":
-                    if listall[7]!='':
-                        rxns=re.split(",", listall[7])
-                        for i in rxns:
-                            ortho_dict[i].append(listall[0])
-                elif type == "KO":
-                    if listall[8]!='':
-                        rxns=re.split(",", listall[8])
-                        for i in rxns:
-                            ko = re.split(":", i)
-                            ortho_dict[ko[1]].append(listall[0])
+            if line.startswith('#'):
+                continue
+            line=line.rstrip()
+            listall=re.split("\t", line)
+            if type == "R":
+                keys = listall[14].split(',')
+            elif type == "EC":
+                keys = listall[10].split(',')
+            elif type == "KO":
+                keys = listall[11].split(',')
+            if len(keys) == 0:
+                continue
+            for k in keys:
+                asso_dict[k].append(listall[0])
 
-    return(ortho_dict)
+    return(asso_dict)
 
 '''
 Function to sort the downloaded kegg object into a format
@@ -464,7 +459,8 @@ def main(args=None):
         help='''Define whether to build the model on reaction ID, KO, or EC.\n
         options are: [R, KO, EC]''')
     parser.add_argument('--out', metavar='out',
-        help='Path to the output location for the file')
+        help='''Path to the output location for the model directory. This will\n
+        be created for you.''')
     args = parser.parse_args(args)
 
     # Set up logging for the command line interface
