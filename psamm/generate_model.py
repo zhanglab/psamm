@@ -119,6 +119,12 @@ def model_reactions(reaction_entry_list):
                 d['orthology'] = encode_utf8(orth_list)
             yield d
 
+'''
+This function handles specific edge cases in the kegg format of reaction
+equations that are incompatible with the psamm format. Takes the downloaded
+dictionary of reactions and returns the same dictionary with modified equations,
+if necessary.
+'''
 def clean_reaction_equations(reaction_entry_list):
     for reaction in reaction_entry_list:
         equation = re.sub(r'\(.*?\)', lambda x: ''.join(x.group(0).split()), \
@@ -164,7 +170,6 @@ def create_model_api(out, rxn_mapping):
     for reaction in reaction_entry_list:
         eq = parse_reaction_equation_string(reaction.equation, 'c')
         for i in eq.compounds:
-            print(i)
             compound_set.add(str(i[0].name))
     for entry in _download_kegg_entries(out, compound_set, CompoundEntry):
         compound_entry_list.append(entry)
