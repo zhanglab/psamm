@@ -119,6 +119,15 @@ def model_reactions(reaction_entry_list):
                 d['orthology'] = encode_utf8(orth_list)
             yield d
 
+def clean_reaction_equations(reaction_entry_list):
+    for reaction in reaction_entry_list:
+        equation = re.sub(r'\(.*?\)', lambda x: ''.join(x.group(0).split()), \
+            str(reaction.equation))
+        equation = equation.replace("(", "[")
+        equation = equation.replace(")", "]")
+        reaction.__dict__['values']['equation']=[equation]
+    return(reaction_entry_list)
+
 '''
 This function creates a draft model based on the reactions:genes
 file specified in the rxn variable. This function generates
@@ -132,8 +141,11 @@ def create_model_api(out, rxn_mapping):
         f.write("List of invalid Kegg IDs: \n")
     # Generate the yaml file for the reactions
     reaction_entry_list = []
-    for entry in _parse_kegg_entries(out, rxn_mapping, ReactionEntry):
+    for entry in _download_kegg_entries(out, rxn_mapping, ReactionEntry):
         reaction_entry_list.append(entry)
+
+    # Clean up the kegg reaction dict.
+    reaction_entry_list = clean_reaction_equations(reaction_entry_list)
 
     # Sets up the yaml object for the reactions and writes
     # out the parsed reaction information to a reactions.yaml
@@ -152,8 +164,9 @@ def create_model_api(out, rxn_mapping):
     for reaction in reaction_entry_list:
         eq = parse_reaction_equation_string(reaction.equation, 'c')
         for i in eq.compounds:
+            print(i)
             compound_set.add(str(i[0].name))
-    for entry in _parse_kegg_entries(out, compound_set, CompoundEntry):
+    for entry in _download_kegg_entries(out, compound_set, CompoundEntry):
         compound_entry_list.append(entry)
     with open(os.path.join(out, 'compounds.yaml'), 'w+') as f:
         yaml.dump(list(model_compounds(compound_entry_list)), f, **yaml_args)
@@ -161,7 +174,7 @@ def create_model_api(out, rxn_mapping):
     # generate a yaml file for all generic compounds
     generic_compounds_list = check_generic_compounds(compound_entry_list)
     generic_entry_list=[]
-    for entry in _parse_kegg_entries(out, generic_compounds_list, CompoundEntry):
+    for entry in _download_kegg_entries(out, generic_compounds_list, CompoundEntry):
         generic_entry_list.append(entry)
     with open(os.path.join(out, 'compounds_generic.yaml'), 'w+') as f:
         yaml.dump(list(model_generic_compounds(generic_entry_list)), f, **yaml_args)
@@ -364,7 +377,7 @@ a compound and stores each line in an object that can
 be parsed as a reaction or a compound, depending on the
 input
 '''
-def _parse_kegg_entries(out, rxn_mapping, entry_class, context=None):
+def _download_kegg_entries(out, rxn_mapping, entry_class, context=None):
     # go through the rxn mapping dict and pull all of the
     # reaction information out of the Kegg API
     with open(os.path.join(out,'log.tsv'), "a+") as f:
