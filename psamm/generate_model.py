@@ -25,8 +25,6 @@ from collections import defaultdict
 from collections import OrderedDict
 import re
 from six import iteritems
-from Bio.KEGG import REST
-from Bio.KEGG import Enzyme
 from psamm.datasource.native import parse_reaction_equation_string
 from psamm.datasource.native import NativeModel, ModelReader, ModelWriter
 from psamm.expression import boolean
@@ -38,8 +36,12 @@ from psamm.formula import Formula
 import time
 logger = logging.getLogger(__name__)
 
-
-
+try:
+    from Bio.KEGG import REST
+    from Bio.KEGG import Enzyme
+except ImportError:
+    logger.warning("WARNING: Biopython package not found! "
+                   "Some functions will be unusable")
 
 class InputError(Exception):
     """Exception used to signal a general input error."""
@@ -50,7 +52,7 @@ def dict_representer(dumper, data):
 def dict_constructor(loader, node):
     return OrderedDict(loader.construct_pairs(node))
 
-def parse_orthology(orthology, type):
+def parse_orthology(orthology, type, col):
     # Dictionary of reactions to genes
     asso_dict=defaultdict(lambda:[])
     # Populate the dictionary
@@ -60,17 +62,20 @@ def parse_orthology(orthology, type):
                 continue
             line=line.rstrip()
             listall=re.split("\t", line)
-            if type == "R":
-                keys = listall[14].split(',')
-            elif type == "EC":
-                keys = listall[10].split(',')
-            elif type == "KO":
-                keys = listall[11].split(',')
+            ## Add handling for a provided column number.
+            if col:
+                keys = listall[col-1].split(',')
+            else:
+                if type == "R":
+                    keys = listall[14].split(',')
+                elif type == "EC":
+                    keys = listall[10].split(',')
+                elif type == "KO":
+                    keys = listall[11].split(',')
             if len(keys) == 0:
                 continue
             for k in keys:
                 asso_dict[k].append(listall[0])
-
     return(asso_dict)
 
 '''
@@ -115,7 +120,8 @@ def model_reactions(reaction_entry_list):
                 d['pathways'] = encode_utf8_list(pathways_list)
             if hasattr(reaction, 'comment') and reaction.comment is not None:
                 d['comment'] = encode_utf8(str(reaction.comment))
-            if hasattr(reaction, 'orthology') and reaction.orthology is not None:
+            if hasattr(reaction, 'orthology') and \
+                reaction.orthology is not None:
                 d['orthology'] = encode_utf8(orth_list)
             yield d
 
@@ -141,14 +147,22 @@ reaction and compound information by utilizing the kegg
 REST api to download the reaction information and uses psamm
 functions to parse out the kegg data.
 '''
-def create_model_api(out, rxn_mapping):
+def create_model_api(out, rxn_mapping, verbose):
 
     with open(os.path.join(out, "log.tsv"), "a+") as f:
         f.write("List of invalid Kegg IDs: \n")
+
+    if verbose:
+        logger.info(f"There are {len(rxn_mapping)} reactions to download.")
     # Generate the yaml file for the reactions
     reaction_entry_list = []
+    count = 0
     for entry in _download_kegg_entries(out, rxn_mapping, ReactionEntry):
         reaction_entry_list.append(entry)
+        count += 1
+        if verbose and count%25==0:
+            logger.info(f"{count}/{len(rxn_mapping)} "
+                "reactions downloaded...")
 
     # Clean up the kegg reaction dict.
     reaction_entry_list = clean_reaction_equations(reaction_entry_list)
@@ -171,20 +185,30 @@ def create_model_api(out, rxn_mapping):
         eq = parse_reaction_equation_string(reaction.equation, 'c')
         for i in eq.compounds:
             compound_set.add(str(i[0].name))
+    if verbose:
+        logger.info(f"There are {len(compound_set)} compounds to download.")
+    count = 0
     for entry in _download_kegg_entries(out, compound_set, CompoundEntry):
         compound_entry_list.append(entry)
+        count += 1
+        if verbose and count%25==0:
+            logger.info(f"{count}/{len(compound_set)} "
+                "compounds downloaded...")
     with open(os.path.join(out, 'compounds.yaml'), 'w+') as f:
         yaml.dump(list(model_compounds(compound_entry_list)), f, **yaml_args)
 
     # generate a yaml file for all generic compounds
     generic_compounds_list = check_generic_compounds(compound_entry_list)
     generic_entry_list=[]
-    for entry in _download_kegg_entries(out, generic_compounds_list, CompoundEntry):
+    for entry in _download_kegg_entries(out, generic_compounds_list, \
+        CompoundEntry):
         generic_entry_list.append(entry)
     with open(os.path.join(out, 'compounds_generic.yaml'), 'w+') as f:
-        yaml.dump(list(model_generic_compounds(generic_entry_list)), f, **yaml_args)
+        yaml.dump(list(model_generic_compounds(generic_entry_list)), \
+            f, **yaml_args)
     with open(os.path.join(out, 'log.tsv'), "a+") as f:
-        f.write("\nThere are {} generic compounds in the model\n".format(str(len(generic_compounds_list))))
+        f.write("\nThere are {} generic compounds in the model\n".format(str(\
+            len(generic_compounds_list))))
         f.write("Generic compounds:\n")
         for i in generic_entry_list:
             f.write("{}".format(i.id))
@@ -244,17 +268,22 @@ def create_model_api(out, rxn_mapping):
             if len(rxn_mapping[reaction.id]) == 1:
                 gene_asso = rxn_mapping[reaction.id]
             else:
-                gene_asso = ['({})'.format(gene) for gene in rxn_mapping[reaction.id]]
-            outfile.write('{}\t{}\n'.format(reaction.id, ' or '.join(gene_asso)))
+                gene_asso = ['({})'.format(gene) \
+                    for gene in rxn_mapping[reaction.id]]
+            outfile.write('{}\t{}\n'.format(reaction.id, \
+                ' or '.join(gene_asso)))
 
-    with open('{}/gene-association_generic.tsv'.format(out), mode='w') as outfile:
+    with open('{}/gene-association_generic.tsv'.format(out), mode='w') \
+        as outfile:
         outfile.write('id\tgenes\n')
         for reaction in reaction_list_generic:
             if len(rxn_mapping[reaction.id]) == 1:
                 gene_asso = rxn_mapping[reaction.id]
             else:
-                gene_asso = ['({})'.format(gene) for gene in rxn_mapping[reaction.id]]
-            outfile.write('{}\t{}\n'.format(reaction.id, ' or '.join(gene_asso)))
+                gene_asso = ['({})'.format(gene) \
+                    for gene in rxn_mapping[reaction.id]]
+            outfile.write('{}\t{}\n'.format(reaction.id, \
+                          ' or '.join(gene_asso)))
 
     # Create a model_def file with all of the new reactions
     with open('{}/model_def.tsv'.format(out), mode='w') as f:
@@ -263,9 +292,15 @@ def create_model_api(out, rxn_mapping):
 
     # Write out some final statistics for the model
     with open(os.path.join(out, 'log.tsv'), 'a+') as f:
-        f.write("\nThere are {} reactions in the model".format(str(len(reaction_list_out))))
-       	f.write("\nThere are {} compounds in the model\n".format(str(len(compound_entry_list))))
-
+        f.write("\nThere are {} reactions in the model".format(str(\
+                len(reaction_list_out))))
+       	f.write("\nThere are {} compounds in the model\n".format(str(\
+                len(compound_entry_list))))
+    if verbose:
+        logger.info("\nThere are {} reactions in the model".format(str(\
+                       len(reaction_list_out))))
+        logger.info("\nThere are {} compounds in the model\n".format(str(\
+                       len(compound_entry_list))))
 
 
 
@@ -296,13 +331,17 @@ def model_compounds(compound_entry_list):
                     for i in compound.names:
                         names_l.append(i)
                     d['names'] = encode_utf8(names_l)
-                if hasattr(compound, 'formula') and compound.formula is not None:
+                if hasattr(compound, 'formula') and \
+                    compound.formula is not None:
                     d['formula'] = encode_utf8(str(compound.formula))
-                if hasattr(compound, 'mol_weight') and compound.mol_weight is not None:
+                if hasattr(compound, 'mol_weight') and \
+                    compound.mol_weight is not None:
                     d['mol_weight'] = encode_utf8(compound.mol_weight)
-                if hasattr(compound, 'comment') and compound.comment is not None:
+                if hasattr(compound, 'comment') and \
+                    compound.comment is not None:
                     d['comment'] = encode_utf8(str(compound.comment))
-                if hasattr(compound, 'dblinks') and compound.dblinks is not None:
+                if hasattr(compound, 'dblinks') and \
+                    compound.dblinks is not None:
                     for key, value in compound.dblinks:
                         d['{}'.format(key)] = encode_utf8(value)
                 yield d
@@ -342,18 +381,24 @@ def model_generic_compounds(compound_entry_list):
                     for i in compound.names:
                         names_l.append(i)
                     d['names'] = encode_utf8(names_l)
-                if hasattr(compound, 'formula') and compound.formula is not None:
+                if hasattr(compound, 'formula') and \
+                    compound.formula is not None:
                     d['formula'] = encode_utf8(str(compound.formula))
-                if hasattr(compound, 'mol_weight') and compound.mol_weight is not None:
+                if hasattr(compound, 'mol_weight') and \
+                    compound.mol_weight is not None:
                     d['mol_weight'] = encode_utf8(compound.mol_weight)
-                if hasattr(compound, 'comment') and compound.comment is not None:
+                if hasattr(compound, 'comment') and \
+                    compound.comment is not None:
                     d['comment'] = encode_utf8(str(compound.comment))
-                if hasattr(compound, 'dblinks') and compound.dblinks is not None:
+                if hasattr(compound, 'dblinks') \
+                    and compound.dblinks is not None:
                     for key, value in compound.dblinks:
                         d['{}'.format(key)] = encode_utf8(value)
                 yield d
             except:
-                print(compound)
+                logger.warning(f"{compound.id} is improperly formatted "
+                               " and will not be imported into "
+                               "compounds_generic.yaml")
                 continue
 
 
@@ -469,6 +514,11 @@ def parse_rxns_from_EC(rxn_mapping):
 def main(args=None):
     """Entry point for the model generation script"""
 
+    if 'Bio.KEGG.Enzyme' not in sys.modules or \
+        'Bio.KEGG.REST' not in sys.modules:
+        quit('\nNo biopython package found.\n'
+        'Please run <pip install biopython>''')
+
     parser = argparse.ArgumentParser(
         description="Generate model based on Eggnog Annotations")
     parser.add_argument('--annotations', metavar='path',
@@ -479,6 +529,11 @@ def main(args=None):
     parser.add_argument('--out', metavar='out',
         help='''Path to the output location for the model directory. This will\n
         be created for you.''')
+    parser.add_argument('--col', default=None, help='If providing your own '
+        'annotation table, specify column for the R, EC, or KO number. '
+        'The default is to parse eggnog output.', type=int)
+    parser.add_argument('--verbose', help='Modify output verbosity',
+        action='store_true')
     args = parser.parse_args(args)
 
     # Set up logging for the command line interface
@@ -508,14 +563,14 @@ def main(args=None):
     ## Add some code here to check the input file.
 
     # Launch the parse_orthology function to contruct a gene association file
-    ortho_dict = parse_orthology(args.annotations, args.type)
+    ortho_dict = parse_orthology(args.annotations, args.type, args.col)
 
     # convert EC to reactions
     if args.type == "EC":
         ortho_dict = parse_rxns_from_EC(ortho_dict)
 
     # Create the model using the kegg api
-    create_model_api(args.out, ortho_dict)
+    create_model_api(args.out, ortho_dict, args.verbose)
 
 
 class ReactionEntry(object):
