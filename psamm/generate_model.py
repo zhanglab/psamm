@@ -133,10 +133,17 @@ if necessary.
 '''
 def clean_reaction_equations(reaction_entry_list):
     for reaction in reaction_entry_list:
+        s = re.search(r"\(([A-Za-z0-9_+-]+)\)", str(reaction.equation))
         equation = re.sub(r'\(.*?\)', lambda x: ''.join(x.group(0).split()), \
             str(reaction.equation))
-        equation = equation.replace("(", "[")
-        equation = equation.replace(")", "]")
+        equation_out=[]
+        for i in re.split(" ", equation):
+            # special handling to retain stoichiometry of (n+1) and (n-1), etc.
+            if "(" in i and (not "(n+" in i or not "(n-" in i):
+                i.replace("(", "[")
+                i.replace(")", "]")
+            equation_out.append(i)
+        equation = ' '.join(equation_out)
         reaction.__dict__['values']['equation']=[equation]
     return(reaction_entry_list)
 
@@ -225,6 +232,7 @@ def create_model_api(out, rxn_mapping, verbose):
     # and reactions without without generic compounds
     reaction_list_out = []
     reaction_list_generic = []
+    compound_list_out = set()
     with open(os.path.join(out, 'log.tsv'), 'a+') as f:
         f.write("\nThe reactions containing these generic compounds are: \n")
         for reaction in reaction_entry_list:
@@ -241,6 +249,8 @@ def create_model_api(out, rxn_mapping, verbose):
                 reaction_list_generic.append(reaction)
             else:
                 reaction_list_out.append(reaction)
+                for c in str(reaction.equation):
+                    compound_list_out.add(str(c))
     with open(os.path.join(out, 'reactions.yaml'), 'w+') as f:
         yaml.dump(list(model_reactions(reaction_list_out)), f, **yaml_args)
     with open(os.path.join(out, 'reactions_generic.yaml'), 'w+') as f:
@@ -295,12 +305,12 @@ def create_model_api(out, rxn_mapping, verbose):
         f.write("\nThere are {} reactions in the model".format(str(\
                 len(reaction_list_out))))
        	f.write("\nThere are {} compounds in the model\n".format(str(\
-                len(compound_entry_list))))
+                len(compound_list_out))))
     if verbose:
         logger.info("\nThere are {} reactions in the model".format(str(\
                        len(reaction_list_out))))
         logger.info("\nThere are {} compounds in the model\n".format(str(\
-                       len(compound_entry_list))))
+                       len(compound_list_out))))
 
 
 
