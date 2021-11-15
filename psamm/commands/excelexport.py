@@ -65,6 +65,11 @@ class ExcelExportCommand(Command):
 
         reaction_sheet = workbook.add_worksheet(name='Reactions')
 
+        # get compound name dict
+        compounds_name = {}
+        for cpd in model.compounds:
+            compounds_name[cpd.id] = cpd.name
+
         property_set = set()
         for reaction in model.reactions:
             property_set.update(reaction.properties)
@@ -73,10 +78,15 @@ class ExcelExportCommand(Command):
                                       key=lambda x: (x != 'id',
                                                      x != 'equation', x))
         model_reactions = set(model.model)
-        for z, i in enumerate(property_list_sorted + ['in_model']):
+        for z, i in enumerate(property_list_sorted + ['in_model'] + ['translated_equation']):
             reaction_sheet.write_string(0, z, text_type(i))
         gene_rxn = defaultdict(list)
         for x, i in enumerate(model.reactions):
+            # get translated equation
+            rx = i.equation
+            translated_equation = str(rx.translated_compounds(
+                lambda x: compounds_name.get(x, x)))
+
             for y, j in enumerate(property_list_sorted):
                 value = i.properties.get(j)
                 if value is not None:
@@ -84,6 +94,9 @@ class ExcelExportCommand(Command):
             reaction_sheet.write_string(
                 x+1, len(property_list_sorted),
                 text_type(i.id in model_reactions))
+            reaction_sheet.write_string(
+                x+1, len(property_list_sorted)+1,
+                translated_equation)
             assoc = None
             if i.genes is None:
                 continue
