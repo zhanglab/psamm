@@ -98,12 +98,22 @@ class ExportTableCommand(Command):
         print('\t'.join(
             [text_type(x) for x in property_list_sorted] + ['in_model']))
 
+        compounds_name = {}
+        for cpd in self._model.compounds:
+            compounds_name[cpd.id] = cpd.name
+
         model_reactions = set(self._model.model)
         for reaction in self._model.reactions:
+            # get translated equation
+            rx = reaction.equation
+            translated_equation = str(rx.translated_compounds(
+                lambda x: compounds_name.get(x, x)))
+
             line_content = [reaction.properties.get(property)
                             for property in property_list_sorted]
             in_model = reaction.id in model_reactions
             line_content.append(in_model)
+            line_content.append(translated_equation)
             print('\t'.join(_encode_value(value) for value in line_content))
 
     def _compound_export(self):
