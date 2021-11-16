@@ -70,6 +70,8 @@ setup(
         'Programming Language :: Python :: 3.7',
     ],
 
+    data_files=[('psamm', ['chebi_pH7_3_mapping.tsv'])],
+
     packages=find_packages(),
 
     entry_points='''
@@ -125,7 +127,8 @@ setup(
         'scipy',
         'future',
         'pandas',
-        'biopython'
+        'biopython',
+        'libchebipy'
     ],
     extras_require={
         'docs': ['sphinx', 'sphinx_rtd_theme', 'mock']
