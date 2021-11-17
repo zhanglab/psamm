@@ -190,15 +190,6 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea):
     # Load database once if --rhea is given
     if use_rhea:
         rhea_db = RheaDb(resource_filename('psamm', 'chebi_pH7_3_mapping.tsv'))
-    #rhea_db = {}
-    #if use_rhea:
-    #    with open(resource_filename('psamm', 'chebi_pH7_3_mapping.tsv'), 'r') as f:
-    #        for line in f:
-    #            split = line.split('\t')
-    #            rhea_db[split[0]] = split[1]
-
-    # Generate the yaml file for the compounds, filtering out the generic
-    # compounds
     compound_entry_list=[]
     compound_set=set()
     for reaction in reaction_entry_list:
@@ -208,53 +199,57 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea):
     if verbose:
         logger.info(f"There are {len(compound_set)} compounds to download.")
     count = 0
-    for entry in _download_kegg_entries(out, compound_set, CompoundEntry):
-        if entry.dblinks is not None:
-            for DB,ID in entry.dblinks: # Parse ChEBI, make a function select_chebi_id?
-                if DB == "ChEBI":
-                    id_list = ID.split(" ")
-                    if use_rhea:
-                        entry.update_charge(rhea_db.select_chebi_id(id_list))
-                    else:
-                        entry.update_charge(id_list[0])
-                    #if len(id_list) > 1:
-                    #   try:
-                    #       rhea_id_list = [rhea_db[x] for x in id_list]
-                    #       if len(set(rhea_id_list)) > 1:
-                    #           print(id_list, rhea_id_list, "The chebi IDs dont map to same Rhea ID")
-                    #           single_id = id_list[0]
-                    #   except KeyError:
-                    #       single_id = id_list[0]
-                    #       print(id_list, "One or more IDs is not in Rhea db, using first") 
-                    #   # print("------------", s, "--------------")
-                    #   # for x in s:
-                    #   #     try:
-                    #   #         print(x, "->", rhea_db[x])
-                    #   #     except KeyError:
-                    #   #         print(x, "no match in rhea")
-                    #entry.update_charge(ID, "first")
-        compound_entry_list.append(entry)
-        count += 1
-        if verbose and count%25==0:
-            logger.info(f"{count}/{len(compound_set)} "
-                "compounds downloaded...")
+    with open(os.path.join(out, 'log.tsv'), "a+") as f:
+        logger.info("Downloading kegg entries and performing charge correction")
+        f.write("\nCompounds with no charge:\n")
+        for entry in _download_kegg_entries(out, compound_set, CompoundEntry):
+            if entry.dblinks is not None:
+                for DB,ID in entry.dblinks: # Parse ChEBI from dblinks
+                    if DB == "ChEBI":
+                        id_list = ID.split(" ")
+                        try:
+                            if use_rhea:
+                                entry.update_charge(rhea_db.select_chebi_id(id_list))
+                            else:
+                                entry.update_charge(id_list[0])
+                        except ValueError:
+                            f.write("{}\tHas no charge in ChEBI\n".format(entry.id))                
+                        except KeyError:
+                            f.write("{}\tOne or more ChEBI IDs not present in Rhea\n".format(entry.id))
+                        except RheaIdMismatch:
+                            f.write("{}\tChEBI IDs map to different Rhea IDs\n".format(entry.id))
+            compound_entry_list.append(entry)
+            count += 1
+            if verbose and count%25==0:
+                logger.info(f"{count}/{len(compound_set)} "
+                    "compounds downloaded...")
     with open(os.path.join(out, 'compounds.yaml'), 'w+') as f:
         yaml.dump(list(model_compounds(compound_entry_list)), f, **yaml_args)
 
     # generate a yaml file for all generic compounds
     generic_compounds_list = check_generic_compounds(compound_entry_list)
     generic_entry_list=[]
-    for entry in _download_kegg_entries(out, generic_compounds_list, \
-        CompoundEntry):
-        if entry.dblinks is not None:
-            for DB,ID in entry.dblinks: # Parse ChEBI ID from dblinks
-                if DB == "ChEBI":
-                    id_list = ID.split(" ")
-                    if use_rhea: # Use rhea to convert ids or choose first id
-                        entry.update_charge(rhea_db.select_chebi_id(id_list))
-                    else:
-                        entry.update_charge(id_list[0])
-        generic_entry_list.append(entry)
+    with open(os.path.join(out, 'log.tsv'), "a+") as f:
+        logger.info("Downloading kegg entries for generic compounds and performing charge correction")
+        f.write("\nGeneric compounds with no charge:\n")
+        for entry in _download_kegg_entries(out, generic_compounds_list, \
+            CompoundEntry):
+            if entry.dblinks is not None:
+                for DB,ID in entry.dblinks: # Parse ChEBI from dblinks
+                    if DB == "ChEBI":
+                        id_list = ID.split(" ")
+                        try:
+                            if use_rhea:
+                                entry.update_charge(rhea_db.select_chebi_id(id_list))
+                            else:
+                                entry.update_charge(id_list[0])
+                        except ValueError:
+                            f.write("{}\tHas no charge in ChEBI\n".format(entry.id))                
+                        except KeyError:
+                            f.write("{}\tOne or more ChEBI IDs not present in Rhea\n".format(entry.id))
+                        except RheaIdMismatch:
+                            f.write("{}\tChEBI IDs map to different Rhea IDs\n".format(entry.id))
+            generic_entry_list.append(entry)
     with open(os.path.join(out, 'compounds_generic.yaml'), 'w+') as f:
         yaml.dump(list(model_generic_compounds(generic_entry_list)), \
             f, **yaml_args)
@@ -399,8 +394,6 @@ def model_compounds(compound_entry_list):
                     compound.dblinks is not None:
                     for key, value in compound.dblinks:
                         d['{}'.format(key)] = encode_utf8(value)
-                        #if key == 'ChEBI':
-                        #    d['charge'] = chebi_compound_search(value)
                 if hasattr(compound, 'charge') \
                     and compound.charge is not None:
                     d['charge'] = encode_utf8(compound.charge)
@@ -426,7 +419,6 @@ def check_generic_compounds(compound_entry_list):
     return(generic_compounds_list)
 
 def model_generic_compounds(compound_entry_list):
-        #generic_compounds_list = []
         non_gen_compounds = []
         for compound in compound_entry_list:
             try:
@@ -454,8 +446,6 @@ def model_generic_compounds(compound_entry_list):
                     and compound.dblinks is not None:
                     for key, value in compound.dblinks:
                         d['{}'.format(key)] = encode_utf8(value)
-                        #if key == 'ChEBI':
-                        #    d['charge'] = chebi_compound_search(value)
                 if hasattr(compound, 'charge') \
                     and compound.charge is not None:
                     d['charge'] = encode_utf8(compound.charge)
@@ -574,22 +564,6 @@ def parse_rxns_from_EC(rxn_mapping):
                     if r[0]=="R":
                         rxn_dict[r]+=rxn_mapping[reactions]
     return(rxn_dict)
-
-"""
-Function to query ChEBI database for a given ChEBI id
-Currently returns charge of the first chebi ID for
-a given compound (some have multiple ids...)
-"""
-#def chebi_compound_search(chebi_id):
-#    single_id = chebi_id.split(" ")[0]
-#    this_chebi_entity = ChebiEntity(single_id)
-#    charge = this_chebi_entity.get_charge()
-#    #formula=this_chebi_entity.get_formula()
-#    #compName=this_chebi_entity.get_name()
-#    try:
-#        return(int(charge))
-#    except ValueError:
-#        return(None)
 
 def main(args=None):
     """Entry point for the model generation script"""
@@ -757,7 +731,7 @@ class CompoundEntry(object):
             self.values['formula'] = [this_chebi_entity.get_formula()]
             #compName=this_chebi_entity.get_name()
         except ValueError:
-            pass # write to log file
+            raise
 
     @property
     def id(self):
@@ -812,22 +786,6 @@ class CompoundEntry(object):
         else:
             return None
 
-    #@property
-    #def charge(self):
-    #    for DB,ID in self.dblinks:
-    #        if DB == "ChEBI":
-    #            print(ID)
-    #    #if 'dblinks' in self.values:
-    #    #    for line in self.values['dblinks']:
-    #    #        database, entry = line.split(':', 1)
-    #    #        if database == "ChEBI":
-    #    #            
-    #    #if 'charge' not in self.values:
-    #    #   return None
-    #    #return self.values['charge'][0]
-
-    #@charge.setter
-
     @property
     def charge(self):
         return self._charge 
@@ -850,6 +808,9 @@ class CompoundEntry(object):
     def __repr__(self):
         return '<CompoundEntry "{}">'.format(self.id)
 
+class RheaIdMismatch(Exception):
+    """Exception used to signal error in Rhea processing"""
+
 class RheaDb(object):
     """Allows storing and searching Rhea db""" 
 
@@ -865,13 +826,13 @@ class RheaDb(object):
         return db
 
     def select_chebi_id(self, id_list):
+        if len(id_list) == 1:
+            return(id_list[0])
         try:
             rhea_id_list = [self._values[x] for x in id_list]
         except KeyError:
-            print("One or more IDs is not in Rhea")
-            return id_list[0]
-        if len(rhea_id_list) == 1 or len(set(rhea_id_list)) == 1:
+            raise
+        if len(set(rhea_id_list)) == 1:
             return rhea_id_list[0]
         else:
-            print("The chebi IDs dont map to same Rhea ID, picking the first")
-            return id_list[0]
+            raise RheaIdMismatch()
