@@ -35,7 +35,10 @@ from psamm.expression.affine import Expression
 from psamm.formula import Formula
 from pkg_resources import resource_filename ## JV added
 import time
-from libchebipy._chebi_entity import ChebiEntity ##JV added but not in dependencies yet
+import pkg_resources
+from psamm.command import _trim
+from six import add_metaclass, iteritems, itervalues, text_type, PY3
+import abc
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +49,12 @@ except ImportError:
     logger.warning("WARNING: Biopython package not found! "
                    "Some functions will be unusable")
 
+try:
+    from libchebipy._chebi_entity import ChebiEntity
+except ImportError:
+    logger.warning("WARNING: The Chebi API package not found! "
+                   "Some functions will be unusable")
+
 class InputError(Exception):
     """Exception used to signal a general input error."""
 
@@ -54,6 +63,46 @@ def dict_representer(dumper, data):
 
 def dict_constructor(loader, node):
     return OrderedDict(loader.construct_pairs(node))
+
+
+
+@add_metaclass(abc.ABCMeta)
+class Command(object):
+    """Represents a command in the interface, operating on a model.
+
+    The constructor will be given the NativeModel and the command line
+    namespace. The subclass must implement :meth:`run` to handle command
+    execution. The doc string will be used as documentation for the command
+    in the command line interface.
+
+    In addition, :meth:`init_parser` can be implemented as a classmethod which
+    will allow the command to initialize an instance of
+    :class:`argparse.ArgumentParser` as desired. The resulting argument
+    namespace will be passed to the constructor.
+    """
+
+    def __init__(self, args):
+        self._args = args
+
+    @classmethod
+    def init_parser(cls, parser):
+        """Initialize command line parser (:class:`argparse.ArgumentParser`)"""
+
+    @abc.abstractmethod
+    def run(self):
+        """Execute command"""
+
+    def argument_error(self, msg):
+        """Raise error indicating error parsing an argument."""
+        raise CommandError(msg)
+
+    def fail(self, msg, exc=None):
+        """Exit command as a result of a failure."""
+        logger.error(msg)
+        if exc is not None:
+            logger.debug('Command failure caused by exception!', exc_info=exc)
+        sys.exit(1)
+
 
 def parse_orthology(orthology, type, col):
     # Dictionary of reactions to genes
@@ -213,7 +262,7 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea):
                             else:
                                 entry.update_charge(id_list[0])
                         except ValueError:
-                            f.write("{}\tHas no charge in ChEBI\n".format(entry.id))                
+                            f.write("{}\tHas no charge in ChEBI\n".format(entry.id))
                         except KeyError:
                             f.write("{}\tOne or more ChEBI IDs not present in Rhea\n".format(entry.id))
                         except RheaIdMismatch:
@@ -244,7 +293,7 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea):
                             else:
                                 entry.update_charge(id_list[0])
                         except ValueError:
-                            f.write("{}\tHas no charge in ChEBI\n".format(entry.id))                
+                            f.write("{}\tHas no charge in ChEBI\n".format(entry.id))
                         except KeyError:
                             f.write("{}\tOne or more ChEBI IDs not present in Rhea\n".format(entry.id))
                         except RheaIdMismatch:
@@ -565,32 +614,92 @@ def parse_rxns_from_EC(rxn_mapping):
                         rxn_dict[r]+=rxn_mapping[reactions]
     return(rxn_dict)
 
-def main(args=None):
-    """Entry point for the model generation script"""
+class main_biomassCommand(Command):
+    """Generate a database of compounds and reactions"""
 
-    if 'Bio.KEGG.Enzyme' not in sys.modules or \
-        'Bio.KEGG.REST' not in sys.modules:
-        quit('\nNo biopython package found.\n'
-        'Please run <pip install biopython>''')
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument('--genome', metavar='path',
+            help='path to the genome')
+        parser.add_argument('--proteome', metavar='path',
+            help='''path to the proteome''')
+        super(main_biomassCommand, cls).init_parser(parser)
 
-    parser = argparse.ArgumentParser(
-        description="Generate model based on Eggnog Annotations")
-    parser.add_argument('--annotations', metavar='path',
-        help='Path to the annotation file from Eggnog')
-    parser.add_argument('--type', type=str,
-        help='''Define whether to build the model on reaction ID, KO, or EC.\n
-        options are: [R, KO, EC]''')
-    parser.add_argument('--out', metavar='out',
-        help='''Path to the output location for the model directory. This will\n
-        be created for you.''')
-    parser.add_argument('--col', default=None, help='If providing your own '
-        'annotation table, specify column for the R, EC, or KO number. '
-        'The default is to parse eggnog output.', type=int)
-    parser.add_argument('--verbose', help='Report progress in verbose mode',
-        action='store_true')
-    parser.add_argument('--rhea', help='''Resolve protonation states using major\n 
-        microspecies at pH 7.3 using Rhea-ChEBI mappings''', action='store_true')
-    args = parser.parse_args(args)
+    def run(self):
+        """Entry point for the biomass reaction generation script"""
+        print('write code here to generate biomass')
+
+
+
+class main_databaseCommand(Command):
+    """Generate a database of compounds and reactions"""
+
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument('--annotations', metavar='path',
+            help='Path to the annotation file from Eggnog')
+        parser.add_argument('--type', type=str,
+            help='''Define whether to build the model on reaction ID, KO, or EC.\n
+            options are: [R, KO, EC]''')
+        parser.add_argument('--out', metavar='out',
+            help='''Path to the output location for the model directory. This will\n
+            be created for you.''')
+        parser.add_argument('--col', default=None, help='If providing your own '
+            'annotation table, specify column for the R, EC, or KO number. '
+            'The default is to parse eggnog output.', type=int)
+        parser.add_argument('--verbose', help='Report progress in verbose mode',
+            action='store_true')
+        parser.add_argument('--rhea', help='''Resolve protonation states using major\n
+            microspecies at pH 7.3 using Rhea-ChEBI mappings''', action='store_true')
+        super(main_databaseCommand, cls).init_parser(parser)
+
+    def run(self):
+        """Entry point for the databse generation script"""
+        # check if required packages are installed
+        if 'Bio.KEGG.Enzyme' not in sys.modules or \
+            'Bio.KEGG.REST' not in sys.modules:
+            quit('No biopython package found. '
+            'Please run <pip install biopython>''')
+        if "libchebipy._chebi_entity" not in sys.modules:
+            quit('The Chebi API is not installed. '
+            'Please run <pip install libchebipy>')
+
+        # Check the validity of the input values
+        if not self._args.annotations:
+            raise InputError('Please specify a path to the eggnog annotations')
+        if not self._args.type:
+            raise InputError('Please specify one of R, KO, or EC as the type')
+        if not self._args.out:
+            raise InputError('Please specify an output directory')
+        if os.path.exists(self._args.out):
+            raise InputError('The output directory already exists! Exiting...')
+            exit()
+        else:
+            os.mkdir(self._args.out)
+
+        # Check the format of the eggnog annotation file.
+        ## Add some code here to check the input file.
+
+        # Launch the parse_orthology function to contruct a gene association file
+        ortho_dict = parse_orthology(self._args.annotations, self._args.type, \
+            self._args.col)
+
+        # convert EC to reactions
+        if self._args.type == "EC":
+            ortho_dict = parse_rxns_from_EC(ortho_dict)
+
+        # Create the model using the kegg api
+        create_model_api(self._args.out, ortho_dict, self._args.verbose, \
+            self._args.rhea)
+
+def main(command_class=None, args=None):
+    """Run the command line interface with the given :class:`Command`.
+
+    If no command class is specified the user will be able to select a specific
+    command through the first command line argument. If the ``args`` are
+    provided, these should be a list of strings that will be used instead of
+    ``sys.argv[1:]``. This is mostly useful for testing.
+    """
 
     # Set up logging for the command line interface
     if 'PSAMM_DEBUG' in os.environ:
@@ -601,32 +710,54 @@ def main(args=None):
         logging.basicConfig(
             level=logging.INFO, format='%(levelname)s: %(message)s')
 
+    # title = 'Metabolic model draft construction'
+    # if command_class is not None:
+    #     title, _, _ = command_class.__doc__.partition('\n\n')
+    parser = argparse.ArgumentParser(description=\
+        'Options to generate a metabolic model')
 
-    # Check the validity of the input information
-    if not args.annotations:
-        raise InputError('Please specify a path to the eggnog annotations')
-    if not args.type:
-        raise InputError('Please specify one of R, KO, or EC as the type')
-    if not args.out:
-        raise InputError('Please specify an output directory')
-    if os.path.exists(args.out):
-        raise InputError('The output directory already exists! Exiting...')
-        exit()
+    # if generate_class is None:
+    #     parser.add_argument(
+    #         'generate', help='Type of database to generate ("list" to see all)')
+    #
+    # args = parser.parse_args(args)
+
+    if command_class is not None:
+        # Command explicitly given, only allow that command
+        command_class.init_parser(parser)
+        parser.set_defaults(command=command_class)
     else:
-        os.mkdir(args.out)
+        # Discover all available options
+        commands = {}
+        for entry in pkg_resources.iter_entry_points(
+                'psamm.generate_model'):
+            canonical = entry.name.lower()
+            if canonical not in commands:
+                command_class = entry.load()
+                commands[canonical] = command_class
+            else:
+                logger.warning('Option {} was found more than once!'.format(
+                    canonical.name))
 
-    # Check the format of the eggnog annotation file.
-    ## Add some code here to check the input file.
+        # Create parsers for subcommands
+        subparsers = parser.add_subparsers(title='Commands', \
+            metavar='command')
+        for name, command_class in sorted(iteritems(commands)):
+            title, _, _ = command_class.__doc__.partition('\n\n')
+            subparser = subparsers.add_parser(
+                name, help=title.rstrip('.'),
+                formatter_class=argparse.RawDescriptionHelpFormatter,
+                description=_trim(command_class.__doc__))
+            subparser.set_defaults(command=command_class)
+            command_class.init_parser(subparser)
 
-    # Launch the parse_orthology function to contruct a gene association file
-    ortho_dict = parse_orthology(args.annotations, args.type, args.col)
+    parsed_args = parser.parse_args(args)
+    command = parsed_args.command(parsed_args)
+    try:
+        command.run()
+    except CommandError as e:
+        parser.error(text_type(e))
 
-    # convert EC to reactions
-    if args.type == "EC":
-        ortho_dict = parse_rxns_from_EC(ortho_dict)
-
-    # Create the model using the kegg api
-    create_model_api(args.out, ortho_dict, args.verbose, args.rhea)
 
 
 class ReactionEntry(object):
@@ -712,6 +843,15 @@ class ReactionEntry(object):
 class ParseError(Exception):
     """Exception used to signal errors while parsing"""
 
+class CommandError(Exception):
+    """Error from running a command.
+
+    This should be raised from a ``Command.run()`` if any arguments are
+    misspecified. When the command is run and the ``CommandError`` is raised,
+    the caller will exit with an error code and print appropriate usage
+    information.
+    """
+
 class CompoundEntry(object):
     """Representation of entry in KEGG compound file"""
 
@@ -788,7 +928,7 @@ class CompoundEntry(object):
 
     @property
     def charge(self):
-        return self._charge 
+        return self._charge
 
     @property
     def comment(self):
@@ -812,7 +952,7 @@ class RheaIdMismatch(Exception):
     """Exception used to signal error in Rhea processing"""
 
 class RheaDb(object):
-    """Allows storing and searching Rhea db""" 
+    """Allows storing and searching Rhea db"""
 
     def __init__(self, filepath):
         self._values = self._parse_db_from_tsv(filepath)

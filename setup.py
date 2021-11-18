@@ -115,6 +115,10 @@ setup(
         SBML = psamm.importers.sbml:NonstrictImporter
         SBML-strict = psamm.importers.sbml:StrictImporter
         MATLAB = psamm.importers.matlab:Importer
+
+        [psamm.generate_model]
+        generate-database = psamm.generate_model:main_databaseCommand
+        generate-biomass = psamm.generate_model:main_biomassCommand
     ''',
 
     test_suite='psamm.tests',
@@ -127,8 +131,6 @@ setup(
         'scipy',
         'future',
         'pandas',
-        'biopython',
-        'libchebipy'
     ],
     extras_require={
         'docs': ['sphinx', 'sphinx_rtd_theme', 'mock']
