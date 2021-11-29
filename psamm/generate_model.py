@@ -30,7 +30,7 @@ from psamm.datasource.native import NativeModel, ModelReader, ModelWriter
 from psamm.expression import boolean
 from psamm.datasource.entry import (DictReactionEntry as ReactionEntry)
 from psamm.datasource.context import FileMark
-from psamm.datasource.reaction import Reaction, Compound
+from psamm.datasource.reaction import Reaction, Compound, Direction
 from psamm.expression.affine import Expression
 from psamm.formula import Formula
 from pkg_resources import resource_filename ## JV added
@@ -399,7 +399,7 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea):
         logger.info("\nThere are {} reactions in the model".format(str(\
                        len(reaction_list_out))))
         logger.info("\nThere are {} compounds in the model\n".format(str(\
-                       len(compound_list_out))))
+                       len(compound_entry_list))))
 
 
 
@@ -571,7 +571,6 @@ def _download_kegg_entries(out, rxn_mapping, entry_class, context=None):
                 mark = FileMark(context, entry_line, 0)
                 yield entry_class(reaction, filemark=mark)
 
-                mark = FileMark(context, entry_line, 0)
 
 """
 Functions converts gene associations to EC into gene associations for reaction
@@ -629,6 +628,176 @@ class main_biomassCommand(Command):
         """Entry point for the biomass reaction generation script"""
         print('write code here to generate biomass')
 
+class main_transporterCommand(Command):
+    """Predicts the function of transporter reactions.
+
+    Output based on algorithm outlined in PMID: 18586723"""
+
+    @classmethod
+    def init_parser(cls, parser):
+        parser.add_argument('--annotations', metavar='path',
+            help='Path to 2 column table of genes to tcdb annotations')
+        parser.add_argument('--db', type=str,
+            help='''path to the tcdb directory.''')
+        parser.add_argument('--model', metavar='path',
+            help='''Path to the model directory''')
+        parser.add_argument('--internal',
+            help='''abbreviation for the internal compartment''')
+        parser.add_argument('--external',
+            help='''abbreviation for the external compartment''')
+        super(main_transporterCommand, cls).init_parser(parser)
+
+    def run(self):
+        '''Entry point for the transporter assignment'''
+
+        # Check the validity of the input values
+        if not self._args.annotations:
+            raise InputError('Please specify a path to the tcdb annotations')
+        if not self._args.db:
+            raise InputError('Specify path to the tcdb substrate table\n'
+                             'This can be downloaded from: \n'
+                             'http://www.tcdb.org/cgi-bin/substrates/'
+                             'getSubstrates.py')
+        if not self._args.model:
+            raise InputError('Please specify a directory to an existing model')
+
+        # read in the model and build a dictionary of Chebi IDs
+        mr = ModelReader.reader_from_path(self._args.model)
+        nm = mr.create_model()
+        mm = nm.create_metabolic_model()
+
+        chebi_dict = defaultdict(lambda:[])
+        for cpd in nm.compounds:
+            if 'ChEBI' in cpd.__dict__['_properties']:
+                chebi = re.split(' ', cpd.__dict__['_properties']['ChEBI'])
+                for i in chebi:
+                    chebi_dict["CHEBI:{}".format(i)].append(cpd.id)
+
+        # Read in the reaction substrates
+        tp_ref_dict = defaultdict(lambda:[])
+        with open(self._args.db, 'r') as infile:
+            for line in infile:
+                line=line.rstrip()
+                listall=re.split("\t", line)
+                substrates=re.split("\|", listall[1])
+                sub_out=[]
+                for i in substrates:
+                    sub_out.append(re.split(";", i)[0])
+                tp_ref_dict[listall[0]]=sub_out
+
+        # build a gene association dictionary
+        gene_asso = defaultdict(lambda:[])
+        with open(self._args.annotations, 'r') as infile:
+            for line in infile:
+                line=line.rstrip()
+                listall=re.split("\t", line)
+                gene_asso[listall[1]].append(listall[0])
+        # Build the transporter databse based on what is in the annotations
+        with open(os.path.join(self._args.model, "transporter_log.tsv"), 'w') \
+            as log:
+            log.write("compounds for which transporters were predicted, but"
+                " are not found in the model:\n")
+            eq = defaultdict(lambda:[])
+            for id, genes in gene_asso.items():
+                # determine energy coupling.
+                # use the tcdb classifications per PMID: 6546518
+                # 1 are channels and pores, presume diffusion
+                if id[0] == "1":
+                    for cpd in tp_ref_dict[id]:
+                        if cpd in chebi_dict:
+                            eq[id].append(("{}_diff".format(chebi_dict[cpd][0]), Reaction(Direction.Both, {
+                            Compound(chebi_dict[cpd][0]).in_compartment(self._args.internal): -1,
+                            Compound(chebi_dict[cpd][0]).in_compartment(self._args.external): 1}
+                            )))
+                        else:
+                            log.write("{}\t{}\t{}\n".format("Compound not in "
+                                "model: ", cpd, id))
+                # 2 are electrochemically driven transporters, typically salt
+                # or proton driven through symport or antiport
+                elif id[0] =="2":
+                    # set up lists to track positive and negative compounds
+                    pos=[]
+                    neg=[]
+                    for cpd in tp_ref_dict[id]:
+                        if cpd in chebi_dict:
+                            # attempt to approximate if symport or antiport.
+                            # if all compounds are the same charge (+/-),
+                            # presume symport. Else compounds have same charge
+                            # (+/+) or (-/-) and we presume antiport. This is
+                            # based on the assumption that charge will remain
+                            # balanced.
+                            if nm.compounds[chebi_dict[cpd][0]].\
+                                properties['charge'] > 0:
+                                pos.append(chebi_dict[cpd][0])
+                            elif nm.compounds[chebi_dict[cpd][0]].\
+                                properties['charge'] < 0:
+                                neg.append(chebi_dict[cpd][0])
+                            else:
+                                log.write("{}\t{}\t{}\n".format("Charge of zero! "
+                                    "Likely not driven by electrochemical gradient", cpd, id))
+                        else:
+                            log.write("{}\t{}\t{}\n".format("Compound not in "
+                                "model: ", cpd, id))
+                    # Build symport/antiport based on pos and neg prediction
+                    if len(pos) > 0 and len(neg) == 0 or \
+                        len(pos) == 0 and len(neg) > 0:
+                        # presume antiport
+                        # find stoichiometry
+                        for p in pos:
+                            for n in pos:
+                                if p != n:
+                                    eq[id].append(("{}_{}_anti".format(n, p), Reaction(Direction.Both, {
+                                    Compound(p).in_compartment(self._args.internal): -1,
+                                    Compound(n).in_compartment(self._args.external): -1,
+                                    Compound(p).in_compartment(self._args.external): 1,
+                                    Compound(n).in_compartment(self._args.internal): 1,
+                                    })))
+                        for p in neg:
+                            for n in neg:
+                                if p != n:
+                                    eq[id].append(("{}_{}_anti".format(n, p), Reaction(Direction.Both, {
+                                    Compound(p).in_compartment(self._args.internal): -1,
+                                    Compound(n).in_compartment(self._args.external): -1,
+                                    Compound(p).in_compartment(self._args.external): 1,
+                                    Compound(n).in_compartment(self._args.internal): 1,
+                                    })))
+                    elif len(pos) > 0 and len(neg) > 0:
+                        # presume symport
+                        for p in pos:
+                            for n in neg:
+                                eq[id].append(("{}_{}_symp".format(n, p), Reaction(Direction.Both, {
+                                Compound(p).in_compartment(self._args.internal): -1,
+                                Compound(n).in_compartment(self._args.internal): -1,
+                                Compound(p).in_compartment(self._args.external): 1,
+                                Compound(n).in_compartment(self._args.external): 1,
+                                })))
+                    else:
+                        log.write("{}\t{}\t{}\n".format("Compound  contains 0 "
+                            "charte. Not electrochemically driven", cpd, id))
+
+            # Sets up the yaml object for the reactions and writes
+            # out the parsed reaction information to a reactions.yaml
+            # file
+            yaml.add_representer(OrderedDict, dict_representer)
+            yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+                                 dict_constructor)
+            yaml_args = {'default_flow_style': False,
+                         'encoding': 'utf-8',
+                         'allow_unicode': True}
+
+            # construct a new reactions.yaml file based on this.
+            reaction_entry_list=[]
+            mark = FileMark(None, 0, 0)
+            with open(os.path.join(self._args.model, "transporters.yaml"), "w") as f:
+                for tcdb in eq:
+                    for rxn in eq[tcdb]:
+                        reaction = {'transport_name':rxn[0], 'entry':[rxn[0]], 'name':[rxn[0]], 'equation':[str(rxn[1])], 'enzyme':[tcdb]}
+                        entry = ReactionEntry(reaction, filemark=mark)
+                        reaction_entry_list.append(entry)
+
+                yaml.dump(list(model_reactions(reaction_entry_list)), f, **yaml_args)
+
+
 
 
 class main_databaseCommand(Command):
@@ -654,7 +823,7 @@ class main_databaseCommand(Command):
         super(main_databaseCommand, cls).init_parser(parser)
 
     def run(self):
-        """Entry point for the databse generation script"""
+        """Entry point for the database generation script"""
         # check if required packages are installed
         if 'Bio.KEGG.Enzyme' not in sys.modules or \
             'Bio.KEGG.REST' not in sys.modules:
@@ -767,7 +936,10 @@ class ReactionEntry(object):
         self.values = dict(values)
         if 'entry' not in values:
             raise ParseError('Missing reaction identifier')
-        self._id, _ = values['entry'][0].split(None, 1)
+        if 'transport_name' in values:
+            self._id = values['transport_name']
+        else:
+            self._id, _ = values['entry'][0].split(None, 1)
         self._filemark = filemark
 
     @property

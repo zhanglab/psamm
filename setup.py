@@ -119,6 +119,7 @@ setup(
         [psamm.generate_model]
         generate-database = psamm.generate_model:main_databaseCommand
         generate-biomass = psamm.generate_model:main_biomassCommand
+        generate-transporters = psamm.generate_model:main_transporterCommand
     ''',
 
     test_suite='psamm.tests',
