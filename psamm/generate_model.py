@@ -124,6 +124,10 @@ def parse_orthology(orthology, type, col):
                     keys = listall[10].split(',')
                 elif type == "KO":
                     keys = listall[11].split(',')
+                elif type == "tcdb":
+                    if listall[17]=='-':
+                        continue
+                    keys = listall[17].split(',')
             if len(keys) == 0:
                 continue
             for k in keys:
@@ -137,6 +141,7 @@ a reactions.yaml file.
 '''
 def model_reactions(reaction_entry_list):
         for reaction in reaction_entry_list:
+
             d = OrderedDict()
             d['id'] = encode_utf8(reaction.id)
 
@@ -172,6 +177,12 @@ def model_reactions(reaction_entry_list):
                 d['pathways'] = encode_utf8_list(pathways_list)
             if hasattr(reaction, 'comment') and reaction.comment is not None:
                 d['comment'] = encode_utf8(str(reaction.comment))
+            if hasattr(reaction, 'tcdb_family') and \
+                reaction.tcdb_family is not None:
+                d['tcdb_family'] = encode_utf8(str(reaction.tcdb_family))
+            if hasattr(reaction, 'substrates') and \
+                reaction.substrates is not None:
+                d['substrates'] = encode_utf8(str(reaction.substrates))
             if hasattr(reaction, 'orthology') and \
                 reaction.orthology is not None:
                 d['orthology'] = encode_utf8(orth_list)
@@ -206,7 +217,7 @@ reaction and compound information by utilizing the kegg
 REST api to download the reaction information and uses psamm
 functions to parse out the kegg data.
 '''
-def create_model_api(out, rxn_mapping, verbose, use_rhea):
+def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
 
     with open(os.path.join(out, "log.tsv"), "a+") as f:
         f.write("List of invalid Kegg IDs: \n")
@@ -349,7 +360,7 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea):
     # Create a model.yaml file
     with open('{}/model.yaml'.format(out), mode='w') as myam:
         myam.write('default_flux_limit: 100\n')
-        myam.write('default_compartment: {}\n'.format("c"))
+        myam.write('default_compartment: {}\n'.format(default_compartment))
         myam.write('extracellular: null\n')
         myam.write('biomass: null\n')
         myam.write('compounds:\n')
@@ -636,15 +647,20 @@ class main_transporterCommand(Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument('--annotations', metavar='path',
-            help='Path to 2 column table of genes to tcdb annotations')
-        parser.add_argument('--db', type=str,
-            help='''path to the tcdb directory.''')
+            help='Path to the annotation file from eggnog')
+        parser.add_argument('--db_substrates', type=str,
+            help='''path to the tcdb substrate file.''')
+        parser.add_argument('--db_families', type=str,
+            help='''path to the tcdb family file.''')
         parser.add_argument('--model', metavar='path',
             help='''Path to the model directory''')
-        parser.add_argument('--internal',
+        parser.add_argument('--compartment_in', default='c',
             help='''abbreviation for the internal compartment''')
-        parser.add_argument('--external',
+        parser.add_argument('--compartment_out', default='e',
             help='''abbreviation for the external compartment''')
+        parser.add_argument('--col', default=None, help='If providing your own '
+            'annotation table, specify column for the R, EC, or KO number. '
+            'The default is to parse eggnog output.', type=int)
         super(main_transporterCommand, cls).init_parser(parser)
 
     def run(self):
@@ -652,12 +668,17 @@ class main_transporterCommand(Command):
 
         # Check the validity of the input values
         if not self._args.annotations:
-            raise InputError('Please specify a path to the tcdb annotations')
-        if not self._args.db:
+            raise InputError('Please specify a path to the annotations')
+        if not self._args.db_substrates:
             raise InputError('Specify path to the tcdb substrate table\n'
                              'This can be downloaded from: \n'
                              'http://www.tcdb.org/cgi-bin/substrates/'
                              'getSubstrates.py')
+        if not self._args.db_families:
+            raise InputError('Specify path to the tcdb family table\n'
+                             'This can be downloaded from: \n'
+                             'http://www.tcdb.org/cgi-bin/projectv/public/'
+                             'families.py')
         if not self._args.model:
             raise InputError('Please specify a directory to an existing model')
 
@@ -674,8 +695,8 @@ class main_transporterCommand(Command):
                     chebi_dict["CHEBI:{}".format(i)].append(cpd.id)
 
         # Read in the reaction substrates
-        tp_ref_dict = defaultdict(lambda:[])
-        with open(self._args.db, 'r') as infile:
+        tp_sub_dict = defaultdict(lambda:[])
+        with open(self._args.db_substrates, 'r') as infile:
             for line in infile:
                 line=line.rstrip()
                 listall=re.split("\t", line)
@@ -683,97 +704,47 @@ class main_transporterCommand(Command):
                 sub_out=[]
                 for i in substrates:
                     sub_out.append(re.split(";", i)[0])
-                tp_ref_dict[listall[0]]=sub_out
+                tp_sub_dict[listall[0]]=sub_out
 
-        # build a gene association dictionary
-        gene_asso = defaultdict(lambda:[])
-        with open(self._args.annotations, 'r') as infile:
+        # read in the reaction families
+        tp_fam_dict = defaultdict(lambda:'')
+        with open(self._args.db_families, 'r') as infile:
             for line in infile:
                 line=line.rstrip()
                 listall=re.split("\t", line)
-                gene_asso[listall[1]].append(listall[0])
+                tp_fam_dict[listall[0]] = listall[1]
+
+        # build a gene association dictionary
+        # Launch the parse_orthology function to contruct a gene association file
+        gene_asso = parse_orthology(self._args.annotations, "tcdb", \
+            self._args.col)
+
         # Build the transporter databse based on what is in the annotations
         with open(os.path.join(self._args.model, "transporter_log.tsv"), 'w') \
             as log:
             log.write("compounds for which transporters were predicted, but"
                 " are not found in the model:\n")
             eq = defaultdict(lambda:[])
+            print(chebi_dict)
             for id, genes in gene_asso.items():
-                # determine energy coupling.
-                # use the tcdb classifications per PMID: 6546518
-                # 1 are channels and pores, presume diffusion
-                if id[0] == "1":
-                    for cpd in tp_ref_dict[id]:
+                # if there is just one substrate and it is in the porin family
+                # assume passive diffusion/porin behavior
+                print(id, tp_sub_dict[id])
+                if len(tp_sub_dict[id]) == 1: # id[0] == "1" and
+                    for cpd in tp_sub_dict[id]:
                         if cpd in chebi_dict:
                             eq[id].append(("{}_diff".format(chebi_dict[cpd][0]), Reaction(Direction.Both, {
-                            Compound(chebi_dict[cpd][0]).in_compartment(self._args.internal): -1,
-                            Compound(chebi_dict[cpd][0]).in_compartment(self._args.external): 1}
+                            Compound(chebi_dict[cpd][0]).in_compartment(self._args.compartment_in): -1,
+                            Compound(chebi_dict[cpd][0]).in_compartment(self._args.compartment_out): 1}
                             )))
                         else:
-                            log.write("{}\t{}\t{}\n".format("Compound not in "
-                                "model: ", cpd, id))
-                # 2 are electrochemically driven transporters, typically salt
-                # or proton driven through symport or antiport
-                elif id[0] =="2":
-                    # set up lists to track positive and negative compounds
-                    pos=[]
-                    neg=[]
-                    for cpd in tp_ref_dict[id]:
-                        if cpd in chebi_dict:
-                            # attempt to approximate if symport or antiport.
-                            # if all compounds are the same charge (+/-),
-                            # presume symport. Else compounds have same charge
-                            # (+/+) or (-/-) and we presume antiport. This is
-                            # based on the assumption that charge will remain
-                            # balanced.
-                            if nm.compounds[chebi_dict[cpd][0]].\
-                                properties['charge'] > 0:
-                                pos.append(chebi_dict[cpd][0])
-                            elif nm.compounds[chebi_dict[cpd][0]].\
-                                properties['charge'] < 0:
-                                neg.append(chebi_dict[cpd][0])
-                            else:
-                                log.write("{}\t{}\t{}\n".format("Charge of zero! "
-                                    "Likely not driven by electrochemical gradient", cpd, id))
-                        else:
-                            log.write("{}\t{}\t{}\n".format("Compound not in "
-                                "model: ", cpd, id))
-                    # Build symport/antiport based on pos and neg prediction
-                    if len(pos) > 0 and len(neg) == 0 or \
-                        len(pos) == 0 and len(neg) > 0:
-                        # presume antiport
-                        # find stoichiometry
-                        for p in pos:
-                            for n in pos:
-                                if p != n:
-                                    eq[id].append(("{}_{}_anti".format(n, p), Reaction(Direction.Both, {
-                                    Compound(p).in_compartment(self._args.internal): -1,
-                                    Compound(n).in_compartment(self._args.external): -1,
-                                    Compound(p).in_compartment(self._args.external): 1,
-                                    Compound(n).in_compartment(self._args.internal): 1,
-                                    })))
-                        for p in neg:
-                            for n in neg:
-                                if p != n:
-                                    eq[id].append(("{}_{}_anti".format(n, p), Reaction(Direction.Both, {
-                                    Compound(p).in_compartment(self._args.internal): -1,
-                                    Compound(n).in_compartment(self._args.external): -1,
-                                    Compound(p).in_compartment(self._args.external): 1,
-                                    Compound(n).in_compartment(self._args.internal): 1,
-                                    })))
-                    elif len(pos) > 0 and len(neg) > 0:
-                        # presume symport
-                        for p in pos:
-                            for n in neg:
-                                eq[id].append(("{}_{}_symp".format(n, p), Reaction(Direction.Both, {
-                                Compound(p).in_compartment(self._args.internal): -1,
-                                Compound(n).in_compartment(self._args.internal): -1,
-                                Compound(p).in_compartment(self._args.external): 1,
-                                Compound(n).in_compartment(self._args.external): 1,
-                                })))
-                    else:
-                        log.write("{}\t{}\t{}\n".format("Compound  contains 0 "
-                            "charte. Not electrochemically driven", cpd, id))
+                            log.write("{}\t{}\n".format("Compound not in "
+                                      "model: ", cpd, id))
+                else:
+                     eq[id].append(("{}".format(id), Reaction(Direction.Both, {
+                     Compound("").in_compartment(self._args.compartment_in): -1,
+                     Compound("").in_compartment(self._args.compartment_out): 1}
+                     )))
 
             # Sets up the yaml object for the reactions and writes
             # out the parsed reaction information to a reactions.yaml
@@ -791,7 +762,12 @@ class main_transporterCommand(Command):
             with open(os.path.join(self._args.model, "transporters.yaml"), "w") as f:
                 for tcdb in eq:
                     for rxn in eq[tcdb]:
-                        reaction = {'transport_name':rxn[0], 'entry':[rxn[0]], 'name':[rxn[0]], 'equation':[str(rxn[1])], 'enzyme':[tcdb]}
+                        fam_id = ".".join(tcdb.split(".")[0:3])
+                        reaction = {'transport_name':rxn[0], 'entry':[rxn[0]],
+                                    'name':[tp_fam_dict[fam_id]], 'equation':[str(rxn[1])],
+                                    'enzyme':[tcdb],
+                                    'tcdb_family':tp_fam_dict[fam_id],
+                                    'substrates':tp_sub_dict[tcdb]}
                         entry = ReactionEntry(reaction, filemark=mark)
                         reaction_entry_list.append(entry)
 
@@ -818,6 +794,8 @@ class main_databaseCommand(Command):
             'The default is to parse eggnog output.', type=int)
         parser.add_argument('--verbose', help='Report progress in verbose mode',
             action='store_true')
+        parser.add_argument('--default_compartment',
+            help='Define abbreviation for the default compartment', default='c')
         parser.add_argument('--rhea', help='''Resolve protonation states using major\n
             microspecies at pH 7.3 using Rhea-ChEBI mappings''', action='store_true')
         super(main_databaseCommand, cls).init_parser(parser)
@@ -859,7 +837,7 @@ class main_databaseCommand(Command):
 
         # Create the model using the kegg api
         create_model_api(self._args.out, ortho_dict, self._args.verbose, \
-            self._args.rhea)
+            self._args.rhea, self._args.default_compartment)
 
 def main(command_class=None, args=None):
     """Run the command line interface with the given :class:`Command`.
@@ -991,6 +969,18 @@ class ReactionEntry(object):
         if 'comment' not in self.values:
             return None
         return '\n'.join(self.values['comment'])
+
+    @property
+    def tcdb_family(self):
+        if 'tcdb_family' not in self.values:
+            return None
+        return self.values['tcdb_family']
+
+    @property
+    def substrates(self):
+        if 'substrates' not in self.values:
+            return None
+        return self.values['substrates']
 
     @property
     def orthology(self):
