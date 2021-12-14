@@ -249,7 +249,7 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
 
     # Load database once if --rhea is given
     if use_rhea:
-        rhea_db = RheaDb(resource_filename('psamm', 'chebi_pH7_3_mapping.tsv'))
+        rhea_db = RheaDb(resource_filename('psamm', 'external-data/chebi_pH7_3_mapping.tsv'))
     compound_entry_list=[]
     compound_set=set()
     for reaction in reaction_entry_list:
