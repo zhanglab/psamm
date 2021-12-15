@@ -183,6 +183,9 @@ def model_reactions(reaction_entry_list):
             if hasattr(reaction, 'substrates') and \
                 reaction.substrates is not None:
                 d['substrates'] = encode_utf8(str(reaction.substrates))
+            if hasattr(reaction, 'genes') and \
+                reaction.genes is not None:
+                d['genes'] = encode_utf8(str(reaction.genes))
             if hasattr(reaction, 'orthology') and \
                 reaction.orthology is not None:
                 d['orthology'] = encode_utf8(orth_list)
@@ -725,7 +728,6 @@ class main_transporterCommand(Command):
             log.write("compounds for which transporters were predicted, but"
                 " are not found in the model:\n")
             eq = defaultdict(lambda:[])
-            print(chebi_dict)
             for id, genes in gene_asso.items():
                 # if there is just one substrate and it is in the porin family
                 # assume passive diffusion/porin behavior
@@ -767,7 +769,8 @@ class main_transporterCommand(Command):
                                     'name':[tp_fam_dict[fam_id]], 'equation':[str(rxn[1])],
                                     'enzyme':[tcdb],
                                     'tcdb_family':tp_fam_dict[fam_id],
-                                    'substrates':tp_sub_dict[tcdb]}
+                                    'substrates':tp_sub_dict[tcdb],
+                                    'genes':"({})".format(" or ".join(gene_asso[tcdb]))}
                         entry = ReactionEntry(reaction, filemark=mark)
                         reaction_entry_list.append(entry)
 
@@ -981,6 +984,12 @@ class ReactionEntry(object):
         if 'substrates' not in self.values:
             return None
         return self.values['substrates']
+
+    @property
+    def genes(self):
+        if 'genes' not in self.values:
+            return None
+        return self.values['genes']
 
     @property
     def orthology(self):
