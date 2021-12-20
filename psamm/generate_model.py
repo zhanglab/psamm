@@ -173,7 +173,7 @@ def model_reactions(reaction_entry_list):
                 d['equation'] = encode_utf8(str(reaction.equation))
             if hasattr(reaction, 'definition') and \
                 reaction.definition is not None:
-                d['definition'] = encode_utf8(reaction.definition)
+                d['KEGG_definition'] = encode_utf8(reaction.definition)
             if hasattr(reaction, 'enzymes') and reaction.enzymes is not None:
                 d['enzymes'] = encode_utf8(enzymes_list)
             if hasattr(reaction, 'pathways') and reaction.pathways is not None:
