@@ -171,6 +171,9 @@ def model_reactions(reaction_entry_list):
                 d['names'] = encode_utf8(names_l)
             if hasattr(reaction, 'equation') and reaction.equation is not None:
                 d['equation'] = encode_utf8(str(reaction.equation))
+            if hasattr(reaction, 'definition') and \
+                reaction.definition is not None:
+                d['definition'] = encode_utf8(reaction.definition)
             if hasattr(reaction, 'enzymes') and reaction.enzymes is not None:
                 d['enzymes'] = encode_utf8(enzymes_list)
             if hasattr(reaction, 'pathways') and reaction.pathways is not None:
@@ -322,6 +325,7 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
                 reaction_list_out.append(reaction)
                 for c in str(reaction.equation):
                     compound_list_out.add(str(c))
+
     with open(os.path.join(out, 'reactions.yaml'), 'w+') as f:
         yaml.dump(list(model_reactions(reaction_list_out)), f, **yaml_args)
     with open(os.path.join(out, 'reactions_generic.yaml'), 'w+') as f:
