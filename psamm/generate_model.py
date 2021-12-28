@@ -185,13 +185,14 @@ def model_reactions(reaction_entry_list):
                 d['tcdb_family'] = encode_utf8(str(reaction.tcdb_family))
             if hasattr(reaction, 'substrates') and \
                 reaction.substrates is not None:
-                d['substrates'] = encode_utf8(str(reaction.substrates))
+                d['substrates'] = encode_utf8(reaction.substrates)
             if hasattr(reaction, 'genes') and \
                 reaction.genes is not None:
                 d['genes'] = encode_utf8(str(reaction.genes))
             if hasattr(reaction, 'orthology') and \
                 reaction.orthology is not None:
                 d['orthology'] = encode_utf8(orth_list)
+            print(reaction.__dict__)
             yield d
 
 '''
@@ -735,7 +736,6 @@ class main_transporterCommand(Command):
             for id, genes in gene_asso.items():
                 # if there is just one substrate and it is in the porin family
                 # assume passive diffusion/porin behavior
-                print(id, tp_sub_dict[id])
                 if len(tp_sub_dict[id]) == 1: # id[0] == "1" and
                     for cpd in tp_sub_dict[id]:
                         if cpd in chebi_dict:
@@ -747,7 +747,7 @@ class main_transporterCommand(Command):
                             log.write("{}\t{}\n".format("Compound not in "
                                       "model: ", cpd, id))
                 else:
-                     eq[id].append(("{}".format(id), Reaction(Direction.Both, {
+                     eq[id].append(("TP_{}".format(id), Reaction(Direction.Both, {
                      Compound("").in_compartment(self._args.compartment_in): -1,
                      Compound("").in_compartment(self._args.compartment_out): 1}
                      )))
@@ -769,6 +769,7 @@ class main_transporterCommand(Command):
                 for tcdb in eq:
                     for rxn in eq[tcdb]:
                         fam_id = ".".join(tcdb.split(".")[0:3])
+                        print(tp_sub_dict[tcdb])
                         reaction = {'transport_name':rxn[0], 'entry':[rxn[0]],
                                     'name':[tp_fam_dict[fam_id]], 'equation':[str(rxn[1])],
                                     'enzyme':[tcdb],
