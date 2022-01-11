@@ -108,6 +108,11 @@ class Command(object):
 
 
 def parse_orthology(orthology, type, col):
+    '''
+    function to parse orthology tables. The default format for these
+    tables is the default eggnog output, but custom colummn numers can be
+    passed through the --col argument
+    '''
     # Dictionary of reactions to genes
     asso_dict = defaultdict(lambda: [])
     # Populate the dictionary
@@ -138,79 +143,75 @@ def parse_orthology(orthology, type, col):
     return(asso_dict)
 
 
-'''
-Function to sort the downloaded kegg object into a format
-that is compatible with the psamm api for storage in
-a reactions.yaml file.
-'''
-
-
 def model_reactions(reaction_entry_list):
-        for reaction in reaction_entry_list:
+    '''
+    Function to sort the downloaded kegg object into a format
+    that is compatible with the psamm api for storage in
+    a reactions.yaml file.
+    '''
+    for reaction in reaction_entry_list:
 
-            d = OrderedDict()
-            d['id'] = encode_utf8(reaction.id)
+        d = OrderedDict()
+        d['id'] = encode_utf8(reaction.id)
 
-            enzymes_list = []
-            for i in reaction.enzymes:
-                enzymes_list.append(i)
+        enzymes_list = []
+        for i in reaction.enzymes:
+            enzymes_list.append(i)
 
-            pathways_list = []
-            if reaction.pathways is not None:
-                for i in reaction.pathways:
-                    pathways_list.append(i[1])
-            if len(pathways_list) == 0:
-                pathways_list = None
+        pathways_list = []
+        if reaction.pathways is not None:
+            for i in reaction.pathways:
+                pathways_list.append(i[1])
+        if len(pathways_list) == 0:
+            pathways_list = None
 
-            orth_list = []
-            for i in reaction.orthology:
-                    orth_list.append(i)
-            if len(orth_list) == 0:
-                orth_list = None
+        orth_list = []
+        for i in reaction.orthology:
+                orth_list.append(i)
+        if len(orth_list) == 0:
+            orth_list = None
 
-            if hasattr(reaction, 'name') and reaction.name is not None:
-                d['name'] = encode_utf8(reaction.name)
-            if hasattr(reaction, 'names') and reaction.names is not None:
-                names_l = []
-                for i in reaction.names:
-                    names_l.append(i)
-                d['names'] = encode_utf8(names_l)
-            if hasattr(reaction, 'equation') and reaction.equation is not None:
-                d['equation'] = encode_utf8(str(reaction.equation))
-            if hasattr(reaction, 'definition') and \
-                       reaction.definition is not None:
-                d['KEGG_definition'] = encode_utf8(reaction.definition)
-            if hasattr(reaction, 'enzymes') and reaction.enzymes is not None:
-                d['enzymes'] = encode_utf8(enzymes_list)
-            if hasattr(reaction, 'pathways') and reaction.pathways is not None:
-                d['pathways'] = encode_utf8_list(pathways_list)
-            if hasattr(reaction, 'comment') and reaction.comment is not None:
-                d['comment'] = encode_utf8(str(reaction.comment))
-            if hasattr(reaction, 'tcdb_family') and \
-                       reaction.tcdb_family is not None:
-                d['tcdb_family'] = encode_utf8(str(reaction.tcdb_family))
-            if hasattr(reaction, 'substrates') and \
-                       reaction.substrates is not None:
-                d['substrates'] = encode_utf8(reaction.substrates)
-            if hasattr(reaction, 'genes') and \
-                       reaction.genes is not None:
-                d['genes'] = encode_utf8(str(reaction.genes))
-            if hasattr(reaction, 'orthology') and \
-                       reaction.orthology is not None:
-                d['orthology'] = encode_utf8(orth_list)
-            yield d
-
-
-'''
-This function handles specific edge cases in the kegg
-format of reaction equations that are incompatible with
-the psamm format. Takes the downloaded dictionary of reactions
-and returns the same dictionary with modified equations,
-if necessary.
-'''
+        if hasattr(reaction, 'name') and reaction.name is not None:
+            d['name'] = encode_utf8(reaction.name)
+        if hasattr(reaction, 'names') and reaction.names is not None:
+            names_l = []
+            for i in reaction.names:
+                names_l.append(i)
+            d['names'] = encode_utf8(names_l)
+        if hasattr(reaction, 'equation') and reaction.equation is not None:
+            d['equation'] = encode_utf8(str(reaction.equation))
+        if hasattr(reaction, 'definition') and \
+                   reaction.definition is not None:
+            d['KEGG_definition'] = encode_utf8(reaction.definition)
+        if hasattr(reaction, 'enzymes') and reaction.enzymes is not None:
+            d['enzymes'] = encode_utf8(enzymes_list)
+        if hasattr(reaction, 'pathways') and reaction.pathways is not None:
+            d['pathways'] = encode_utf8_list(pathways_list)
+        if hasattr(reaction, 'comment') and reaction.comment is not None:
+            d['comment'] = encode_utf8(str(reaction.comment))
+        if hasattr(reaction, 'tcdb_family') and \
+                   reaction.tcdb_family is not None:
+            d['tcdb_family'] = encode_utf8(str(reaction.tcdb_family))
+        if hasattr(reaction, 'substrates') and \
+                   reaction.substrates is not None:
+            d['substrates'] = encode_utf8(reaction.substrates)
+        if hasattr(reaction, 'genes') and \
+                   reaction.genes is not None:
+            d['genes'] = encode_utf8(str(reaction.genes))
+        if hasattr(reaction, 'orthology') and \
+                   reaction.orthology is not None:
+            d['orthology'] = encode_utf8(orth_list)
+        yield d
 
 
 def clean_reaction_equations(reaction_entry_list):
+    '''
+    This function handles specific edge cases in the kegg
+    format of reaction equations that are incompatible with
+    the psamm format. Takes the downloaded dictionary of reactions
+    and returns the same dictionary with modified equations,
+    if necessary.
+    '''
     for reaction in reaction_entry_list:
         s = re.search(r"\(([A-Za-z0-9_+-]+)\)", str(reaction.equation))
         equation = re.sub(r'\(.*?\)', lambda x: ''.join(x.group(0).split()), \
@@ -226,15 +227,15 @@ def clean_reaction_equations(reaction_entry_list):
         reaction.__dict__['values']['equation']=[equation]
     return(reaction_entry_list)
 
-'''
-This function creates a draft model based on the reactions:genes
-file specified in the rxn variable. This function generates
-reaction and compound information by utilizing the kegg
-REST api to download the reaction information and uses psamm
-functions to parse out the kegg data.
-'''
-def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
 
+def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
+    '''
+    This function creates a draft model based on the reactions:genes
+    file specified in the rxn variable. This function generates
+    reaction and compound information by utilizing the kegg
+    REST api to download the reaction information and uses psamm
+    functions to parse out the kegg data.
+    '''
     with open(os.path.join(out, "log.tsv"), "a+") as f:
         f.write("List of invalid Kegg IDs: \n")
 
@@ -402,12 +403,12 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
 
 
 
-'''
-Function to sort the downloaded	kegg object into a format
-that is	compatible with the psamm api for storage in
-a compounds.yaml file.
-'''
 def model_compounds(compound_entry_list):
+    '''
+    Function to sort the downloaded	kegg object into a format
+    that is	compatible with the psamm api for storage in
+    a compounds.yaml file.
+    '''
     non_gen_compounds = []
     for compound in compound_entry_list:
         try:
@@ -457,6 +458,13 @@ def model_compounds(compound_entry_list):
             continue
 
 def check_generic_compounds(compound_entry_list):
+    '''
+    Function for checking if the compound formulation is
+    compatible with psamm. generalized rules for this are
+    that compounds must have a formula, the formula cannot
+    be variable (e.g. presence of X), and R groups are
+    generally discouraged.
+    '''
     generic_compounds_list = []
     for compound in compound_entry_list:
         try:
@@ -474,63 +482,75 @@ def check_generic_compounds(compound_entry_list):
     return(generic_compounds_list)
 
 def model_generic_compounds(compound_entry_list):
-        non_gen_compounds = []
-        for compound in compound_entry_list:
-            try:
-                form = Formula.parse(str(compound.formula))
-                d = OrderedDict()
-                d['id'] = encode_utf8(compound.id)
-                non_gen_compounds.append(compound.id)
-                if hasattr(compound, 'name') and compound.name is not None:
-                    d['name'] = encode_utf8(compound.name)
-                if hasattr(compound, 'names') and compound.names is not None:
-                    names_l = []
-                    for i in compound.names:
-                        names_l.append(i)
-                    d['names'] = encode_utf8(names_l)
-                if hasattr(compound, 'formula') and \
-                    compound.formula is not None:
-                    d['formula'] = encode_utf8(str(compound.formula))
-                if hasattr(compound, 'mol_weight') and \
-                    compound.mol_weight is not None:
-                    d['mol_weight'] = encode_utf8(compound.mol_weight)
-                if hasattr(compound, 'comment') and \
-                    compound.comment is not None:
-                    d['comment'] = encode_utf8(str(compound.comment))
-                if hasattr(compound, 'dblinks') \
-                    and compound.dblinks is not None:
-                    for key, value in compound.dblinks:
-                        if key != 'ChEBI':
-                            d['{}'.format(key)] = encode_utf8(value)
-                if hasattr(compound, 'chebi') \
-                    and compound.chebi is not None:
-                    d['ChEBI'] = encode_utf8(compound.chebi)
-                if hasattr(compound, 'chebi_all') \
-                    and compound.chebi_all is not None:
-                    d['ChEBI_all'] = encode_utf8(compound.chebi_all)
-                if hasattr(compound, 'charge') \
-                    and compound.charge is not None:
-                    d['charge'] = encode_utf8(compound.charge)
-                yield d
-            except:
-                logger.warning(f"{compound.id} is improperly formatted "
-                               " and will not be imported into "
-                               "compounds_generic.yaml")
-                continue
+    '''
+    Function to sort the downloaded	kegg object into a format
+    that is	compatible with the psamm api for storage in
+    a generic_compounds.yaml file. This function contains
+    special error handling for improperly formatted compounds
+    '''
+    non_gen_compounds = []
+    for compound in compound_entry_list:
+        try:
+            form = Formula.parse(str(compound.formula))
+            d = OrderedDict()
+            d['id'] = encode_utf8(compound.id)
+            non_gen_compounds.append(compound.id)
+            if hasattr(compound, 'name') and compound.name is not None:
+                d['name'] = encode_utf8(compound.name)
+            if hasattr(compound, 'names') and compound.names is not None:
+                names_l = []
+                for i in compound.names:
+                    names_l.append(i)
+                d['names'] = encode_utf8(names_l)
+            if hasattr(compound, 'formula') and \
+                compound.formula is not None:
+                d['formula'] = encode_utf8(str(compound.formula))
+            if hasattr(compound, 'mol_weight') and \
+                compound.mol_weight is not None:
+                d['mol_weight'] = encode_utf8(compound.mol_weight)
+            if hasattr(compound, 'comment') and \
+                compound.comment is not None:
+                d['comment'] = encode_utf8(str(compound.comment))
+            if hasattr(compound, 'dblinks') \
+                and compound.dblinks is not None:
+                for key, value in compound.dblinks:
+                    if key != 'ChEBI':
+                        d['{}'.format(key)] = encode_utf8(value)
+            if hasattr(compound, 'chebi') \
+                and compound.chebi is not None:
+                d['ChEBI'] = encode_utf8(compound.chebi)
+            if hasattr(compound, 'chebi_all') \
+                and compound.chebi_all is not None:
+                d['ChEBI_all'] = encode_utf8(compound.chebi_all)
+            if hasattr(compound, 'charge') \
+                and compound.charge is not None:
+                d['charge'] = encode_utf8(compound.charge)
+            yield d
+        except:
+            logger.warning(f"{compound.id} is improperly formatted "
+                           " and will not be imported into "
+                           "compounds_generic.yaml")
+            continue
 
 
-'''
-Two functions listed here for compatibility with
-python 2 and python 3
-'''
 def encode_utf8(s):
+    '''
+    Compatibility with python 2 and python 3.
+    Note that python 2 support is deprecated in psamm.
+    '''
     is_python2 = sys.version_info.major == 2
     if is_python2:
         if isinstance(s, unicode):
             return s.encode('utf-8')
     else:
         return s
+
+
 def encode_utf8_list(s):
+    '''
+    Compatibility with python 2 and python 3.
+    Note that python 2 support is deprecated in psamm.
+    '''
     is_python2 = sys.version_info.major == 2
     if is_python2:
         if isinstance(s, unicode):
@@ -538,13 +558,14 @@ def encode_utf8_list(s):
     else:
         return s
 
-'''
-Downloads the kegg entry associated with a reaction or
-a compound and stores each line in an object that can
-be parsed as a reaction or a compound, depending on the
-input
-'''
+
 def _download_kegg_entries(out, rxn_mapping, entry_class, context=None):
+    '''
+    Downloads the kegg entry associated with a reaction or
+    a compound and stores each line in an object that can
+    be parsed as a reaction or a compound, depending on the
+    input
+    '''
     # go through the rxn mapping dict and pull all of the
     # reaction information out of the Kegg API
     with open(os.path.join(out,'log.tsv'), "a+") as f:
@@ -585,11 +606,12 @@ def _download_kegg_entries(out, rxn_mapping, entry_class, context=None):
                 yield entry_class(reaction, filemark=mark)
 
 
-"""
-Functions converts gene associations to EC into gene associations for reaction
-IDs. Returns a dictionary of Reaction IDs to genes.
-"""
 def parse_rxns_from_EC(rxn_mapping):
+    """
+    Functions converts gene associations to EC into gene
+    associations for reaction IDs. Returns a dictionary
+    of Reaction IDs to genes.
+    """
     rxn_dict=defaultdict(lambda:[])
     for reactions in rxn_mapping:
         try:
