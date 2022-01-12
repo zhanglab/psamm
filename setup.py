@@ -72,7 +72,9 @@ setup(
 
     package_data={'psamm': ['external-data/chebi_pH7_3_mapping.tsv',
                             'external-data/biomass_compound_descriptions.tsv',
-                            'external-data/biomass_reaction_descriptions.tsv]},
+                            'external-data/biomass_reaction_descriptions.tsv',
+                            'external-data/tcdb_substrates.tsv',
+                            'external-data/tcdb_families.ts']},
 
     packages=find_packages(),
 
