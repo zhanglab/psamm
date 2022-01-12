@@ -673,9 +673,9 @@ class main_transporterCommand(Command):
         parser.add_argument('--annotations', metavar='path',
             help='Path to the annotation file from eggnog')
         parser.add_argument('--db_substrates', type=str,
-            help='''path to the tcdb substrate file.''')
+            help='''OPTIONAL. Path to a custom substrate file. ''')
         parser.add_argument('--db_families', type=str,
-            help='''path to the tcdb family file.''')
+            help='''OPITONAL. Path to a custom family file.''')
         parser.add_argument('--model', metavar='path',
             help='''Path to the model directory''')
         parser.add_argument('--compartment_in', default='c',
@@ -693,16 +693,26 @@ class main_transporterCommand(Command):
         # Check the validity of the input values
         if not self._args.annotations:
             raise InputError('Please specify a path to the annotations')
-        if not self._args.db_substrates:
-            raise InputError('Specify path to the tcdb substrate table\n'
-                             'This can be downloaded from: \n'
-                             'http://www.tcdb.org/cgi-bin/substrates/'
-                             'getSubstrates.py')
-        if not self._args.db_families:
-            raise InputError('Specify path to the tcdb family table\n'
-                             'This can be downloaded from: \n'
-                             'http://www.tcdb.org/cgi-bin/projectv/public/'
-                             'families.py')
+        if self._args.db_substrates:
+            logger.info("Using custom transporter families")
+            substrate = self._args.db_substrates
+        else:
+            logger.info(f"Using the default transporter families from TCDB. "
+                         "Downloaded from: ")
+            logger.info("http://www.tcdb.org/cgi-bin/projectv/public/"
+                         "getSubstrates.py")
+            substrate = resource_filename('psamm',
+                                          'external-data/tcdb_substrates.tsv')
+        if self._args.db_families:
+            logger.info("Using custom transporter families")
+            family = self._args.db_families
+        else:
+            logger.info(f"Using the default transporter families from TCDB. "
+                         "Downloaded from: ")
+            logger.info("http://www.tcdb.org/cgi-bin/projectv/public/"
+                         "families.py")
+            family = resource_filename('psamm',
+                                       'external-data/tcdb_families.tsv')
         if not self._args.model:
             raise InputError('Please specify a directory to an existing model')
 
@@ -720,7 +730,7 @@ class main_transporterCommand(Command):
 
         # Read in the reaction substrates
         tp_sub_dict = defaultdict(lambda:[])
-        with open(self._args.db_substrates, 'r') as infile:
+        with open(substrate, 'r') as infile:
             for line in infile:
                 line = line.rstrip()
                 listall = re.split("\t", line)
@@ -732,7 +742,7 @@ class main_transporterCommand(Command):
 
         # read in the reaction families
         tp_fam_dict = defaultdict(lambda:'')
-        with open(self._args.db_families, 'r') as infile:
+        with open(family, 'r') as infile:
             for line in infile:
                 line = line.rstrip()
                 listall = re.split("\t", line)
