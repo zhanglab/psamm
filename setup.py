@@ -70,7 +70,9 @@ setup(
         'Programming Language :: Python :: 3.7',
     ],
 
-    package_data={'psamm': ['external-data/chebi_pH7_3_mapping.tsv']},
+    package_data={'psamm': ['external-data/chebi_pH7_3_mapping.tsv',
+                            'external-data/tcdb_substrates.tsv',
+                            'external-data/tcdb_families.ts']},
 
     packages=find_packages(),
 
