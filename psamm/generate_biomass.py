@@ -75,7 +75,7 @@ class main(Command):
             help="Path to the model directory")
         ##------------------------ To do---------------------------------------
         ## Add tRNA charging reactions
-        ## option for custom name of biomass function 
+        ## option for custom name of biomass function
         ## make the actual biomass equation (dna+rna+protein => biomass)
         ## Check if required compounds are in the model currently
         ##  -> print warning message if missing, guide user to table input function
@@ -221,8 +221,8 @@ class main(Command):
         dna_rxn = Reaction(Direction.Forward, {**compound_fwd, **compound_rev})
         dna_rxn_entry = {"id": "dna_met",
                          "name": "DNA",
-                         "equation": str(dna_rxn).replace("\n", ""),
-                         "pathways": "Biomass"}
+                         "equation": str(dna_rxn),
+                         "pathways": ["Biomass"]}
 
         ### RNA Reaction formation
         calc_stoichiometry_df(RNA, RNA_counts)
@@ -239,8 +239,8 @@ class main(Command):
         rna_rxn = Reaction(Direction.Forward, {**compound_fwd, **compound_rev})
         rna_rxn_entry = {"id": "rna_met",
                          "name": "RNA",
-                         "equation": str(rna_rxn).replace("\n", ""),
-                         "pathways": "Biomass"}
+                         "equation": str(rna_rxn),
+                         "pathways": ["Biomass"]}
 
         ### Protein Reaction formation
         calc_stoichiometry_df(Prot, Prot_counts)
@@ -256,15 +256,15 @@ class main(Command):
         prot_rxn = Reaction(Direction.Forward, {**compound_fwd, **compound_rev})
         prot_rxn_entry = {"id": "pro_met",
                           "name": "Protein",
-                          "equation": str(prot_rxn).replace("\n", ""),
-                          "pathways": "Biomass"}
+                          "equation": str(prot_rxn),
+                          "pathways": ["Biomass"]}
 
         ### Biomass reaction formation ###
         biomass_rxn_name = "biomass" # add option to change?
         bio_rxn_entry = {"id": biomass_rxn_name,
                          "name": "Biomass",
                          "equation": "______",
-                         "pathways": "Biomass"}
+                         "pathways": ["Biomass"]}
 
         ### GENERATING biomass.yaml ###
         model_path = self._args.model
@@ -276,7 +276,8 @@ class main(Command):
         yaml_args = {"default_flow_style": False,
                      "sort_keys": False,
                      "encoding": "utf-8",
-                     "allow_unicode": True}
+                     "allow_unicode": True,
+                     "width": float("inf")}
 
         with open(os.path.join(model_dir, "biomass.yaml"), "w") as f:
             yaml.dump([dna_rxn_entry, rna_rxn_entry,
