@@ -1,14 +1,19 @@
-from collections import Counter
-from six import add_metaclass, iteritems, itervalues, text_type, PY3
-import abc
-import pandas as pd
 from psamm.datasource.reaction import Reaction, Compound, Direction
+from collections import Counter
+from collections import OrderedDict
+from six import add_metaclass, iteritems, itervalues, text_type, PY3
+import logging
+import os
+import abc
+import yaml
+import pandas as pd
 try:
     from Bio import SeqIO
     from Bio import Seq
 except ModuleNotFoundError:
     quit("No biopython package found. Please run <pip install biopython>")
 
+logger = logging.getLogger(__name__)
 
 @add_metaclass(abc.ABCMeta)
 class Command(object):
@@ -44,7 +49,7 @@ class Command(object):
         """Exit command as a result of a failure."""
         logger.error(msg)
         if exc is not None:
-            logger.debug('Command failure caused by exception!', exc_info=exc)
+            logger.debug("Command failure caused by exception!", exc_info=exc)
         sys.exit(1)
 
 
@@ -57,40 +62,43 @@ class main(Command):
 
     @classmethod
     def init_parser(cls, parser):
-        parser.add_argument('--genome', metavar='path',
-            help='Path to the genome in fasta format')
-        parser.add_argument('--proteome', metavar='path',
-            help='Path to the proteome in fasta format')
-        parser.add_argument('--gff', metavar = 'path',
-            help='Specify path to gff containing transcript annotations. '
-                 'Only annotations specified as \'CDS\' in the third column will be used. '
-                 'Annotations must correspond to sequences in the --genome file.')
-        parser.add_argument('--model', metavar='path',
-            help='Path to the model directory')
-        #before meeting: ---------------
-        ## and make sure it is properly writing the biomass.yaml file
-        ## update model.yaml with biomass: rxn_name
-        ## update model.yaml to make sure it includes biomass.yaml
-        ## option for custom name of biomass function
-        #Probably will have to do after meeting -----------
+        parser.add_argument("--genome", metavar="path",
+            help="Path to the genome in fasta format")
+        parser.add_argument("--proteome", metavar="path",
+            help="Path to the proteome in fasta format")
+        parser.add_argument("--gff", metavar = "path",
+            help="Specify path to gff containing transcript \
+                  annotations. Only annotations specified as \"CDS\" in the \
+                  third column will be used. Annotations must correspond to \
+                  sequences in the --genome file.")
+        parser.add_argument("--model", metavar="path",
+            help="Path to the model directory")
+        ##------------------------ To do---------------------------------------
+        ## Add tRNA charging reactions
+        ## option for custom name of biomass function 
+        ## make the actual biomass equation (dna+rna+protein => biomass)
+        ## Check if required compounds are in the model currently
+        ##  -> print warning message if missing, guide user to table input function
         ## option for renaming biomass components based on table?
-        ## make the actual biomass equation (idk how is best yet)
-        ## Fix line lengths and other pep8 stuff (ez, just need to download a linter)
+        ##  -> option to generate template table
         super(main, cls).init_parser(parser)
 
     def run(self):
         """Entry point for the biomass reaction generation script"""
         if not self._args.genome:
-            raise InputError('Please specify a path to the genome in fasta format')
+            raise InputError("Please specify a path to the genome "
+                             "in fasta format with --genome")
         if not self._args.proteome:
-            raise InputError('Specify path to proteome in fasta format')
+            raise InputError("Specify path to proteome in fasta format "
+                             "with --proteome")
         if not self._args.gff:
-            raise InputError('Specify path to gff containing transcript annotations. '
-                 'Only annotations specified as \'CDS\' in the third column will be used. '
-                 'Annotations must correspond to sequences in the --genome file.')
+            raise InputError("Specify path to gff containing transcript "
+                "annotations with --gff. Only annotations specified as \"CDS\" "
+                "in the third column will be used. Annotations must correspond "
+                "to sequences in the --genome file.")
         if not self._args.model:
-            raise InputError('Please specify the path to an existing \
-                            model with --model')
+            raise InputError("Please specify the path to an existing "
+                             "model with --model")
         faa = self._args.proteome
         fna = self._args.genome
         gff = self._args.gff
@@ -156,6 +164,7 @@ class main(Command):
         Prot_counts = Counter()
 
         ### DATA PROCESSING ###
+        logger.info("Counting nucleotides and amino acids")
 
         # genome and proteome are dicts with "seqname": seqIO_entry
         # Counts look like {"A": 200, "C": 380..}
@@ -178,9 +187,10 @@ class main(Command):
                         try:
                             seq_entry = genome[l[0]]
                         except KeyError:
-                            print("WARNING: an annotation in gff file does not \
-                            match any sequences in fasta file, skipping...")
-                            continue
+                            logger.warning("The annotation {s} does not match "
+                                "any sequence names in {f}, ignoring...".format(
+                                s = l[0], f = fna
+                                ))
                         ## FIX STRANDEDNESS: if - use reverse complement
                         if l[6] == "-":
                             RNA_counts += Counter(Seq.complement(
@@ -191,24 +201,13 @@ class main(Command):
 
         RNA_counts["U"] = RNA_counts.pop("T") #renames T to U for RNA
 
-        #data = zip([DNA,RNA,Prot], [DNA_counts, RNA_counts, Prot_counts])
-        #datdat = []
-        #for df, counts in data:
-        #    datdat.append(calc_stoichiometry_df(df, counts))
-
-        # These are for testing, delete before pushing
-        #DNA_counts = Counter("ATGCGATCTAGCCGGAGAGGGGGGGGGGA")
-        #RNA_counts = Counter("AUGCGUCAGUCUAGCUAGUCGAUUUUCU")
-        #Prot_counts = Counter("TGRAQGVASSSNSTRNERRSESSDSARAPALEYPSLLTPAVADRVEVDPRTRSTEVLEVQTTGAKRGRIKVQSYLNRSFT\
-        #FKSFVEGKSNQLALAASQQVAENAGGAYNPLFIYGGVGLGKTHLMQAIGNEILEQNPAAKVVYLHSERFVADMVKALQLN\
-        #AMAEFKRFYRSLDALLIDDIQFFAKKDRSQEEFFHTFNALLEGNQQVILTCDRFPKEIDGLEDRLKSRFGWGLTVAVEPP\
-        #DLETRVAILLKKAEEAKIKLPADAAFFIAQRIRSNVRELEGALKRVIANSQFTGSAINAAFVKESLKDLLALQDKQVSVD\
-        #NIQRTVAEYFKIKISDLHSKRRSRSIARPRQIAMALAKELTQHSLPEIGEAFGGRDHT")
-
-        cell_compartment = "c"
-        decimals = 6
 
         ### DNA Reaction formation ###
+        logger.info("Calculating stoichiometry for biomass equations")
+
+        decimals = 6
+        cell_compartment = "c"
+
         calc_stoichiometry_df(DNA, DNA_counts)
         total = DNA.stoichiometry.sum()
         ids_fwd = list(DNA.id) + ["C00002", "C00001"]
@@ -220,6 +219,10 @@ class main(Command):
         compound_rev = {Compound(id).in_compartment(cell_compartment):
                     round(n, decimals) for id,n in zip(ids_rev, stoich_rev)}
         dna_rxn = Reaction(Direction.Forward, {**compound_fwd, **compound_rev})
+        dna_rxn_entry = {"id": "dna_met",
+                         "name": "DNA",
+                         "equation": str(dna_rxn).replace("\n", ""),
+                         "pathways": "Biomass"}
 
         ### RNA Reaction formation
         calc_stoichiometry_df(RNA, RNA_counts)
@@ -234,6 +237,10 @@ class main(Command):
         compound_rev = {Compound(id).in_compartment(cell_compartment):
                         round(n, decimals) for id,n in zip(ids_rev, stoich_rev)}
         rna_rxn = Reaction(Direction.Forward, {**compound_fwd, **compound_rev})
+        rna_rxn_entry = {"id": "rna_met",
+                         "name": "RNA",
+                         "equation": str(rna_rxn).replace("\n", ""),
+                         "pathways": "Biomass"}
 
         ### Protein Reaction formation
         calc_stoichiometry_df(Prot, Prot_counts)
@@ -247,7 +254,46 @@ class main(Command):
         compound_rev = {Compound(id).in_compartment(cell_compartment):
                     round(n, decimals) for id,n in zip(ids_rev, stoich_rev)}
         prot_rxn = Reaction(Direction.Forward, {**compound_fwd, **compound_rev})
+        prot_rxn_entry = {"id": "pro_met",
+                          "name": "Protein",
+                          "equation": str(prot_rxn).replace("\n", ""),
+                          "pathways": "Biomass"}
 
-        print("DNA", dna_rxn)
-        print("RNA", rna_rxn)
-        print("Protein", prot_rxn)
+        ### Biomass reaction formation ###
+        biomass_rxn_name = "biomass" # add option to change?
+        bio_rxn_entry = {"id": biomass_rxn_name,
+                         "name": "Biomass",
+                         "equation": "______",
+                         "pathways": "Biomass"}
+
+        ### GENERATING biomass.yaml ###
+        model_path = self._args.model
+        model_dir = os.path.dirname(model_path)
+
+        logger.info("Generating new biomass reactions in "
+                    "{}/biomass.yaml".format(os.path.abspath(model_dir)))
+
+        yaml_args = {"default_flow_style": False,
+                     "sort_keys": False,
+                     "encoding": "utf-8",
+                     "allow_unicode": True}
+
+        with open(os.path.join(model_dir, "biomass.yaml"), "w") as f:
+            yaml.dump([dna_rxn_entry, rna_rxn_entry,
+                       prot_rxn_entry, bio_rxn_entry],
+                       f, **yaml_args)
+
+        ### Updating model.yaml ###
+        logger.info("Updating model in {}".format(os.path.abspath(model_path)))
+
+        with open(model_path, "r") as f:
+            model_dict = yaml.safe_load(f)
+
+        model_dict["reactions"].append({"include": "./biomass.yaml"})
+        model_dict["biomass"] = biomass_rxn_name
+        #cell_compartment = model_dict["default_compartment"]
+
+        with open(os.path.join(model_path), "w") as f:
+            yaml.dump(model_dict, f, **yaml_args)
+
+        ### Check whether the required compounds are in the model already
