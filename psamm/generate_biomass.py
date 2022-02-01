@@ -88,14 +88,9 @@ class main(Command):
             help="Makes a template config file for --config. Compound IDs "
                  "added in the third column will replace the default kegg IDs "
                  "for the compound")
-        parser.add_argument("--non-bacteria", action = "store_true",
-            help="Exclude the bacteria-specific formylated methionine reaction")
         ##------------------------ To do---------------------------------------
         ## need to check first if reactions are already in model?
-        ## why are the formulas of the trnas 'R' in Cbes; how should I save them?
-        ## Make the biomass equations work again
         ## Might need to catch spaces in the config compound names, havent tested
-        ## What are R04212 and R03905?
         super(main, cls).init_parser(parser)
 
     def run(self):
@@ -159,29 +154,26 @@ class main(Command):
             df.custom_id = df.custom_id.fillna(df.id)
             df.id = df.custom_id
 
-        # Slice the dataframe after config so that new ids are maintained
+        # Slice the dataframe after config parse so that new ids are used
         Prot = df[df.type == "Prot"].copy().set_index("code")
         DNA = df[df.type == "DNA"].copy().set_index("code")
         RNA = df[df.type == "RNA"].copy().set_index("code")
-        #Other = df[df.type == "Other"]
 
         ### Check if needed compounds are in the model, add them if not
         model_reader = native.ModelReader.reader_from_path(model_path)
         compounds = [r.id for r in model_reader.parse_compounds()]
         missing_cpds = df.query("id not in @compounds")
-        droplist = ["type"]
+        droplist = ["type", "code"]
         if self._args.config:
             droplist.append("custom_id")
         missing_cpds = missing_cpds.drop(columns = droplist)
         if len(missing_cpds) > 0:
             logger.warning("\033[1mThe following compounds are required for "
                 "biomass equations but are missing from the model: "
-                "\033[0m{}\n\033[1mEither create entries for these compounds "
-                "or specify corresponding names to existing "
-                "compounds using --config. \nPredefined versions of these "
-                "compounds will be generated in "
-                "{}\033[0m".format(list(missing_cpds.id),os.path.join(model_dir,
-                                                    "biomass_compounds.yaml")))
+                "\033[0m{}\n\033[1mPredefined versions of these compounds will "
+                "be generated in {}. To use customized biomass compound IDs, "
+                "use --config\033[0m".format(list(missing_cpds.id),os.path.join(
+                                        model_dir, "biomass_compounds.yaml")))
             missing_cpd_entries = [v.dropna().to_dict()
                                     for k,v in missing_cpds.iterrows()]
             with open(os.path.join(model_dir, "biomass_compounds.yaml"), "a+") as f:
@@ -344,13 +336,10 @@ class main(Command):
         df_reac = pd.read_csv(resource_filename("psamm",
                             "external-data/biomass_reaction_descriptions.tsv"),
                             sep = "\t")
-        if self._args.non_bacteria:
-            df_reac = df_reac[df_reac["id"].str.contains("R03940") == False]
         for index, row in df_reac.iterrows():
             fwd, rev = row.equation.split(" <=> ")
             ids_fwd = fwd.split(" + ")
             ids_rev = rev.split(" + ")
-            #list(df.loc[ids_fwd].id)
             compound_fwd = {Compound(id).in_compartment(cell_compartment): -1
                             for id in list(df.loc[ids_fwd].id)}
             compound_rev = {Compound(id).in_compartment(cell_compartment): 1
