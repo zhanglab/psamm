@@ -648,8 +648,6 @@ def parse_rxns_from_EC(rxn_mapping):
                         rxn_dict[r]+=rxn_mapping[reactions]
     return(rxn_dict)
 
-        super(main_biomassCommand, cls).init_parser(parser)
-
     def run(self):
         """Entry point for the biomass reaction generation script"""
         from collections import Counter
@@ -732,7 +730,6 @@ def parse_rxns_from_EC(rxn_mapping):
         #Prot_mass = sum([Prot_base_composition[aa]*Prot_weights[aa] for aa in Prot_counts.keys()])
         #Prot_stoichiometry = {aa: round(Prot_base_composition[aa]/Prot_mass, 6) for aa in Prot_counts.keys()}
         #print(DNA_stoichiometry, RNA_stoichiometry, Prot_stoichiometry)
->>>>>>> 6a10d55 (Changes to go with previous commit but I forgot)
 
 class main_transporterCommand(Command):
     """Predicts the function of transporter reactions.
