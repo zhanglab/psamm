@@ -88,6 +88,8 @@ class main(Command):
             help="Makes a template config file for --config. Compound IDs "
                  "added in the third column will replace the default kegg IDs "
                  "for the compound")
+        parser.add_argument("--non-bacteria", action = "store_true",
+            help="Exclude the bacteria-specific formylated methionine reaction")
         ##------------------------ To do---------------------------------------
         ## need to check first if reactions are already in model?
         ## Might need to catch spaces in the config compound names, havent tested
