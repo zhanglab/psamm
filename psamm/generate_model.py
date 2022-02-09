@@ -648,21 +648,6 @@ def parse_rxns_from_EC(rxn_mapping):
                         rxn_dict[r]+=rxn_mapping[reactions]
     return(rxn_dict)
 
-class main_biomassCommand(Command):
-    """Generate a database of compounds and reactions"""
-
-    @classmethod
-    def init_parser(cls, parser):
-        parser.add_argument('--genome', metavar='path',
-            help = 'path to the genome')
-        parser.add_argument('--proteome', metavar='path',
-            help = '''path to the proteome''')
-        super(main_biomassCommand, cls).init_parser(parser)
-
-    def run(self):
-        """Entry point for the biomass reaction generation script"""
-        print('write code here to generate biomass')
-
 class main_transporterCommand(Command):
     """Predicts the function of transporter reactions.
 
@@ -820,8 +805,11 @@ class main_transporterCommand(Command):
 
                 yaml.dump(list(model_reactions(reaction_entry_list)), f,
                           **yaml_args)
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> genBiomass
 
 
 class main_databaseCommand(Command):
@@ -1097,8 +1085,10 @@ class CompoundEntry(object):
             use_rhea = True
         else:
             use_rhea = False
+        token = 0
         for DB,ID in self.dblinks:
             if DB == "ChEBI":
+                token = 1
                 id_list = ID.split(" ")
                 if use_rhea:
                     rhea_id_list = rhea_db.select_chebi_id(id_list)
@@ -1114,6 +1104,11 @@ class CompoundEntry(object):
                 else: # --rhea not given
                     self._chebi = id_list[0]
                     self._chebi_all = id_list
+        if token == 0:
+            with open(os.path.join(out, "log.tsv"), "a+") as f:
+                # fix out variable scoping
+                pass
+
         ## libchebipy update charge and formula
         if self._chebi is not None:
             this_chebi_entity = ChebiEntity(self._chebi)

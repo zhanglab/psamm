@@ -71,8 +71,12 @@ setup(
     ],
 
     package_data={'psamm': ['external-data/chebi_pH7_3_mapping.tsv',
+                            'external-data/biomass_compound_descriptions.tsv',
+                            'external-data/biomass_reaction_descriptions.tsv',
                             'external-data/tcdb_substrates.tsv',
-                            'external-data/tcdb_families.ts']},
+                            'external-data/tcdb_families.ts',
+                            'external-data/biomass_compound_descriptions.tsv',
+                            'external-data/biomass_reaction_descriptions.tsv']},
 
     packages=find_packages(),
 
@@ -120,7 +124,8 @@ setup(
 
         [psamm.generate_model]
         generate-database = psamm.generate_model:main_databaseCommand
-        generate-biomass = psamm.generate_model:main_biomassCommand
+        #generate-biomass = psamm.generate_model:main_biomassCommand
+        generate-biomass = psamm.generate_biomass:main
         generate-transporters = psamm.generate_model:main_transporterCommand
     ''',
 
