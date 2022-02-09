@@ -805,11 +805,6 @@ class main_transporterCommand(Command):
 
                 yaml.dump(list(model_reactions(reaction_entry_list)), f,
                           **yaml_args)
-<<<<<<< HEAD
-
-
-=======
->>>>>>> genBiomass
 
 
 class main_databaseCommand(Command):
