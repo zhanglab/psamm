@@ -1080,10 +1080,8 @@ class CompoundEntry(object):
             use_rhea = True
         else:
             use_rhea = False
-        token = 0
         for DB,ID in self.dblinks:
             if DB == "ChEBI":
-                token = 1
                 id_list = ID.split(" ")
                 if use_rhea:
                     rhea_id_list = rhea_db.select_chebi_id(id_list)
@@ -1099,10 +1097,6 @@ class CompoundEntry(object):
                 else: # --rhea not given
                     self._chebi = id_list[0]
                     self._chebi_all = id_list
-        if token == 0:
-            with open(os.path.join(out, "log.tsv"), "a+") as f:
-                # fix out variable scoping
-                pass
 
         ## libchebipy update charge and formula
         if self._chebi is not None:

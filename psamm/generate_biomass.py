@@ -112,6 +112,13 @@ class main(Command):
             if not self._args.model:
                 raise InputError("Please specify the path to an existing "
                                  "model with --model")
+        if os.path.isdir(self._args.model):
+            if os.path.exists(os.path.join(self._args.model, "model.yaml")):
+                 model_path = os.path.join(self._args.model, "model.yaml")
+            else:
+                raise InputError("No model.yaml file found!")
+        else:
+            model_path = self._args.model
 
         ### SETTING UP DATA AND FUNCTIONS ###
         pd.options.mode.chained_assignment = None
@@ -144,7 +151,6 @@ class main(Command):
         faa = self._args.proteome
         fna = self._args.genome
         gff = self._args.gff
-        model_path = self._args.model
         model_dir = os.path.dirname(model_path)
 
         ### Handling the config file ###
