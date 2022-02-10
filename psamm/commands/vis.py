@@ -193,17 +193,7 @@ class InteractiveCommand(MetabolicMixin,
                                         ),
                                 dbc.Col([
                                 dbc.Row([
-                                        dbc.Row([
-                                                dbc.Alert(
-                                                        id="node-data",
-                                                        children="Click on a node to see its details here",
-                                                        color="secondary",
-                                                ),
-                                                dbc.Alert(
-                                                        id="edge-data",
-                                                        children="Click on an edge to see its details here",
-                                                        color="secondary",)
-                                        ]),
+
                                         dbc.Col([
                                                         cyto.Cytoscape(id = 'net',
                                                         layout={'name':'cose'},
@@ -228,6 +218,17 @@ class InteractiveCommand(MetabolicMixin,
                                                                     ],
                                                                     minZoom=0.06
                                                                     )],sm=12,md=8,),
+                                            dbc.Row([
+                                                    dbc.Alert(
+                                                            id="node-data",
+                                                            children="Click on a node to see its details here",
+                                                            color="secondary",
+                                                    ),
+                                                    dbc.Alert(
+                                                            id="edge-data",
+                                                            children="Click on an edge to see its details here",
+                                                            color="secondary",)
+                                            ]),
 
                                 ]),
                                 ]),
