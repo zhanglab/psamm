@@ -116,6 +116,7 @@ setup(
         psammotate = psamm.commands.psammotate:PsammotateCommand
         modelmapping = psamm.commands.model_mapping:ModelMappingCommand
         vis = psamm.commands.vis:VisualizationCommand
+        vis-interact = psamm.commands.vis:InteractiveCommand
         tmfa = psamm.commands.tmfa:TMFACommand
 
         [psamm.importer]
