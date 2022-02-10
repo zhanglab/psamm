@@ -56,6 +56,7 @@ from dash.dependencies import Input, Output, State
 import dash_cytoscape as cyto
 import re
 import pandas as pd
+import webbrowser
 
 logger = logging.getLogger(__name__)
 
@@ -397,7 +398,9 @@ class InteractiveCommand(MetabolicMixin,
         )
 
         self._app.layout = html.Div([navbar, body_layout])
+        webbrowser.open_new("http://localhost:{}".format("8050"))
         self._app.run_server(debug=True)
+
 
     def callbacks(self, _app):
 
