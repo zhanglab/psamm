@@ -64,7 +64,7 @@ and KO):
 
 .. code-block:: shell
 
-   (psamm-env) $ psamm-generate-model generate-database \
+  (psamm-env) $ psamm-generate-model generate-database \
                    --annotations mollicute_eggnog.tsv --type R \
                    --out mollicute_model_R
    (psamm-env) $ psamm-generate-model generate-database \
@@ -88,9 +88,9 @@ program, it can be run in verbose mode.
 .. code-block:: shell
 
    (psamm-env) $ rm -r mollicute_model_R
-   (psamm-env) $ psamm-generate-model generate-database \
-                   --annotations mollicute_eggnog.tsv --type R \
-                   --out mollicute_model_R --verbose
+    (psamm-env) $ psamm-generate-model generate-database \
+                    --annotations mollicute_eggnog.tsv --type R \
+                    --out mollicute_model_R --verbose
 
 The above scripts generate the model with a default compartment of "C". If
 a different initial compartment is required, use the `--default_compartment`
@@ -99,9 +99,9 @@ flag. The following will assign "cyt" as the default compartment
 .. code-block:: shell
 
    (psamm-env) $ rm -r mollicute_model_R
-   (psamm-env) $ psamm-generate-model generate-database \
-                   --annotations mollicute_eggnog.tsv --type R \
-                   --out mollicute_model --verbose --default_compartment cyt
+    (psamm-env) $ psamm-generate-model generate-database \
+                    --annotations mollicute_eggnog.tsv --type R \
+                    --out mollicute_model --verbose --default_compartment cyt
 
 The models output above use the default compound formulation in Kegg based
 on the first CHEBI assignment in the KEGG dblinks. In order to generate a
@@ -112,9 +112,9 @@ Rhea database. This option is specified using the `--rhea` flag.
 .. code-block:: shell
 
    (psamm-env) $ rm -r mollicute_model_R
-   (psamm-env) $ psamm-generate-model generate-database \
-                   --annotations mollicute_eggnog.tsv --type R \
-                   --out mollicute_model --verbose --rhea
+    (psamm-env) $ psamm-generate-model generate-database \
+                    --annotations mollicute_eggnog.tsv --type R \
+                    --out mollicute_model --verbose --rhea
 
 If the user has a custom formulated annotation table, this may also be used
 to generate the model. In this case, the gene should be the first column
@@ -140,9 +140,9 @@ transporters.yaml file and transporter_log.tsv file. The basic usage is below:
 
 .. code-block:: shell
 
-(psamm-env) $ psamm-generate-model generate-database \
-                --annotations mollicute_eggnog.tsv \
-                --model mollicute_model
+  (psamm-env) $ psamm-generate-model generate-transporters \
+                  --annotations mollicute_eggnog.tsv \
+                  --model mollicute_model
 
 The default compartments for this basic usage are "c" for internal compartment
 and "e" for external compartment, but these can be changed with
@@ -150,18 +150,20 @@ and "e" for external compartment, but these can be changed with
 
 .. code-block:: shell
 
-(psamm-env) $ psamm-generate-model generate-database \
-                --annotations mollicute_eggnog.tsv \
-                --model mollicute_model --compartment_in cyt \
-                --compartment_out ext
+  (psamm-env) $ psamm-generate-model generate-transporters \
+                  --annotations mollicute_eggnog.tsv \
+                  --model mollicute_model --compartment_in cyt \
+                  --compartment_out ext
 
 If a custom annotation table is provided, it is handled similarly to in
 `generate-database`, where `--col` specifies the index of the column
 of the TCDB id.
 
-(psamm-env) $ psamm-generate-model generate-database \
-                --annotations custom_transport.tsv \
-                --model custom_model
+.. code-block:: shell
+
+  (psamm-env) $ psamm-generate-model generate-transporters \
+                  --annotations custom_transport.tsv \
+                  --model custom_model
 
 It is also worth noting that the substrate and family information for these
 transporters are included in PSAMM as external files; however, if you would
@@ -171,3 +173,120 @@ like to use custom annotation tables, these can be provided with
 
 Basic use of the ``generate-biomass`` command
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The last step in creating a functional metabolic model is the biomass functions
+which are used to simulate biological conditions in the cell. The
+generate-biomass command creates biomass reactions that account for the
+synthesis of DNA, RNA, and protein in the cell. The basic formulation is to
+create all nucleotides and amino acids based on the ratios that they are present
+in your genome and annotation. Then, DNA, RNA, and protein are combined in a
+1:1:1 ratio to form 'biomass'.
+
+Note that this biomass reaction should only serve as the starting point
+and can be further curated to include measured proportions of carbohydrates,
+lipids, and other components of the cell.
+
+``generate-biomass`` requires three external data sources which should have been
+created during annotation of the genome:
+
+1. The genome in fasta format (supplied with --genome)
+2. A proteome made from this genome in fasta format (supplied with --proteome)
+3. The annotation file in gff format (supplied with --gff)
+
+**Note:** gff files can contain any type of annotation. ``generate-biomass``
+specifically uses annotations labeled as 'CDS' in the third column of the
+gff file
+
+Therefore the basic usage looks like this:
+
+.. code-block:: shell
+
+  (psamm-env) $ psamm-generate-model generate-biomass \
+                  --genome oyster_mollicutes_mag.fa \
+                  --proteome oyster_mollicutes_mag.faa \
+                  --gff oyster_mollicutes_mag.gff \
+                  --model mollicute_model
+
+``generate-biomass`` will output two new files: ``biomass_reactions.yaml`` and
+``biomass_compounds.yaml``. Additionally, it will edit your ``model.yaml`` to
+include these new files and assign the model a biomass function.
+There are a total of 79 compounds that are required for the biomass reactions -
+mostly nucleotides and amino acids (charged and uncharged forms). These
+compounds are used in the 20 amino acid charging reactions and 5 biomass
+reactions. If any of these compounds or reactions are missing from the model,
+they are automatically added in ``biomass_compounds.yaml`` and
+``biomass_reactions.yaml``.
+
+**Custom compound names using --config**
+
+By default, ``generate-biomass`` searches your model for required compounds
+using KEGG IDs and adds those that are missing to ``biomass_compounds.yaml``.
+If you are using non-KEGG IDs for your compounds, they will not be detected
+nor included in the biomass reactions.
+To fix this, you can supply a config file which will relate KEGG compound IDs to
+your custom IDs. To use this feature first run:
+
+.. code-block:: shell
+
+  (psamm-env) $ psamm-generate-model generate-biomass \
+                  --generate-config > config.csv
+
+This will save a table called config.csv which contains the internal ids and
+names of required compounds formatted like so::
+
+  id,name,custom_id
+   biomass,biomass,
+   protein,protein,
+   dna,dna,
+   rna,rna,
+   C00041,L-alanine,
+   C00062,L-arginine,
+   C00152,L-asparagine,
+   ...
+
+IDs added to the third column will be used instead of the default IDs.
+For example, if you have a compound in your model called 'Alanine',
+you would edit the config file like so::
+
+  id,name,custom_id
+   biomass,biomass,
+   protein,protein,
+   dna,dna,
+   rna,rna,
+   C00041,L-alanine,Alanine
+   C00062,L-arginine,
+   C00152,L-asparagine,
+   ...
+
+Then run ``generate-biomass`` using the ``--config`` flag:
+
+.. code-block:: shell
+
+  (psamm-env) $ psamm-generate-model generate-biomass \
+                  --genome oyster_mollicutes_mag.fa \
+                  --proteome oyster_mollicutes_mag.faa \
+                  --gff oyster_mollicutes_mag.gff \
+                  --model mollicute_model \
+                  --config config.csv
+
+The config file can also be used to create a custom naming scheme even if the
+compounds don't already exist in your model. In this case, if 'Alanine' was
+not present in your model, it would be created under the name 'Alanine' (instead
+of the default 'C00041')
+
+**Custom biomass reaction name using --biomass**
+
+When ``generate-biomass`` is run, it will create the main biomass function
+under the name 'biomass' and add it to your ``model.yaml``. A different name can
+be supplied with the ``--biomass`` flag. Note that this name can also be changed
+after running ``generate-biomass`` by editting the id in
+``biomass_reactions.yaml`` as well as the 'biomass:' attribute of your model
+file; this function exists only for convenience. Example usage:
+
+.. code-block:: shell
+
+  (psamm-env) $ psamm-generate-model generate-biomass \
+                  --genome oyster_mollicutes_mag.fa \
+                  --proteome oyster_mollicutes_mag.faa \
+                  --gff oyster_mollicutes_mag.gff \
+                  --model mollicute_model
+                  --biomass Biomass_Mollicute_mag

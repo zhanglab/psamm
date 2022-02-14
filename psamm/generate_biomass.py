@@ -1,3 +1,20 @@
+# This file is part of PSAMM.
+#
+# PSAMM is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PSAMM is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright 2021-2022  Jason Vailionis <jason_vailionis@uri.edu>
+
 from psamm.datasource.reaction import Reaction, Compound, Direction
 from psamm.datasource import native
 from collections import Counter
@@ -88,8 +105,6 @@ class main(Command):
             help="Makes a template config file for --config. Compound IDs "
                  "added in the third column will replace the default kegg IDs "
                  "for the compound")
-        parser.add_argument("--non-bacteria", action = "store_true",
-            help="Exclude the bacteria-specific formylated methionine reaction")
         ##------------------------ To do---------------------------------------
         ## need to check first if reactions are already in model?
         ## Might need to catch spaces in the config compound names, havent tested
@@ -112,13 +127,14 @@ class main(Command):
             if not self._args.model:
                 raise InputError("Please specify the path to an existing "
                                  "model with --model")
-        if os.path.isdir(self._args.model):
-            if os.path.exists(os.path.join(self._args.model, "model.yaml")):
-                 model_path = os.path.join(self._args.model, "model.yaml")
+        if not self._args.generate_config:
+            if os.path.isdir(self._args.model):
+                if os.path.exists(os.path.join(self._args.model, "model.yaml")):
+                     model_path = os.path.join(self._args.model, "model.yaml")
+                else:
+                    raise InputError("No model.yaml file found!")
             else:
-                raise InputError("No model.yaml file found!")
-        else:
-            model_path = self._args.model
+                model_path = self._args.model
 
         ### SETTING UP DATA AND FUNCTIONS ###
         pd.options.mode.chained_assignment = None

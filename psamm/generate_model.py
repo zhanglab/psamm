@@ -13,7 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2019-2021  Christopher Powers <c-11060@uri.edu>
+# Copyright 2019-2022  Christopher Powers <c-11060@uri.edu>
+# Copyright 2021-2022  Jason Vailionis <jason_vailionis@uri.edu>
 
 from __future__ import unicode_literals
 import logging
@@ -741,7 +742,11 @@ class main_transporterCommand(Command):
 
         # Build the transporter databse based on what is in
         # the annotations
-        with open(os.path.join(self._args.model, "transporter_log.tsv"), 'w') \
+        if "model.yaml" in self._args.model:
+            path = self._args.model.rstrip("model.yaml")
+        else:
+            path = self._args.model
+        with open(os.path.join(path, "transporter_log.tsv"), 'w') \
             as log:
             log.write("compounds for which transporters were predicted, but"
                 " are not found in the model:\n")
@@ -787,7 +792,7 @@ class main_transporterCommand(Command):
             # construct a new reactions.yaml file based on this.
             reaction_entry_list=[]
             mark = FileMark(None, 0, 0)
-            with open(os.path.join(self._args.model, "transporters.yaml"),
+            with open(os.path.join(path, "transporters.yaml"),
                 "w") as f:
                 for tcdb in eq:
                     for rxn in eq[tcdb]:
