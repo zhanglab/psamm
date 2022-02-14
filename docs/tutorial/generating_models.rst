@@ -173,17 +173,17 @@ like to use custom annotation tables, these can be provided with
 
 Basic use of the ``generate-biomass`` command
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The last step in creating a functional metabolic model is the biomass functions
-which are used to simulate biological conditions in the cell. The
-generate-biomass command creates biomass reactions that account for the
+The last step in creating a functional metabolic model is creating the biomass
+functions which are used to simulate biological conditions in the cell. The
+``generate-biomass`` command creates biomass reactions that account for the
 synthesis of DNA, RNA, and protein in the cell. The basic formulation is to
 create all nucleotides and amino acids based on the ratios that they are present
 in your genome and annotation. Then, DNA, RNA, and protein are combined in a
 1:1:1 ratio to form 'biomass'.
 
 Note that this biomass reaction should only serve as the starting point
-and can be further curated to include measured proportions of carbohydrates,
-lipids, and other components of the cell.
+and can be further curated to include experimentally measured proportions of
+carbohydrates, lipids, and other components of the cell.
 
 ``generate-biomass`` requires three external data sources which should have been
 created during annotation of the genome:
