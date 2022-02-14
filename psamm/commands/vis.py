@@ -149,25 +149,26 @@ class InteractiveCommand(MetabolicMixin,
 
         # Set the navigation bar for the app
         navbar = dbc.NavbarSimple(
-                children=[
-                        dbc.NavItem(
-                                dbc.NavLink(
-                                        "Source Code",
-                                        href="https://github.com/cpowers11060/metavis",
-                                )
-                        ),
-                        dbc.NavItem(
-                                dbc.NavLink(
-                                        "Psamm documentation",
-                                        href="https://psamm.readthedocs.io",
-                                )
-                        ),
-                        dbc.NavItem(
-                                dbc.NavLink(
-                                        "Psamm publication",
-                                        href="https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1004732",
-                                )
-                        ),],
+            children=[
+                dbc.NavItem(
+                    dbc.NavLink(
+                        "Source Code",
+                        href="https://github.com/cpowers11060/metavis",
+                    )
+                ),
+                dbc.NavItem(
+                    dbc.NavLink(
+                        "Psamm documentation",
+                        href="https://psamm.readthedocs.io",
+                    )
+                ),
+                dbc.NavItem(
+                    dbc.NavLink(
+                        "Psamm publication",
+                        href="https://journals.plos.org/ploscompbiol/"
+                             "article?id=10.1371/journal.pcbi.1004732",
+                    )
+                ),],
 
                 brand="Psamm web-based visualization of metabolic models",
                 brand_href="#",
@@ -177,9 +178,7 @@ class InteractiveCommand(MetabolicMixin,
 
         # Define the body of the app
         body_layout = dbc.Container(
-                [
-                        dbc.Row(
-                                [
+                [dbc.Row([
                                 dcc.Markdown(
                                 """
                                 -----
@@ -406,7 +405,8 @@ class InteractiveCommand(MetabolicMixin,
     def callbacks(self, _app):
 
         @_app.callback(
-                Output("node-data", "children"), [Input("net", "selectedNodeData")]
+                Output("node-data", "children"),
+                [Input("net", "selectedNodeData")]
         )
         def display_nodedata(datalist):
                 contents = "Click on a node to see its details here"
@@ -416,7 +416,7 @@ class InteractiveCommand(MetabolicMixin,
                                 contents = []
                                 contents.append(
                                         html.H5(
-                                                        "ID: " + data["id"].title()
+                                            "ID: " + data["id"].title()
                                         )
                                 )
                                 contents.append(
@@ -434,7 +434,8 @@ class InteractiveCommand(MetabolicMixin,
                 return contents
 
         @_app.callback(
-                Output("edge-data", "children"), [Input("net", "selectedEdgeData")]
+                Output("edge-data", "children"),
+                [Input("net", "selectedEdgeData")]
         )
         def display_nodedata(datalist):
                 contents = "Click on an edge to see its details here"
@@ -442,7 +443,8 @@ class InteractiveCommand(MetabolicMixin,
                         if len(datalist) > 0:
                                 data = datalist[-1]
                                 contents = []
-                                contents.append(html.H5("ID: " + data["id"].title()))
+                                contents.append(html.H5(
+                                                "ID: " + data["id"].title()))
                                 contents.append(
                                         html.P(
                                                 "Name: "
@@ -483,8 +485,9 @@ class InteractiveCommand(MetabolicMixin,
                 ],
                 prevent_initial_call=True,
         )
-        def filter_nodes(pathways_dropdown, element_dropdown, compounds_dropdown, fba_dropdown, filter1_dropdown, filter2_dropdown):
-            print("HELLO \n\n\n\n\n\n\n\n\n\n")
+        def filter_nodes(pathways_dropdown, element_dropdown, \
+                         compounds_dropdown, fba_dropdown, \
+                         filter1_dropdown, filter2_dropdown):
             if isinstance(pathways_dropdown, list) \
             or isinstance(element_dropdown, str) \
             or isinstance(compounds_dropdown, str) or isinstance(fba_dropdown, str) \
