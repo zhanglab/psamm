@@ -74,7 +74,7 @@ setup(
                             'external-data/biomass_compound_descriptions.tsv',
                             'external-data/biomass_reaction_descriptions.tsv',
                             'external-data/tcdb_substrates.tsv',
-                            'external-data/tcdb_families.ts',
+                            'external-data/tcdb_families.tsv',
                             'external-data/biomass_compound_descriptions.tsv',
                             'external-data/biomass_reaction_descriptions.tsv']},
 
