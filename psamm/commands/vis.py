@@ -496,7 +496,6 @@ class InteractiveCommand(MetabolicMixin,
         def filter_nodes(n_clicks, pathways_dropdown, element_dropdown, \
                          compounds_dropdown, fba_dropdown, \
                          filter1_dropdown, filter2_dropdown):
-            print(n_clicks)
             if isinstance(pathways_dropdown, list) \
             or isinstance(element_dropdown, str) \
             or isinstance(compounds_dropdown, str) or isinstance(fba_dropdown, str) \
@@ -687,11 +686,22 @@ def bfs_compounds(start, end, network, rxn_list, rxn_set, middle2, middle3):
         for u in frontier_start:
             adj={}
             for rxn in network[0]:
+                left=[]
+                for l in rxn._properties['equation'].__dict__['_left']:
+                    left.append(l[0].__dict__['_name'])
+                right=[]
+                for r in rxn._properties['equation'].__dict__['_right']:
+                    right.append(r[0].__dict__['_name'])
                 for cpd in network[0][rxn][0]:
                     for j in cpd:
                         if j.name==u[0]:
                             for k in cpd:
-                                adj[k.name]=rxn.id
+                                print(left, right)
+                                print(j, k)
+                                if j.name in left and k.name in right and (str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Forward" or str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Both"):
+                                    adj[k.name]=rxn.id
+                                elif j.name in right and k.name in left and (str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Reverse" or str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Both"):
+                                    adj[k.name]=rxn.id
             for v, r in adj.items():
                 if (v, r) not in depth_start and v not in generic and (v, r) != middle2 and (v, r) != middle3:
                     depth_start[(v, r)]=i
@@ -706,11 +716,20 @@ def bfs_compounds(start, end, network, rxn_list, rxn_set, middle2, middle3):
         for u in frontier_end:
             adj={}
             for rxn in network[0]:
+                left=[]
+                for l in rxn._properties['equation'].__dict__['_left']:
+                    left.append(l[0].__dict__['_name'])
+                right=[]
+                for r in rxn._properties['equation'].__dict__['_right']:
+                    right.append(r[0].__dict__['_name'])
                 for cpd in network[0][rxn][0]:
                     for j in cpd:
                         if j.name==u[0]:
                             for k in cpd:
-                                adj[k.name]=rxn.id
+                                if j.name in left and k.name in right and (str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Forward" or str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Both"):
+                                    adj[k.name]=rxn.id
+                                elif j.name in right and k.name in left and (str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Reverse" or str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Both"):
+                                    adj[k.name]=rxn.id
             for v, r in adj.items():
                 if (v, r) not in depth_end and v not in generic and (v, r) != middle2 and (v, r) != middle3:
                     depth_end[(v, r)]=i
@@ -787,7 +806,6 @@ def build_network(nm, rxn_set, network, fba_dropdown):
 
         for rxn in network[0]:
             if rxn.id in rxn_set:
-                print(str(rxn._properties['equation'].__dict__['_direction']))
                 rxn_num=0
                 for cpd in network[0][rxn][0]:
                     nodes.append({'data':{'id':str(cpd[0]),
