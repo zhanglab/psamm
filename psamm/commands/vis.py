@@ -207,7 +207,8 @@ class InteractiveCommand(MetabolicMixin,
                                                                             "selector": "edge",
                                                                             "style": {
                                                                                     "width": 1,
-                                                                                    "curve-style": "bezier"}},
+                                                                                    "curve-style": "bezier",
+                                                                                    "target-arrow-shape":"triangle"}},
                                                                             {
                                                                             "selector": "[flux != 0]",
                                                                             "style": {
@@ -366,6 +367,9 @@ class InteractiveCommand(MetabolicMixin,
                                                 ),
                                                 dbc.Col([
                                                     html.Div([
+                                                    html.Button("Submit", id="btn_sub")
+                                                ]),
+                                                    html.Div([
                                                     html.Button("Download CSV", id="btn_tsv"),
                                                     dcc.Download(id="download"),
                                                 ]),
@@ -373,6 +377,7 @@ class InteractiveCommand(MetabolicMixin,
                                                     html.Button("Download png", id="btn-get-png"),
                                                     dcc.Download(id="downloadpng"),
                                                 ]),
+
                                                 ]),
 
 
@@ -476,18 +481,22 @@ class InteractiveCommand(MetabolicMixin,
         @_app.callback(
                 Output("net", "elements"),
                 [
-                        Input("pathways_dropdown", "value"),
-                        Input("element_dropdown", "value"),
-                        Input("compounds_dropdown", "value"),
-                        Input("fba_dropdown", "value"),
-                        Input("filter1_dropdown", "value"),
-                        Input("filter2_dropdown", "value"),
+                        Input("btn_sub", "n_clicks"),
+                ],
+                [
+                        State("pathways_dropdown", "value"),
+                        State("element_dropdown", "value"),
+                        State("compounds_dropdown", "value"),
+                        State("fba_dropdown", "value"),
+                        State("filter1_dropdown", "value"),
+                        State("filter2_dropdown", "value"),
                 ],
                 prevent_initial_call=True,
         )
-        def filter_nodes(pathways_dropdown, element_dropdown, \
+        def filter_nodes(n_clicks, pathways_dropdown, element_dropdown, \
                          compounds_dropdown, fba_dropdown, \
                          filter1_dropdown, filter2_dropdown):
+            print(n_clicks)
             if isinstance(pathways_dropdown, list) \
             or isinstance(element_dropdown, str) \
             or isinstance(compounds_dropdown, str) or isinstance(fba_dropdown, str) \
@@ -778,6 +787,7 @@ def build_network(nm, rxn_set, network, fba_dropdown):
 
         for rxn in network[0]:
             if rxn.id in rxn_set:
+                print(str(rxn._properties['equation'].__dict__['_direction']))
                 rxn_num=0
                 for cpd in network[0][rxn][0]:
                     nodes.append({'data':{'id':str(cpd[0]),
@@ -795,29 +805,101 @@ def build_network(nm, rxn_set, network, fba_dropdown):
                     else:
                         path = ['No pathway exists']
                     if rxn.id in edges:
-                        edges.append({'data':{
-                            'id':"".join([rxn.id, "_", str(rxn_num)]),
-                            'source':str(cpd[0]),
-                            'target':str(cpd[1]),
-                            'label': "".join([rxn.name, "_", str(rxn_num)]),
-                            'equation': str(rxn.properties["equation"]),
-                            'pathways':path,
-                            'flux':flux_carrying[rxn.id]
-    #                            'equation':rxn.equation
-                            }})
-                        rxn_num+=1
+                        if str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Forward":
+                            edges.append({'data':{
+                                'id':"".join([rxn.id, "_", str(rxn_num)]),
+                                'source':str(cpd[0]),
+                                'target':str(cpd[1]),
+                                'label': "".join([rxn.name, "_", str(rxn_num)]),
+                                'equation': str(rxn.properties["equation"]),
+                                'pathways':path,
+                                'flux':flux_carrying[rxn.id]
+        #                            'equation':rxn.equation
+                                }})
+                            rxn_num+=1
+                        elif str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Reverse":
+                            edges.append({'data':{
+                                'id':"".join([rxn.id, "_", str(rxn_num)]),
+                                'source':str(cpd[1]),
+                                'target':str(cpd[0]),
+                                'label': "".join([rxn.name, "_", str(rxn_num)]),
+                                'equation': str(rxn.properties["equation"]),
+                                'pathways':path,
+                                'flux':flux_carrying[rxn.id]
+        #                            'equation':rxn.equation
+                                }})
+                            rxn_num+=1
+                        elif str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Both":
+                            edges.append({'data':{
+                                'id':"".join([rxn.id, "_", str(rxn_num)]),
+                                'source':str(cpd[0]),
+                                'target':str(cpd[1]),
+                                'label': "".join([rxn.name, "_", str(rxn_num)]),
+                                'equation': str(rxn.properties["equation"]),
+                                'pathways':path,
+                                'flux':flux_carrying[rxn.id]
+        #                            'equation':rxn.equation
+                                }})
+                            rxn_num+=1
+                            edges.append({'data':{
+                                'id':"".join([rxn.id, "_", str(rxn_num)]),
+                                'source':str(cpd[1]),
+                                'target':str(cpd[0]),
+                                'label': "".join([rxn.name, "_", str(rxn_num)]),
+                                'equation': str(rxn.properties["equation"]),
+                                'pathways':path,
+                                'flux':flux_carrying[rxn.id]
+        #                            'equation':rxn.equation
+                                }})
+                            rxn_num+=1
                     else:
-                        edges.append({'data':{
-                            'id':"".join([rxn.id, "_", str(rxn_num)]),
-                            'source':str(cpd[0]),
-                            'target':str(cpd[1]),
-                            'label': "".join([rxn.name, "_", str(rxn_num)]),
-                            'equation': str(rxn.properties["equation"]),
-                            'pathways':path,
-                            'flux':flux_carrying[rxn.id]
-    #                            'equation':rxn.equation
-                            }})
-                        rxn_num+=1
+                        if str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Forward":
+                            edges.append({'data':{
+                                'id':"".join([rxn.id, "_", str(rxn_num)]),
+                                'source':str(cpd[0]),
+                                'target':str(cpd[1]),
+                                'label': "".join([rxn.name, "_", str(rxn_num)]),
+                                'equation': str(rxn.properties["equation"]),
+                                'pathways':path,
+                                'flux':flux_carrying[rxn.id]
+        #                            'equation':rxn.equation
+                                }})
+                            rxn_num+=1
+                        elif str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Reverse":
+                            edges.append({'data':{
+                                'id':"".join([rxn.id, "_", str(rxn_num)]),
+                                'source':str(cpd[1]),
+                                'target':str(cpd[0]),
+                                'label': "".join([rxn.name, "_", str(rxn_num)]),
+                                'equation': str(rxn.properties["equation"]),
+                                'pathways':path,
+                                'flux':flux_carrying[rxn.id]
+        #                            'equation':rxn.equation
+                                }})
+                            rxn_num+=1
+                        elif str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Both":
+                            edges.append({'data':{
+                                'id':"".join([rxn.id, "_", str(rxn_num)]),
+                                'source':str(cpd[0]),
+                                'target':str(cpd[1]),
+                                'label': "".join([rxn.name, "_", str(rxn_num)]),
+                                'equation': str(rxn.properties["equation"]),
+                                'pathways':path,
+                                'flux':flux_carrying[rxn.id]
+        #                            'equation':rxn.equation
+                                }})
+                            rxn_num+=1
+                            edges.append({'data':{
+                                'id':"".join([rxn.id, "_", str(rxn_num)]),
+                                'source':str(cpd[1]),
+                                'target':str(cpd[0]),
+                                'label': "".join([rxn.name, "_", str(rxn_num)]),
+                                'equation': str(rxn.properties["equation"]),
+                                'pathways':path,
+                                'flux':flux_carrying[rxn.id]
+        #                            'equation':rxn.equation
+                                }})
+                            rxn_num+=1
 
         return nodes, edges
 
