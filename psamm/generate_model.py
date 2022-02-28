@@ -607,47 +607,111 @@ def _download_kegg_entries(out, rxn_mapping, entry_class, context=None):
                 yield entry_class(reaction, filemark=mark)
 
 
-def parse_rxns_from_EC(rxn_mapping):
+def parse_rxns_from_EC(rxn_mapping, out, verbose):
     """
     Functions converts gene associations to EC into gene
     associations for reaction IDs. Returns a dictionary
     of Reaction IDs to genes.
     """
     rxn_dict=defaultdict(lambda:[])
-    for reactions in rxn_mapping:
-        try:
-            request = REST.kegg_get(reactions)
-        except:
-            f.write("".join(["  - ",reactions,"\n"]))
-            continue
-        entry_line = None
-        section_id = None
-        reaction = {}
-        for lineno, line in enumerate(request):
-            line=line.rstrip()
-            if line=="///":
+    if verbose:
+        logger.info("Downloading reactions associated with EC...")
+        logger.info("There are {} ECs download".format(len(rxn_mapping)))
+        count=0
+    with open(os.path.join(out, "log.tsv"), "a+") as f:
+        for reactions in rxn_mapping:
+            if verbose:
+                if count % 25 == 0:
+                    logger.info("{}/{} have been downloaded".format(count,
+                                len(rxn_mapping)))
+                count += 1
+            try:
+                request = REST.kegg_get(reactions)
+            except:
+                f.write("".join(["  - ",reactions,"\n"]))
                 continue
-            if entry_line is None:
-                entry_line = lineno
-            # Look for the beginning of the section
-            m = re.match(r'([A-Z_]+)\s+(.*)', line.rstrip())
-            if m is not None:
-                section_id = m.group(1).lower()
-                reaction[section_id] = [m.group(2)]
-            elif section_id is not None:
-                reaction[section_id].append(line.strip())
-            else:
-                raise ParseError(
-                    'Missing section identifier at line \
-                    {}'.format(lineno))
-            rxn_ids=[]
-        for i in reaction:
-            if i == "all_reac":
-                listall = re.split("\s",reaction[i][0])
+            entry_line = None
+            section_id = None
+            reaction = {}
+            for lineno, line in enumerate(request):
+                line=line.rstrip()
+                if line=="///":
+                    continue
+                if entry_line is None:
+                    entry_line = lineno
+                # Look for the beginning of the section
+                m = re.match(r'([A-Z_]+)\s+(.*)', line.rstrip())
+                if m is not None:
+                    section_id = m.group(1).lower()
+                    reaction[section_id] = [m.group(2)]
+                elif section_id is not None:
+                    reaction[section_id].append(line.strip())
+                else:
+                    raise ParseError(
+                        'Missing section identifier at line \
+                        {}'.format(lineno))
+                rxn_ids=[]
+            if "all_reac" in reaction:
+                listall = re.split("\s",reaction["all_reac"][0])
                 for r in listall:
                     if r[0] == "R":
                         rxn_dict[r]+=rxn_mapping[reactions]
+
     return(rxn_dict)
+
+def parse_rxns_from_KO(rxn_mapping, out, verbose):
+    """
+    Functions converts gene associations to EC into gene
+    associations for reaction IDs. Returns a dictionary
+    of Reaction IDs to genes.
+    """
+    rxn_dict=defaultdict(lambda:[])
+    if verbose:
+        logger.info("Downloading reactions associated with KO...")
+        logger.info("There are {} KOs download".format(len(rxn_mapping)))
+        count=0
+    with open(os.path.join(out, "log.tsv"), "a+") as f:
+        for reactions in rxn_mapping:
+            if verbose:
+                if count % 25 == 0:
+                    logger.info("{}/{} have been downloaded".format(count,
+                                len(rxn_mapping)))
+                count += 1
+            try:
+                request = REST.kegg_get(reactions)
+            except:
+                f.write("".join(["  - ",reactions,"\n"]))
+                continue
+            entry_line = None
+            section_id = None
+            reaction = {}
+            for lineno, line in enumerate(request):
+                line=line.rstrip()
+                if line=="///":
+                    continue
+                if entry_line is None:
+                    entry_line = lineno
+                # Look for the beginning of the section
+                m = re.match(r'([A-Z_]+)\s+(.*)', line.rstrip())
+                if m is not None:
+                    section_id = m.group(1).lower()
+                    reaction[section_id] = [m.group(2)]
+                elif section_id is not None:
+                    reaction[section_id].append(line.strip())
+                else:
+                    raise ParseError(
+                        'Missing section identifier at line \
+                        {}'.format(lineno))
+                rxn_ids=[]
+            if "dblinks" in reaction:
+                for i in reaction["dblinks"]:
+                    if i[0:2] == "RN":
+                        listall = re.split("\s",i[1:])
+                        for r in listall:
+                            if r[0] == "R":
+                                rxn_dict[r]+=rxn_mapping[reactions]
+    return(rxn_dict)
+
 
 class main_transporterCommand(Command):
     """Predicts the function of transporter reactions.
@@ -872,7 +936,9 @@ class main_databaseCommand(Command):
 
         # convert EC to reactions
         if self._args.type == "EC":
-            ortho_dict = parse_rxns_from_EC(ortho_dict)
+            ortho_dict = parse_rxns_from_EC(ortho_dict, self._args.out, self._args.verbose)
+        elif self._args.type == "KO":
+            ortho_dict = parse_rxns_from_KO(ortho_dict, self._args.out, self._args.verbose)
 
         # Create the model using the kegg api
         create_model_api(self._args.out, ortho_dict, self._args.verbose, \
