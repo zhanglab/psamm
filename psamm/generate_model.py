@@ -220,9 +220,9 @@ def clean_reaction_equations(reaction_entry_list):
         equation_out = []
         for i in re.split(" ", equation):
             # special handling to retain stoichiometry of (n+1) and (n-1), etc.
-            if "(" in i and (not "(n+" in i or not "(n-" in i):
-                i.replace("(", "[")
-                i.replace(")", "]")
+            if "(" in i:# and (not "(n+" in i or not "(n-" in i):
+                i = i.replace("(", "[")
+                i = i.replace(")", "]")
             equation_out.append(i)
         equation = ' '.join(equation_out)
         reaction.__dict__['values']['equation']=[equation]
