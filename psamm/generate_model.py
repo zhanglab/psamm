@@ -125,7 +125,10 @@ def parse_orthology(orthology, type, col):
             listall = re.split("\t", line)
             # Add handling for a provided column number.
             if col:
-                keys = listall[col-1].split(',')
+                if len(listall[col-1]) > 0:
+                    keys = listall[col-1].split(',')
+                else:
+                    keys= []
             else:
                 if type == "R":
                     keys = listall[14].split(',')
