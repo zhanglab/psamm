@@ -1173,8 +1173,17 @@ class CompoundEntry(object):
         if self._chebi is not None:
             this_chebi_entity = ChebiEntity(self._chebi)
             try:
-                self._charge = int(this_chebi_entity.get_charge())
-                self.values['formula'] = [this_chebi_entity.get_formula()]
+                try:
+                    # libchebipy sometimes fails with an index error
+                    # on the first time running. We have not been able
+                    # to fix the source of this error, but catching the
+                    # index error and repeating the operation appears to
+                    # fix this
+                    self._charge = int(this_chebi_entity.get_charge())
+                    self.values['formula'] = [this_chebi_entity.get_formula()]
+                except IndexError:
+                    self._charge = int(this_chebi_entity.get_charge())
+                    self.values['formula'] = [this_chebi_entity.get_formula()]
             except ValueError: # chebi entry has no charge; leave as None
                 pass
 
