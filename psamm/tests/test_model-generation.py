@@ -22,17 +22,48 @@ from psamm import mapmaker
 from psamm import generate_model
 
 class TestGenerateDatabase(unittest.TestCase):
+    def test_model_compounds(self):
+        cpd = ['C02987', 'C00001']
+        cpd_out = generate_model._download_kegg_entries(".", cpd, generate_model.CompoundEntry, context=None)
+        cpd_out = list(cpd_out)
+        generic_out = generate_model.check_generic_compounds(cpd_out)
+        generic_out = generate_model.model_generic_compounds(list(generic_out))
+        print(list(generic_out))
+        print(cpd_out)
+        self.assertTrue(len(cpd_out) == 1)
+        self.assertTrue('C02987' in cpd_out)
+        self.assertTrue('C00001' not in cpd_out)
+
+    def test_generic_compoundID(self):
+        # Test that the download of compounds works
+        cpd = ['C02987', 'C00001']
+        cpd_out = generate_model._download_kegg_entries(".", cpd, generate_model.CompoundEntry, context=None)
+        cpd_out = generate_model.check_generic_compounds(list(cpd_out))
+        cpd_out = list(cpd_out)
+        self.assertTrue(len(cpd_out) == 1)
+        self.assertTrue('C02987' in cpd_out)
+        self.assertTrue('C00001' not in cpd_out)
+
     def test_Compound_Download(self):
         # Test that the download of compounds works
         cpd = ['C00001']
         cpd_out = generate_model._download_kegg_entries(".", cpd, generate_model.CompoundEntry, context=None)
-        self.assertTrue(len(list(cpd_out)) == 1)
+        cpd_out = list(cpd_out)
+        self.assertTrue(len(cpd_out) == 1)
+
+    def test_rxn_clean(self):
+        # Test teh function that reformats stoichiometry
+        rxn = ['R04347']
+        rxn_out = generate_model._download_kegg_entries(".", rxn, generate_model.ReactionEntry, context=None)
+        rxn_out = generate_model.clean_reaction_equations(list(rxn_out))
+        self.assertEqual(str(rxn_out[0].equation), "C04488 + C03576 + 2 C01330[side1] <=> C01217 + C03920 + 2 C01330[side2]")
 
     def test_Compound_Contents(self):
         # Test that the downloaded compound contains the relevant information
         cpd = ['C00001']
         cpd_out = generate_model._download_kegg_entries(".", cpd, generate_model.CompoundEntry, context=None)
         cpd_out = list(cpd_out)
+        self.assertTrue(len(cpd_out) == 1)
         self.assertEqual(list(cpd_out)[0].id, "C00001")
         self.assertEqual(list(cpd_out)[0].name, "H2O")
         self.assertEqual(list(cpd_out)[0].formula, "H2O")
@@ -94,7 +125,6 @@ class TestGenerateDatabase(unittest.TestCase):
         outfile.write(test_egg)
         outfile.close()
         asso = generate_model.parse_orthology("testin.tsv", "R", None)
-        print(asso)
         self.assertTrue(len(asso)==1)
         self.assertTrue(asso["R00351"]==["gene1"])
         asso = generate_model.parse_orthology("testin.tsv", "KO", None)
