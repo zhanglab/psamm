@@ -21,18 +21,97 @@ import os
 from psamm import mapmaker
 from psamm import generate_model
 
+class TestGenerateTransporters(unittest.TestCase):
+    def test_compartment(self):
+        print("test")
+
 class TestGenerateDatabase(unittest.TestCase):
+    def test_overall_model_creation(self):
+        print("test")
+
+    def test_Rhea(self):
+        print("test")
+
+    def test_EC_download(self):
+        # Test when EC has one reaction
+        rxn_mapping = {"2.3.3.1" : ["Gene1"]}
+        ec = generate_model.parse_rxns_from_EC(rxn_mapping, ".", False)
+        self.assertTrue(len(ec) == 1)
+        self.assertTrue(len(ec["R00351"]) == 1)
+        self.assertTrue("R00351" in ec)
+        self.assertTrue(ec["R00351"]==["Gene1"])
+        # Test when EC has multiple reactions
+        rxn_mapping = {"4.2.1.3" : ["Gene1"]}
+        ec = generate_model.parse_rxns_from_EC(rxn_mapping, ".", False)
+        print(ec)
+        self.assertTrue(len(ec) == 3)
+        self.assertTrue("R01324" in ec)
+        self.assertTrue("R01325" in ec)
+        self.assertTrue("R01900" in ec)
+        self.assertTrue(ec["R01324"]==["Gene1"])
+        self.assertTrue(ec["R01325"]==["Gene1"])
+        self.assertTrue(ec["R01900"]==["Gene1"])
+        # Test for multiple genes
+        rxn_mapping = {"2.3.3.1" : ["Gene1", "Gene2"]}
+        ec = generate_model.parse_rxns_from_EC(rxn_mapping, ".", False)
+        self.assertTrue(len(ec) == 1)
+        self.assertTrue(len(ec["R00351"]) == 2)
+        self.assertTrue("R00351" in ec)
+        self.assertTrue(ec["R00351"]==["Gene1", "Gene2"])
+
+    def test_KO_download(self):
+        # Test when EC has one reaction
+        rxn_mapping = {"K01647" : ["Gene1"]}
+        ko = generate_model.parse_rxns_from_KO(rxn_mapping, ".", False)
+        print(ko)
+        self.assertTrue(len(ko) == 1)
+        self.assertTrue(len(ko["R00351"]) == 1)
+        self.assertTrue("R00351" in ko)
+        self.assertTrue(ko["R00351"]==["Gene1"])
+        # Test when EC has multiple reactions
+        rxn_mapping = {"K01681" : ["Gene1"]}
+        ko = generate_model.parse_rxns_from_KO(rxn_mapping, ".", False)
+        print(ko)
+        self.assertTrue(len(ko) == 3)
+        self.assertTrue("R01324" in ko)
+        self.assertTrue("R01325" in ko)
+        self.assertTrue("R01900" in ko)
+        self.assertTrue(ko["R01324"]==["Gene1"])
+        self.assertTrue(ko["R01325"]==["Gene1"])
+        self.assertTrue(ko["R01900"]==["Gene1"])
+        # Test for multiple genes
+        rxn_mapping = {"K01647" : ["Gene1", "Gene2"]}
+        ko = generate_model.parse_rxns_from_KO(rxn_mapping, ".", False)
+        self.assertTrue(len(ko) == 1)
+        self.assertTrue(len(ko["R00351"]) == 2)
+        self.assertTrue("R00351" in ko)
+        self.assertTrue(ko["R00351"]==["Gene1", "Gene2"])
+
     def test_model_compounds(self):
+        # Tests that compounds are properly sorted into generic compounds
+        # with the proper attributes.
         cpd = ['C02987', 'C00001']
         cpd_out = generate_model._download_kegg_entries(".", cpd, generate_model.CompoundEntry, context=None)
         cpd_out = list(cpd_out)
-        generic_out = generate_model.check_generic_compounds(cpd_out)
+        generic = generate_model.check_generic_compounds(cpd_out)
+        generic_out = generate_model._download_kegg_entries(".", generic, generate_model.CompoundEntry, context=None)
         generic_out = generate_model.model_generic_compounds(list(generic_out))
-        print(list(generic_out))
-        print(cpd_out)
+        generic_out = list(generic_out)
+        self.assertTrue(len(cpd_out) == 2)
+        self.assertTrue(len(generic_out) == 1)
+        self.assertTrue('C02987' == cpd_out[0].id)
+        self.assertTrue('C00001' == cpd_out[1].id)
+        self.assertTrue('C02987' == generic_out[0]['id'])
+        self.assertTrue('L-Glutamyl-tRNA(Glu)' == generic_out[0]['name'])
+        self.assertTrue('C20H28N6O13PR(C5H8O6PR)n' == generic_out[0]['formula'])
+        self.assertTrue('29157' == generic_out[0]['ChEBI'])
+        cpd_out = list(generate_model.model_compounds(cpd_out))
         self.assertTrue(len(cpd_out) == 1)
-        self.assertTrue('C02987' in cpd_out)
-        self.assertTrue('C00001' not in cpd_out)
+        self.assertTrue('C00001' == cpd_out[0]['id'])
+        self.assertTrue('H2O' == cpd_out[0]['name'])
+        self.assertTrue('H2O' == cpd_out[0]['formula'])
+        self.assertTrue('15377' == cpd_out[0]['ChEBI'])
+        generic_out = list(generate_model.model_compounds(generic_out))
 
     def test_generic_compoundID(self):
         # Test that the download of compounds works
