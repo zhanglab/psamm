@@ -248,7 +248,7 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
     # Generate the yaml file for the reactions
     reaction_entry_list = []
     count = 0
-    for entry in _download_kegg_entries(out, rxn_mapping, ReactionEntry):
+    for entry in _download_kegg_entries(out, rxn_mapping, None, ReactionEntry):
         reaction_entry_list.append(entry)
         count += 1
         if verbose and count%25 == 0:
@@ -270,9 +270,10 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
 
     # Load database once if --rhea is given
     if use_rhea:
-        global rhea_db
         rhea_db = RheaDb(resource_filename('psamm',
                          'external-data/chebi_pH7_3_mapping.tsv'))
+    else:
+        rhea_db = None
 
     compound_entry_list = []
     compound_set = set()
@@ -284,7 +285,7 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
         logger.info(f"There are {len(compound_set)} compounds to download.")
     count = 0
     logger.info("Downloading kegg entries and performing charge correction")
-    for entry in _download_kegg_entries(out, compound_set, CompoundEntry):
+    for entry in _download_kegg_entries(out, compound_set, rhea_db, CompoundEntry):
         compound_entry_list.append(entry)
         count += 1
         if verbose and count%25 == 0:
@@ -298,7 +299,7 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
     generic_entry_list=[]
     logger.info("Downloading kegg entries for generic compounds and "
                 "performing charge correction")
-    for entry in _download_kegg_entries(out, generic_compounds_list, \
+    for entry in _download_kegg_entries(out, generic_compounds_list, rhea_db, \
         CompoundEntry):
         generic_entry_list.append(entry)
     with open(os.path.join(out, 'compounds_generic.yaml'), 'w+') as f:
@@ -563,7 +564,7 @@ def encode_utf8_list(s):
         return s
 
 
-def _download_kegg_entries(out, rxn_mapping, entry_class, context=None):
+def _download_kegg_entries(out, rxn_mapping, rhea, entry_class, context=None):
     '''
     Downloads the kegg entry associated with a reaction or
     a compound and stores each line in an object that can
@@ -607,7 +608,7 @@ def _download_kegg_entries(out, rxn_mapping, entry_class, context=None):
                             'Missing section identifier at line \
                             {}'.format(lineno))
                 mark = FileMark(context, entry_line, 0)
-                yield entry_class(reaction, filemark=mark)
+                yield entry_class(reaction, rhea, filemark=mark)
 
 
 def parse_rxns_from_EC(rxn_mapping, out, verbose):
@@ -859,6 +860,7 @@ class main_transporterCommand(Command):
             # construct a new reactions.yaml file based on this.
             reaction_entry_list=[]
             mark = FileMark(None, 0, 0)
+            rhea = None
             with open(os.path.join(path, "transporters.yaml"),
                 "w") as f:
                 for tcdb in eq:
@@ -872,7 +874,7 @@ class main_transporterCommand(Command):
                                     'substrates':tp_sub_dict[tcdb],
                                     'genes':"({})".format(" or ".join(
                                         gene_asso[tcdb]))}
-                        entry = ReactionEntry(reaction, filemark=mark)
+                        entry = ReactionEntry(reaction, rhea, filemark=mark)
                         reaction_entry_list.append(entry)
 
                 yaml.dump(list(model_reactions(reaction_entry_list)), f,
@@ -1009,7 +1011,7 @@ def main(command_class=None, args=None):
 class ReactionEntry(object):
     """Representation of entry in KEGG reaction file"""
 
-    def __init__(self, values, filemark=None):
+    def __init__(self, values, rhea, filemark=None):
         self.values = dict(values)
         if 'entry' not in values:
             raise ParseError('Missing reaction identifier')
@@ -1122,7 +1124,7 @@ class CommandError(Exception):
 class CompoundEntry(object):
     """Representation of entry in KEGG compound file"""
 
-    def __init__(self, values, filemark=None):
+    def __init__(self, values, rhea, filemark=None):
         self.values = dict(values)
         if 'entry' not in values:
             raise ParseError('Missing compound identifier')
@@ -1131,6 +1133,7 @@ class CompoundEntry(object):
         self._charge = None
         self._chebi = None
         self._chebi_all = None
+        self.rhea = rhea
         self.initialize_charge()
 
     def initialize_charge(self):
@@ -1150,8 +1153,9 @@ class CompoundEntry(object):
             elif the KEGG-chebi IDs don't have mappings in rhea:
                 use the first chebi ID given by KEGG
         """
-        if 'rhea_db' in globals():
+        if self.rhea is not None:
             use_rhea = True
+            rhea_db = self.rhea
         else:
             use_rhea = False
         for DB,ID in self.dblinks:
