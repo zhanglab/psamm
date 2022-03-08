@@ -221,12 +221,24 @@ def clean_reaction_equations(reaction_entry_list):
         equation = re.sub(r'\(.*?\)', lambda x: ''.join(x.group(0).split()), \
             str(reaction.equation))
         equation_out = []
-        for i in re.split(" ", equation):
+        comp = re.split(" ", equation)
+        comp = comp + [""]
+        for i in range(0,len(comp)-1):
+            # Handles unusual stoichiometry at the beginning of compounds
+            if "(" in comp[i] and "C" in comp[i+1]:
+                if i > 0:
+                    if "=" in comp[i-1] or "+" in comp[i-1]:
+                        equation_out.append(comp[i])
+                        continue
+                else:
+                    equation_out.append(comp[i])
+                    continue
             # special handling to retain stoichiometry of (n+1) and (n-1), etc.
-            if "(" in i:# and (not "(n+" in i or not "(n-" in i):
-                i = i.replace("(", "[")
-                i = i.replace(")", "]")
-            equation_out.append(i)
+            # at the end of the compound
+            if "(" in comp[i]:# and (not "(n+" in i or not "(n-" in i):
+                comp[i] = comp[i].replace("(", "[")
+                comp[i] = comp[i].replace(")", "]")
+            equation_out.append(comp[i])
         equation = ' '.join(equation_out)
         reaction.__dict__['values']['equation']=[equation]
     return(reaction_entry_list)
@@ -278,6 +290,7 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
     compound_entry_list = []
     compound_set = set()
     for reaction in reaction_entry_list:
+        print(reaction.equation)
         eq = parse_reaction_equation_string(reaction.equation, 'c')
         for i in eq.compounds:
             compound_set.add(str(i[0].name))
@@ -836,6 +849,8 @@ class main_transporterCommand(Command):
                         else:
                             log.write("{}\t{}\n".format("Compound not in "
                                       "model: ", cpd, id))
+                # Otherwise, create a template reaction entry with no
+                # formulation for user curation
                 else:
                      eq[id].append(("TP_{}".format(id), Reaction(
                      Direction.Both,
