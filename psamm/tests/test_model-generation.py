@@ -20,17 +20,33 @@ import sys
 import os
 from psamm import mapmaker
 from psamm import generate_model
+from pkg_resources import resource_filename
 
 class TestGenerateTransporters(unittest.TestCase):
     def test_compartment(self):
         print("test")
 
 class TestGenerateDatabase(unittest.TestCase):
-    def test_overall_model_creation(self):
-        print("test")
-
+    '''
+    Test cases largely designed to test download of information
+    from KEGG through biopython and generate a reaction database
+    properly. Note that if these start to fail, one of the avenues
+    to check for errors is the composition of the ec, ko, reaction, or
+    compound representation in KEGG.
+    '''
     def test_Rhea(self):
-        print("test")
+        # Test that the rhea flag properly captures charge of atp
+        rhea_db = generate_model.RheaDb(resource_filename('psamm',
+                         'external-data/chebi_pH7_3_mapping.tsv'))
+        cpd = ['C00002']
+        cpd_out = generate_model._download_kegg_entries(".", cpd, None, generate_model.CompoundEntry, context=None)
+        cpd_out = list(cpd_out)
+        nonRhea = list(generate_model.model_compounds(cpd_out))
+        self.assertTrue(nonRhea[0]['charge']==0)
+        cpd_out = generate_model._download_kegg_entries(".", cpd, rhea_db, generate_model.CompoundEntry, context=None)
+        cpd_out = list(cpd_out)
+        Rhea = list(generate_model.model_compounds(cpd_out))
+        self.assertTrue(Rhea[0]['charge']==-4)
 
     def test_EC_download(self):
         # Test when EC has one reaction
@@ -43,7 +59,6 @@ class TestGenerateDatabase(unittest.TestCase):
         # Test when EC has multiple reactions
         rxn_mapping = {"4.2.1.3" : ["Gene1"]}
         ec = generate_model.parse_rxns_from_EC(rxn_mapping, ".", False)
-        print(ec)
         self.assertTrue(len(ec) == 3)
         self.assertTrue("R01324" in ec)
         self.assertTrue("R01325" in ec)
@@ -91,10 +106,10 @@ class TestGenerateDatabase(unittest.TestCase):
         # Tests that compounds are properly sorted into generic compounds
         # with the proper attributes.
         cpd = ['C02987', 'C00001']
-        cpd_out = generate_model._download_kegg_entries(".", cpd, generate_model.CompoundEntry, context=None)
+        cpd_out = generate_model._download_kegg_entries(".", cpd, None, generate_model.CompoundEntry, context=None)
         cpd_out = list(cpd_out)
         generic = generate_model.check_generic_compounds(cpd_out)
-        generic_out = generate_model._download_kegg_entries(".", generic, generate_model.CompoundEntry, context=None)
+        generic_out = generate_model._download_kegg_entries(".", generic, None, generate_model.CompoundEntry, context=None)
         generic_out = generate_model.model_generic_compounds(list(generic_out))
         generic_out = list(generic_out)
         self.assertTrue(len(cpd_out) == 2)
@@ -116,7 +131,7 @@ class TestGenerateDatabase(unittest.TestCase):
     def test_generic_compoundID(self):
         # Test that the download of compounds works
         cpd = ['C02987', 'C00001']
-        cpd_out = generate_model._download_kegg_entries(".", cpd, generate_model.CompoundEntry, context=None)
+        cpd_out = generate_model._download_kegg_entries(".", cpd, None, generate_model.CompoundEntry, context=None)
         cpd_out = generate_model.check_generic_compounds(list(cpd_out))
         cpd_out = list(cpd_out)
         self.assertTrue(len(cpd_out) == 1)
@@ -126,21 +141,21 @@ class TestGenerateDatabase(unittest.TestCase):
     def test_Compound_Download(self):
         # Test that the download of compounds works
         cpd = ['C00001']
-        cpd_out = generate_model._download_kegg_entries(".", cpd, generate_model.CompoundEntry, context=None)
+        cpd_out = generate_model._download_kegg_entries(".", cpd, None, generate_model.CompoundEntry, context=None)
         cpd_out = list(cpd_out)
         self.assertTrue(len(cpd_out) == 1)
 
     def test_rxn_clean(self):
         # Test teh function that reformats stoichiometry
         rxn = ['R04347']
-        rxn_out = generate_model._download_kegg_entries(".", rxn, generate_model.ReactionEntry, context=None)
+        rxn_out = generate_model._download_kegg_entries(".", rxn, None, generate_model.ReactionEntry, context=None)
         rxn_out = generate_model.clean_reaction_equations(list(rxn_out))
         self.assertEqual(str(rxn_out[0].equation), "C04488 + C03576 + 2 C01330[side1] <=> C01217 + C03920 + 2 C01330[side2]")
 
     def test_Compound_Contents(self):
         # Test that the downloaded compound contains the relevant information
         cpd = ['C00001']
-        cpd_out = generate_model._download_kegg_entries(".", cpd, generate_model.CompoundEntry, context=None)
+        cpd_out = generate_model._download_kegg_entries(".", cpd, None, generate_model.CompoundEntry, context=None)
         cpd_out = list(cpd_out)
         self.assertTrue(len(cpd_out) == 1)
         self.assertEqual(list(cpd_out)[0].id, "C00001")
@@ -153,13 +168,13 @@ class TestGenerateDatabase(unittest.TestCase):
     def test_Reaction_Download(self):
         # Test that the download of reactions works
         rxn = ['R00351']
-        rxn_out = generate_model._download_kegg_entries(".", rxn, generate_model.ReactionEntry, context=None)
+        rxn_out = generate_model._download_kegg_entries(".", rxn, None, generate_model.ReactionEntry, context=None)
         self.assertTrue(len(list(rxn_out)) == 1)
 
     def test_Reaction_Contents(self):
         # Test that the downloaded reaction contains the relevant information
         rxn = ['R00351']
-        rxn_out = generate_model._download_kegg_entries(".", rxn, generate_model.ReactionEntry, context=None)
+        rxn_out = generate_model._download_kegg_entries(".", rxn, None, generate_model.ReactionEntry, context=None)
         rxn_out = list(rxn_out)
         self.assertEqual(rxn_out[0].id, "R00351")
         self.assertEqual(rxn_out[0].name, "acetyl-CoA:oxaloacetate C-acetyltransferase (thioester-hydrolysing)")
@@ -176,7 +191,7 @@ class TestGenerateDatabase(unittest.TestCase):
         # Tests the conversion of the reactions object to a dictionary format
         rxn = ['R00351']
         rxn_out = []
-        for entry in generate_model._download_kegg_entries(".", rxn, generate_model.ReactionEntry, context=None):
+        for entry in generate_model._download_kegg_entries(".", rxn, None, generate_model.ReactionEntry, context=None):
             rxn_out.append(entry)
         rxn_model = generate_model.model_reactions(rxn_out)
         rxn_model = list(rxn_model)
@@ -194,7 +209,7 @@ class TestGenerateDatabase(unittest.TestCase):
     def test_logfile(self):
         # Test that the logfile gets written
         rxn = ['R00351']
-        rxn_out = generate_model._download_kegg_entries(".", rxn, generate_model.ReactionEntry, context=None)
+        rxn_out = generate_model._download_kegg_entries(".", rxn, None, generate_model.ReactionEntry, context=None)
         self.assertTrue(os.path.exists("./log.tsv"))
 
     def test_parseOrtho(self):
