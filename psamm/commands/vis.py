@@ -237,7 +237,7 @@ class InteractiveCommand(MetabolicMixin,
                                                 dbc.Badge(
                                                         "Pathways:", color="info", className="mr-1"
                                                 ),
-                                                dbc.FormGroup(
+                                                dbc.Row(
                                                         [
                                                                 dcc.Dropdown(
                                                                         id="pathways_dropdown",
@@ -258,7 +258,7 @@ class InteractiveCommand(MetabolicMixin,
                                                 dbc.Badge(
                                                         "Element Transfer Networks:", color="info", className="mr-1"
                                                 ),
-                                                dbc.FormGroup(
+                                                dbc.Row(
                                                         [
                                                                 dcc.Dropdown(
                                                                         id="element_dropdown",
@@ -277,7 +277,7 @@ class InteractiveCommand(MetabolicMixin,
                                                 ),
                                                 dbc.Badge(
                                                         "Compound Search:", color="info", className="mr-1"),
-                                                dbc.FormGroup(
+                                                dbc.Row(
                                                         [
                                                                 dcc.Dropdown(
                                                                         id="compounds_dropdown",
@@ -305,7 +305,7 @@ class InteractiveCommand(MetabolicMixin,
                                                 ),
                                                 dbc.Badge(
                                                         "Compound 1:", color="info", className="mr-1"),
-                                                dbc.FormGroup(
+                                                dbc.Row(
                                                         [
                                                                 dcc.Dropdown(
                                                                         id="filter1_dropdown",
@@ -324,7 +324,7 @@ class InteractiveCommand(MetabolicMixin,
                                                 ),
                                                 dbc.Badge(
                                                         "Compound 2:", color="info", className="mr-1"),
-                                                dbc.FormGroup(
+                                                dbc.Row(
                                                         [
                                                                 dcc.Dropdown(
                                                                         id="filter2_dropdown",
@@ -343,7 +343,7 @@ class InteractiveCommand(MetabolicMixin,
                                                 ),
                                                 dbc.Badge(
                                                         "Flux Analysis:", color="info", className="mr-1"),
-                                                dbc.FormGroup(
+                                                dbc.Row(
                                                         [
                                                                 dcc.Dropdown(
                                                                         id="fba_dropdown",
