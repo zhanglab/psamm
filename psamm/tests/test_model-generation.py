@@ -26,6 +26,15 @@ class TestGenerateTransporters(unittest.TestCase):
     def test_compartment(self):
         print("test")
 
+    def test_parse_orthology(self):
+        print("test")
+
+    def test_porin(self):
+        print("test")
+
+    def test_others(self):
+        print("test")
+
 class TestGenerateDatabase(unittest.TestCase):
     '''
     Test cases largely designed to test download of information
