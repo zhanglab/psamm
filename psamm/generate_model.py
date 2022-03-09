@@ -290,7 +290,6 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
     compound_entry_list = []
     compound_set = set()
     for reaction in reaction_entry_list:
-        print(reaction.equation)
         eq = parse_reaction_equation_string(reaction.equation, 'c')
         for i in eq.compounds:
             compound_set.add(str(i[0].name))
