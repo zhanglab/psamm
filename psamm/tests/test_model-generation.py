@@ -21,19 +21,88 @@ import os
 from psamm import mapmaker
 from psamm import generate_model
 from pkg_resources import resource_filename
+from psamm.datasource.native import NativeModel, ModelReader
+from psamm.datasource.reaction import Reaction, Compound, Direction
+from collections import defaultdict
+import re
 
 class TestGenerateTransporters(unittest.TestCase):
-    def test_compartment(self):
-        print("test")
-
     def test_parse_orthology(self):
-        print("test")
+        test_egg = "gene1\ta\tb\tc\td\te\tf\tg\th\ti\t2.3.3.1\tK01647\tk\tl\tR00351\tm\tn\t2.A.49.5.2\tp\tq\n"
+        outfile = open("testin.tsv", "w")
+        outfile.write(test_egg)
+        outfile.close()
+        asso = generate_model.parse_orthology("testin.tsv", "tcdb", None)
+        self.assertTrue(len(asso)==1)
+        self.assertTrue(asso["2.A.49.5.2"]==["gene1"])
 
-    def test_porin(self):
-        print("test")
+    def test_transporters(self):
+        asso = {"R00351":["gene1"], "R00375":["gene2"]}
+        generate_model.create_model_api(".", asso, False, False, "c")
+        substrate = resource_filename('psamm',
+                                      'external-data/tcdb_substrates.tsv')
+        family = resource_filename('psamm',
+                                   'external-data/tcdb_families.tsv')
 
-    def test_others(self):
-        print("test")
+        # read in the model and build a dictionary of Chebi IDs
+        mr = ModelReader.reader_from_path(".""")
+        nm = mr.create_model()
+        mm = nm.create_metabolic_model()
+        chebi_dict = defaultdict(lambda:[])
+        for cpd in nm.compounds:
+            if 'ChEBI' in cpd.__dict__['_properties']:
+                chebi = re.split(' ', cpd.__dict__['_properties']['ChEBI'])
+                for i in chebi:
+                    chebi_dict["CHEBI:{}".format(i)].append(cpd.id)
+        # Read in the reaction substrates
+        tp_sub_dict = defaultdict(lambda:[])
+        with open(substrate, 'r') as infile:
+            for line in infile:
+                line = line.rstrip()
+                listall = re.split("\t", line)
+                substrates = re.split("\|", listall[1])
+                sub_out = []
+                for i in substrates:
+                    sub_out.append(re.split(";", i)[0])
+                tp_sub_dict[listall[0]] = sub_out
+
+        # read in the reaction families
+        tp_fam_dict = defaultdict(lambda:'')
+        with open(family, 'r') as infile:
+            for line in infile:
+                line = line.rstrip()
+                listall = re.split("\t", line)
+                tp_fam_dict[listall[0]] = listall[1]
+        tp_asso = {"2.A.11.1.6":["gene2"], "1.A.8.9.20":["gene3"]}
+        generate_model.gen_transporters(".", tp_asso, tp_sub_dict, tp_fam_dict, chebi_dict, "c", "e")
+        rxn = open("transporters.yaml", "r").read()
+        self.assertIn("TP_2.A.11.1.6", rxn)
+        self.assertIn("[c] <=> [e]", rxn)
+        self.assertIn("CHEBI:34982", rxn)
+        self.assertIn("CHEBI:3308", rxn)
+        self.assertIn("CHEBI:50744", rxn)
+        self.assertIn("C00001_diff", rxn)
+        self.assertIn("[c] <=> [e]", rxn)
+        self.assertIn("The Major Intrinsic Protein (MIP) Family", rxn)
+        self.assertIn("CHEBI:15377", rxn)
+        self.assertIn("C00001[c] <=> C00001[e]", rxn)
+        # check different compartments
+        generate_model.gen_transporters(".", tp_asso, tp_sub_dict, tp_fam_dict, chebi_dict, "d", "f")
+        rxn = open("transporters.yaml", "r").read()
+        self.assertIn("C00001[d] <=> C00001[f]", rxn)
+        self.assertIn("[d] <=> [f]", rxn)
+        os.remove("log.tsv")
+        os.remove("reactions.yaml")
+        os.remove("reactions_generic.yaml")
+        os.remove("model.yaml")
+        os.remove("compounds.yaml")
+        os.remove("compounds_generic.yaml")
+        os.remove("gene-association.tsv")
+        os.remove('gene-association_generic.tsv')
+        os.remove('model_def.tsv')
+        os.remove('transporters.yaml')
+        os.remove('transporter_log.tsv')
+
 
 class TestGenerateDatabase(unittest.TestCase):
     '''
@@ -43,6 +112,51 @@ class TestGenerateDatabase(unittest.TestCase):
     to check for errors is the composition of the ec, ko, reaction, or
     compound representation in KEGG.
     '''
+    def test_overall(self):
+        # Check ability to create expected output files
+        asso = {"R00351":["gene1"], "R00375":["gene2"]}
+        generate_model.create_model_api(".", asso, False, False, "c")
+        self.assertTrue(os.path.exists("log.tsv"))
+        self.assertTrue(os.path.exists("reactions.yaml"))
+        self.assertTrue(os.path.exists("compounds.yaml"))
+        self.assertTrue(os.path.exists("model.yaml"))
+        self.assertTrue(os.path.exists("gene-association.tsv"))
+        self.assertTrue(os.path.exists("gene-association_generic.tsv"))
+        self.assertTrue(os.path.exists("reactions_generic.yaml"))
+        self.assertTrue(os.path.exists("compounds_generic.yaml"))
+        # Check contents of the created files
+        mr = ModelReader.reader_from_path(".")
+        nm = mr.create_model()
+        mm = nm.create_metabolic_model()
+        self.assertIn("R00351", set(mm.reactions))
+        self.assertNotIn("R00375", set(mm.reactions))
+        self.assertIn(Compound("C00010", 'c'), set(mm.compounds))
+        self.assertNotIn(Compound("C00039", 'c'), set(mm.compounds))
+        self.assertIn("2.3.3.1", nm.reactions['R00351'].__dict__['_properties']['enzymes'])
+        self.assertIn("Glyoxylate and dicarboxylate metabolism", nm.reactions['R00351'].__dict__['_properties']['pathways'])
+        self.assertIn("K01647", nm.reactions['R00351'].__dict__['_properties']['orthology'])
+        self.assertEqual("C6H5O7", nm.compounds['C00158'].__dict__['_properties']['formula'])
+        self.assertEqual("16947", nm.compounds['C00158'].__dict__['_properties']['ChEBI'])
+        self.assertEqual(-3, nm.compounds['C00158'].__dict__['_properties']['charge'])
+        # Check for relevant entries in the generic and other files
+        cpd = open("compounds_generic.yaml", "r").read()
+        self.assertIn("C00039", cpd)
+        rxn = open("reactions_generic.yaml", "r").read()
+        self.assertIn("R00375", rxn)
+        ga = open("gene-association.tsv", "r").read()
+        self.assertIn("R00351", ga)
+        ga = open("gene-association_generic.tsv", "r").read()
+        self.assertIn("R00375", ga)
+        os.remove("log.tsv")
+        os.remove("reactions.yaml")
+        os.remove("reactions_generic.yaml")
+        os.remove("model.yaml")
+        os.remove("compounds.yaml")
+        os.remove("compounds_generic.yaml")
+        os.remove("gene-association.tsv")
+        os.remove('gene-association_generic.tsv')
+        os.remove('model_def.tsv')
+
     def test_Rhea(self):
         # Test that the rhea flag properly captures charge of atp
         rhea_db = generate_model.RheaDb(resource_filename('psamm',
@@ -56,6 +170,7 @@ class TestGenerateDatabase(unittest.TestCase):
         cpd_out = list(cpd_out)
         Rhea = list(generate_model.model_compounds(cpd_out))
         self.assertTrue(Rhea[0]['charge']==-4)
+        os.remove("log.tsv")
 
     def test_EC_download(self):
         # Test when EC has one reaction
@@ -82,12 +197,12 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertTrue(len(ec["R00351"]) == 2)
         self.assertTrue("R00351" in ec)
         self.assertTrue(ec["R00351"]==["Gene1", "Gene2"])
+        os.remove("log.tsv")
 
     def test_KO_download(self):
         # Test when EC has one reaction
         rxn_mapping = {"K01647" : ["Gene1"]}
         ko = generate_model.parse_rxns_from_KO(rxn_mapping, ".", False)
-        print(ko)
         self.assertTrue(len(ko) == 1)
         self.assertTrue(len(ko["R00351"]) == 1)
         self.assertTrue("R00351" in ko)
@@ -95,7 +210,6 @@ class TestGenerateDatabase(unittest.TestCase):
         # Test when EC has multiple reactions
         rxn_mapping = {"K01681" : ["Gene1"]}
         ko = generate_model.parse_rxns_from_KO(rxn_mapping, ".", False)
-        print(ko)
         self.assertTrue(len(ko) == 3)
         self.assertTrue("R01324" in ko)
         self.assertTrue("R01325" in ko)
@@ -110,6 +224,7 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertTrue(len(ko["R00351"]) == 2)
         self.assertTrue("R00351" in ko)
         self.assertTrue(ko["R00351"]==["Gene1", "Gene2"])
+        os.remove("log.tsv")
 
     def test_model_compounds(self):
         # Tests that compounds are properly sorted into generic compounds
@@ -136,6 +251,7 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertTrue('H2O' == cpd_out[0]['formula'])
         self.assertTrue('15377' == cpd_out[0]['ChEBI'])
         generic_out = list(generate_model.model_compounds(generic_out))
+        os.remove("log.tsv")
 
     def test_generic_compoundID(self):
         # Test that the download of compounds works
@@ -146,6 +262,7 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertTrue(len(cpd_out) == 1)
         self.assertTrue('C02987' in cpd_out)
         self.assertTrue('C00001' not in cpd_out)
+        os.remove("log.tsv")
 
     def test_Compound_Download(self):
         # Test that the download of compounds works
@@ -153,6 +270,7 @@ class TestGenerateDatabase(unittest.TestCase):
         cpd_out = generate_model._download_kegg_entries(".", cpd, None, generate_model.CompoundEntry, context=None)
         cpd_out = list(cpd_out)
         self.assertTrue(len(cpd_out) == 1)
+        os.remove("log.tsv")
 
     def test_rxn_clean(self):
         # Test teh function that reformats stoichiometry
@@ -173,12 +291,14 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertEqual(list(cpd_out)[0].mol_weight, 18.0153)
         self.assertEqual(list(cpd_out)[0].chebi, "15377")
         self.assertEqual(list(cpd_out)[0].charge, 0)
+        os.remove("log.tsv")
 
     def test_Reaction_Download(self):
         # Test that the download of reactions works
         rxn = ['R00351']
         rxn_out = generate_model._download_kegg_entries(".", rxn, None, generate_model.ReactionEntry, context=None)
         self.assertTrue(len(list(rxn_out)) == 1)
+        os.remove("log.tsv")
 
     def test_Reaction_Contents(self):
         # Test that the downloaded reaction contains the relevant information
@@ -195,6 +315,7 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertIsNone(rxn_out[0].genes)
         self.assertTrue(len(list(rxn_out[0].pathways))==8)
         self.assertEqual(list(rxn_out[0].pathways)[0], ('rn00020',  'Citrate cycle (TCA cycle)'))
+        os.remove("log.tsv")
 
     def test_Model_Reactions(self):
         # Tests the conversion of the reactions object to a dictionary format
@@ -214,12 +335,7 @@ class TestGenerateDatabase(unittest.TestCase):
             path.append(i[1])
         self.assertEqual(len(list(rxn_out[0].pathways)), len(rxn_model[0]['pathways']))
         self.assertEqual(path, rxn_model[0]['pathways'])
-
-    def test_logfile(self):
-        # Test that the logfile gets written
-        rxn = ['R00351']
-        rxn_out = generate_model._download_kegg_entries(".", rxn, None, generate_model.ReactionEntry, context=None)
-        self.assertTrue(os.path.exists("./log.tsv"))
+        os.remove("log.tsv")
 
     def test_parseOrtho(self):
         # Test the ability to parse the defaul eggnog output
