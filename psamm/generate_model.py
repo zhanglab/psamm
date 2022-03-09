@@ -728,6 +728,75 @@ def parse_rxns_from_KO(rxn_mapping, out, verbose):
                                 rxn_dict[r]+=rxn_mapping[reactions]
     return(rxn_dict)
 
+def gen_transporters(path, gene_asso, tp_sub_dict, tp_fam_dict, chebi_dict, \
+     compartment_in, compartment_out):
+    with open(os.path.join(path, "transporter_log.tsv"), 'w') \
+        as log:
+        log.write("compounds for which transporters were predicted, but"
+            " are not found in the model:\n")
+        eq = defaultdict(lambda:[])
+        for id, genes in gene_asso.items():
+            # if there is just one substrate and it is in the porin family
+            # assume passive diffusion/porin behavior
+            if len(tp_sub_dict[id]) == 1: # id[0] == "1" and
+                for cpd in tp_sub_dict[id]:
+                    if cpd in chebi_dict:
+                        eq[id].append(
+                        ("{}_diff".format(chebi_dict[cpd][0]),
+                                      Reaction(Direction.Both, {
+                        Compound(chebi_dict[cpd][0]).in_compartment(
+                            compartment_in): -1,
+                        Compound(chebi_dict[cpd][0]).in_compartment(
+                            compartment_out): 1}
+                        )))
+                    else:
+                        log.write("{}\t{}\n".format("Compound not in "
+                                  "model: ", cpd, id))
+            # Otherwise, create a template reaction entry with no
+            # formulation for user curation
+            else:
+                 eq[id].append(("TP_{}".format(id), Reaction(
+                 Direction.Both,
+                 {
+                 Compound("").in_compartment(compartment_in): \
+                 -1,
+                 Compound("").in_compartment(compartment_out): \
+                 1
+                 }
+                 )))
+
+        # Sets up the yaml object for the reactions and writes
+        # out the parsed reaction information to a reactions.yaml
+        # file
+        yaml.add_representer(OrderedDict, dict_representer)
+        yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+                             dict_constructor)
+        yaml_args = {'default_flow_style': False,
+                     'encoding': 'utf-8',
+                     'allow_unicode': True}
+
+        # construct a new reactions.yaml file based on this.
+        reaction_entry_list=[]
+        mark = FileMark(None, 0, 0)
+        rhea = None
+        with open(os.path.join(path, "transporters.yaml"),
+            "w") as f:
+            for tcdb in eq:
+                for rxn in eq[tcdb]:
+                    fam_id = ".".join(tcdb.split(".")[0:3])
+                    reaction = {'transport_name':rxn[0], 'entry':[rxn[0]],
+                                'name':[tp_fam_dict[fam_id]],
+                                'equation':[str(rxn[1])],
+                                'enzyme':[tcdb],
+                                'tcdb_family':tp_fam_dict[fam_id],
+                                'substrates':tp_sub_dict[tcdb],
+                                'genes':"({})".format(" or ".join(
+                                    gene_asso[tcdb]))}
+                    entry = ReactionEntry(reaction, rhea, filemark=mark)
+                    reaction_entry_list.append(entry)
+
+            yaml.dump(list(model_reactions(reaction_entry_list)), f,
+                      **yaml_args)
 
 class main_transporterCommand(Command):
     """Predicts the function of transporter reactions.
@@ -826,73 +895,9 @@ class main_transporterCommand(Command):
             path = self._args.model.rstrip("model.yaml")
         else:
             path = self._args.model
-        with open(os.path.join(path, "transporter_log.tsv"), 'w') \
-            as log:
-            log.write("compounds for which transporters were predicted, but"
-                " are not found in the model:\n")
-            eq = defaultdict(lambda:[])
-            for id, genes in gene_asso.items():
-                # if there is just one substrate and it is in the porin family
-                # assume passive diffusion/porin behavior
-                if len(tp_sub_dict[id]) == 1: # id[0] == "1" and
-                    for cpd in tp_sub_dict[id]:
-                        if cpd in chebi_dict:
-                            eq[id].append(
-                            ("{}_diff".format(chebi_dict[cpd][0]),
-                                          Reaction(Direction.Both, {
-                            Compound(chebi_dict[cpd][0]).in_compartment(
-                                self._args.compartment_in): -1,
-                            Compound(chebi_dict[cpd][0]).in_compartment(
-                                self._args.compartment_out): 1}
-                            )))
-                        else:
-                            log.write("{}\t{}\n".format("Compound not in "
-                                      "model: ", cpd, id))
-                # Otherwise, create a template reaction entry with no
-                # formulation for user curation
-                else:
-                     eq[id].append(("TP_{}".format(id), Reaction(
-                     Direction.Both,
-                     {
-                     Compound("").in_compartment(self._args.compartment_in): \
-                     -1,
-                     Compound("").in_compartment(self._args.compartment_out): \
-                     1
-                     }
-                     )))
+        gen_transporters(path, gene_asso, tp_sub_dict, tp_fam_dict, chebi_dict, \
+             self._args.compartment_in, self._args.compartment_out)
 
-            # Sets up the yaml object for the reactions and writes
-            # out the parsed reaction information to a reactions.yaml
-            # file
-            yaml.add_representer(OrderedDict, dict_representer)
-            yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
-                                 dict_constructor)
-            yaml_args = {'default_flow_style': False,
-                         'encoding': 'utf-8',
-                         'allow_unicode': True}
-
-            # construct a new reactions.yaml file based on this.
-            reaction_entry_list=[]
-            mark = FileMark(None, 0, 0)
-            rhea = None
-            with open(os.path.join(path, "transporters.yaml"),
-                "w") as f:
-                for tcdb in eq:
-                    for rxn in eq[tcdb]:
-                        fam_id = ".".join(tcdb.split(".")[0:3])
-                        reaction = {'transport_name':rxn[0], 'entry':[rxn[0]],
-                                    'name':[tp_fam_dict[fam_id]],
-                                    'equation':[str(rxn[1])],
-                                    'enzyme':[tcdb],
-                                    'tcdb_family':tp_fam_dict[fam_id],
-                                    'substrates':tp_sub_dict[tcdb],
-                                    'genes':"({})".format(" or ".join(
-                                        gene_asso[tcdb]))}
-                        entry = ReactionEntry(reaction, rhea, filemark=mark)
-                        reaction_entry_list.append(entry)
-
-                yaml.dump(list(model_reactions(reaction_entry_list)), f,
-                          **yaml_args)
 
 
 class main_databaseCommand(Command):
