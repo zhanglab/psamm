@@ -28,7 +28,7 @@ import argparse
 from collections import defaultdict, Counter
 from six import text_type
 from ..command import MetabolicMixin, Command, FilePrefixAppendAction, \
-    convert_to_unicode
+    convert_to_unicode, SolverCommandMixin
 from .. import graph
 import sys
 from ..formula import Atom, _AtomType
@@ -40,12 +40,11 @@ except ImportError:
 
 from psamm.expression import boolean
 from psamm.lpsolver import generic
-from psamm.fluxanalysis import FluxBalanceProblem
+from psamm import fluxanalysis
 from psamm.lpsolver import glpk, lp
 from psamm.graph import make_network_dict, write_network_dict
 from psamm.datasource.reaction import Reaction, Compound
 import plotly.express as px
-from psamm.fluxanalysis import FluxBalanceProblem
 from psamm.lpsolver import glpk, lp
 import json
 import dash
@@ -67,7 +66,7 @@ ALT_COLOR = '#b3fcb8'
 
 EPSILON = 1e-5
 
-class InteractiveCommand(MetabolicMixin,
+class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                            Command, FilePrefixAppendAction):
     """Generate graphical representations of the model"""
 
@@ -114,10 +113,13 @@ class InteractiveCommand(MetabolicMixin,
         pathway_list, rxn_set = get_pathway_list(self._model, "All")
         compounds_list = get_compounds_list(self._model)
         rxns=list(rxn_set)
+        rxns_full = []
+        for i in self._model.reactions:
+            rxns_full.append(i.id)
+
         # nodes, edges = build_network(nm, rxn_set, network)
         # initialize an empty list. the full is messy
         nodes, edges = [], []
-
 
         # Initialize the app
         self._app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -195,7 +197,9 @@ class InteractiveCommand(MetabolicMixin,
 
                                         dbc.Col([
                                                         cyto.Cytoscape(id = 'net',
-                                                        layout={'name':'cose'},
+                                                        layout={'name':'cose',
+                                                                'animate':True,
+                                                                'animationDuration':1000},
                                                         style={'width': '600px', 'height': '600px'},
                                                         elements=nodes+edges,
                                                         stylesheet=[{
@@ -203,18 +207,25 @@ class InteractiveCommand(MetabolicMixin,
                                                                     'style': {
                                                                             'background-color': '#BFD7B5',
                                                                             'label': 'data(label)'}},
-                                                                            {
-                                                                            "selector": "edge",
-                                                                            "style": {
-                                                                                    "width": 1,
-                                                                                    "curve-style": "bezier",
-                                                                                    "target-arrow-shape":"triangle"}},
-                                                                            {
-                                                                            "selector": "[flux != 0]",
-                                                                            "style": {
-                                                                                    "line-color": "blue"
-                                                                                    }
+                                                                    {
+                                                                    "selector": "edge",
+                                                                    "style": {
+                                                                            "width": 1,
+                                                                            "curve-style": "bezier",
+                                                                            "target-arrow-shape":"triangle"}},
+                                                                    {
+                                                                    "selector": "[flux > 0]",
+                                                                    "style": {
+                                                                            "line-color": "blue",
+                                                                            "target-arrow-color":"blue",
+                                                                            "width": 1,
+                                                                            "curve-style": "bezier",
+                                                                            "target-arrow-shape":"triangle",
+                                                                            "line-dash-pattern": [6,3],
+                                                                            "line-dash-offset": 24
                                                                             }
+                                                                    },
+
                                                                     ],
                                                                     minZoom=0.06
                                                                     )],sm=12,md=8,),
@@ -352,7 +363,7 @@ class InteractiveCommand(MetabolicMixin,
                                                                                         "label": i,
                                                                                         "value": i,
                                                                                 }
-                                                                                for i in list(rxns)
+                                                                                for i in list(rxns_full)
                                                                         ],
                                                                         value=rxns,
                                                                         multi=False,
@@ -479,7 +490,8 @@ class InteractiveCommand(MetabolicMixin,
                 return contents
 
         @_app.callback(
-                Output("net", "elements"),
+                [Output("net", "elements"),
+                Output("fba-data", "children")],
                 [
                         Input("btn_sub", "n_clicks"),
                 ],
@@ -523,32 +535,39 @@ class InteractiveCommand(MetabolicMixin,
                                     rxn_list.append(rxn.id)
                 else:
                     rxn_list = rxn_set
-                nodes, edges = build_network(nm, rxn_list, network, fba_dropdown)
+                nodes, edges, obj_flux = build_network(self, nm, rxn_list, network, fba_dropdown)
                 elements=nodes+edges
 
-                return elements
+                if obj_flux != 0:
+                    contents = []
+                    contents.append(html.H5("{} flux is {}".format(fba_dropdown, obj_flux)))
+                else:
+                    contents = []
+                    contents.append(hmtl.H5("No flux through the network"))
+
+                return elements, contents
 
 
-        @_app.callback(
-                Output("fba-data", "children"), [Input("fba_dropdown", "value")],
-                prevent_initial_call=True,
-        )
-        def Run_FBA(fba_dropdown):
-          if not isinstance(fba_dropdown, list):
-              objective=str(fba_dropdown)
-              # First read in the base model
-              nm, network = read_model(self._model, self._mm, element_dropdown)
-              # Set up the solver
-              solver = glpk.Solver()
-              # Define the flux balance
-              problem = FluxBalanceProblem(nm, solver)
-              problem.maximize(fba_dropdown)
-
-
-
-              return(str(problem.get_flux(fba_dropdown)))
-          else:
-              return("More than one reaction selected")
+        # @_app.callback(
+        #         Output("fba-data", "children"), [Input("fba_dropdown", "value")],
+        #         prevent_initial_call=True,
+        # )
+        # def Run_FBA(fba_dropdown):
+        #   if not isinstance(fba_dropdown, list):
+        #       objective=str(fba_dropdown)
+        #       # First read in the base model
+        #       nm, network = read_model(self._model, self._mm, element_dropdown)
+        #       # Set up the solver
+        #       solver = glpk.Solver()
+        #       # Define the flux balance
+        #       problem = fluxanalysis.FluxBalanceProblem(nm, solver)
+        #       problem.maximize(fba_dropdown)
+        #
+        #
+        #
+        #       return(str(problem.get_flux(fba_dropdown)))
+        #   else:
+        #       return("More than one reaction selected")
 
         @_app.callback(
             Output("download", "data"),
@@ -777,7 +796,7 @@ def bfs_compounds(start, end, network, rxn_list, rxn_set, middle2, middle3):
 
 # Useful function to build the subset network. Returns nodes and edges
 # from the network associated with the rxn_set of interest
-def build_network(nm, rxn_set, network, fba_dropdown):
+def build_network(self, nm, rxn_set, network, fba_dropdown):
         name={}
         formula={}
         for i in nm.compounds:
@@ -785,16 +804,17 @@ def build_network(nm, rxn_set, network, fba_dropdown):
             formula[i.id]=i.formula
         nodes=[]
         edges=[]
-
+        obj = 0
         if not isinstance(fba_dropdown, list):
             objective=str(fba_dropdown)
             mm = nm.create_metabolic_model()
 
             # Set up the solver
-            solver = glpk.Solver()
+            solver = self._get_solver()
             # Define the flux balance
-            problem = FluxBalanceProblem(mm, solver)
+            problem = fluxanalysis.FluxBalanceProblem(mm, solver)
             problem.maximize(fba_dropdown)
+            obj = problem.get_flux(fba_dropdown)
             flux_carrying={}
             for i in nm.reactions:
                 flux_carrying[i.id]=problem.get_flux(i.id)
@@ -824,6 +844,7 @@ def build_network(nm, rxn_set, network, fba_dropdown):
                         path = ['No pathway exists']
                     if rxn.id in edges:
                         if str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Forward":
+                            flux = flux_carrying[rxn.id]
                             edges.append({'data':{
                                 'id':"".join([rxn.id, "_", str(rxn_num)]),
                                 'source':str(cpd[0]),
@@ -831,11 +852,12 @@ def build_network(nm, rxn_set, network, fba_dropdown):
                                 'label': "".join([rxn.name, "_", str(rxn_num)]),
                                 'equation': str(rxn.properties["equation"]),
                                 'pathways':path,
-                                'flux':flux_carrying[rxn.id]
+                                'flux':flux
         #                            'equation':rxn.equation
                                 }})
                             rxn_num+=1
                         elif str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Reverse":
+                            flux = 0-float(flux_carrying[rxn.id])
                             edges.append({'data':{
                                 'id':"".join([rxn.id, "_", str(rxn_num)]),
                                 'source':str(cpd[1]),
@@ -843,11 +865,12 @@ def build_network(nm, rxn_set, network, fba_dropdown):
                                 'label': "".join([rxn.name, "_", str(rxn_num)]),
                                 'equation': str(rxn.properties["equation"]),
                                 'pathways':path,
-                                'flux':flux_carrying[rxn.id]
+                                'flux':flux
         #                            'equation':rxn.equation
                                 }})
                             rxn_num+=1
                         elif str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Both":
+                            flux = flux_carrying[rxn.id]
                             edges.append({'data':{
                                 'id':"".join([rxn.id, "_", str(rxn_num)]),
                                 'source':str(cpd[0]),
@@ -855,10 +878,11 @@ def build_network(nm, rxn_set, network, fba_dropdown):
                                 'label': "".join([rxn.name, "_", str(rxn_num)]),
                                 'equation': str(rxn.properties["equation"]),
                                 'pathways':path,
-                                'flux':flux_carrying[rxn.id]
+                                'flux':flux
         #                            'equation':rxn.equation
                                 }})
                             rxn_num+=1
+                            flux = 0-float(flux_carrying[rxn.id])
                             edges.append({'data':{
                                 'id':"".join([rxn.id, "_", str(rxn_num)]),
                                 'source':str(cpd[1]),
@@ -866,12 +890,13 @@ def build_network(nm, rxn_set, network, fba_dropdown):
                                 'label': "".join([rxn.name, "_", str(rxn_num)]),
                                 'equation': str(rxn.properties["equation"]),
                                 'pathways':path,
-                                'flux':flux_carrying[rxn.id]
+                                'flux':flux
         #                            'equation':rxn.equation
                                 }})
                             rxn_num+=1
                     else:
                         if str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Forward":
+                            flux = flux_carrying[rxn.id]
                             edges.append({'data':{
                                 'id':"".join([rxn.id, "_", str(rxn_num)]),
                                 'source':str(cpd[0]),
@@ -879,11 +904,12 @@ def build_network(nm, rxn_set, network, fba_dropdown):
                                 'label': "".join([rxn.name, "_", str(rxn_num)]),
                                 'equation': str(rxn.properties["equation"]),
                                 'pathways':path,
-                                'flux':flux_carrying[rxn.id]
+                                'flux':flux
         #                            'equation':rxn.equation
                                 }})
                             rxn_num+=1
                         elif str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Reverse":
+                            flux = 0-float(flux_carrying[rxn.id])
                             edges.append({'data':{
                                 'id':"".join([rxn.id, "_", str(rxn_num)]),
                                 'source':str(cpd[1]),
@@ -891,11 +917,12 @@ def build_network(nm, rxn_set, network, fba_dropdown):
                                 'label': "".join([rxn.name, "_", str(rxn_num)]),
                                 'equation': str(rxn.properties["equation"]),
                                 'pathways':path,
-                                'flux':flux_carrying[rxn.id]
+                                'flux':flux
         #                            'equation':rxn.equation
                                 }})
                             rxn_num+=1
                         elif str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Both":
+                            flux = flux_carrying[rxn.id]
                             edges.append({'data':{
                                 'id':"".join([rxn.id, "_", str(rxn_num)]),
                                 'source':str(cpd[0]),
@@ -903,10 +930,11 @@ def build_network(nm, rxn_set, network, fba_dropdown):
                                 'label': "".join([rxn.name, "_", str(rxn_num)]),
                                 'equation': str(rxn.properties["equation"]),
                                 'pathways':path,
-                                'flux':flux_carrying[rxn.id]
+                                'flux':flux
         #                            'equation':rxn.equation
                                 }})
                             rxn_num+=1
+                            flux = 0-float(flux_carrying[rxn.id])
                             edges.append({'data':{
                                 'id':"".join([rxn.id, "_", str(rxn_num)]),
                                 'source':str(cpd[1]),
@@ -914,12 +942,12 @@ def build_network(nm, rxn_set, network, fba_dropdown):
                                 'label': "".join([rxn.name, "_", str(rxn_num)]),
                                 'equation': str(rxn.properties["equation"]),
                                 'pathways':path,
-                                'flux':flux_carrying[rxn.id]
+                                'flux':flux
         #                            'equation':rxn.equation
                                 }})
                             rxn_num+=1
 
-        return nodes, edges
+        return nodes, edges, obj
 
 
 class VisualizationCommand(MetabolicMixin,
