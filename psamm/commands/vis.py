@@ -184,10 +184,8 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                 dcc.Markdown(
                                 """
                                 -----
-                                ##### Filter / Explore metabolic models
+                                ### Filter / Explore metabolic models
                                 Use these filters to highlight reactions and compounds associated with different reactions.
-                                Try exploring different visualisation options.
-                                The current visualization represents a draft model of Reinekea sp.
 
                                 -----
                                 """
@@ -243,172 +241,97 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
 
                                 ]),
                                 ]),
-                                dbc.Col(
-                                        [
-                                                dbc.Badge(
-                                                        "Pathways:", color="info", className="mr-1"
-                                                ),
-                                                dbc.Row(
-                                                        [
-                                                                dcc.Dropdown(
-                                                                        id="pathways_dropdown",
-                                                                        options=[
-                                                                                {
-                                                                                        "label": i,
-                                                                                        "value": i,
-                                                                                }
-                                                                                for i in list(pathway_list)
-                                                                        ],
-                                                                        value=pathway_list[0],
-                                                                        multi=True,
-                                                                        placeholder="",
-                                                                        style={"width": "100%"},
-                                                                ),
-                                                        ]
-                                                ),
-                                                dbc.Badge(
-                                                        "Element Transfer Networks:", color="info", className="mr-1"
-                                                ),
-                                                dbc.Row(
-                                                        [
-                                                                dcc.Dropdown(
-                                                                        id="element_dropdown",
-                                                                        options=[
-                                                                                {
-                                                                                        "label": i,
-                                                                                        "value": i,
-                                                                                }
-                                                                                for i in ["C","N","S","P"]
-                                                                        ],
-                                                                        value=["C","N","S","P"],
-                                                                        multi=False,
-                                                                        style={"width": "100%"},
-                                                                ),
-                                                        ]
-                                                ),
-                                                dbc.Badge(
-                                                        "Compound Search:", color="info", className="mr-1"),
-                                                dbc.Row(
-                                                        [
-                                                                dcc.Dropdown(
-                                                                        id="compounds_dropdown",
-                                                                        options=[
-                                                                                {
-                                                                                        "label": i,
-                                                                                        "value": i,
-                                                                                }
-                                                                                for i in list(compounds_list)
-                                                                        ],
-                                                                        value=compounds_list,
-                                                                        multi=False,
-                                                                        style={"width": "100%"},
-                                                                ),
-                                                        ]
-                                                ),
-                                                dbc.Row(
-                                                        [
-                                                                dbc.Alert(
-                                                                        id="comp-search",
-                                                                        children="Select two compounds below to see the three shortest paths",
-                                                                        color="secondary",
-                                                                )
-                                                        ]
-                                                ),
-                                                dbc.Badge(
-                                                        "Compound 1:", color="info", className="mr-1"),
-                                                dbc.Row(
-                                                        [
-                                                                dcc.Dropdown(
-                                                                        id="filter1_dropdown",
-                                                                        options=[
-                                                                                {
-                                                                                        "label": i,
-                                                                                        "value": i,
-                                                                                }
-                                                                                for i in list(compounds_list)
-                                                                        ],
-                                                                        value=compounds_list,
-                                                                        multi=False,
-                                                                        style={"width": "100%"},
-                                                                ),
-                                                        ]
-                                                ),
-                                                dbc.Badge(
-                                                        "Compound 2:", color="info", className="mr-1"),
-                                                dbc.Row(
-                                                        [
-                                                                dcc.Dropdown(
-                                                                        id="filter2_dropdown",
-                                                                        options=[
-                                                                                {
-                                                                                        "label": i,
-                                                                                        "value": i,
-                                                                                }
-                                                                                for i in list(compounds_list)
-                                                                        ],
-                                                                        value=compounds_list,
-                                                                        multi=False,
-                                                                        style={"width": "100%"},
-                                                                ),
-                                                        ]
-                                                ),
-                                                dbc.Badge(
-                                                        "Flux Analysis:", color="info", className="mr-1"),
-                                                dbc.Row(
-                                                        [
-                                                                dcc.Dropdown(
-                                                                        id="fba_dropdown",
-                                                                        options=[
-                                                                                {
-                                                                                        "label": i,
-                                                                                        "value": i,
-                                                                                }
-                                                                                for i in list(rxns_full)
-                                                                        ],
-                                                                        value=rxns,
-                                                                        multi=False,
-                                                                        style={"width": "100%"},
-                                                                ),
-                                                        ]
-                                                ),
-                                                dbc.Alert(
-                                                        id="fba-data",
-                                                        children="Select a reaction to see the flux here",
-                                                        color="secondary",
-                                                ),
-                                                dbc.Col([
-                                                    html.Div([
-                                                    html.Button("Submit", id="btn_sub")
-                                                ]),
-                                                    html.Div([
-                                                    html.Button("Download CSV", id="btn_tsv"),
-                                                    dcc.Download(id="download"),
-                                                ]),
-                                                    html.Div([
-                                                    html.Button("Download png", id="btn-get-png"),
-                                                    dcc.Download(id="downloadpng"),
-                                                ]),
-
-                                                ]),
-
-
-                                        ],
-                                        sm=12,
-                                        md=4,
+                                dbc.Col([
+                                        html.H5("Pathways:"),
+                                        dbc.Row(
+                                        [dcc.Dropdown(
+                                            id="pathways_dropdown",
+                                            options=[
+                                            {"label": i,
+                                            "value": i,}
+                                            for i in list(pathway_list)],
+                                        value=pathway_list[0],
+                                        multi=True,
+                                        placeholder="",
+                                        style={"width": "100%"},),]),
+                                        html.H5("Element Transfer Networks:"),
+                                        dbc.Row([dcc.Dropdown(
+                                            id="element_dropdown",
+                                            options=[
+                                                {"label": i,
+                                                "value": i,}
+                                                for i in ["C","N","S","P"]],
+                                            value=["C","N","S","P"],
+                                            multi=False,
+                                            style={"width": "100%"},),]),
+                                        html.H5("Compound Search:"),
+                                        dbc.Row([dcc.Dropdown(
+                                            id="compounds_dropdown",
+                                            options=[
+                                            {"label": i,
+                                            "value": i,}
+                                        for i in list(compounds_list)],
+                                            value=compounds_list,
+                                            multi=False,
+                                            style={"width": "100%"},),]),
+                                        html.H5("Path search"),
+                                        html.P("Select two compounds below to see the three shortest paths"),
+                                        html.P("Compound 1:"),
+                                        dbc.Row([dcc.Dropdown(
+                                            id="filter1_dropdown",
+                                            options=[{"label": i,
+                                                "value": i,}
+                                            for i in list(compounds_list)],
+                                                value=compounds_list,
+                                                multi=False,
+                                                style={"width": "100%"},),]),
+                                                html.P("Compound 2:"),
+                                            dbc.Row([dcc.Dropdown(
+                                                id="filter2_dropdown",
+                                                options=[{"label": i,
+                                                    "value": i,}
+                                            for i in list(compounds_list)],
+                                                value=compounds_list,
+                                                multi=False,
+                                                style={"width": "100%"},),]),
+                                        html.H5("Flux Analysis:"),
+                                            dbc.Row([dcc.Dropdown(
+                                                id="fba_dropdown",
+                                                options=[{"label": i,
+                                                    "value": i,}
+                                            for i in list(rxns_full)],
+                                                value=rxns,
+                                                multi=False,
+                                                style={"width": "100%"},),]),
+                                        dbc.Alert(id="fba-data",
+                                            children="Select a reaction to see the flux here",
+                                            color="secondary",),
+                                        dbc.Col([
+                                            html.Div([
+                                                html.Button("Submit", id="btn_sub")
+                                                    ]),
+                                            html.Div([
+                                            html.Button("Download CSV", id="btn_tsv"),
+                                            dcc.Download(id="download"),
+                                            ]),
+                                            html.Div([
+                                            html.Button("Download png", id="btn-get-png"),
+                                            dcc.Download(id="downloadpng"),
+                                            ]),
+                                        ]),
+                                    ],
+                                sm=12,
+                                md=4,
                                 ),
 
                                 ]),
 
-                        dbc.Row(
-                                [
-                                        dcc.Markdown(
-                                                """
-                                \* Data analysis carried out for demonstration of data visualisation purposes only.
-                                """
-                                        )
-                                ],
-                                style={"fontSize": 11, "color": "gray"},
-                        ),
+                        dbc.Row([dcc.Markdown(
+                            """
+                            \* Data analysis carried out for demonstration of data visualisation purposes only.
+                            """
+                            )],
+                            style={"fontSize": 11, "color": "gray"},),
                 ],
                 style={"marginTop": 20},
         )
