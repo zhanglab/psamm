@@ -288,6 +288,15 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                                     value=compounds_list,
                                                     multi=False,
                                                     style={"width": "100%"},),]),
+                                            html.H5("Gene Delete:"),
+                                                dbc.Row([dcc.Dropdown(
+                                                    id="delete_dropdown",
+                                                    options=[{"label": i,
+                                                        "value": i,}
+                                                for i in list(rxns)],
+                                                    value=None,
+                                                    multi=True,
+                                                    style={"width": "100%"},),]),
                                             html.H5("Flux Analysis:"),
                                                 dbc.Row([dcc.Dropdown(
                                                     id="fba_dropdown",
@@ -517,17 +526,24 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                         State("fba_dropdown", "value"),
                         State("filter1_dropdown", "value"),
                         State("filter2_dropdown", "value"),
+                        State("delete_dropdown", "value")
                 ],
                 prevent_initial_call=True,
         )
         def filter_nodes(n_clicks, pathways_dropdown, element_dropdown, \
                          compounds_dropdown, fba_dropdown, \
-                         filter1_dropdown, filter2_dropdown):
+                         filter1_dropdown, filter2_dropdown, delete_dropdown):
             if isinstance(pathways_dropdown, list) \
+            or isinstance(delete_dropdown, list) \
             or isinstance(element_dropdown, str) \
             or isinstance(compounds_dropdown, str) or isinstance(fba_dropdown, str) \
             or (isinstance(filter1_dropdown, str) and isinstance(filter1_dropdown, str)):
-                nm, network = read_model(self._model, self._mm, element_dropdown)
+                model = self._mm
+                print(model)
+                if delete_dropdown is not None:
+                    for i in delete_dropdown:
+                        model.remove_reaction(i)
+                nm, network = read_model(self._model, model, element_dropdown)
                 pathway_list, rxn_set = get_pathway_list(nm, pathways_dropdown)
 
                 if isinstance(filter1_dropdown, str) and isinstance(filter2_dropdown, str):
@@ -550,7 +566,7 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                     rxn_list.append(rxn.id)
                 else:
                     rxn_list = rxn_set
-                nodes, edges, obj_flux = build_network(self, nm, rxn_list, network, fba_dropdown)
+                nodes, edges, obj_flux = build_network(self, nm, model, rxn_list, network, fba_dropdown)
                 elements=nodes+edges
 
                 if obj_flux != 0:
@@ -809,7 +825,7 @@ def bfs_compounds(start, end, network, rxn_list, rxn_set, middle2, middle3):
 
 # Useful function to build the subset network. Returns nodes and edges
 # from the network associated with the rxn_set of interest
-def build_network(self, nm, rxn_set, network, fba_dropdown):
+def build_network(self, nm, mm, rxn_set, network, fba_dropdown):
         name={}
         formula={}
         for i in nm.compounds:
@@ -820,7 +836,7 @@ def build_network(self, nm, rxn_set, network, fba_dropdown):
         obj = 0
         if not isinstance(fba_dropdown, list):
             objective=str(fba_dropdown)
-            mm = nm.create_metabolic_model()
+            #mm = nm.create_metabolic_model()
 
             # Set up the solver
             solver = self._get_solver()
@@ -828,13 +844,13 @@ def build_network(self, nm, rxn_set, network, fba_dropdown):
             problem = fluxanalysis.FluxBalanceProblem(mm, solver)
             problem.maximize(fba_dropdown)
             obj = problem.get_flux(fba_dropdown)
-            flux_carrying={}
-            for i in nm.reactions:
-                flux_carrying[i.id]=problem.get_flux(i.id)
+            flux_carrying=defaultdict(lambda:0)
+            for i in mm.reactions:
+                flux_carrying[i]=problem.get_flux(i)
         else:
             flux_carrying={}
-            for i in nm.reactions:
-                flux_carrying[i.id]=0
+            for i in mm.reactions:
+                flux_carrying[i]=0
 
 
         for rxn in network[0]:
