@@ -288,7 +288,7 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                                     value=compounds_list,
                                                     multi=False,
                                                     style={"width": "100%"},),]),
-                                            html.H5("Gene Delete:"),
+                                            html.H5("Reaction Delete:"),
                                                 dbc.Row([dcc.Dropdown(
                                                     id="delete_dropdown",
                                                     options=[{"label": i,
@@ -378,7 +378,7 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                                         stylesheet=[{
                                                                     'selector': 'node',
                                                                     'style': {
-                                                                            'background-color': '#BFD7B5',
+                                                                            'background-color': 'data(col)',
                                                                             'label': 'data(label)'}},
                                                                     {
                                                                     "selector": "edge",
@@ -539,7 +539,6 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
             or isinstance(compounds_dropdown, str) or isinstance(fba_dropdown, str) \
             or (isinstance(filter1_dropdown, str) and isinstance(filter1_dropdown, str)):
                 model = self._mm
-                print(model)
                 if delete_dropdown is not None:
                     for i in delete_dropdown:
                         model.remove_reaction(i)
@@ -851,6 +850,13 @@ def build_network(self, nm, mm, rxn_set, network, fba_dropdown):
             flux_carrying={}
             for i in mm.reactions:
                 flux_carrying[i]=0
+        comp=[]
+        for i in nm.compartments:
+            comp.append(i.id)
+        color = ["#6FB2D2","#85C88A","#EBD671","#EEEEEE"]
+        col_dict = {}
+        for col in range(0,len(comp)):
+            col_dict[comp[col]]=color[col]
 
 
         for rxn in network[0]:
@@ -859,11 +865,15 @@ def build_network(self, nm, mm, rxn_set, network, fba_dropdown):
                 for cpd in network[0][rxn][0]:
                     nodes.append({'data':{'id':str(cpd[0]),
                                   'label': name[str(cpd[0])[0:(str(cpd[0]).find('['))]],
-                                  'formula': formula[str(cpd[0])[0:(str(cpd[0]).find('['))]]
+                                  'formula': formula[str(cpd[0])[0:(str(cpd[0]).find('['))]],
+                                  'compartment': cpd[0].compartment,
+                                  'col': col_dict[cpd[0].compartment]
                                   }})
                     nodes.append({'data':{'id':str(cpd[1]),
                                   'label': name[str(cpd[1])[0:(str(cpd[1]).find('['))]],
-                                  'formula': formula[str(cpd[1])[0:(str(cpd[1]).find('['))]]
+                                  'formula': formula[str(cpd[1])[0:(str(cpd[1]).find('['))]],
+                                  'compartment': cpd[0].compartment,
+                                  'col': col_dict[cpd[0].compartment]
                                   }})
                     if  'pathways' in rxn.properties:
                         path = rxn.properties['pathways']
