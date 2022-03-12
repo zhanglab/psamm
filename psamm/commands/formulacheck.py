@@ -26,6 +26,32 @@ from ..balancecheck import formula_balance
 
 logger = logging.getLogger(__name__)
 
+def formula_check(self):
+    # Create a set of excluded reactions
+    exclude = set(self._args.exclude)
+    count = 0
+    unbalanced = 0
+    unchecked = 0
+    for reaction, result in formula_balance(self._model):
+        count += 1
+
+        if reaction.id in exclude or reaction.equation is None:
+            continue
+
+        if result is None:
+            unchecked += 1
+            continue
+
+        left_form, right_form = result
+        if right_form != left_form:
+            unbalanced += 1
+            right_missing, left_missing = Formula.balance(
+                right_form, left_form)
+
+            print('{}\t{}\t{}\t{}\t{}'.format(
+                reaction.id, left_form, right_form,
+                left_missing, right_missing))
+    return(unbalanced, count, unchecked, exclude)
 
 class FormulaBalanceCommand(Command):
     """Check whether reactions in the model are elementally balanced.
@@ -45,31 +71,7 @@ class FormulaBalanceCommand(Command):
 
     def run(self):
         """Run formula balance command"""
-
-        # Create a set of excluded reactions
-        exclude = set(self._args.exclude)
-        count = 0
-        unbalanced = 0
-        unchecked = 0
-        for reaction, result in formula_balance(self._model):
-            count += 1
-
-            if reaction.id in exclude or reaction.equation is None:
-                continue
-
-            if result is None:
-                unchecked += 1
-                continue
-
-            left_form, right_form = result
-            if right_form != left_form:
-                unbalanced += 1
-                right_missing, left_missing = Formula.balance(
-                    right_form, left_form)
-
-                print('{}\t{}\t{}\t{}\t{}'.format(
-                    reaction.id, left_form, right_form,
-                    left_missing, right_missing))
+        unbalanced, count, unchecked, exclude = formula_check(self)
 
         logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))
         logger.info('Unchecked reactions due to missing formula: {}/{}'.format(

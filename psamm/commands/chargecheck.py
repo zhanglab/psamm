@@ -26,6 +26,33 @@ from ..balancecheck import charge_balance
 
 logger = logging.getLogger(__name__)
 
+def charge_check(self, epsilon):
+    # Load compound information
+    def compound_name(id):
+        if id not in self._model.compounds:
+            return id
+        return self._model.compounds[id].properties.get('name', id)
+
+    # Create a set of excluded reactions
+    exclude = set(self._args.exclude)
+    count = 0
+    unbalanced = 0
+    unchecked = 0
+    for reaction, charge in charge_balance(self._model):
+        count += 1
+
+        if reaction.id in exclude or reaction.equation is None:
+            continue
+
+        if math.isnan(charge):
+            logger.debug('Not checking reaction {};'
+                         ' missing charge'.format(reaction.id))
+            unchecked += 1
+        elif abs(charge) > epsilon:
+            unbalanced += 1
+            rxt = reaction.equation.translated_compounds(compound_name)
+            print('{}\t{}\t{}'.format(reaction.id, charge, rxt))
+    return(unbalanced, count, unchecked, exclude)
 
 class ChargeBalanceCommand(Command):
     """Check whether compound charge is balanced.
@@ -49,32 +76,8 @@ class ChargeBalanceCommand(Command):
 
     def run(self):
         """Run charge balance command"""
-
-        # Load compound information
-        def compound_name(id):
-            if id not in self._model.compounds:
-                return id
-            return self._model.compounds[id].properties.get('name', id)
-
-        # Create a set of excluded reactions
-        exclude = set(self._args.exclude)
-        count = 0
-        unbalanced = 0
-        unchecked = 0
-        for reaction, charge in charge_balance(self._model):
-            count += 1
-
-            if reaction.id in exclude or reaction.equation is None:
-                continue
-
-            if math.isnan(charge):
-                logger.debug('Not checking reaction {};'
-                             ' missing charge'.format(reaction.id))
-                unchecked += 1
-            elif abs(charge) > self._args.epsilon:
-                unbalanced += 1
-                rxt = reaction.equation.translated_compounds(compound_name)
-                print('{}\t{}\t{}'.format(reaction.id, charge, rxt))
+        epsilon = self._args.epsilon
+        unbalanced, count, unchecked, exclude = charge_check(self, epsilon)
 
         logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))
         logger.info('Unchecked reactions due to missing charge: {}/{}'.format(

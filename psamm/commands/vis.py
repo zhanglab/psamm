@@ -37,8 +37,9 @@ try:
 except ImportError:
     render = None
     FORMATS = None
-
+from six import string_types
 from psamm.expression import boolean
+from psamm.importer import count_genes
 from psamm.lpsolver import generic
 from psamm import fluxanalysis
 from psamm.lpsolver import glpk, lp
@@ -56,6 +57,8 @@ import dash_cytoscape as cyto
 import re
 import pandas as pd
 import webbrowser
+from psamm.commands.chargecheck import charge_check
+from psamm.commands.formulacheck import formula_check
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +120,41 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
         for i in self._model.reactions:
             rxns_full.append(i.id)
 
+        content_model = []
+        count = 0
+        rxns_with_genes = 0
+        for i in self._model.reactions:
+            count += 1
+            if 'genes' in i._properties:
+                if len(i._properties['genes']) > 0:
+                    rxns_with_genes += 1
+            #print(i._properties['genes'])
+
+        content_model.append(html.H5("General Model Statistics:"))
+        content_model.append(html.P("Reactions in model: " + str(count)))
+        count = 0
+        for i in self._model.compounds:
+            count += 1
+        content_model.append(html.P("Compounds in model: " + str(count)))
+        content_model.append(html.P("Pathways in mode: " + str(len(pathway_list))))
+        content_model.append(html.P("Reactions with gene assocations: " + str(rxns_with_genes)))
+        try:
+            content_model.append(html.P("Total genes: " + str(count_genes(self._model))))
+        except:
+            content_model.append(html.P("Total genes: Unable to count genes"))
+
+        unbalanced, count, unchecked, exclude = charge_check(self, 1e-6)
+        content_model.append(html.H5("Chargecheck results:"))
+        content_model.append(html.P("Unblanced reactions: " + str(unbalanced)))
+        content_model.append(html.P("Unchecked reactions: " + str(unchecked)))
+        content_model.append(html.P("Excluded reactions: " + str(len(exclude))))
+
+        unbalanced, count, unchecked, exclude = formula_check(self)
+        content_model.append(html.H5("Formulacheck results:"))
+        content_model.append(html.P("Unblanced reactions: " + str(unbalanced)))
+        content_model.append(html.P("Unchecked reactions: " + str(unchecked)))
+        content_model.append(html.P("Excluded reactions: " + str(len(exclude))))
+
         # nodes, edges = build_network(nm, rxn_set, network)
         # initialize an empty list. the full is messy
         nodes, edges = [], []
@@ -133,7 +171,7 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                         'border': 'thin lightgrey solid',
                         'overflowX': 'scroll'
                 },
-                'tab': {'height': 'calc(98vh - 115px)'}
+                #'tab': {'height': 'calc(98vh - 115px)'}
         }
         col_swatch = px.colors.qualitative.Dark24
         default_stylesheet = [
@@ -190,15 +228,143 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                 -----
                                 """
                                         ),
-                                dbc.Col([
                                 dbc.Row([
+                                dbc.Col([
 
-                                        dbc.Col([
+                                    html.Div(id='model-control-tabs', className='control-tabs', children=[
+                                    dcc.Tabs(id="model-tabs", value="what is", children=[
+
+                                        dcc.Tab(label='Controls', value='Controls',
+                                            children=html.Div(className='control-tab',children=[
+                                            html.H5("Pathways:"),
+                                            dbc.Row(
+                                            [dcc.Dropdown(
+                                                id="pathways_dropdown",
+                                                options=[
+                                                {"label": i,
+                                                "value": i,}
+                                                for i in list(pathway_list)],
+                                            value=pathway_list[0],
+                                            multi=True,
+                                            placeholder="",
+                                            style={"width": "100%"},),]),
+                                            html.H5("Element Transfer Networks:"),
+                                            dbc.Row([dcc.Dropdown(
+                                                id="element_dropdown",
+                                                options=[
+                                                    {"label": i,
+                                                    "value": i,}
+                                                    for i in ["C","N","S","P"]],
+                                                value=["C","N","S","P"],
+                                                multi=False,
+                                                style={"width": "100%"},),]),
+                                            html.H5("Compound Search:"),
+                                            dbc.Row([dcc.Dropdown(
+                                                id="compounds_dropdown",
+                                                options=[
+                                                {"label": i,
+                                                "value": i,}
+                                            for i in list(compounds_list)],
+                                                value=compounds_list,
+                                                multi=False,
+                                                style={"width": "100%"},),]),
+                                            html.H5("Path search"),
+                                            html.P("Select two compounds below to see the three shortest paths"),
+                                            html.P("Compound 1:"),
+                                            dbc.Row([dcc.Dropdown(
+                                                id="filter1_dropdown",
+                                                options=[{"label": i,
+                                                    "value": i,}
+                                                for i in list(compounds_list)],
+                                                    value=compounds_list,
+                                                    multi=False,
+                                                    style={"width": "100%"},),]),
+                                                    html.P("Compound 2:"),
+                                                dbc.Row([dcc.Dropdown(
+                                                    id="filter2_dropdown",
+                                                    options=[{"label": i,
+                                                        "value": i,}
+                                                for i in list(compounds_list)],
+                                                    value=compounds_list,
+                                                    multi=False,
+                                                    style={"width": "100%"},),]),
+                                            html.H5("Flux Analysis:"),
+                                                dbc.Row([dcc.Dropdown(
+                                                    id="fba_dropdown",
+                                                    options=[{"label": i,
+                                                        "value": i,}
+                                                for i in list(rxns_full)],
+                                                    value=rxns,
+                                                    multi=False,
+                                                    style={"width": "100%"},),]),
+                                            dbc.Alert(id="fba-data",
+                                                children="Select a reaction to see the flux here",
+                                                color="secondary",
+                                                style={"width": "75%"}),
+                                            dbc.Col([
+                                                html.Div([
+                                                    html.Button("Submit", id="btn_sub")
+                                                        ]),
+                                                html.Div([
+                                                html.Button("Download CSV", id="btn_tsv"),
+                                                dcc.Download(id="download"),
+                                                ]),
+                                                html.Div([
+                                                html.Button("Download png", id="btn-get-png"),
+                                                dcc.Download(id="downloadpng"),
+                                                ]),
+                                            ]),
+                                            ]),
+                                            ),
+                                        dcc.Tab(label='Model Stats', value='Statistics',
+                                            children=html.Div(className='about-tab', children=[
+                                            html.H4(
+                                            className='Statistics',
+                                            children='Model Statistics:'
+                                            ),
+
+                                            html.P(
+                                                """
+                                                Below shows some basic information for the
+                                                model.
+                                                """
+                                            ),
+                                            dbc.Alert(id="model-stats",
+                                                children=content_model,
+                                                color="white",
+                                                style={"width": "75%"}),
+                                            ]),
+                                            ),
+                                        dcc.Tab(label='About', value='what-is',
+                                            children=html.Div(className='about-tab', children=[
+                                            html.H4(
+                                            className='what-is',
+                                            children='What is PSAMM?'
+                                            ),
+                                            html.P(
+                                                """
+                                                The Portable System for the Analysis of Metabolic Models
+                                                or PSAMM is a platform that allows for the analysis of
+                                                genome scale metabolic models implemented in the python
+                                                programming language
+                                                """
+                                            ),
+                                            ]),
+                                            ),
+
+                                        ], style={'display':'inline-block','width': '100%'}),
+                                    # sm=12,
+                                    # md=4,
+                                    ]),]),
+                                    dbc.Col([
+
+
+
                                                         cyto.Cytoscape(id = 'net',
                                                         layout={'name':'cose',
                                                                 'animate':True,
                                                                 'animationDuration':1000},
-                                                        style={'width': '600px', 'height': '600px'},
+                                                        style={'width': '100%', 'height': '600px'},
                                                         elements=nodes+edges,
                                                         stylesheet=[{
                                                                     'selector': 'node',
@@ -226,7 +392,7 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
 
                                                                     ],
                                                                     minZoom=0.06
-                                                                    )],sm=12,md=8,),
+                                                                    ),
                                             dbc.Row([
                                                     dbc.Alert(
                                                             id="node-data",
@@ -236,105 +402,29 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                                     dbc.Alert(
                                                             id="edge-data",
                                                             children="Click on an edge to see its details here",
-                                                            color="secondary",)
-                                            ]),
+                                                            color="secondary",),
+                                            ]),]),
 
-                                ]),
-                                ]),
-                                dbc.Col([
-                                        html.H5("Pathways:"),
-                                        dbc.Row(
-                                        [dcc.Dropdown(
-                                            id="pathways_dropdown",
-                                            options=[
-                                            {"label": i,
-                                            "value": i,}
-                                            for i in list(pathway_list)],
-                                        value=pathway_list[0],
-                                        multi=True,
-                                        placeholder="",
-                                        style={"width": "100%"},),]),
-                                        html.H5("Element Transfer Networks:"),
-                                        dbc.Row([dcc.Dropdown(
-                                            id="element_dropdown",
-                                            options=[
-                                                {"label": i,
-                                                "value": i,}
-                                                for i in ["C","N","S","P"]],
-                                            value=["C","N","S","P"],
-                                            multi=False,
-                                            style={"width": "100%"},),]),
-                                        html.H5("Compound Search:"),
-                                        dbc.Row([dcc.Dropdown(
-                                            id="compounds_dropdown",
-                                            options=[
-                                            {"label": i,
-                                            "value": i,}
-                                        for i in list(compounds_list)],
-                                            value=compounds_list,
-                                            multi=False,
-                                            style={"width": "100%"},),]),
-                                        html.H5("Path search"),
-                                        html.P("Select two compounds below to see the three shortest paths"),
-                                        html.P("Compound 1:"),
-                                        dbc.Row([dcc.Dropdown(
-                                            id="filter1_dropdown",
-                                            options=[{"label": i,
-                                                "value": i,}
-                                            for i in list(compounds_list)],
-                                                value=compounds_list,
-                                                multi=False,
-                                                style={"width": "100%"},),]),
-                                                html.P("Compound 2:"),
-                                            dbc.Row([dcc.Dropdown(
-                                                id="filter2_dropdown",
-                                                options=[{"label": i,
-                                                    "value": i,}
-                                            for i in list(compounds_list)],
-                                                value=compounds_list,
-                                                multi=False,
-                                                style={"width": "100%"},),]),
-                                        html.H5("Flux Analysis:"),
-                                            dbc.Row([dcc.Dropdown(
-                                                id="fba_dropdown",
-                                                options=[{"label": i,
-                                                    "value": i,}
-                                            for i in list(rxns_full)],
-                                                value=rxns,
-                                                multi=False,
-                                                style={"width": "100%"},),]),
-                                        dbc.Alert(id="fba-data",
-                                            children="Select a reaction to see the flux here",
-                                            color="secondary",),
-                                        dbc.Col([
-                                            html.Div([
-                                                html.Button("Submit", id="btn_sub")
-                                                    ]),
-                                            html.Div([
-                                            html.Button("Download CSV", id="btn_tsv"),
-                                            dcc.Download(id="download"),
-                                            ]),
-                                            html.Div([
-                                            html.Button("Download png", id="btn-get-png"),
-                                            dcc.Download(id="downloadpng"),
-                                            ]),
-                                        ]),
-                                    ],
-                                sm=12,
-                                md=4,
-                                ),
 
-                                ]),
 
-                        dbc.Row([dcc.Markdown(
-                            """
-                            \* Data analysis carried out for demonstration of data visualisation purposes only.
-                            """
-                            )],
-                            style={"fontSize": 11, "color": "gray"},),
-                ],
-                style={"marginTop": 20},
-        )
+
+
+                                dbc.Row([dcc.Markdown(
+                                    """
+                                    \* Data analysis carried out for demonstration of data visualisation purposes only.
+                                    """
+                                    )],
+                                    style={"fontSize": 11, "color": "gray"},),
+
+                                ],style={"marginTop": 20},),
+                                ]),
+                                ])
+
+        #
+        #
+        #         ],
+        #         style={"marginTop": 20},
+        # )
 
         self._app.layout = html.Div([navbar, body_layout])
         webbrowser.open_new("http://localhost:{}".format("8050"))
@@ -412,6 +502,8 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
 
                 return contents
 
+
+
         @_app.callback(
                 [Output("net", "elements"),
                 Output("fba-data", "children")],
@@ -466,7 +558,7 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                     contents.append(html.H5("{} flux is {}".format(fba_dropdown, obj_flux)))
                 else:
                     contents = []
-                    contents.append(hmtl.H5("No flux through the network"))
+                    contents.append(html.H5("No flux through the network"))
 
                 return elements, contents
 
@@ -638,8 +730,6 @@ def bfs_compounds(start, end, network, rxn_list, rxn_set, middle2, middle3):
                     for j in cpd:
                         if j.name==u[0]:
                             for k in cpd:
-                                print(left, right)
-                                print(j, k)
                                 if j.name in left and k.name in right and (str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Forward" or str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Both"):
                                     adj[k.name]=rxn.id
                                 elif j.name in right and k.name in left and (str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Reverse" or str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Both"):
