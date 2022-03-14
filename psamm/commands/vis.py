@@ -355,7 +355,23 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                                 The Portable System for the Analysis of Metabolic Models
                                                 or PSAMM is a platform that allows for the analysis of
                                                 genome scale metabolic models implemented in the python
-                                                programming language
+                                                programming language.
+                                                """
+                                            ),
+                                            html.H5('ChargeCheck'),
+                                            html.P(
+                                                """
+                                                The charge check function essentially compares the right
+                                                and left sides of a reaction and verifies that the net
+                                                charge of the reaction is zero
+                                                """
+                                            ),
+                                            html.H5('FormulaCheck'),
+                                            html.P(
+                                                """
+                                                The charge check function essentially compares the right
+                                                and left sides of a reaction and verifies that the net
+                                                mass of the reaction is zero
                                                 """
                                             ),
                                             ]),
