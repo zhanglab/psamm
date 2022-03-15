@@ -56,12 +56,32 @@ except ImportError:
     logger.warning("WARNING: The Chebi API package not found! "
                    "Some functions will be unusable")
 
+
+class ParseError(Exception):
+    """Exception used to signal errors while parsing"""
+
+
+class VersionError(Exception):
+    """Exception used to signal incorrect python version"""
+
+
+class CommandError(Exception):
+    """Error from running a command.
+
+    This should be raised from a ``Command.run()`` if any arguments are
+    misspecified. When the command is run and the ``CommandError`` is raised,
+    the caller will exit with an error code and print appropriate usage
+    information.
+    """
+
+
 if sys.version_info.minor < 6:
-    logger.warning("Biopython only compatible with python > 3.5. Exiting..."
-    quit()
+    raise VersionError("Biopython only compatible with python > 3.5.")
+
 
 class InputError(Exception):
-    """Exception used to signal a general input error."""
+    """Exception used to signal a general input error. Exiting..."""
+
 
 
 def dict_representer(dumper, data):
@@ -258,7 +278,8 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
         f.write("List of invalid Kegg IDs: \n")
 
     if verbose:
-        logger.info(f"There are {len(rxn_mapping)} reactions to download.")
+        logger.info("There are {} reactions to download"
+                    ".".format(len(rxn_mapping)))
     # Generate the yaml file for the reactions
     reaction_entry_list = []
     count = 0
@@ -266,7 +287,8 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
         reaction_entry_list.append(entry)
         count += 1
         if verbose and count % 25 == 0:
-            logger.info(f"{count}/{len(rxn_mapping)} reactions downloaded...")
+            logger.info("{}/{} reactions downloaded..."
+                        .format(count, len(rxn_mapping)))
 
     # Clean up the kegg reaction dict.
     reaction_entry_list = clean_reaction_equations(reaction_entry_list)
@@ -295,7 +317,8 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
         for i in eq.compounds:
             compound_set.add(str(i[0].name))
     if verbose:
-        logger.info(f"There are {len(compound_set)} compounds to download.")
+        logger.info("There are {} compounds to download."
+                    .format(len(compound_set)))
     count = 0
     logger.info("Downloading kegg entries and performing charge correction")
     for entry in _download_kegg_entries(out, compound_set,
@@ -303,7 +326,8 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
         compound_entry_list.append(entry)
         count += 1
         if verbose and count % 25 == 0:
-            logger.info(f"{count}/{len(compound_set)} compounds downloaded...")
+            logger.info("{}/{} compounds downloaded...".
+                        format(count,len(compound_set)))
     with open(os.path.join(out, 'compounds.yaml'), 'w+') as f:
         yaml.dump(list(model_compounds(compound_entry_list)), f, **yaml_args)
 
@@ -472,9 +496,9 @@ def model_compounds(compound_entry_list):
                     d['charge'] = encode_utf8(compound.charge)
                 yield d
         except ParseError:
-            logger.warning(f"import of {compound.id} failed"
-                           " and will not be imported into "
-                           "compounds.yaml or compounds_generic.yaml")
+            logger.warning("import of {} failed"
+                           " and will not be imported into compounds.yaml "
+                           "or compounds_generic.yaml".format(compound.id))
             continue
 
 
@@ -544,9 +568,9 @@ def model_generic_compounds(compound_entry_list):
                 d['charge'] = encode_utf8(compound.charge)
             yield d
         except ParseError:
-            logger.warning(f"{compound.id} is improperly formatted "
+            logger.warning("{} is improperly formatted "
                            " and will not be imported into "
-                           "compounds_generic.yaml")
+                           "compounds_generic.yaml".format(compound.id))
             continue
 
 
@@ -828,7 +852,7 @@ class main_transporterCommand(Command):
             logger.info("Using custom transporter families")
             substrate = self._args.db_substrates
         else:
-            logger.info(f"Using the default transporter families from TCDB. "
+            logger.info("Using the default transporter families from TCDB. "
                         "Downloaded from: ")
             logger.info("http://www.tcdb.org/cgi-bin/projectv/public/"
                         "getSubstrates.py")
@@ -838,7 +862,7 @@ class main_transporterCommand(Command):
             logger.info("Using custom transporter families")
             family = self._args.db_families
         else:
-            logger.info(f"Using the default transporter families from TCDB. "
+            logger.info("Using the default transporter families from TCDB. "
                         "Downloaded from: ")
             logger.info("http://www.tcdb.org/cgi-bin/projectv/public/"
                         "families.py")
@@ -1128,20 +1152,6 @@ class ReactionEntry(object):
 
     def __repr__(self):
         return '<ReactionEntry "{}">'.format(self.id)
-
-
-class ParseError(Exception):
-    """Exception used to signal errors while parsing"""
-
-
-class CommandError(Exception):
-    """Error from running a command.
-
-    This should be raised from a ``Command.run()`` if any arguments are
-    misspecified. When the command is run and the ``CommandError`` is raised,
-    the caller will exit with an error code and print appropriate usage
-    information.
-    """
 
 
 class CompoundEntry(object):
