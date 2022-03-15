@@ -862,7 +862,7 @@ class main_transporterCommand(Command):
             for line in infile:
                 line = line.rstrip()
                 listall = re.split("\t", line)
-                substrates = re.split("|", listall[1])
+                substrates = re.split(r"\|", listall[1])
                 sub_out = []
                 for i in substrates:
                     sub_out.append(re.split(";", i)[0])
