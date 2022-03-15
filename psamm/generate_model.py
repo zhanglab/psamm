@@ -40,7 +40,7 @@ import pkg_resources
 from psamm.command import _trim
 from six import add_metaclass, iteritems, itervalues, text_type, PY3
 import abc
-
+from urllib.error import HTTPError
 logger = logging.getLogger(__name__)
 
 try:
@@ -128,7 +128,7 @@ def parse_orthology(orthology, type, col):
                 if len(listall[col-1]) > 0:
                     keys = listall[col-1].split(',')
                 else:
-                    keys= []
+                    keys = []
             else:
                 if type == "R":
                     keys = listall[14].split(',')
@@ -171,7 +171,7 @@ def model_reactions(reaction_entry_list):
 
         orth_list = []
         for i in reaction.orthology:
-                orth_list.append(i)
+            orth_list.append(i)
         if len(orth_list) == 0:
             orth_list = None
 
@@ -184,8 +184,7 @@ def model_reactions(reaction_entry_list):
             d['names'] = encode_utf8(names_l)
         if hasattr(reaction, 'equation') and reaction.equation is not None:
             d['equation'] = encode_utf8(str(reaction.equation))
-        if hasattr(reaction, 'definition') and \
-                   reaction.definition is not None:
+        if hasattr(reaction, 'definition') and reaction.definition is not None:
             d['KEGG_definition'] = encode_utf8(reaction.definition)
         if hasattr(reaction, 'enzymes') and reaction.enzymes is not None:
             d['enzymes'] = encode_utf8(enzymes_list)
@@ -194,16 +193,16 @@ def model_reactions(reaction_entry_list):
         if hasattr(reaction, 'comment') and reaction.comment is not None:
             d['comment'] = encode_utf8(str(reaction.comment))
         if hasattr(reaction, 'tcdb_family') and \
-                   reaction.tcdb_family is not None:
+                reaction.tcdb_family is not None:
             d['tcdb_family'] = encode_utf8(str(reaction.tcdb_family))
         if hasattr(reaction, 'substrates') and \
-                   reaction.substrates is not None:
+                reaction.substrates is not None:
             d['substrates'] = encode_utf8(reaction.substrates)
         if hasattr(reaction, 'genes') and \
-                   reaction.genes is not None:
+                reaction.genes is not None:
             d['genes'] = encode_utf8(str(reaction.genes))
         if hasattr(reaction, 'orthology') and \
-                   reaction.orthology is not None:
+                reaction.orthology is not None:
             d['orthology'] = encode_utf8(orth_list)
         yield d
 
@@ -218,12 +217,12 @@ def clean_reaction_equations(reaction_entry_list):
     '''
     for reaction in reaction_entry_list:
         s = re.search(r"\(([A-Za-z0-9_+-]+)\)", str(reaction.equation))
-        equation = re.sub(r'\(.*?\)', lambda x: ''.join(x.group(0).split()), \
-            str(reaction.equation))
+        equation = re.sub(r'\(.*?\)', lambda x: ''.join(x.group(0).split()),
+                          str(reaction.equation))
         equation_out = []
         comp = re.split(" ", equation)
         comp = comp + [""]
-        for i in range(0,len(comp)-1):
+        for i in range(0, len(comp)-1):
             # Handles unusual stoichiometry at the beginning of compounds
             if "(" in comp[i] and "C" in comp[i+1]:
                 if i > 0:
@@ -235,12 +234,12 @@ def clean_reaction_equations(reaction_entry_list):
                     continue
             # special handling to retain stoichiometry of (n+1) and (n-1), etc.
             # at the end of the compound
-            if "(" in comp[i]:# and (not "(n+" in i or not "(n-" in i):
+            if "(" in comp[i]:  # and (not "(n+" in i or not "(n-" in i):
                 comp[i] = comp[i].replace("(", "[")
                 comp[i] = comp[i].replace(")", "]")
             equation_out.append(comp[i])
         equation = ' '.join(equation_out)
-        reaction.__dict__['values']['equation']=[equation]
+        reaction.__dict__['values']['equation'] = [equation]
     return(reaction_entry_list)
 
 
@@ -263,9 +262,8 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
     for entry in _download_kegg_entries(out, rxn_mapping, None, ReactionEntry):
         reaction_entry_list.append(entry)
         count += 1
-        if verbose and count%25 == 0:
-            logger.info(f"{count}/{len(rxn_mapping)} "
-                "reactions downloaded...")
+        if verbose and count % 25 == 0:
+            logger.info(f"{count}/{len(rxn_mapping)} reactions downloaded...")
 
     # Clean up the kegg reaction dict.
     reaction_entry_list = clean_reaction_equations(reaction_entry_list)
@@ -297,28 +295,28 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
         logger.info(f"There are {len(compound_set)} compounds to download.")
     count = 0
     logger.info("Downloading kegg entries and performing charge correction")
-    for entry in _download_kegg_entries(out, compound_set, rhea_db, CompoundEntry):
+    for entry in _download_kegg_entries(out, compound_set,
+                                        rhea_db, CompoundEntry):
         compound_entry_list.append(entry)
         count += 1
-        if verbose and count%25 == 0:
-            logger.info(f"{count}/{len(compound_set)} "
-                "compounds downloaded...")
+        if verbose and count % 25 == 0:
+            logger.info(f"{count}/{len(compound_set)} compounds downloaded...")
     with open(os.path.join(out, 'compounds.yaml'), 'w+') as f:
         yaml.dump(list(model_compounds(compound_entry_list)), f, **yaml_args)
 
     # generate a yaml file for all generic compounds
     generic_compounds_list = check_generic_compounds(compound_entry_list)
-    generic_entry_list=[]
+    generic_entry_list = []
     logger.info("Downloading kegg entries for generic compounds and "
                 "performing charge correction")
-    for entry in _download_kegg_entries(out, generic_compounds_list, rhea_db, \
-        CompoundEntry):
+    for entry in _download_kegg_entries(out, generic_compounds_list, rhea_db,
+                                        CompoundEntry):
         generic_entry_list.append(entry)
     with open(os.path.join(out, 'compounds_generic.yaml'), 'w+') as f:
-        yaml.dump(list(model_generic_compounds(generic_entry_list)), \
-            f, **yaml_args)
+        yaml.dump(list(model_generic_compounds(generic_entry_list)),
+                  f, **yaml_args)
     with open(os.path.join(out, 'log.tsv'), "a+") as f:
-        f.write("\nThere are {} generic compounds in the model\n".format(str(\
+        f.write("\nThere are {} generic compounds in the model\n".format(str(
             len(generic_compounds_list))))
         f.write("Generic compounds:\n")
         for i in generic_entry_list:
@@ -340,8 +338,8 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
     with open(os.path.join(out, 'log.tsv'), 'a+') as f:
         f.write("\nThe reactions containing these generic compounds are: \n")
         for reaction in reaction_entry_list:
-            if any(i in str(reaction.equation) \
-                for i in generic_compounds_list):
+            if any(i in str(reaction.equation)
+                   for i in generic_compounds_list):
                 f.write("{}".format(reaction.id))
                 if reaction.name:
                     f.write("|{}".format(reaction.name))
@@ -360,8 +358,7 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
     with open(os.path.join(out, 'reactions.yaml'), 'w+') as f:
         yaml.dump(list(model_reactions(reaction_list_out)), f, **yaml_args)
     with open(os.path.join(out, 'reactions_generic.yaml'), 'w+') as f:
-       	yaml.dump(list(model_reactions(reaction_list_generic)), f, **yaml_args)
-
+        yaml.dump(list(model_reactions(reaction_list_generic)), f, **yaml_args)
 
     # Create a model.yaml file
     with open('{}/model.yaml'.format(out), mode='w') as myam:
@@ -384,21 +381,21 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
             if len(rxn_mapping[reaction.id]) == 1:
                 gene_asso = rxn_mapping[reaction.id]
             else:
-                gene_asso = ['({})'.format(gene) \
-                    for gene in rxn_mapping[reaction.id]]
-            outfile.write('{}\t{}\n'.format(reaction.id, \
-                ' or '.join(gene_asso)))
+                gene_asso = ['({})'.format(gene)
+                             for gene in rxn_mapping[reaction.id]]
+            outfile.write('{}\t{}\n'.format(reaction.id,
+                          ' or '.join(gene_asso)))
 
     with open('{}/gene-association_generic.tsv'.format(out), mode='w') \
-        as outfile:
+            as outfile:
         outfile.write('id\tgenes\n')
         for reaction in reaction_list_generic:
             if len(rxn_mapping[reaction.id]) == 1:
                 gene_asso = rxn_mapping[reaction.id]
             else:
-                gene_asso = ['({})'.format(gene) \
-                    for gene in rxn_mapping[reaction.id]]
-            outfile.write('{}\t{}\n'.format(reaction.id, \
+                gene_asso = ['({})'.format(gene)
+                             for gene in rxn_mapping[reaction.id]]
+            outfile.write('{}\t{}\n'.format(reaction.id,
                           ' or '.join(gene_asso)))
 
     # Create a model_def file with all of the new reactions
@@ -408,16 +405,15 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
 
     # Write out some final statistics for the model
     with open(os.path.join(out, 'log.tsv'), 'a+') as f:
-        f.write("\nThere are {} reactions in the model".format(str(\
+        f.write("\nThere are {} reactions in the model".format(str(
                 len(reaction_list_out))))
-       	f.write("\nThere are {} compounds in the model\n".format(str(\
+        f.write("\nThere are {} compounds in the model\n".format(str(
                 len(compound_list_out))))
     if verbose:
-        logger.info("\nThere are {} reactions in the model".format(str(\
+        logger.info("\nThere are {} reactions in the model".format(str(
                        len(reaction_list_out))))
-        logger.info("\nThere are {} compounds in the model\n".format(str(\
+        logger.info("\nThere are {} compounds in the model\n".format(str(
                        len(compound_entry_list))))
-
 
 
 def model_compounds(compound_entry_list):
@@ -442,37 +438,42 @@ def model_compounds(compound_entry_list):
                 non_gen_compounds.append(compound.id)
                 if hasattr(compound, 'name') and compound.name is not None:
                     d['name'] = encode_utf8(compound.name)
-                if hasattr(compound, 'names') and compound.names is not None:
+                if hasattr(compound, 'names') and \
+                        compound.names is not None:
                     names_l = []
                     for i in compound.names:
                         names_l.append(i)
                     d['names'] = encode_utf8(names_l)
                 if hasattr(compound, 'formula') and \
-                    compound.formula is not None:
+                        compound.formula is not None:
                     d['formula'] = encode_utf8(str(compound.formula))
                 if hasattr(compound, 'mol_weight') and \
-                    compound.mol_weight is not None:
+                        compound.mol_weight is not None:
                     d['mol_weight'] = encode_utf8(compound.mol_weight)
                 if hasattr(compound, 'comment') and \
-                    compound.comment is not None:
+                        compound.comment is not None:
                     d['comment'] = encode_utf8(str(compound.comment))
                 if hasattr(compound, 'dblinks') and \
-                    compound.dblinks is not None:
+                        compound.dblinks is not None:
                     for key, value in compound.dblinks:
                         if key != 'ChEBI':
                             d['{}'.format(key)] = encode_utf8(value)
                 if hasattr(compound, 'chebi') \
-                    and compound.chebi is not None:
+                        and compound.chebi is not None:
                     d['ChEBI'] = encode_utf8(compound.chebi)
                 if hasattr(compound, 'chebi_all') \
-                    and compound.chebi_all is not None:
+                        and compound.chebi_all is not None:
                     d['ChEBI_all'] = encode_utf8(compound.chebi_all)
                 if hasattr(compound, 'charge') \
-                    and compound.charge is not None:
+                        and compound.charge is not None:
                     d['charge'] = encode_utf8(compound.charge)
                 yield d
-        except:
+        except ParseError:
+            logger.warning(f"import of {compound.id} failed"
+                           " and will not be imported into "
+                           "compounds.yaml or compounds_generic.yaml")
             continue
+
 
 def check_generic_compounds(compound_entry_list):
     '''
@@ -494,9 +495,10 @@ def check_generic_compounds(compound_entry_list):
                 generic_compounds_list.append(compound.id)
             else:
                 continue
-        except:
+        except ParseError:
             generic_compounds_list.append(compound.id)
     return(generic_compounds_list)
+
 
 def model_generic_compounds(compound_entry_list):
     '''
@@ -519,31 +521,26 @@ def model_generic_compounds(compound_entry_list):
                 for i in compound.names:
                     names_l.append(i)
                 d['names'] = encode_utf8(names_l)
-            if hasattr(compound, 'formula') and \
-                compound.formula is not None:
+            if hasattr(compound, 'formula') and compound.formula is not None:
                 d['formula'] = encode_utf8(str(compound.formula))
             if hasattr(compound, 'mol_weight') and \
-                compound.mol_weight is not None:
+                    compound.mol_weight is not None:
                 d['mol_weight'] = encode_utf8(compound.mol_weight)
-            if hasattr(compound, 'comment') and \
-                compound.comment is not None:
+            if hasattr(compound, 'comment') and compound.comment is not None:
                 d['comment'] = encode_utf8(str(compound.comment))
-            if hasattr(compound, 'dblinks') \
-                and compound.dblinks is not None:
+            if hasattr(compound, 'dblinks') and compound.dblinks is not None:
                 for key, value in compound.dblinks:
                     if key != 'ChEBI':
                         d['{}'.format(key)] = encode_utf8(value)
-            if hasattr(compound, 'chebi') \
-                and compound.chebi is not None:
+            if hasattr(compound, 'chebi') and compound.chebi is not None:
                 d['ChEBI'] = encode_utf8(compound.chebi)
-            if hasattr(compound, 'chebi_all') \
-                and compound.chebi_all is not None:
+            if hasattr(compound, 'chebi_all') and \
+                    compound.chebi_all is not None:
                 d['ChEBI_all'] = encode_utf8(compound.chebi_all)
-            if hasattr(compound, 'charge') \
-                and compound.charge is not None:
+            if hasattr(compound, 'charge') and compound.charge is not None:
                 d['charge'] = encode_utf8(compound.charge)
             yield d
-        except:
+        except ParseError:
             logger.warning(f"{compound.id} is improperly formatted "
                            " and will not be imported into "
                            "compounds_generic.yaml")
@@ -585,25 +582,23 @@ def _download_kegg_entries(out, rxn_mapping, rhea, entry_class, context=None):
     '''
     # go through the rxn mapping dict and pull all of the
     # reaction information out of the Kegg API
-    with open(os.path.join(out,'log.tsv'), "a+") as f:
+    with open(os.path.join(out, 'log.tsv'), "a+") as f:
         for reactions in rxn_mapping:
             # Check for standard formatting of R and C. These can be treated
             # the same way
-            if reactions[0] == "R" or reactions[0]=="C":
+            if reactions[0] == "R" or reactions[0] == "C":
                 # Try except loop to catch a failure to download.
                 # On a failure, the failure gets recorded in the log
                 try:
                     request = REST.kegg_get(reactions)
-                except:
-                    f.write("".join(["  - ",reactions,"\n"]))
-                    # sleep to give time to exit code
-                    time.sleep(0.5)
+                except HTTPError:
+                    f.write("".join(["  - ", reactions, "\n"]))
                     continue
                 entry_line = None
                 section_id = None
                 reaction = {}
                 for lineno, line in enumerate(request):
-                    line=line.rstrip()
+                    line = line.rstrip()
                     if line == "///":
                         continue
                     if entry_line is None:
@@ -629,11 +624,11 @@ def parse_rxns_from_EC(rxn_mapping, out, verbose):
     associations for reaction IDs. Returns a dictionary
     of Reaction IDs to genes.
     """
-    rxn_dict=defaultdict(lambda:[])
+    rxn_dict = defaultdict(lambda: [])
     if verbose:
         logger.info("Downloading reactions associated with EC...")
         logger.info("There are {} ECs download".format(len(rxn_mapping)))
-        count=0
+        count = 0
     with open(os.path.join(out, "log.tsv"), "a+") as f:
         for reactions in rxn_mapping:
             if verbose:
@@ -643,15 +638,15 @@ def parse_rxns_from_EC(rxn_mapping, out, verbose):
                 count += 1
             try:
                 request = REST.kegg_get(reactions)
-            except:
-                f.write("".join(["  - ",reactions,"\n"]))
+            except HTTPError:
+                f.write("".join(["  - ", reactions, "\n"]))
                 continue
             entry_line = None
             section_id = None
             reaction = {}
             for lineno, line in enumerate(request):
-                line=line.rstrip()
-                if line=="///":
+                line = line.rstrip()
+                if line == "///":
                     continue
                 if entry_line is None:
                     entry_line = lineno
@@ -663,17 +658,17 @@ def parse_rxns_from_EC(rxn_mapping, out, verbose):
                 elif section_id is not None:
                     reaction[section_id].append(line.strip())
                 else:
-                    raise ParseError(
-                        'Missing section identifier at line \
-                        {}'.format(lineno))
-                rxn_ids=[]
+                    raise ParseError('Missing section identifier at line '
+                                     '{}'.format(lineno))
+                rxn_ids = []
             if "all_reac" in reaction:
-                listall = re.split("\s",reaction["all_reac"][0])
+                listall = re.split(" ", reaction["all_reac"][0])
                 for r in listall:
                     if r[0] == "R":
-                        rxn_dict[r]+=rxn_mapping[reactions]
+                        rxn_dict[r] += rxn_mapping[reactions]
 
     return(rxn_dict)
+
 
 def parse_rxns_from_KO(rxn_mapping, out, verbose):
     """
@@ -681,11 +676,11 @@ def parse_rxns_from_KO(rxn_mapping, out, verbose):
     associations for reaction IDs. Returns a dictionary
     of Reaction IDs to genes.
     """
-    rxn_dict=defaultdict(lambda:[])
+    rxn_dict = defaultdict(lambda: [])
     if verbose:
         logger.info("Downloading reactions associated with KO...")
         logger.info("There are {} KOs download".format(len(rxn_mapping)))
-        count=0
+        count = 0
     with open(os.path.join(out, "log.tsv"), "a+") as f:
         for reactions in rxn_mapping:
             if verbose:
@@ -695,15 +690,15 @@ def parse_rxns_from_KO(rxn_mapping, out, verbose):
                 count += 1
             try:
                 request = REST.kegg_get(reactions)
-            except:
-                f.write("".join(["  - ",reactions,"\n"]))
+            except HTTPError:
+                f.write("".join(["  - ", reactions, "\n"]))
                 continue
             entry_line = None
             section_id = None
             reaction = {}
             for lineno, line in enumerate(request):
-                line=line.rstrip()
-                if line=="///":
+                line = line.rstrip()
+                if line == "///":
                     continue
                 if entry_line is None:
                     entry_line = lineno
@@ -718,52 +713,48 @@ def parse_rxns_from_KO(rxn_mapping, out, verbose):
                     raise ParseError(
                         'Missing section identifier at line \
                         {}'.format(lineno))
-                rxn_ids=[]
+                rxn_ids = []
             if "dblinks" in reaction:
                 for i in reaction["dblinks"]:
                     if i[0:2] == "RN":
-                        listall = re.split("\s",i[1:])
+                        listall = re.split(" ", i[1:])
                         for r in listall:
                             if r[0] == "R":
-                                rxn_dict[r]+=rxn_mapping[reactions]
+                                rxn_dict[r] += rxn_mapping[reactions]
     return(rxn_dict)
 
-def gen_transporters(path, gene_asso, tp_sub_dict, tp_fam_dict, chebi_dict, \
-     compartment_in, compartment_out):
+
+def gen_transporters(path, gene_asso, tp_sub_dict, tp_fam_dict, chebi_dict,
+                     compartment_in, compartment_out):
     with open(os.path.join(path, "transporter_log.tsv"), 'w') \
-        as log:
+            as log:
         log.write("compounds for which transporters were predicted, but"
-            " are not found in the model:\n")
-        eq = defaultdict(lambda:[])
+                  " are not found in the model:\n")
+        eq = defaultdict(lambda: [])
         for id, genes in gene_asso.items():
             # if there is just one substrate and it is in the porin family
             # assume passive diffusion/porin behavior
-            if len(tp_sub_dict[id]) == 1: # id[0] == "1" and
+            if len(tp_sub_dict[id]) == 1:  # id[0] == "1" and
                 for cpd in tp_sub_dict[id]:
                     if cpd in chebi_dict:
-                        eq[id].append(
-                        ("{}_diff".format(chebi_dict[cpd][0]),
-                                      Reaction(Direction.Both, {
-                        Compound(chebi_dict[cpd][0]).in_compartment(
-                            compartment_in): -1,
-                        Compound(chebi_dict[cpd][0]).in_compartment(
-                            compartment_out): 1}
-                        )))
+                        eq[id].append(("{}_diff".format(chebi_dict[cpd][0]),
+                                       Reaction(Direction.Both,
+                                       {Compound(chebi_dict[cpd][0]).
+                                        in_compartment(compartment_in): -1,
+                                        Compound(chebi_dict[cpd][0]).
+                                        in_compartment(compartment_out): 1})))
                     else:
                         log.write("{}\t{}\n".format("Compound not in "
                                   "model: ", cpd, id))
             # Otherwise, create a template reaction entry with no
             # formulation for user curation
             else:
-                 eq[id].append(("TP_{}".format(id), Reaction(
-                 Direction.Both,
-                 {
-                 Compound("").in_compartment(compartment_in): \
-                 -1,
-                 Compound("").in_compartment(compartment_out): \
-                 1
-                 }
-                 )))
+                eq[id].append(("TP_{}".format(id),
+                              Reaction(Direction.Both,
+                                       {Compound("").in_compartment(
+                                        compartment_in): -1,
+                                        Compound("").in_compartment(
+                                        compartment_out): 1})))
 
         # Sets up the yaml object for the reactions and writes
         # out the parsed reaction information to a reactions.yaml
@@ -776,27 +767,28 @@ def gen_transporters(path, gene_asso, tp_sub_dict, tp_fam_dict, chebi_dict, \
                      'allow_unicode': True}
 
         # construct a new reactions.yaml file based on this.
-        reaction_entry_list=[]
+        reaction_entry_list = []
         mark = FileMark(None, 0, 0)
         rhea = None
         with open(os.path.join(path, "transporters.yaml"),
-            "w") as f:
+                  "w") as f:
             for tcdb in eq:
                 for rxn in eq[tcdb]:
                     fam_id = ".".join(tcdb.split(".")[0:3])
-                    reaction = {'transport_name':rxn[0], 'entry':[rxn[0]],
-                                'name':[tp_fam_dict[fam_id]],
-                                'equation':[str(rxn[1])],
-                                'enzyme':[tcdb],
-                                'tcdb_family':tp_fam_dict[fam_id],
-                                'substrates':tp_sub_dict[tcdb],
-                                'genes':"({})".format(" or ".join(
+                    reaction = {'transport_name': rxn[0], 'entry': [rxn[0]],
+                                'name': [tp_fam_dict[fam_id]],
+                                'equation': [str(rxn[1])],
+                                'enzyme': [tcdb],
+                                'tcdb_family': tp_fam_dict[fam_id],
+                                'substrates': tp_sub_dict[tcdb],
+                                'genes': "({})".format(" or ".join(
                                     gene_asso[tcdb]))}
                     entry = ReactionEntry(reaction, rhea, filemark=mark)
                     reaction_entry_list.append(entry)
 
             yaml.dump(list(model_reactions(reaction_entry_list)), f,
                       **yaml_args)
+
 
 class main_transporterCommand(Command):
     """Predicts the function of transporter reactions.
@@ -806,20 +798,21 @@ class main_transporterCommand(Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument('--annotations', metavar='path',
-            help='Path to the annotation file from eggnog')
+                            help='Path to the annotation file from eggnog')
         parser.add_argument('--db_substrates', type=str,
-            help='''OPTIONAL. Path to a custom substrate file. ''')
+                            help='OPTIONAL. Path to a custom substrate file.')
         parser.add_argument('--db_families', type=str,
-            help='''OPITONAL. Path to a custom family file.''')
+                            help='OPTIONAL. Path to a custom family file.')
         parser.add_argument('--model', metavar='path',
-            help='''Path to the model directory''')
+                            help='Path to the model directory')
         parser.add_argument('--compartment_in', default='c',
-            help='''abbreviation for the internal compartment''')
+                            help='abbreviation for the internal compartment')
         parser.add_argument('--compartment_out', default='e',
-            help='''abbreviation for the external compartment''')
+                            help='abbreviation for the external compartment')
         parser.add_argument('--col', default=None, help='If providing your own'
-            ' annotation table, specify column for the R, EC, or KO number. '
-            'The default is to parse eggnog output.', type=int)
+                            ' annotation table, specify column for the R, EC, '
+                            'or KO number. The default is to parse eggnog'
+                            ' output.', type=int)
         super(main_transporterCommand, cls).init_parser(parser)
 
     def run(self):
@@ -833,9 +826,9 @@ class main_transporterCommand(Command):
             substrate = self._args.db_substrates
         else:
             logger.info(f"Using the default transporter families from TCDB. "
-                         "Downloaded from: ")
+                        "Downloaded from: ")
             logger.info("http://www.tcdb.org/cgi-bin/projectv/public/"
-                         "getSubstrates.py")
+                        "getSubstrates.py")
             substrate = resource_filename('psamm',
                                           'external-data/tcdb_substrates.tsv')
         if self._args.db_families:
@@ -843,9 +836,9 @@ class main_transporterCommand(Command):
             family = self._args.db_families
         else:
             logger.info(f"Using the default transporter families from TCDB. "
-                         "Downloaded from: ")
+                        "Downloaded from: ")
             logger.info("http://www.tcdb.org/cgi-bin/projectv/public/"
-                         "families.py")
+                        "families.py")
             family = resource_filename('psamm',
                                        'external-data/tcdb_families.tsv')
         if not self._args.model:
@@ -856,7 +849,7 @@ class main_transporterCommand(Command):
         nm = mr.create_model()
         mm = nm.create_metabolic_model()
 
-        chebi_dict = defaultdict(lambda:[])
+        chebi_dict = defaultdict(lambda: [])
         for cpd in nm.compounds:
             if 'ChEBI' in cpd.__dict__['_properties']:
                 chebi = re.split(' ', cpd.__dict__['_properties']['ChEBI'])
@@ -864,19 +857,19 @@ class main_transporterCommand(Command):
                     chebi_dict["CHEBI:{}".format(i)].append(cpd.id)
 
         # Read in the reaction substrates
-        tp_sub_dict = defaultdict(lambda:[])
+        tp_sub_dict = defaultdict(lambda: [])
         with open(substrate, 'r') as infile:
             for line in infile:
                 line = line.rstrip()
                 listall = re.split("\t", line)
-                substrates = re.split("\|", listall[1])
+                substrates = re.split("|", listall[1])
                 sub_out = []
                 for i in substrates:
                     sub_out.append(re.split(";", i)[0])
                 tp_sub_dict[listall[0]] = sub_out
 
         # read in the reaction families
-        tp_fam_dict = defaultdict(lambda:'')
+        tp_fam_dict = defaultdict(lambda: '')
         with open(family, 'r') as infile:
             for line in infile:
                 line = line.rstrip()
@@ -886,8 +879,8 @@ class main_transporterCommand(Command):
         # build a gene association dictionary
         # Launch the parse_orthology function to contruct a gene
         # association file
-        gene_asso = parse_orthology(self._args.annotations, "tcdb", \
-            self._args.col)
+        gene_asso = parse_orthology(self._args.annotations, "tcdb",
+                                    self._args.col)
 
         # Build the transporter databse based on what is in
         # the annotations
@@ -895,9 +888,9 @@ class main_transporterCommand(Command):
             path = self._args.model.rstrip("model.yaml")
         else:
             path = self._args.model
-        gen_transporters(path, gene_asso, tp_sub_dict, tp_fam_dict, chebi_dict, \
-             self._args.compartment_in, self._args.compartment_out)
-
+        gen_transporters(path, gene_asso, tp_sub_dict, tp_fam_dict,
+                         chebi_dict, self._args.compartment_in,
+                         self._args.compartment_out)
 
 
 class main_databaseCommand(Command):
@@ -906,36 +899,39 @@ class main_databaseCommand(Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument('--annotations', metavar='path',
-            help='Path to the annotation file from Eggnog')
+                            help='Path to the annotation file from Eggnog')
         parser.add_argument('--type', type=str,
-            help='Define whether to build the model on reaction '
-            'ID, KO, or EC.\noptions are: [R, KO, EC]')
+                            help='Define whether to build the model on'
+                            ' reaction ID, KO, or EC.\noptions are: '
+                            '[R, KO, EC]')
         parser.add_argument('--out', metavar='out',
-            help='Path to the output location for the model directory. '
-            'This will be created for you.')
+                            help='Path to the output location for the model '
+                            'directory. This will be created for you.')
         parser.add_argument('--col', default=None, help='If providing your '
-            'own annotation table, specify column for the R, EC, or KO number.'
-            ' The default is to parse eggnog output.', type=int)
+                            'own annotation table, specify column for the R, '
+                            'EC, or KO number. The default is to parse eggnog'
+                            ' output.', type=int)
         parser.add_argument('--verbose', help='Report progress  verbose mode',
-            action='store_true')
+                            action='store_true')
         parser.add_argument('--default_compartment',
-            help='Define abbreviation for the default compartment',
-            default='c')
+                            help='Define abbreviation for the default '
+                            'compartment',
+                            default='c')
         parser.add_argument('--rhea', help='Resolve protonation states '
-            'using major microspecies at pH 7.3 using Rhea-ChEBI mappings',
-            action='store_true')
+                            'using major microspecies at pH 7.3 using '
+                            'Rhea-ChEBI mappings', action='store_true')
         super(main_databaseCommand, cls).init_parser(parser)
 
     def run(self):
         """Entry point for the database generation script"""
         # check if required packages are installed
         if 'Bio.KEGG.Enzyme' not in sys.modules or \
-            'Bio.KEGG.REST' not in sys.modules:
+                'Bio.KEGG.REST' not in sys.modules:
             quit('No biopython package found. '
-            'Please run <pip install biopython>''')
+                 'Please run <pip install biopython>''')
         if "libchebipy._chebi_entity" not in sys.modules:
             quit('The Chebi API is not installed. '
-            'Please run <pip install libchebipy>')
+                 'Please run <pip install libchebipy>')
 
         # Check the validity of the input values
         if not self._args.annotations:
@@ -951,22 +947,25 @@ class main_databaseCommand(Command):
             os.mkdir(self._args.out)
 
         # Check the format of the eggnog annotation file.
-        ## Add some code here to check the input file.
+        # Add some code here to check the input file.
 
         # Launch the parse_orthology function to contruct a
         # gene association file
-        ortho_dict = parse_orthology(self._args.annotations, self._args.type, \
-            self._args.col)
+        ortho_dict = parse_orthology(self._args.annotations, self._args.type,
+                                     self._args.col)
 
         # convert EC to reactions
         if self._args.type == "EC":
-            ortho_dict = parse_rxns_from_EC(ortho_dict, self._args.out, self._args.verbose)
+            ortho_dict = parse_rxns_from_EC(ortho_dict, self._args.out,
+                                            self._args.verbose)
         elif self._args.type == "KO":
-            ortho_dict = parse_rxns_from_KO(ortho_dict, self._args.out, self._args.verbose)
+            ortho_dict = parse_rxns_from_KO(ortho_dict, self._args.out,
+                                            self._args.verbose)
 
         # Create the model using the kegg api
-        create_model_api(self._args.out, ortho_dict, self._args.verbose, \
-            self._args.rhea, self._args.default_compartment)
+        create_model_api(self._args.out, ortho_dict, self._args.verbose,
+                         self._args.rhea, self._args.default_compartment)
+
 
 def main(command_class=None, args=None):
     """Run the command line interface with the given :class:`Command`.
@@ -986,8 +985,8 @@ def main(command_class=None, args=None):
         logging.basicConfig(
             level=logging.INFO, format='%(levelname)s: %(message)s')
 
-    parser = argparse.ArgumentParser(description=\
-        'Options to generate a metabolic model')
+    parser = argparse.ArgumentParser(description='Options to generate '
+                                     'a metabolic model')
 
     if command_class is not None:
         # Command explicitly given, only allow that command
@@ -1007,8 +1006,8 @@ def main(command_class=None, args=None):
                     canonical.name))
 
         # Create parsers for subcommands
-        subparsers = parser.add_subparsers(title='Commands', \
-            metavar='command')
+        subparsers = parser.add_subparsers(title='Commands',
+                                           metavar='command')
         for name, command_class in sorted(iteritems(commands)):
             title, _, _ = command_class.__doc__.partition('\n\n')
             subparser = subparsers.add_parser(
@@ -1024,7 +1023,6 @@ def main(command_class=None, args=None):
         command.run()
     except CommandError as e:
         parser.error(text_type(e))
-
 
 
 class ReactionEntry(object):
@@ -1128,8 +1126,10 @@ class ReactionEntry(object):
     def __repr__(self):
         return '<ReactionEntry "{}">'.format(self.id)
 
+
 class ParseError(Exception):
     """Exception used to signal errors while parsing"""
+
 
 class CommandError(Exception):
     """Error from running a command.
@@ -1139,6 +1139,7 @@ class CommandError(Exception):
     the caller will exit with an error code and print appropriate usage
     information.
     """
+
 
 class CompoundEntry(object):
     """Representation of entry in KEGG compound file"""
@@ -1177,25 +1178,25 @@ class CompoundEntry(object):
             rhea_db = self.rhea
         else:
             use_rhea = False
-        for DB,ID in self.dblinks:
+        for DB, ID in self.dblinks:
             if DB == "ChEBI":
                 id_list = ID.split(" ")
                 if use_rhea:
                     rhea_id_list = rhea_db.select_chebi_id(id_list)
-                    if len(rhea_id_list) == 0: # no chebis map to rhea
+                    if len(rhea_id_list) == 0:  # no chebis map to rhea
                         self._chebi = id_list[0]
                         self._chebi_all = id_list
-                    elif len(set(rhea_id_list)) == 1: # chebis map to same rhea
+                    elif len(set(rhea_id_list)) == 1:  # chebi map to same rhea
                         self._chebi = rhea_id_list[0]
                         self._chebi_all = set(id_list + [rhea_id_list[0]])
-                    else: # chebis map to different rheas
+                    else:  # chebis map to different rheas
                         self._chebi = id_list[0]
                         self._chebi_all = set(id_list + rhea_id_list)
-                else: # --rhea not given
+                else:  # --rhea not given
                     self._chebi = id_list[0]
                     self._chebi_all = id_list
 
-        ## libchebipy update charge and formula
+        # libchebipy update charge and formula
         if self._chebi is not None:
             this_chebi_entity = ChebiEntity(self._chebi)
             try:
@@ -1210,7 +1211,7 @@ class CompoundEntry(object):
                 except IndexError:
                     self._charge = int(this_chebi_entity.get_charge())
                     self.values['formula'] = [this_chebi_entity.get_formula()]
-            except ValueError: # chebi entry has no charge; leave as None
+            except ValueError:  # chebi entry has no charge; leave as None
                 pass
 
     @property
@@ -1282,7 +1283,10 @@ class CompoundEntry(object):
     def comment(self):
         if 'comment' not in self.values:
             return None
-        return '\n'.join(self.values['comment'])
+        try:
+            return '\n'.join(self.values['comment'])
+        except TypeError:
+            return self.values['comment']
 
     def __getitem__(self, name):
         if name not in self.values:
@@ -1295,6 +1299,7 @@ class CompoundEntry(object):
 
     def __repr__(self):
         return '<CompoundEntry "{}">'.format(self.id)
+
 
 class RheaDb(object):
     """Allows storing and searching Rhea db"""
