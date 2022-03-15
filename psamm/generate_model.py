@@ -56,6 +56,9 @@ except ImportError:
     logger.warning("WARNING: The Chebi API package not found! "
                    "Some functions will be unusable")
 
+if sys.version_info.minor < 6:
+    logger.warning("Biopython only compatible with python > 3.5. Exiting..."
+    quit()
 
 class InputError(Exception):
     """Exception used to signal a general input error."""
