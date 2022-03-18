@@ -77,6 +77,238 @@ class Command(object):
 class InputError(Exception):
     """Exception used to signal a general input error."""
 
+# Returns df with additional columns for stoichiometry
+def calc_stoichiometry_df(df, counts):
+    df["counts"] = pd.Series(counts)
+    df["composition"] = df.counts / df.counts.sum()
+    df["mass"] = df.mol_weight*df.composition
+    df["stoichiometry"] = df.composition / df.mass.sum()
+    df = df.fillna(0)
+    return df
+
+def load_compound_data(print_config = False):
+    df = pd.read_csv(resource_filename("psamm",
+                        "external-data/biomass_compound_descriptions.tsv"),
+                    sep = "\t", na_values = ["None"])
+    df.set_index(df.id.values, inplace = True)
+    return df
+
+def make_template(compounds_df):
+    template = compounds_df[["id", "name"]]
+    template["custom_id"] = np.nan
+    return template
+
+def apply_config(df, config_path):
+    config = pd.read_csv(config_path)
+    save_index = df.index
+    df = pd.merge(df, config, how = "left", on = ["id", "name"])
+    df.set_index(save_index, inplace = True)
+    df.custom_id = df.custom_id.fillna(df.id)
+    df.id = df.custom_id
+    return df
+
+#return model_dict
+def load_model(model_path):
+    with open(model_path, "r") as f:
+        model_dict = yaml.safe_load(f)
+    return model_dict
+
+def check_missing_cpds(model_path, df, config, yaml_args):
+    ### Check if needed compounds are in the model, add them if not
+    model_dir = os.path.dirname(model_path)
+    model_reader = native.ModelReader.reader_from_path(model_path)
+    compounds = [r.id for r in model_reader.parse_compounds()]
+    missing_cpds = df.query("id not in @compounds")
+    droplist = ["type", "code"]
+    if config:
+        droplist.append("custom_id")
+    missing_cpds = missing_cpds.drop(columns = droplist)
+    if len(missing_cpds) > 0:
+        logger.warning("\033[1mThe following compounds are required for "
+            "biomass equations but are missing from the model: "
+            "\033[0m{}\n\033[1mPredefined versions of these compounds will "
+            "be generated in {}. To use customized biomass compound IDs, "
+            "use --config\033[0m".format(list(missing_cpds.id),os.path.join(
+                                    model_dir, "biomass_compounds.yaml")))
+        missing_cpd_entries = [v.dropna().to_dict()
+                                for k,v in missing_cpds.iterrows()]
+        with open(os.path.join(model_dir, "biomass_compounds.yaml"), "a+") as f:
+            yaml.dump(missing_cpd_entries, f, **yaml_args)
+
+def fix_cell_compartment(model_dict):
+    cell_compartment = model_dict["default_compartment"]
+    if cell_compartment is None:
+        cell_compartment = "c"
+        model_dict["default_compartment"] = "c"
+    return cell_compartment
+
+def update_model_yaml(model_path, model_dict, cell_compartment, biomass_name, yaml_args):
+    exists = False # Checking if biomass_reactions.yaml already included
+    for file in model_dict["reactions"]:
+        if "biomass_reactions.yaml" in file["include"]:
+            exists = True
+    if not exists:
+        model_dict["reactions"].append({"include":
+                                        "./biomass_reactions.yaml"})
+
+    exists = False # Checking if biomass_compounds.yaml already included
+    for file in model_dict["compounds"]:
+        if "biomass_compounds.yaml" in file["include"]:
+            exists = True
+    if not exists:
+        model_dict["compounds"].append({"include":
+                                        "./biomass_compounds.yaml"})
+
+    model_dict["biomass"] = biomass_name
+
+    os.rename(model_path, model_path + ".tmp")
+    with open(model_path, "w") as f:
+        yaml.dump(model_dict, f, **yaml_args)
+    os.remove(model_path + ".tmp")
+
+
+def count_DNA(genome, df, cell_compartment, decimals = 6):
+    DNA = df[df.type == "DNA"].copy().set_index("code")
+    DNA_counts = Counter()
+    for seq in genome:
+        DNA_counts += Counter(genome[seq].seq)
+
+    calc_stoichiometry_df(DNA, DNA_counts)
+    total = DNA.stoichiometry.sum()
+    ids_fwd = list(DNA.id) + list(df.loc[["C00002", "C00001"]].id.values)
+    stoich_fwd = list(DNA.stoichiometry) + [2*total, 2*total]
+    compound_fwd = {Compound(id).in_compartment(cell_compartment):
+                round(-1*n, decimals) for id,n in zip(ids_fwd, stoich_fwd)}
+    ids_rev = list(df.loc[["dna", "C00008", "C00009", "C00013"]].id.values)
+    stoich_rev = [1, 2*total, 2*total, total]
+    compound_rev = {Compound(id).in_compartment(cell_compartment):
+                round(n, decimals) for id,n in zip(ids_rev, stoich_rev)}
+    dna_rxn = Reaction(Direction.Forward, {**compound_fwd, **compound_rev})
+    dna_rxn_entry = {"id": "dna_met",
+                     "name": "DNA",
+                     "equation": str(dna_rxn),
+                     "pathways": ["Biomass"]}
+    return dna_rxn_entry
+
+
+def count_Prot(proteome, df, cell_compartment, decimals = 6):
+    Prot = df[df.type == "Prot"].copy().set_index("code")
+    Prot_counts = Counter()
+    for seq in proteome:
+        Prot_counts += Counter(proteome[seq].seq)
+
+    ### Protein Reaction formation
+    calc_stoichiometry_df(Prot, Prot_counts)
+    total = Prot.stoichiometry.sum()
+    ids_fwd = list(df[df.type == "aatrna"].id) + \
+                list(df.loc[["C00044", "C00001"]].id.values)
+    stoich_fwd = list(Prot.stoichiometry) + [2*total, 2*total]
+    compound_fwd = {Compound(id).in_compartment(cell_compartment):
+                round(-1*n, decimals) for id,n in zip(ids_fwd, stoich_fwd)}
+    ids_rev = list(df[df.type == "trna"].id) +\
+                list(df.loc[["protein", "C00035", "C00009"]].id.values)
+    stoich_rev = list(Prot.stoichiometry) + [1, 2*total, 2*total]
+    compound_rev = {Compound(id).in_compartment(cell_compartment):
+                round(n, decimals) for id,n in zip(ids_rev, stoich_rev)}
+    prot_rxn = Reaction(Direction.Forward, {**compound_fwd, **compound_rev})
+    prot_rxn_entry = {"id": "pro_met",
+                      "name": "Protein",
+                      "equation": str(prot_rxn),
+                      "pathways": ["Biomass"]}
+    return prot_rxn_entry
+
+def count_RNA(genome, gff, df, cell_compartment, decimals = 6):
+    RNA = df[df.type == "RNA"].copy().set_index("code")
+    RNA_counts = Counter()
+    # Parsing through the gff and counting bases in coding regions to get
+    # the total RNA base counts
+    with open(gff, "r") as gff_file:
+        for line in gff_file:
+            if not line.startswith("#"):
+                l = line.strip().split("\t")
+                if l[2] == "CDS":
+                    try:
+                        seq_entry = genome[l[0]]
+                    except KeyError:
+                        logger.warning("The annotation {s} does not match "
+                            "any sequence names in {f}, ignoring...".format(
+                            s = l[0], f = fna
+                            ))
+                    ## FIX STRANDEDNESS: if - use reverse complement
+                    if l[6] == "-":
+                        RNA_counts += Counter(Seq.complement(
+                                        seq_entry.seq[int(l[3]):int(l[4])]))
+                    else:
+                        RNA_counts += Counter(
+                                        seq_entry.seq[int(l[3]):int(l[4])])
+    RNA_counts["U"] = RNA_counts.pop("T") #renames T to U for RNA
+
+    ### RNA Reaction formation
+    calc_stoichiometry_df(RNA, RNA_counts)
+    total = RNA.stoichiometry.sum()
+    ids_fwd = list(RNA.id) + list(df.loc[["C00001"]].id.values)
+    stoich_fwd = [RNA.loc["A"].stoichiometry + 2*total] +\
+                list(RNA.stoichiometry)[1:] + [2*total]
+    compound_fwd = {Compound(id).in_compartment(cell_compartment):
+                round(-1*n, decimals) for id,n in zip(ids_fwd, stoich_fwd)}
+    ids_rev = list(df.loc[["rna", "C00008", "C00009", "C00013"]].id.values)
+    stoich_rev = [1, 2*total, 2*total, total]
+    compound_rev = {Compound(id).in_compartment(cell_compartment):
+                    round(n, decimals) for id,n in zip(ids_rev, stoich_rev)}
+    rna_rxn = Reaction(Direction.Forward, {**compound_fwd, **compound_rev})
+    rna_rxn_entry = {"id": "rna_met",
+                     "name": "RNA",
+                     "equation": str(rna_rxn),
+                     "pathways": ["Biomass"]}
+    return rna_rxn_entry
+
+def return_biomass_rxn(df, biomass_name, cell_compartment):
+    ### Biomass reaction formation ###
+    compound_fwd = {Compound(id).in_compartment(cell_compartment): -1
+                    for id in list(df.loc[["dna", "rna", "protein"]].id.values)}
+    compound_rev = {Compound(df.loc["biomass"].id).in_compartment(cell_compartment): 1}
+    bio_rxn = Reaction(Direction.Forward, {**compound_fwd, **compound_rev})
+
+    bio_rxn_entry = {"id": biomass_name,
+                     "name": "Biomass",
+                     "equation": str(bio_rxn),
+                     "pathways": ["Biomass"]}
+    return bio_rxn_entry
+
+def return_bio_sink_rxn(df, cell_compartment):
+    ### Biomass sink reaction ###
+    bio_sink = Reaction(Direction.Forward, {
+                Compound(df.loc["biomass"].id).in_compartment(cell_compartment): -1})
+
+    bio_sink_entry = {"id": "sink_biomass",
+                     "name": "Biomass accumulation",
+                     "equation": str(bio_sink),
+                     "pathways": ["Biomass"]}
+    return bio_sink_entry
+
+def return_trna_rxns(df, cell_compartment):
+    #### tRNA charging reactions ###
+    tRNA_rxns = []
+    df_reac = pd.read_csv(resource_filename("psamm",
+                        "external-data/biomass_reaction_descriptions.tsv"),
+                        sep = "\t")
+    for index, row in df_reac.iterrows():
+        fwd, rev = row.equation.split(" <=> ")
+        ids_fwd = fwd.split(" + ")
+        ids_rev = rev.split(" + ")
+        compound_fwd = {Compound(id).in_compartment(cell_compartment): -1
+                        for id in list(df.loc[ids_fwd].id)}
+        compound_rev = {Compound(id).in_compartment(cell_compartment): 1
+                        for id in list(df.loc[ids_rev].id)}
+        tRNA_rxn = Reaction(Direction.Both, {**compound_fwd,**compound_rev})
+        tRNA_rxn_entry = {"id": row.id,
+                          "name": row["name"],
+                          "equation": str(tRNA_rxn),
+                          "enzyme": row["enzymes"],
+                          "pathways": ["Biomass"]}
+        tRNA_rxns.append(tRNA_rxn_entry)
+    return tRNA_rxns
+
 
 class main(Command):
     """Generate a database of compounds and reactions"""
@@ -105,9 +337,6 @@ class main(Command):
             help="Makes a template config file for --config. Compound IDs "
                  "added in the third column will replace the default kegg IDs "
                  "for the compound")
-        ##------------------------ To do---------------------------------------
-        ## need to check first if reactions are already in model?
-        ## Might need to catch spaces in the config compound names, havent tested
         super(main, cls).init_parser(parser)
 
     def run(self):
@@ -121,9 +350,7 @@ class main(Command):
                                  "with --proteome")
             if not self._args.gff:
                 raise InputError("Specify path to gff containing transcript "
-                    "annotations with --gff. Only annotations specified as \"CDS\" "
-                    "in the third column will be used. Annotations must correspond "
-                    "to sequences in the --genome file.")
+                    "annotations with --gff.")
             if not self._args.model:
                 raise InputError("Please specify the path to an existing "
                                  "model with --model")
@@ -138,243 +365,51 @@ class main(Command):
 
         ### SETTING UP DATA AND FUNCTIONS ###
         pd.options.mode.chained_assignment = None
-        # Returns df with additional columns for stoichiometry
-        def calc_stoichiometry_df(df, counts):
-            df["counts"] = pd.Series(counts)
-            df["composition"] = df.counts / df.counts.sum()
-            df["mass"] = df.mol_weight*df.composition
-            df["stoichiometry"] = df.composition / df.mass.sum()
-            df = df.fillna(0)
-            return df
-
-        df = pd.read_csv(resource_filename("psamm",
-                            "external-data/biomass_compound_descriptions.tsv"),
-                        sep = "\t", na_values = ["None"])
-        df.set_index(df.id.values, inplace = True)
-
+        df = load_compound_data()
         if self._args.generate_config:
-            template = df[["id", "name"]]
-            template["custom_id"] = np.nan
-            template.to_csv(sys.stdout, index = False)
-            quit()
-
-        yaml_args = {"default_flow_style": False,
-                     "sort_keys": False,
-                     "encoding": "utf-8",
-                     "allow_unicode": True,
-                     "width": float("inf")}
+           template = make_template(df)
+           template.to_csv(sys.stdout, index = False)
+           quit()
 
         faa = self._args.proteome
         fna = self._args.genome
         gff = self._args.gff
         model_dir = os.path.dirname(model_path)
 
+        yaml_args = {"default_flow_style": False,
+                    "sort_keys": False,
+                    "encoding": "utf-8",
+                    "allow_unicode": True,
+                     "width": float("inf")}
+
         ### Handling the config file ###
         if self._args.config:
-            config = pd.read_csv(self._args.config)
-            save_index = df.index
-            df = pd.merge(df, config, how = "left", on = ["id", "name"])
-            df.set_index(save_index, inplace = True)
-            df.custom_id = df.custom_id.fillna(df.id)
-            df.id = df.custom_id
+            df = apply_config(df, self._args.config)
 
-        # Slice the dataframe after config parse so that new ids are used
-        Prot = df[df.type == "Prot"].copy().set_index("code")
-        DNA = df[df.type == "DNA"].copy().set_index("code")
-        RNA = df[df.type == "RNA"].copy().set_index("code")
+        # Adds missing compounds, updates model.yaml
+        # Makes biomass compounds and reactions yamls
+        logger.info("Checking for existing compounds in the model")
+        check_missing_cpds(model_path, df, self._args.config, yaml_args)
+        model_dict = load_model(model_path)
+        cell_compartment = fix_cell_compartment(model_dict)
 
-        ### Check if needed compounds are in the model, add them if not
-        model_reader = native.ModelReader.reader_from_path(model_path)
-        compounds = [r.id for r in model_reader.parse_compounds()]
-        missing_cpds = df.query("id not in @compounds")
-        droplist = ["type", "code"]
-        if self._args.config:
-            droplist.append("custom_id")
-        missing_cpds = missing_cpds.drop(columns = droplist)
-        if len(missing_cpds) > 0:
-            logger.warning("\033[1mThe following compounds are required for "
-                "biomass equations but are missing from the model: "
-                "\033[0m{}\n\033[1mPredefined versions of these compounds will "
-                "be generated in {}. To use customized biomass compound IDs, "
-                "use --config\033[0m".format(list(missing_cpds.id),os.path.join(
-                                        model_dir, "biomass_compounds.yaml")))
-            missing_cpd_entries = [v.dropna().to_dict()
-                                    for k,v in missing_cpds.iterrows()]
-            with open(os.path.join(model_dir, "biomass_compounds.yaml"), "a+") as f:
-                yaml.dump(missing_cpd_entries, f, **yaml_args)
+        logger.info("Updating {}".format(os.path.abspath(model_path)))
+        update_model_yaml(model_path, model_dict, cell_compartment,
+                            self._args.biomass, yaml_args)
 
-        ### Updating model.yaml ###
-        logger.info("Updating model in {}".format(os.path.abspath(model_path)))
-
-        with open(model_path, "r") as f:
-            model_dict = yaml.safe_load(f)
-
-        exists = False # Checking if biomass_reactions.yaml already included
-        for file in model_dict["reactions"]:
-            if "biomass_reactions.yaml" in file["include"]:
-                exists = True
-        if not exists:
-            model_dict["reactions"].append({"include":
-                                            "./biomass_reactions.yaml"})
-
-        exists = False # Checking if biomass_compounds.yaml already included
-        for file in model_dict["compounds"]:
-            if "biomass_compounds.yaml" in file["include"]:
-                exists = True
-        if not exists:
-            model_dict["compounds"].append({"include":
-                                            "./biomass_compounds.yaml"})
-
-        model_dict["biomass"] = self._args.biomass
-        cell_compartment = model_dict["default_compartment"]
-        if cell_compartment is None:
-            cell_compartment = "c"
-            model_dict["default_compartment"] = "c"
-
-        os.rename(model_path, model_path + ".tmp")
-        with open(model_path, "w") as f:
-            yaml.dump(model_dict, f, **yaml_args)
-        os.remove(model_path + ".tmp")
-
-        ### DATA PROCESSING ###
-        logger.info("Counting nucleotides and amino acids")
-        DNA_counts = Counter()
-        RNA_counts = Counter()
-        Prot_counts = Counter()
-
-        # genome and proteome are dicts with "seqname": seqIO_entry
-        # Counts look like {"A": 200, "C": 380..}
+        ### Counting bases/amino acids and making reaction entries ###
         genome = {seq.name: seq.upper() for seq in SeqIO.parse(fna, "fasta")}
         proteome = {seq.name: seq.upper() for seq in SeqIO.parse(faa, "fasta")}
 
-        for seq in genome:
-            DNA_counts += Counter(genome[seq].seq)
+        logger.info("Calculating stoichiometry for DNA, RNA, and amino acids")
+        dna_rxn_entry = count_DNA(genome, df, cell_compartment)
+        prot_rxn_entry = count_Prot(proteome, df, cell_compartment)
+        rna_rxn_entry = count_RNA(genome, gff, df, cell_compartment)
 
-        for seq in proteome:
-            Prot_counts += Counter(proteome[seq].seq)
-
-        # Parsing through the gff and counting bases in coding regions to get
-        # the total RNA base counts
-        with open(gff, "r") as gff_file:
-            for line in gff_file:
-                if not line.startswith("#"):
-                    l = line.strip().split("\t")
-                    if l[2] == "CDS":
-                        try:
-                            seq_entry = genome[l[0]]
-                        except KeyError:
-                            logger.warning("The annotation {s} does not match "
-                                "any sequence names in {f}, ignoring...".format(
-                                s = l[0], f = fna
-                                ))
-                        ## FIX STRANDEDNESS: if - use reverse complement
-                        if l[6] == "-":
-                            RNA_counts += Counter(Seq.complement(
-                                            seq_entry.seq[int(l[3]):int(l[4])]))
-                        else:
-                            RNA_counts += Counter(
-                                            seq_entry.seq[int(l[3]):int(l[4])])
-
-        RNA_counts["U"] = RNA_counts.pop("T") #renames T to U for RNA
-
-        ### DNA Reaction formation ###
-        logger.info("Calculating stoichiometry for biomass equations")
-
-        decimals = 6
-
-        calc_stoichiometry_df(DNA, DNA_counts)
-        total = DNA.stoichiometry.sum()
-        ids_fwd = list(DNA.id) + list(df.loc[["C00002", "C00001"]].id.values)
-        stoich_fwd = list(DNA.stoichiometry) + [2*total, 2*total]
-        compound_fwd = {Compound(id).in_compartment(cell_compartment):
-                    round(-1*n, decimals) for id,n in zip(ids_fwd, stoich_fwd)}
-        ids_rev = list(df.loc[["dna", "C00008", "C00009", "C00013"]].id.values)
-        stoich_rev = [1, 2*total, 2*total, total]
-        compound_rev = {Compound(id).in_compartment(cell_compartment):
-                    round(n, decimals) for id,n in zip(ids_rev, stoich_rev)}
-        dna_rxn = Reaction(Direction.Forward, {**compound_fwd, **compound_rev})
-        dna_rxn_entry = {"id": "dna_met",
-                         "name": "DNA",
-                         "equation": str(dna_rxn),
-                         "pathways": ["Biomass"]}
-
-        ### RNA Reaction formation
-        calc_stoichiometry_df(RNA, RNA_counts)
-        total = RNA.stoichiometry.sum()
-        ids_fwd = list(RNA.id) + list(df.loc[["C00001"]].id.values)
-        stoich_fwd = [RNA.loc["A"].stoichiometry + 2*total] +\
-                    list(RNA.stoichiometry)[1:] + [2*total]
-        compound_fwd = {Compound(id).in_compartment(cell_compartment):
-                    round(-1*n, decimals) for id,n in zip(ids_fwd, stoich_fwd)}
-        ids_rev = list(df.loc[["rna", "C00008", "C00009", "C00013"]].id.values)
-        stoich_rev = [1, 2*total, 2*total, total]
-        compound_rev = {Compound(id).in_compartment(cell_compartment):
-                        round(n, decimals) for id,n in zip(ids_rev, stoich_rev)}
-        rna_rxn = Reaction(Direction.Forward, {**compound_fwd, **compound_rev})
-        rna_rxn_entry = {"id": "rna_met",
-                         "name": "RNA",
-                         "equation": str(rna_rxn),
-                         "pathways": ["Biomass"]}
-
-        ### Protein Reaction formation
-        calc_stoichiometry_df(Prot, Prot_counts)
-        total = Prot.stoichiometry.sum()
-        ids_fwd = list(df[df.type == "aatrna"].id) + \
-                    list(df.loc[["C00044", "C00001"]].id.values)
-        stoich_fwd = list(Prot.stoichiometry) + [2*total, 2*total]
-        compound_fwd = {Compound(id).in_compartment(cell_compartment):
-                    round(-1*n, decimals) for id,n in zip(ids_fwd, stoich_fwd)}
-        ids_rev = list(df[df.type == "trna"].id) +\
-                    list(df.loc[["protein", "C00035", "C00009"]].id.values)
-        stoich_rev = list(Prot.stoichiometry) + [1, 2*total, 2*total]
-        compound_rev = {Compound(id).in_compartment(cell_compartment):
-                    round(n, decimals) for id,n in zip(ids_rev, stoich_rev)}
-        prot_rxn = Reaction(Direction.Forward, {**compound_fwd, **compound_rev})
-        prot_rxn_entry = {"id": "pro_met",
-                          "name": "Protein",
-                          "equation": str(prot_rxn),
-                          "pathways": ["Biomass"]}
-
-        ### Biomass reaction formation ###
-        compound_fwd = {Compound(id).in_compartment(cell_compartment): -1
-                        for id in list(df.loc[["dna", "rna", "protein"]].id.values)}
-        compound_rev = {Compound(df.loc["biomass"].id).in_compartment(cell_compartment): 1}
-        bio_rxn = Reaction(Direction.Forward, {**compound_fwd, **compound_rev})
-
-        bio_rxn_entry = {"id": self._args.biomass,
-                         "name": "Biomass",
-                         "equation": str(bio_rxn),
-                         "pathways": ["Biomass"]}
-
-        ### Biomass sink reaction ###
-        bio_sink = Reaction(Direction.Forward, {
-                    Compound(df.loc["biomass"].id).in_compartment(cell_compartment): -1})
-
-        bio_sink_entry = {"id": "sink_biomass",
-                         "name": "Biomass accumulation",
-                         "equation": str(bio_sink),
-                         "pathways": ["Biomass"]}
-
-        #### tRNA charging reactions ###
-        tRNA_rxns = []
-        df_reac = pd.read_csv(resource_filename("psamm",
-                            "external-data/biomass_reaction_descriptions.tsv"),
-                            sep = "\t")
-        for index, row in df_reac.iterrows():
-            fwd, rev = row.equation.split(" <=> ")
-            ids_fwd = fwd.split(" + ")
-            ids_rev = rev.split(" + ")
-            compound_fwd = {Compound(id).in_compartment(cell_compartment): -1
-                            for id in list(df.loc[ids_fwd].id)}
-            compound_rev = {Compound(id).in_compartment(cell_compartment): 1
-                            for id in list(df.loc[ids_rev].id)}
-            tRNA_rxn = Reaction(Direction.Both, {**compound_fwd,**compound_rev})
-            tRNA_rxn_entry = {"id": row.id,
-                              "name": row["name"],
-                              "equation": str(tRNA_rxn),
-                              "enzyme": row["enzymes"],
-                              "pathways": ["Biomass"]}
-            tRNA_rxns.append(tRNA_rxn_entry)
+        # Making the reaction entries for other biomass rxns
+        bio_rxn_entry = return_biomass_rxn(df, self._args.biomass, cell_compartment)
+        bio_sink_entry = return_bio_sink_rxn(df, cell_compartment)
+        tRNA_rxns = return_trna_rxns(df, cell_compartment)
 
         ### GENERATING biomass_reactions.yaml ###
         logger.info("Generating new biomass reactions in "

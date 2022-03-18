@@ -14,6 +14,7 @@
 # along with PSAMM.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2021 Christopher Powers <c-11060@uri.edu>
+# Copyright 2022 Jason Vailionis <jason_vailionis@uri.edu>
 
 import unittest
 import sys
@@ -410,3 +411,29 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertTrue(len(asso) == 1)
         self.assertTrue(asso["a"] == ["gene1"])
         os.remove("testin.tsv")
+
+class TestGenerateBiomass(unittest.TestCase):
+    def load_cpd_database(self):
+        pass
+        # test if it is modified properly with config too
+    def load_rxn_database(self):
+        pass
+    def check_existing_cpds(self):
+        pass
+    def read_model(self):
+        pass
+    def modify_model(self):
+        pass
+    def calc_stoichiometry(self):
+        pass
+    def dna_entry(self):
+        pass
+    def rna_entry(self):
+        pass
+    def prot_entry(self):
+        pass
+    def bio_entry(self):
+        pass
+    def sink_entry(self):
+        pass
+        
