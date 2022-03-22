@@ -479,6 +479,7 @@ class TestGenerateBiomass(unittest.TestCase):
         self.assertTrue(test_model_dict == updated_model_dict)
         os.remove("biomass_compounds.yaml")
         os.remove(tmp_model_path)
+        os.remove("compounds.yaml")
     def test_calc_stoichiometry(self):
         df = pd.DataFrame({"mol_weight": [1,2,3,3]})
         out = generate_biomass.calc_stoichiometry_df(df, [2,2,3,3])
@@ -512,6 +513,7 @@ class TestGenerateBiomass(unittest.TestCase):
         "C00044[c] + (3.921756) C00001[c] => rna[c] + (3.921756) C00008[c] + "
         "(3.921756) C00009[c] + (1.960878) C00013[c]", "pathways": ["Biomass"]}
         self.assertTrue(rna_output == proper_output)
+        os.remove("temp.gff")
     def test_prot_entry(self):
         df = generate_biomass.load_compound_data()
         with StringIO(">seq1\nLEW\n>seq2\nMIG") as faa:
