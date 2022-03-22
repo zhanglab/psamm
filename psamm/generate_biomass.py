@@ -86,7 +86,7 @@ def calc_stoichiometry_df(df, counts):
     df = df.fillna(0)
     return df
 
-def load_compound_data(print_config = False):
+def load_compound_data():
     df = pd.read_csv(resource_filename("psamm",
                         "external-data/biomass_compound_descriptions.tsv"),
                     sep = "\t", na_values = ["None"])
@@ -136,7 +136,11 @@ def check_missing_cpds(model_path, df, config, yaml_args):
             yaml.dump(missing_cpd_entries, f, **yaml_args)
 
 def fix_cell_compartment(model_dict):
-    cell_compartment = model_dict["default_compartment"]
+    try:
+        cell_compartment = model_dict["default_compartment"]
+    except KeyError:
+        cell_compartment = "c"
+        model_dict["default_compartment"] = "c"
     if cell_compartment is None:
         cell_compartment = "c"
         model_dict["default_compartment"] = "c"
@@ -241,7 +245,10 @@ def count_RNA(genome, gff, df, cell_compartment, decimals = 6):
                     else:
                         RNA_counts += Counter(
                                         seq_entry.seq[int(l[3]):int(l[4])])
-    RNA_counts["U"] = RNA_counts.pop("T") #renames T to U for RNA
+    try:
+        RNA_counts["U"] = RNA_counts.pop("T") #renames T to U for RNA
+    except KeyError:
+        pass # If there are no T's, pass
 
     ### RNA Reaction formation
     calc_stoichiometry_df(RNA, RNA_counts)
@@ -354,7 +361,6 @@ class main(Command):
             if not self._args.model:
                 raise InputError("Please specify the path to an existing "
                                  "model with --model")
-        if not self._args.generate_config:
             if os.path.isdir(self._args.model):
                 if os.path.exists(os.path.join(self._args.model, "model.yaml")):
                      model_path = os.path.join(self._args.model, "model.yaml")
@@ -363,7 +369,7 @@ class main(Command):
             else:
                 model_path = self._args.model
 
-        ### SETTING UP DATA AND FUNCTIONS ###
+        ### SETTING UP DATA ###
         pd.options.mode.chained_assignment = None
         df = load_compound_data()
         if self._args.generate_config:
