@@ -123,6 +123,7 @@ class TestGenerateDatabase(unittest.TestCase):
     to check for errors is the composition of the ec, ko, reaction, or
     compound representation in KEGG.
     """
+
     def test_overall(self):
         # Check ability to create expected output files
         asso = {"R00351": ["gene1"], "R00375": ["gene2"]}
@@ -418,44 +419,47 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertTrue(asso["a"] == ["gene1"])
         os.remove("testin.tsv")
 
+
 class TestGenerateBiomass(unittest.TestCase):
     def test_cpd_database_load(self):
         df = generate_biomass.load_compound_data()
-        self.assertTrue(df.shape == (79,7))
+        self.assertTrue(df.shape == (79, 7))
         config = generate_biomass.make_template(df)
-        self.assertTrue(config.shape == (79,3))
-        config.custom_id = list(range(79)) # config w/ custom ids from 0 to 78
-        config.to_csv("config_file.csv", index = False)
+        self.assertTrue(config.shape == (79, 3))
+        config.custom_id = list(range(79))  # config w/ custom ids from 0 to 78
+        config.to_csv("config_file.csv", index=False)
         modified_df = generate_biomass.apply_config(df, "config_file.csv")
-        self.assertTrue(modified_df.shape == (79,8))
+        self.assertTrue(modified_df.shape == (79, 8))
         self.assertTrue(modified_df.loc["biomass", "id"] == 0)
         self.assertTrue(modified_df.loc["C02554", "id"] == 78)
         os.remove("config_file.csv")
+
     def test_model_parsing(self):
-        ## THIS will include the way to build a fake model
+        # THIS will include the way to build a fake model
         # Then, test the load_model, check_missing_cpds, fix_cell_compartment,
         # and update_model_yaml methods
         yaml_args = {"default_flow_style": False,
-                    "sort_keys": False,
-                    "encoding": "utf-8",
-                    "allow_unicode": True,
+                     "sort_keys": False,
+                     "encoding": "utf-8",
+                     "allow_unicode": True,
                      "width": float("inf")}
         test_model_dict = {"default_compartment": None, "biomass": None,
-                    "compounds": [{"include": "compounds.yaml"}],
-                    "reactions": [{"include": "reactions.yaml"}],
-                    "model": [{"include": "model_def.tsv"}]}
+                           "compounds": [{"include": "compounds.yaml"}],
+                           "reactions": [{"include": "reactions.yaml"}],
+                           "model": [{"include": "model_def.tsv"}]}
         tmp_model_path = "tmp_model.yaml"
         df = generate_biomass.load_compound_data()
         with open(tmp_model_path, "w") as f:
             yaml.dump(test_model_dict, f, **yaml_args)
         model_dict = generate_biomass.load_model(tmp_model_path)
         self.assertTrue(test_model_dict == model_dict)
-        ## FAKE compounds.yaml which contains one of the 79 biomass compounds
-        # Testing if the output generate_biomass.yaml has the other 78 compounds
+        # FAKE compounds.yaml which contains one of the 79 biomass compounds
+        # Testing if generate_biomass.yaml has the other 78 compounds
         with open("compounds.yaml", "w") as f:
             f.write("- id: C02554")
-        generate_biomass.check_missing_cpds(tmp_model_path, df, None, yaml_args)
-        ## Read in the biomass_compounds.yaml and make sure theres 78 cpds
+        generate_biomass.check_missing_cpds(
+            tmp_model_path, df, None, yaml_args)
+        # Read in the biomass_compounds.yaml and make sure theres 78 cpds
         # matching the first 78 in the df
         with open("biomass_compounds.yaml", "r") as f:
             matches = re.findall("- id:.*\n", f.read())
@@ -464,90 +468,114 @@ class TestGenerateBiomass(unittest.TestCase):
         self.assertTrue(list(df.id)[:-1] == cpds)
         # Check fix_cell_compartment()
         model_dict["default_compartment"] = None
-        self.assertTrue(generate_biomass.fix_cell_compartment(model_dict) == "c")
+        self.assertTrue(
+            generate_biomass.fix_cell_compartment(model_dict) == "c")
         model_dict["default_compartment"] = "x"
-        self.assertTrue(generate_biomass.fix_cell_compartment(model_dict) == "x")
+        self.assertTrue(
+            generate_biomass.fix_cell_compartment(model_dict) == "x")
         del model_dict["default_compartment"]
-        self.assertTrue(generate_biomass.fix_cell_compartment(model_dict) == "c")
+        self.assertTrue(
+            generate_biomass.fix_cell_compartment(model_dict) == "c")
         # Check update_model_yaml()
-        test_model_dict["compounds"].append({"include": "./biomass_compounds.yaml"})
-        test_model_dict["reactions"].append({"include": "./biomass_reactions.yaml"})
+        test_model_dict["compounds"].append(
+            {"include": "./biomass_compounds.yaml"})
+        test_model_dict["reactions"].append(
+            {"include": "./biomass_reactions.yaml"})
         test_model_dict["biomass"] = "biomass_name"
         test_model_dict["default_compartment"] = "c"
-        generate_biomass.update_model_yaml(tmp_model_path, model_dict, "c", "biomass_name", yaml_args)
+        generate_biomass.update_model_yaml(
+            tmp_model_path, model_dict, "c", "biomass_name", yaml_args)
         updated_model_dict = generate_biomass.load_model(tmp_model_path)
         self.assertTrue(test_model_dict == updated_model_dict)
         os.remove("biomass_compounds.yaml")
         os.remove(tmp_model_path)
         os.remove("compounds.yaml")
+
     def test_calc_stoichiometry(self):
-        df = pd.DataFrame({"mol_weight": [1,2,3,3]})
-        out = generate_biomass.calc_stoichiometry_df(df, [2,2,3,3])
-        self.assertTrue(out.shape == (4,5))
+        df = pd.DataFrame({"mol_weight": [1, 2, 3, 3]})
+        out = generate_biomass.calc_stoichiometry_df(df, [2, 2, 3, 3])
+        self.assertTrue(out.shape == (4, 5))
         self.assertTrue(list(out.columns) == ["mol_weight", "counts",
-                                        "composition", "mass", "stoichiometry"])
+                                              "composition", "mass",
+                                              "stoichiometry"])
         np.testing.assert_almost_equal(out.stoichiometry,
-                                        [0.0833333, 0.0833333, 0.125, 0.125])
+                                       [0.0833333, 0.0833333, 0.125, 0.125])
+
     def test_dna_entry(self):
         with StringIO(">seq1\nAAGGGT\n>seq2\nAGCT") as seqfile:
-            genome = {seq.name: seq.upper() for seq in SeqIO.parse(seqfile, "fasta")}
+            genome = {seq.name: seq.upper()
+                      for seq in SeqIO.parse(seqfile, "fasta")}
         df = generate_biomass.load_compound_data()
         dna_output = generate_biomass.count_DNA(genome, df, "c")
         print(dna_output)
         proper_output = {"id": "dna_met", "name": "DNA",
-        "equation": "(0.613065) C00131[c] + (0.40871) C00459[c] + "
-        "(0.81742) C00286[c] + (0.204355) C00458[c] + (4.0871) C00002[c] "
-        "+ (4.0871) C00001[c] => dna[c] + (4.0871) C00008[c] + (4.0871) "
-        "C00009[c] + (2.04355) C00013[c]", "pathways": ["Biomass"]}
+                         "equation": "(0.613065) C00131[c] + (0.40871) "
+                         "C00459[c] + (0.81742) C00286[c] + (0.204355) "
+                         "C00458[c] + (4.0871) C00002[c] + (4.0871) C00001[c] "
+                         "=> dna[c] + (4.0871) C00008[c] + (4.0871) C00009[c] "
+                         "+ (2.04355) C00013[c]", "pathways": ["Biomass"]}
         self.assertTrue(dna_output == proper_output)
+
     def test_rna_entry(self):
         df = generate_biomass.load_compound_data()
         with StringIO(">seq1\nAAGGGT\n>seq2\nAGCT") as fna:
-            genome = {seq.name: seq.upper() for seq in SeqIO.parse(fna, "fasta")}
+            genome = {seq.name: seq.upper()
+                      for seq in SeqIO.parse(fna, "fasta")}
         with open("temp.gff", "w") as gff:
             gff.write("seq1\tProtein Homology\tCDS\t2\t6\t.\t+\t0\ttest\n" +
                       "seq2\tProtein Homology\tCDS\t2\t4\t.\t-\t0\ttest")
         rna_output = generate_biomass.count_RNA(genome, "temp.gff", df, "c")
         proper_output = {"id": "rna_met", "name": "RNA",
-        "equation": "(4.248569) C00002[c] + (0.326813) C00075[c] + (1.307252) "
-        "C00044[c] + (3.921756) C00001[c] => rna[c] + (3.921756) C00008[c] + "
-        "(3.921756) C00009[c] + (1.960878) C00013[c]", "pathways": ["Biomass"]}
+                         "equation": "(4.248569) C00002[c] + (0.326813) "
+                         "C00075[c] + (1.307252) C00044[c] + (3.921756) "
+                         "C00001[c] => rna[c] + (3.921756) C00008[c] + "
+                         "(3.921756) C00009[c] + (1.960878) C00013[c]",
+                         "pathways": ["Biomass"]}
         self.assertTrue(rna_output == proper_output)
         os.remove("temp.gff")
+
     def test_prot_entry(self):
         df = generate_biomass.load_compound_data()
         with StringIO(">seq1\nLEW\n>seq2\nMIG") as faa:
-            proteome = {seq.name: seq.upper() for seq in SeqIO.parse(faa, "fasta")}
+            proteome = {seq.name: seq.upper()
+                        for seq in SeqIO.parse(faa, "fasta")}
         prot_output = generate_biomass.count_Prot(proteome, df, "c")
         proper_output = {"id": "pro_met", "name": "Protein",
-        "equation": "(1.194786) C02987[c] + (1.194786) C02412[c] + (1.194786) "
-        "C03127[c] + (1.194786) C02047[c] + (1.194786) C02430[c] + (1.194786) "
-        "C03512[c] + (14.337431) C00044[c] + (14.337431) C00001[c] => "
-        "(1.194786) C01641[c] + (1.194786) C01642[c] + (1.194786) C01644[c] + "
-        "(1.194786) C01645[c] + (1.194786) C01647[c] + (1.194786) C01652[c] + "
-        "protein[c] + (14.337431) C00035[c] + (14.337431) C00009[c]",
-        "pathways": ["Biomass"]}
+                         "equation": "(1.194786) C02987[c] + (1.194786) "
+                         "C02412[c] + (1.194786) C03127[c] + (1.194786) "
+                         "C02047[c] + (1.194786) C02430[c] + (1.194786) "
+                         "C03512[c] + (14.337431) C00044[c] + (14.337431) "
+                         "C00001[c] => (1.194786) C01641[c] + (1.194786) "
+                         "C01642[c] + (1.194786) C01644[c] + (1.194786) "
+                         "C01645[c] + (1.194786) C01647[c] + (1.194786) "
+                         "C01652[c] + protein[c] + (14.337431) C00035[c] + "
+                         "(14.337431) C00009[c]", "pathways": ["Biomass"]}
         self.assertTrue(prot_output == proper_output)
+
     def test_bio_entry(self):
         df = generate_biomass.load_compound_data()
         bio_output = generate_biomass.return_biomass_rxn(df, "biomass", "c")
         proper_output = {"id": "biomass", "name": "Biomass",
-        "equation": "dna[c] + rna[c] + protein[c] => biomass[c]",
-        "pathways": ["Biomass"]}
+                         "equation": "dna[c] + rna[c] + protein[c] => "
+                         "biomass[c]", "pathways": ["Biomass"]}
         self.assertTrue(bio_output == proper_output)
+
     def test_sink_entry(self):
         df = generate_biomass.load_compound_data()
         sink_output = generate_biomass.return_bio_sink_rxn(df, "c")
         proper_output = {"id": "sink_biomass", "name": "Biomass accumulation",
-        "equation": "biomass[c] =>", "pathways": ["Biomass"]}
+                         "equation": "biomass[c] =>", "pathways": ["Biomass"]}
         self.assertTrue(sink_output == proper_output)
+
     def test_tRNA_entries(self):
         df = generate_biomass.load_compound_data()
         trna_output = generate_biomass.return_trna_rxns(df, "c")
         self.assertTrue(len(trna_output) == 20)
         proper_output_lastaa = {"id": "R03665",
-        "name": "L-Valine:tRNAVal ligase (AMP-forming)",
-        "equation": "C00002[c] + C00183[c] + C01653[c] <=> C00020[c] + "
-        "C00013[c] + C02554[c]", "enzyme": "['6.1.1.9']",
-        "pathways": ["Biomass"]}
+                                "name": "L-Valine:tRNAVal ligase "
+                                "(AMP-forming)",
+                                "equation": "C00002[c] + C00183[c] + C01653[c]"
+                                " <=> C00020[c] + C00013[c] + C02554[c]",
+                                "enzyme": "['6.1.1.9']",
+                                "pathways": ["Biomass"]}
         self.assertTrue(trna_output[19] == proper_output_lastaa)
