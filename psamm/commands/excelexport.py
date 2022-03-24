@@ -68,7 +68,10 @@ class ExcelExportCommand(Command):
         # get compound name dict
         compounds_name = {}
         for cpd in model.compounds:
-            compounds_name[cpd.id] = cpd.name
+            if cpd.name:
+                compounds_name[cpd.id] = cpd.name
+            else:
+                compounds_name[cpd.id] = cpd.id
 
         property_set = set()
         for reaction in model.reactions:
@@ -78,7 +81,8 @@ class ExcelExportCommand(Command):
                                       key=lambda x: (x != 'id',
                                                      x != 'equation', x))
         model_reactions = set(model.model)
-        for z, i in enumerate(property_list_sorted + ['in_model'] + ['translated_equation']):
+        for z, i in enumerate(property_list_sorted + ['in_model'] +
+                              ['translated_equation']):
             reaction_sheet.write_string(0, z, text_type(i))
         gene_rxn = defaultdict(list)
         for x, i in enumerate(model.reactions):

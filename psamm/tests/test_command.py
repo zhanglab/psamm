@@ -609,6 +609,22 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
             ['rxn_3', 'D[c] => E[c]', '', '', 'true'],
         ])
 
+    def test_run_tableexport_trans_reactions(self):
+        f = self.run_command(ExportTableCommand, ['translated-reactions'])
+        print(f.getvalue())
+
+        self.assertTableOutputEqual(f.getvalue(), [
+            ['id', 'equation', 'genes', 'name', 'in_model',
+             'translated_equation'],
+            ['rxn_1', 'A_\u2206[e] => B[c]', '["gene_1", "gene_2"]',
+                'Reaction 1', 'true', '|Compound A[e]| => |Compound B[c]|'],
+            ['rxn_2_\u03c0', 'atp[c] + (2) B[c] <=> adp[c] + C[e]',
+                'gene_3 or (gene_4 and gene_5)', 'Reaction 2', 'true',
+                '|\u2192 ATP [c]| + (2) |Compound B[c]| <=> '
+                '| ADP[c]| + C[e]'],
+            ['rxn_3', 'D[c] => E[c]', '', '', 'true', 'D[c] => E[c]'],
+        ])
+
     def test_run_tableexport_compounds(self):
         f = self.run_command(ExportTableCommand, ['compounds'])
         self.assertTableOutputEqual(f.getvalue(), [
