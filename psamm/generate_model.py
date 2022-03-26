@@ -947,6 +947,8 @@ class main_databaseCommand(Command):
         parser.add_argument('--rhea', help='Resolve protonation states '
                             'using major microspecies at pH 7.3 using '
                             'Rhea-ChEBI mappings', action='store_true')
+        parser.add_argument('--force', help='force rewrite of existing '
+                            'directories', action='store_true')
         super(main_databaseCommand, cls).init_parser(parser)
 
     def run(self):
@@ -967,10 +969,10 @@ class main_databaseCommand(Command):
             raise InputError('Please specify one of R, KO, or EC as the type')
         if not self._args.out:
             raise InputError('Please specify an output directory')
-        if os.path.exists(self._args.out):
+        if os.path.exists(self._args.out) and not self._args.force:
             raise InputError('The output directory already exists! Exiting...')
             exit()
-        else:
+        elif os.path.exists(self._args.out) == False:
             os.mkdir(self._args.out)
 
         # Check the format of the eggnog annotation file.
@@ -1207,7 +1209,7 @@ class CompoundEntry(object):
                         self._chebi_all = set(id_list + rhea_id_list)
                 else:  # --rhea not given
                     self._chebi = id_list[0]
-                    self._chebi_all = id_list
+                    self._chebi_all = list(id_list)
 
         # libchebipy update charge and formula
         if self._chebi is not None:
@@ -1290,7 +1292,10 @@ class CompoundEntry(object):
 
     @property
     def chebi_all(self):
-        return ', '.join(self._chebi_all)
+        if self._chebi_all is not None:
+            return ', '.join(self._chebi_all)
+        else:
+            return None
 
     @property
     def comment(self):
