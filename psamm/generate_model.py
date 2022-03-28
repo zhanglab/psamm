@@ -42,7 +42,18 @@ from six import add_metaclass, iteritems, itervalues, text_type, PY3
 import abc
 from urllib.error import HTTPError
 logger = logging.getLogger(__name__)
-
+if sys.version_info.minor > 5:
+    try:
+        from Bio.KEGG import REST
+        from Bio.KEGG import Enzyme
+    except ImportError:
+        logger.warning("WARNING: Biopython package not found! "
+                       "Some functions will be unusable")
+    try:
+        from libchebipy._chebi_entity import ChebiEntity
+    except ImportError:
+        logger.warning("WARNING: The Chebi API package not found! "
+                       "Some functions will be unusable")
 
 class ParseError2(Exception):
     """Exception used to signal errors while parsing"""
@@ -827,17 +838,6 @@ class main_transporterCommand(Command):
     def run(self):
         if sys.version_info.minor < 6:
             raise VersionError("Biopython only compatible with python > 3.5.")
-        try:
-            from Bio.KEGG import REST
-            from Bio.KEGG import Enzyme
-        except ImportError:
-            logger.warning("WARNING: Biopython package not found! "
-                           "Some functions will be unusable")
-        try:
-            from libchebipy._chebi_entity import ChebiEntity
-        except ImportError:
-            logger.warning("WARNING: The Chebi API package not found! "
-                           "Some functions will be unusable")
         '''Entry point for the transporter assignment'''
 
         # Check the validity of the input values
@@ -949,17 +949,6 @@ class main_databaseCommand(Command):
     def run(self):
         """Entry point for the database generation script"""
         # check if required packages are installed
-        try:
-            from Bio.KEGG import REST
-            from Bio.KEGG import Enzyme
-        except ImportError:
-            logger.warning("WARNING: Biopython package not found! "
-                           "Some functions will be unusable")
-        try:
-            from libchebipy._chebi_entity import ChebiEntity
-        except ImportError:
-            logger.warning("WARNING: The Chebi API package not found! "
-                           "Some functions will be unusable")
         if 'Bio.KEGG.Enzyme' not in sys.modules or \
                 'Bio.KEGG.REST' not in sys.modules:
             quit('No biopython package found. '

@@ -28,6 +28,13 @@ import abc
 import yaml
 import pandas as pd
 import numpy as np
+if sys.version_info.minor > 5:
+    try:
+        from Bio import SeqIO
+        from Bio import Seq
+    except ImportError:
+        quit("No biopython package found. "
+             "Please run <pip install biopython>")
 
 logger = logging.getLogger(__name__)
 
@@ -371,12 +378,6 @@ class main(Command):
 
     def run(self):
         """Entry point for the biomass reaction generation script"""
-        try:
-            from Bio import SeqIO
-            from Bio import Seq
-        except ImportError:
-            quit("No biopython package found. "
-                 "Please run <pip install biopython>")
 
         if not self._args.generate_config:
             if not self._args.genome:
