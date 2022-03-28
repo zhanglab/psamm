@@ -33,7 +33,7 @@ from psamm.datasource.entry import (DictReactionEntry as ReactionEntry)
 from psamm.datasource.context import FileMark
 from psamm.datasource.reaction import Reaction, Compound, Direction
 from psamm.expression.affine import Expression
-from psamm.formula import Formula
+from psamm.formula import Formula, ParseError
 from pkg_resources import resource_filename
 import time
 import pkg_resources
@@ -57,7 +57,7 @@ except ImportError:
                    "Some functions will be unusable")
 
 
-class ParseError(Exception):
+class ParseError2(Exception):
     """Exception used to signal errors while parsing"""
 
 
@@ -638,7 +638,7 @@ def _download_kegg_entries(out, rxn_mapping, rhea, entry_class, context=None):
                     elif section_id is not None:
                         reaction[section_id].append(line.strip())
                     else:
-                        raise ParseError(
+                        raise ParseError2(
                             'Missing section identifier at line \
                             {}'.format(lineno))
                 mark = FileMark(context, entry_line, 0)
@@ -685,7 +685,7 @@ def parse_rxns_from_EC(rxn_mapping, out, verbose):
                 elif section_id is not None:
                     reaction[section_id].append(line.strip())
                 else:
-                    raise ParseError('Missing section identifier at line '
+                    raise ParseError2('Missing section identifier at line '
                                      '{}'.format(lineno))
                 rxn_ids = []
             if "all_reac" in reaction:
@@ -737,7 +737,7 @@ def parse_rxns_from_KO(rxn_mapping, out, verbose):
                 elif section_id is not None:
                     reaction[section_id].append(line.strip())
                 else:
-                    raise ParseError(
+                    raise ParseError2(
                         'Missing section identifier at line \
                         {}'.format(lineno))
                 rxn_ids = []
@@ -1060,7 +1060,7 @@ class ReactionEntry(object):
     def __init__(self, values, rhea, filemark=None):
         self.values = dict(values)
         if 'entry' not in values:
-            raise ParseError('Missing reaction identifier')
+            raise ParseError2('Missing reaction identifier')
         if 'transport_name' in values:
             self._id = values['transport_name']
         else:
@@ -1162,7 +1162,7 @@ class CompoundEntry(object):
     def __init__(self, values, rhea, filemark=None):
         self.values = dict(values)
         if 'entry' not in values:
-            raise ParseError('Missing compound identifier')
+            raise ParseError2('Missing compound identifier')
         self._id, _ = values['entry'][0].split(None, 1)
         self._filemark = filemark
         self._charge = None
