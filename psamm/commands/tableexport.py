@@ -57,6 +57,7 @@ class ExportTableCommand(Command):
     to determine which part of the model to export:
 
     - reactions: Export reactions and reaction metadata
+    - translated-reactions: Export reactions with translated compounds
     - compounds: Export compounds and compound metadata
     - exchange: Export the list of exchange compounds/reactions
     - limits: Export list of internal flux limits
