@@ -326,9 +326,8 @@ class TestGenerateDatabase(unittest.TestCase):
                                                         generate_model.
                                                         ReactionEntry,
                                                         context=None)
-        rxn_out = generate_model.clean_reaction_equations(list(rxn_out))
-        self.assertEqual(str(rxn_out[0].equation), "C04488 + C03576 + 2 "
-                         "C01330[side1] <=> C01217 + C03920 + 2 C01330[side2]")
+        rxn_out, gen= generate_model.clean_reaction_equations(list(rxn_out))
+        self.assertTrue("R04347" in gen)
 
     @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_Compound_Contents(self):
