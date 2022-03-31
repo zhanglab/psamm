@@ -231,6 +231,7 @@ def clean_reaction_equations(reaction_entry_list):
     and returns the same dictionary with modified equations,
     if necessary.
     '''
+    generic = []
     for reaction in reaction_entry_list:
         s = re.search(r"\(([A-Za-z0-9_+-]+)\)", str(reaction.equation))
         equation = re.sub(r'\(.*?\)', lambda x: ''.join(x.group(0).split()),
@@ -238,6 +239,7 @@ def clean_reaction_equations(reaction_entry_list):
         equation_out = []
         comp = re.split(" ", equation)
         comp = comp + [""]
+
         for i in range(0, len(comp)-1):
             # Handles unusual stoichiometry at the beginning of compounds
             if "(" in comp[i] and "C" in comp[i+1]:
@@ -248,15 +250,18 @@ def clean_reaction_equations(reaction_entry_list):
                 else:
                     equation_out.append(comp[i])
                     continue
+                generic.append(reaction.id)
             # special handling to retain stoichiometry of (n+1) and (n-1), etc.
             # at the end of the compound
             if "(" in comp[i]:  # and (not "(n+" in i or not "(n-" in i):
                 comp[i] = comp[i].replace("(", "[")
                 comp[i] = comp[i].replace(")", "]")
+                generic.append(reaction.id)
             equation_out.append(comp[i])
         equation = ' '.join(equation_out)
         reaction.__dict__['values']['equation'] = [equation]
-    return(reaction_entry_list)
+
+    return(reaction_entry_list, generic)
 
 
 def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
@@ -284,7 +289,7 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
                         .format(count, len(rxn_mapping)))
 
     # Clean up the kegg reaction dict.
-    reaction_entry_list = clean_reaction_equations(reaction_entry_list)
+    reaction_entry_list, gen = clean_reaction_equations(reaction_entry_list)
 
     # Sets up the yaml object for the reactions and writes
     # out the parsed reaction information to a reactions.yaml
@@ -355,11 +360,12 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
     reaction_list_out = []
     reaction_list_generic = []
     compound_list_out = set()
+
     with open(os.path.join(out, 'log.tsv'), 'a+') as f:
         f.write("\nThe reactions containing these generic compounds are: \n")
         for reaction in reaction_entry_list:
             if any(i in str(reaction.equation)
-                   for i in generic_compounds_list):
+                   for i in generic_compounds_list) or reaction.id in gen:
                 f.write("{}".format(reaction.id))
                 if reaction.name:
                     f.write("|{}".format(reaction.name))
