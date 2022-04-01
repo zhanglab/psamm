@@ -33,8 +33,11 @@ import numpy as np
 from io import StringIO
 
 
+if sys.version_info.minor < 6:
+    raise unittest.SkipTest("not compatible with py3.5")
+
 class TestGenerateTransporters(unittest.TestCase):
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
+
     def test_parse_orthology(self):
         test_egg = "gene1\ta\tb\tc\td\te\tf\tg\th\ti\t2.3.3.1\tK01647\tk"
         test_egg += "\tl\tR00351\tm\tn\t2.A.49.5.2\tp\tq\n"
@@ -45,7 +48,6 @@ class TestGenerateTransporters(unittest.TestCase):
         self.assertTrue(len(asso) == 1)
         self.assertTrue(asso["2.A.49.5.2"] == ["gene1"])
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_transporters(self):
         asso = {"R00351": ["gene1"], "R00375": ["gene2"]}
         generate_model.create_model_api(".", asso, False, False, "c")
@@ -125,7 +127,7 @@ class TestGenerateDatabase(unittest.TestCase):
     compound representation in KEGG.
     """
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
+
     def test_overall(self):
         # Check ability to create expected output files
         asso = {"R00351": ["gene1"], "R00375": ["gene2"]}
@@ -178,7 +180,6 @@ class TestGenerateDatabase(unittest.TestCase):
         os.remove("gene-association_generic.tsv")
         os.remove("model_def.tsv")
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_Rhea(self):
         # Test that the rhea flag properly captures charge of atp
         rhea_db = generate_model.RheaDb(resource_filename("psamm",
@@ -202,7 +203,6 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertTrue(Rhea[0]["charge"] == -4)
         os.remove("log.tsv")
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_EC_download(self):
         # Test when EC has one reaction
         rxn_mapping = {"2.3.3.1": ["Gene1"]}
@@ -230,7 +230,6 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertTrue(ec["R00351"] == ["Gene1", "Gene2"])
         os.remove("log.tsv")
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_KO_download(self):
         # Test when EC has one reaction
         rxn_mapping = {"K01647": ["Gene1"]}
@@ -258,7 +257,6 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertTrue(ko["R00351"] == ["Gene1", "Gene2"])
         os.remove("log.tsv")
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_model_compounds(self):
         # Tests that compounds are properly sorted into generic compounds
         # with the proper attributes.
@@ -291,7 +289,6 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertTrue("H2O" == cpd_out[0]["formula"])
         self.assertTrue("15377" == cpd_out[0]["ChEBI"])
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_generic_compoundID(self):
         # Test that the download of compounds works
         cpd = ["C02987", "C00001"]
@@ -306,7 +303,6 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertTrue("C00001" not in cpd_out)
         os.remove("log.tsv")
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_Compound_Download(self):
         # Test that the download of compounds works
         cpd = ["C00001"]
@@ -318,7 +314,6 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertTrue(len(cpd_out) == 1)
         os.remove("log.tsv")
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_rxn_clean(self):
         # Test teh function that reformats stoichiometry
         rxn = ["R04347"]
@@ -329,7 +324,6 @@ class TestGenerateDatabase(unittest.TestCase):
         rxn_out, gen= generate_model.clean_reaction_equations(list(rxn_out))
         self.assertTrue("R04347" in gen)
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_Compound_Contents(self):
         # Test that the downloaded compound contains the relevant information
         cpd = ["C00001"]
@@ -347,7 +341,6 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertEqual(list(cpd_out)[0].charge, 0)
         os.remove("log.tsv")
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_Reaction_Download(self):
         # Test that the download of reactions works
         rxn = ["R00351"]
@@ -358,7 +351,6 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertTrue(len(list(rxn_out)) == 1)
         os.remove("log.tsv")
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_Reaction_Contents(self):
         # Test that the downloaded reaction contains the relevant information
         rxn = ["R00351"]
@@ -384,7 +376,6 @@ class TestGenerateDatabase(unittest.TestCase):
                          ("rn00020", "Citrate cycle (TCA cycle)"))
         os.remove("log.tsv")
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_Model_Reactions(self):
         # Tests the conversion of the reactions object to a dictionary format
         rxn = ["R00351"]
@@ -410,7 +401,6 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertEqual(path, rxn_model[0]["pathways"])
         os.remove("log.tsv")
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_parseOrtho(self):
         # Test the ability to parse the defaul eggnog output
         test_egg = "gene1\ta\tb\tc\td\te\tf\tg\th\ti\t2.3.3.1\t"
@@ -434,7 +424,7 @@ class TestGenerateDatabase(unittest.TestCase):
 
 
 class TestGenerateBiomass(unittest.TestCase):
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
+
     def test_cpd_database_load(self):
         df = generate_biomass.load_compound_data()
         self.assertTrue(df.shape == (79, 7))
@@ -448,7 +438,6 @@ class TestGenerateBiomass(unittest.TestCase):
         self.assertTrue(modified_df.loc["C02554", "id"] == 78)
         os.remove("config_file.csv")
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_model_parsing(self):
         # THIS will include the way to build a fake model
         # Then, test the load_model, check_missing_cpds, fix_cell_compartment,
@@ -506,7 +495,6 @@ class TestGenerateBiomass(unittest.TestCase):
         os.remove(tmp_model_path)
         os.remove("compounds.yaml")
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_calc_stoichiometry(self):
         df = pd.DataFrame({"mol_weight": [1, 2, 3, 3]})
         out = generate_biomass.calc_stoichiometry_df(df, [2, 2, 3, 3])
@@ -517,7 +505,6 @@ class TestGenerateBiomass(unittest.TestCase):
         np.testing.assert_almost_equal(out.stoichiometry,
                                        [0.0833333, 0.0833333, 0.125, 0.125])
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_dna_entry(self):
         from Bio import SeqIO
         with StringIO(">seq1\nAAGGGT\n>seq2\nAGCT") as seqfile:
@@ -534,7 +521,6 @@ class TestGenerateBiomass(unittest.TestCase):
                          "+ (2.04355) C00013[c]", "pathways": ["Biomass"]}
         self.assertTrue(dna_output == proper_output)
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_rna_entry(self):
         from Bio import SeqIO
         df = generate_biomass.load_compound_data()
@@ -554,7 +540,6 @@ class TestGenerateBiomass(unittest.TestCase):
         self.assertTrue(rna_output == proper_output)
         os.remove("temp.gff")
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_prot_entry(self):
         from Bio import SeqIO
         df = generate_biomass.load_compound_data()
@@ -574,7 +559,6 @@ class TestGenerateBiomass(unittest.TestCase):
                          "(14.337431) C00009[c]", "pathways": ["Biomass"]}
         self.assertTrue(prot_output == proper_output)
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_bio_entry(self):
         df = generate_biomass.load_compound_data()
         bio_output = generate_biomass.return_biomass_rxn(df, "biomass", "c")
@@ -583,7 +567,6 @@ class TestGenerateBiomass(unittest.TestCase):
                          "biomass[c]", "pathways": ["Biomass"]}
         self.assertTrue(bio_output == proper_output)
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_sink_entry(self):
         df = generate_biomass.load_compound_data()
         sink_output = generate_biomass.return_bio_sink_rxn(df, "c")
@@ -591,7 +574,6 @@ class TestGenerateBiomass(unittest.TestCase):
                          "equation": "biomass[c] =>", "pathways": ["Biomass"]}
         self.assertTrue(sink_output == proper_output)
 
-    @unittest.skipIf(sys.version_info.minor < 6, "not compatible with py3.5")
     def test_tRNA_entries(self):
         df = generate_biomass.load_compound_data()
         trna_output = generate_biomass.return_trna_rxns(df, "c")
