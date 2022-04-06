@@ -80,7 +80,7 @@ class TestGenerateTransporters(unittest.TestCase):
 
         # read in the reaction families
         tp_fam_dict = defaultdict(lambda: "")
-        with open(family, "r") as infile:
+        with open(family, "r", encoding="utf8") as infile:
             for line in infile:
                 line = line.rstrip()
                 listall = re.split("\t", line)
