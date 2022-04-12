@@ -886,7 +886,7 @@ class main_transporterCommand(Command):
 
         # Read in the reaction substrates
         tp_sub_dict = defaultdict(lambda: [])
-        with open(substrate, 'r') as infile:
+        with open(substrate, 'r', encoding="utf8") as infile:
             for line in infile:
                 line = line.rstrip()
                 listall = re.split("\t", line)
