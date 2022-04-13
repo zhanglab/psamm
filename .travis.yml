@@ -20,8 +20,8 @@ install:
     if [ ! -f "src" ]; then
       mkdir src;
     fi;
-    
-    pip install Cython; 
+
+    pip install Cython;
     if [ ! -f "$HOME/qsopt-ex/esolver" ]; then
       ( cd src/;
         git clone https://github.com/jonls/qsopt-ex.git;
@@ -35,7 +35,7 @@ install:
       ( cd src/;
         git clone https://github.com/jonls/python-qsoptex.git;
         cd python-qsoptex/;
-        ./setup.py install;    
+        ./setup.py install;
         cd $HOME );
     fi;
     pip install python-qsoptex;
@@ -63,6 +63,16 @@ matrix:
     python: '3.7'
   - env: TOXENV=py37-qsoptex,coverage
     python: '3.7'
+  - env: TOXENV=py37-gurobi,coverage
+    python: '3.7'
+  - env: TOXENV=py38-nosolver,coverage
+    python: '3.8'
+  - env: TOXENV=py38-glpk,coverage
+    python: '3.8'
+  - env: TOXENV=py38-qsoptex,coverage
+    python: '3.8'
+  - env: TOXENV=py38-gurobi,coverage
+    python: '3.8'
   - env: TOXENV=docs
 deploy:
   provider: pypi

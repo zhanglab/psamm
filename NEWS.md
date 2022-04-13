@@ -1,27 +1,38 @@
+v1.1.2 (2022-04-13)
+------------------
+
+- Adds the new `psamm-generate-model command` with the options of
+  `generate-database`, `generate-transporters`, and `generate-biomass`,
+  which construct metabolic models in the KEGG namespace
+- Adds the new option _translated-reactions_ to the `tableexport` command
+- Exports translated compound IDs in excel export
+- Fixed compatibility in documentation for Gurobi for python versions 3.7
+- Adds support for Python 3.8
+
 
 v1.1.2 (2021-05-10)
 ------------------
 
 - Drops support for Python 2.7 (deprecated Jan. 01, 2020), 3.3, and 3.4
 - Adds the --phin and --phout options to the `tmfa` command
-- Adds descriptive counts of the number of reactions and compounds 
+- Adds descriptive counts of the number of reactions and compounds
   curated in the _manual curation_ option of `modelmapping`
 
 
 v1.1.1 (2020-12-18)
 ------------------
 
-- Fix bug where the `psamm modelmapping translate_id` command requires 
+- Fix bug where the `psamm modelmapping translate_id` command requires
   the undefined parameter `--dest-model`
 
 
 v1.1 (2020-12-11)
 ------------------
 
-- Adds the new `vis` command for visualizing metabolic pathways and 
+- Adds the new `vis` command for visualizing metabolic pathways and
   networks
-- Adds the new `tmfa` command to implement the approach as described 
-  in Henry et al., 2007 (PMID: 17172310) and Hamilton et al., 2013 
+- Adds the new `tmfa` command to implement the approach as described
+  in Henry et al., 2007 (PMID: 17172310) and Hamilton et al., 2013
   (PMID: 23870272).
 - Performance updates to the `model-mapping` command
 - Updates to export full models from `gimme` and `psammotate`

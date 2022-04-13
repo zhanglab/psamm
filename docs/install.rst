@@ -143,10 +143,10 @@ is shown below:
      - Yes
      - Yes
    * - Gurobi
+     - No
+     - No
      - Yes
-     - No
-     - No
-     - No
+     - Yes
    * - GLPK
      - No
      - Yes
