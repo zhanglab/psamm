@@ -55,6 +55,7 @@ if sys.version_info.minor > 5:
         logger.warning("WARNING: The Chebi API package not found! "
                        "Some functions will be unusable")
 
+
 class ParseError2(Exception):
     """Exception used to signal errors while parsing"""
 
@@ -325,7 +326,7 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
         count += 1
         if verbose and count % 25 == 0:
             logger.info("{}/{} compounds downloaded...".
-                        format(count,len(compound_set)))
+                        format(count, len(compound_set)))
     with open(os.path.join(out, 'compounds.yaml'), 'w+') as f:
         yaml.dump(list(model_compounds(compound_entry_list)), f, **yaml_args)
 
@@ -685,7 +686,7 @@ def parse_rxns_from_EC(rxn_mapping, out, verbose):
                     reaction[section_id].append(line.strip())
                 else:
                     raise ParseError2('Missing section identifier at line '
-                                     '{}'.format(lineno))
+                                      '{}'.format(lineno))
                 rxn_ids = []
             if "all_reac" in reaction:
                 listall = re.split(" ", reaction["all_reac"][0])
@@ -975,7 +976,7 @@ class main_databaseCommand(Command):
         if os.path.exists(self._args.out) and not self._args.force:
             raise InputError('The output directory already exists! Exiting...')
             exit()
-        elif os.path.exists(self._args.out) == False:
+        elif os.path.exists(self._args.out) is False:
             os.mkdir(self._args.out)
 
         # Check the format of the eggnog annotation file.

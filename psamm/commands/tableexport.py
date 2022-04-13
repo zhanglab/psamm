@@ -118,8 +118,8 @@ class ExportTableCommand(Command):
             property_set, key=lambda x: (x != 'id', x != 'equation', x))
 
         print('\t'.join(
-            [text_type(x) for x in property_list_sorted] + ['in_model'] + \
-             ['translated_equation']))
+            [text_type(x) for x in property_list_sorted] + ['in_model'] +
+            ['translated_equation']))
 
         compounds_name = {}
         for cpd in self._model.compounds:
