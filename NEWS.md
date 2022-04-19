@@ -1,11 +1,11 @@
-v1.2 (2022-04-13)
+v1.2 (2022-04-19)
 ------------------
 
 - Adds the new `psamm-generate-model command` with the options of
   `generate-database`, `generate-transporters`, and `generate-biomass`,
   which construct metabolic models in the KEGG namespace
 - Adds the new option _translated-reactions_ to the `tableexport` command
-- Exports translated compound IDs in excel export
+- Added translated reactions to `excelexport`
 - Fixed compatibility in documentation for Gurobi for python versions 3.7
 - Adds support for Python 3.8
 
