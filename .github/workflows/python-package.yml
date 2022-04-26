@@ -1,0 +1,78 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: PSAMM
+
+on:
+  push:
+    branches: [ master, release ]
+  pull_request:
+    branches: [ master, release ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.7", "3.8"]
+        solver: ["swigplk", "qsoptex", "nosolver"]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install flake8 pytest
+        pip install pyyaml>=4.2b1
+        pip install six
+        pip install xlsxwriter
+        pip install numpy
+        pip install future
+        pip install pandas
+        pip install biopython
+        pip install libchebipy
+        if echo ${{ matrix.solver }} | grep -q "swiglpk"; then
+          pip install swiglpk;
+        fi
+        if echo ${{ matrix.solver }} | grep -q "qsoptex"; then
+          if [ ! -f "src" ]; then
+            mkdir src;
+          fi;
+          pip install Cython;
+          
+          if [ ! -f "$HOME/qsopt-ex/esolver" ]; then
+            ( cd src/;
+              git clone https://github.com/jonls/qsopt-ex.git;
+              cd qsopt-ex/;
+              ./bootstrap;
+              mkdir build && cd build;
+              ../configure --prefix="$HOME/qsopt-ex" && make install;
+              cd $HOME );
+          fi;
+          if [ ! -f "$HOME/python-qsoptex" ]; then
+            ( cd src/;
+              git clone https://github.com/jonls/python-qsoptex.git;
+              cd python-qsoptex/;
+              ./setup.py install;
+              cd $HOME );
+          fi;
+          pip install python-qsoptex;
+          export CPATH="$HOME/qsopt-ex/include:$CPATH";
+          export LIBRARY_PATH="$HOME/qsopt-ex/lib:$LIBRARY_PATH";
+          export LD_LIBRARY_PATH="$HOME/qsopt-ex/lib:$LD_LIBRARY_PATH";
+        fi;
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Test with pytest
+      run: |
+        pytest
