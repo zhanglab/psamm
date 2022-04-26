@@ -7,7 +7,7 @@ v1.2 (2022-04-19)
 - Adds the new option _translated-reactions_ to the `tableexport` command
 - Added translated reactions to `excelexport`
 - Fixed compatibility in documentation for Gurobi for python versions 3.7
-- Adds support for Python 3.8
+- Adds support for Python 3.8 and 3.9
 
 
 v1.1.2 (2021-05-10)
