@@ -18,8 +18,7 @@
 from psamm.datasource.reaction import Reaction, Compound, Direction
 from psamm.datasource import native
 from collections import Counter
-from collections import OrderedDict
-from six import add_metaclass, iteritems, itervalues, text_type, PY3
+from six import add_metaclass
 from pkg_resources import resource_filename
 import logging
 import sys
@@ -80,6 +79,7 @@ class Command(object):
 class InputError(Exception):
     """Exception used to signal a general input error."""
 
+
 class CommandError(Exception):
     """Error from running a command.
 
@@ -88,6 +88,7 @@ class CommandError(Exception):
     the caller will exit with an error code and print appropriate usage
     information.
     """
+
 
 # Returns df with additional columns for stoichiometry
 def calc_stoichiometry_df(df, counts):

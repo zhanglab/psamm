@@ -27,25 +27,21 @@ from collections import OrderedDict
 import re
 from six import iteritems
 from psamm.datasource.native import parse_reaction_equation_string
-from psamm.datasource.native import NativeModel, ModelReader, ModelWriter
-from psamm.expression import boolean
+from psamm.datasource.native import ModelReader
 from psamm.datasource.entry import (DictReactionEntry as ReactionEntry)
 from psamm.datasource.context import FileMark
 from psamm.datasource.reaction import Reaction, Compound, Direction
-from psamm.expression.affine import Expression
 from psamm.formula import Formula, ParseError
 from pkg_resources import resource_filename
-import time
 import pkg_resources
 from psamm.command import _trim
-from six import add_metaclass, iteritems, itervalues, text_type, PY3
+from six import add_metaclass, iteritems, text_type
 import abc
 from urllib.error import HTTPError
 logger = logging.getLogger(__name__)
 if sys.version_info.minor > 5:
     try:
         from Bio.KEGG import REST
-        from Bio.KEGG import Enzyme
     except ImportError:
         logger.warning("WARNING: Biopython package not found! "
                        "Some functions will be unusable")
@@ -234,7 +230,6 @@ def clean_reaction_equations(reaction_entry_list):
     '''
     generic = []
     for reaction in reaction_entry_list:
-        s = re.search(r"\(([A-Za-z0-9_+-]+)\)", str(reaction.equation))
         equation = re.sub(r'\(.*?\)', lambda x: ''.join(x.group(0).split()),
                           str(reaction.equation))
         equation_out = []
@@ -438,9 +433,9 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
                 len(compound_list_out))))
     if verbose:
         logger.info("\nThere are {} reactions in the model".format(str(
-                       len(reaction_list_out))))
+                    len(reaction_list_out))))
         logger.info("\nThere are {} compounds in the model\n".format(str(
-                       len(compound_entry_list))))
+                    len(compound_entry_list))))
 
 
 def model_compounds(compound_entry_list):
@@ -537,7 +532,6 @@ def model_generic_compounds(compound_entry_list):
     non_gen_compounds = []
     for compound in compound_entry_list:
         try:
-            form = Formula.parse(str(compound.formula))
             d = OrderedDict()
             d['id'] = compound.id
             non_gen_compounds.append(compound.id)
@@ -661,7 +655,6 @@ def parse_rxns_from_EC(rxn_mapping, out, verbose):
                 else:
                     raise ParseError2('Missing section identifier at line '
                                       '{}'.format(lineno))
-                rxn_ids = []
             if "all_reac" in reaction:
                 listall = re.split(" ", reaction["all_reac"][0])
                 for r in listall:
@@ -714,7 +707,6 @@ def parse_rxns_from_KO(rxn_mapping, out, verbose):
                     raise ParseError2(
                         'Missing section identifier at line \
                         {}'.format(lineno))
-                rxn_ids = []
             if "dblinks" in reaction:
                 for i in reaction["dblinks"]:
                     if i[0:2] == "RN":
@@ -850,7 +842,6 @@ class main_transporterCommand(Command):
         # read in the model and build a dictionary of Chebi IDs
         mr = ModelReader.reader_from_path(self._args.model)
         nm = mr.create_model()
-        mm = nm.create_metabolic_model()
 
         chebi_dict = defaultdict(lambda: [])
         for cpd in nm.compounds:
@@ -1116,7 +1107,6 @@ class ReactionEntry(object):
     @property
     def orthology(self):
         if 'orthology' in self.values:
-            KO_name_dict = {}
             for line in self.values['orthology']:
                 split = line.split(None, 1)
                 yield split[0]
