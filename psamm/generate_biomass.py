@@ -80,6 +80,14 @@ class Command(object):
 class InputError(Exception):
     """Exception used to signal a general input error."""
 
+class CommandError(Exception):
+    """Error from running a command.
+
+    This should be raised from a ``Command.run()`` if any arguments are
+    misspecified. When the command is run and the ``CommandError`` is raised,
+    the caller will exit with an error code and print appropriate usage
+    information.
+    """
 
 # Returns df with additional columns for stoichiometry
 def calc_stoichiometry_df(df, counts):
@@ -128,25 +136,26 @@ def check_missing_cpds(model_path, df, config, yaml_args):
     model_dir = os.path.dirname(model_path)
     model_reader = native.ModelReader.reader_from_path(model_path)
     compounds = [r.id for r in model_reader.parse_compounds()]
-    missing_cpds = df.query("id not in @compounds")
-    droplist = ["type", "code"]
-    if config:
-        droplist.append("custom_id")
-    missing_cpds = missing_cpds.drop(columns=droplist)
-    if len(missing_cpds) > 0:
-        logger.warning("\033[1mThe following compounds are required for "
-                       "biomass equations but are missing from the model: "
-                       "\033[0m{}\n\033[1mPredefined versions of these "
-                       "compounds will be generated in {}. To use customized "
-                       "biomass compound IDs, use --config\033[0m"
-                       "".format(list(missing_cpds.id),
-                                 os.path.join(model_dir,
-                                              "biomass_compounds.yaml")))
-        missing_cpd_entries = [v.dropna().to_dict()
-                               for k, v in missing_cpds.iterrows()]
-        with open(os.path.join(model_dir,
-                               "biomass_compounds.yaml"), "a+") as f:
-            yaml.dump(missing_cpd_entries, f, **yaml_args)
+    if len(compounds) > 0:
+        missing_cpds = df.query("id not in @compounds")
+        droplist = ["type", "code"]
+        if config:
+            droplist.append("custom_id")
+        missing_cpds = missing_cpds.drop(columns=droplist)
+        if len(missing_cpds) > 0:
+            logger.warning("\033[1mThe following compounds are required for "
+                           "biomass equations but are missing from the model: "
+                           "\033[0m{}\n\033[1mPredefined versions of these "
+                           "compounds will be generated in {}. To use custom "
+                           "biomass compound IDs, use --config\033[0m"
+                           "".format(list(missing_cpds.id),
+                                     os.path.join(model_dir,
+                                                  "biomass_compounds.yaml")))
+            missing_cpd_entries = [v.dropna().to_dict()
+                                   for k, v in missing_cpds.iterrows()]
+            with open(os.path.join(model_dir,
+                                   "biomass_compounds.yaml"), "a+") as f:
+                yaml.dump(missing_cpd_entries, f, **yaml_args)
 
 
 def fix_cell_compartment(model_dict):
@@ -254,8 +263,8 @@ def count_RNA(genome, gff, df, cell_compartment, decimals=6):
                         seq_entry = genome[L[0]]
                     except KeyError:
                         logger.warning("The annotation {s} does not match "
-                                       "any sequence names in {f}, "
-                                       "ignoring...".format(s=L[0], f=fna))
+                                       "any sequence names in genome file, "
+                                       "ignoring...".format(s=L[0]))
                     # FIX STRANDEDNESS: if - use reverse complement
                     if L[6] == "-":
                         RNA_counts += Counter(Seq.complement(

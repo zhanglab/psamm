@@ -173,7 +173,7 @@ def model_reactions(reaction_entry_list):
     for reaction in reaction_entry_list:
 
         d = OrderedDict()
-        d['id'] = encode_utf8(reaction.id)
+        d['id'] = reaction.id
 
         enzymes_list = []
         for i in reaction.enzymes:
@@ -193,34 +193,34 @@ def model_reactions(reaction_entry_list):
             orth_list = None
 
         if hasattr(reaction, 'name') and reaction.name is not None:
-            d['name'] = encode_utf8(reaction.name)
+            d['name'] = reaction.name
         if hasattr(reaction, 'names') and reaction.names is not None:
             names_l = []
             for i in reaction.names:
                 names_l.append(i)
-            d['names'] = encode_utf8(names_l)
+            d['names'] = names_l
         if hasattr(reaction, 'equation') and reaction.equation is not None:
-            d['equation'] = encode_utf8(str(reaction.equation))
+            d['equation'] = str(reaction.equation)
         if hasattr(reaction, 'definition') and reaction.definition is not None:
-            d['KEGG_definition'] = encode_utf8(reaction.definition)
+            d['KEGG_definition'] = reaction.definition
         if hasattr(reaction, 'enzymes') and reaction.enzymes is not None:
-            d['enzymes'] = encode_utf8(enzymes_list)
+            d['enzymes'] = enzymes_list
         if hasattr(reaction, 'pathways') and reaction.pathways is not None:
-            d['pathways'] = encode_utf8_list(pathways_list)
+            d['pathways'] = pathways_list
         if hasattr(reaction, 'comment') and reaction.comment is not None:
-            d['comment'] = encode_utf8(str(reaction.comment))
+            d['comment'] = str(reaction.comment)
         if hasattr(reaction, 'tcdb_family') and \
                 reaction.tcdb_family is not None:
-            d['tcdb_family'] = encode_utf8(str(reaction.tcdb_family))
+            d['tcdb_family'] = str(reaction.tcdb_family)
         if hasattr(reaction, 'substrates') and \
                 reaction.substrates is not None:
-            d['substrates'] = encode_utf8(reaction.substrates)
+            d['substrates'] = reaction.substrates
         if hasattr(reaction, 'genes') and \
                 reaction.genes is not None:
-            d['genes'] = encode_utf8(str(reaction.genes))
+            d['genes'] = str(reaction.genes)
         if hasattr(reaction, 'orthology') and \
                 reaction.orthology is not None:
-            d['orthology'] = encode_utf8(orth_list)
+            d['orthology'] = orth_list
         yield d
 
 
@@ -461,39 +461,39 @@ def model_compounds(compound_entry_list):
                 continue
             else:
                 d = OrderedDict()
-                d['id'] = encode_utf8(compound.id)
+                d['id'] = compound.id
                 non_gen_compounds.append(compound.id)
                 if hasattr(compound, 'name') and compound.name is not None:
-                    d['name'] = encode_utf8(compound.name)
+                    d['name'] = compound.name
                 if hasattr(compound, 'names') and \
                         compound.names is not None:
                     names_l = []
                     for i in compound.names:
                         names_l.append(i)
-                    d['names'] = encode_utf8(names_l)
+                    d['names'] = names_l
                 if hasattr(compound, 'formula') and \
                         compound.formula is not None:
-                    d['formula'] = encode_utf8(str(compound.formula))
+                    d['formula'] = str(compound.formula)
                 if hasattr(compound, 'mol_weight') and \
                         compound.mol_weight is not None:
-                    d['mol_weight'] = encode_utf8(compound.mol_weight)
+                    d['mol_weight'] = compound.mol_weight
                 if hasattr(compound, 'comment') and \
                         compound.comment is not None:
-                    d['comment'] = encode_utf8(str(compound.comment))
+                    d['comment'] = str(compound.comment)
                 if hasattr(compound, 'dblinks') and \
                         compound.dblinks is not None:
                     for key, value in compound.dblinks:
                         if key != 'ChEBI':
-                            d['{}'.format(key)] = encode_utf8(value)
+                            d['{}'.format(key)] = value
                 if hasattr(compound, 'chebi') \
                         and compound.chebi is not None:
-                    d['ChEBI'] = encode_utf8(compound.chebi)
+                    d['ChEBI'] = compound.chebi
                 if hasattr(compound, 'chebi_all') \
                         and compound.chebi_all is not None:
-                    d['ChEBI_all'] = encode_utf8(compound.chebi_all)
+                    d['ChEBI_all'] = compound.chebi_all
                 if hasattr(compound, 'charge') \
                         and compound.charge is not None:
-                    d['charge'] = encode_utf8(compound.charge)
+                    d['charge'] = compound.charge
                 yield d
         except ParseError:
             logger.warning("import of {} failed"
@@ -539,65 +539,39 @@ def model_generic_compounds(compound_entry_list):
         try:
             form = Formula.parse(str(compound.formula))
             d = OrderedDict()
-            d['id'] = encode_utf8(compound.id)
+            d['id'] = compound.id
             non_gen_compounds.append(compound.id)
             if hasattr(compound, 'name') and compound.name is not None:
-                d['name'] = encode_utf8(compound.name)
+                d['name'] = compound.name
             if hasattr(compound, 'names') and compound.names is not None:
                 names_l = []
                 for i in compound.names:
                     names_l.append(i)
-                d['names'] = encode_utf8(names_l)
+                d['names'] = names_l
             if hasattr(compound, 'formula') and compound.formula is not None:
-                d['formula'] = encode_utf8(str(compound.formula))
+                d['formula'] = str(compound.formula)
             if hasattr(compound, 'mol_weight') and \
                     compound.mol_weight is not None:
-                d['mol_weight'] = encode_utf8(compound.mol_weight)
+                d['mol_weight'] = compound.mol_weight
             if hasattr(compound, 'comment') and compound.comment is not None:
-                d['comment'] = encode_utf8(str(compound.comment))
+                d['comment'] = str(compound.comment)
             if hasattr(compound, 'dblinks') and compound.dblinks is not None:
                 for key, value in compound.dblinks:
                     if key != 'ChEBI':
-                        d['{}'.format(key)] = encode_utf8(value)
+                        d['{}'.format(key)] = value
             if hasattr(compound, 'chebi') and compound.chebi is not None:
-                d['ChEBI'] = encode_utf8(compound.chebi)
+                d['ChEBI'] = compound.chebi
             if hasattr(compound, 'chebi_all') and \
                     compound.chebi_all is not None:
-                d['ChEBI_all'] = encode_utf8(compound.chebi_all)
+                d['ChEBI_all'] = compound.chebi_all
             if hasattr(compound, 'charge') and compound.charge is not None:
-                d['charge'] = encode_utf8(compound.charge)
+                d['charge'] = compound.charge
             yield d
         except ParseError:
             logger.warning("{} is improperly formatted "
                            " and will not be imported into "
                            "compounds_generic.yaml".format(compound.id))
             continue
-
-
-def encode_utf8(s):
-    '''
-    Compatibility with python 2 and python 3.
-    Note that python 2 support is deprecated in psamm.
-    '''
-    is_python2 = sys.version_info.major == 2
-    if is_python2:
-        if isinstance(s, unicode):
-            return s.encode('utf-8')
-    else:
-        return s
-
-
-def encode_utf8_list(s):
-    '''
-    Compatibility with python 2 and python 3.
-    Note that python 2 support is deprecated in psamm.
-    '''
-    is_python2 = sys.version_info.major == 2
-    if is_python2:
-        if isinstance(s, unicode):
-            return s[1].encode('utf-8')
-    else:
-        return s
 
 
 def _download_kegg_entries(out, rxn_mapping, rhea, entry_class, context=None):
