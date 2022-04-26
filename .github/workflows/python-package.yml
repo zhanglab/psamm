@@ -33,6 +33,7 @@ jobs:
         pip install six
         pip install xlsxwriter
         pip install numpy
+        pip install scipy
         pip install future
         pip install pandas
         pip install biopython
@@ -45,22 +46,21 @@ jobs:
             mkdir src;
           fi;
           pip install Cython;
-          
-          if [ ! -f "$HOME/qsopt-ex/esolver" ]; then
+          if [ ! -f "$HOME/python-qsoptex" ]; then
+            ( cd src/;
+              git clone https://github.com/jonls/python-qsoptex.git;
+              cd python-qsoptex/;
+              ./setup.py install;
+              cd ../.. );
+          fi;
+          if [ ! -f "$HOME/qsopt-ex/bin/esolver" ]; then
             ( cd src/;
               git clone https://github.com/jonls/qsopt-ex.git;
               cd qsopt-ex/;
               ./bootstrap;
               mkdir build && cd build;
               ../configure --prefix="$HOME/qsopt-ex" && make install;
-              cd $HOME );
-          fi;
-          if [ ! -f "$HOME/python-qsoptex" ]; then
-            ( cd src/;
-              git clone https://github.com/jonls/python-qsoptex.git;
-              cd python-qsoptex/;
-              ./setup.py install;
-              cd $HOME );
+              cd ../../.. );
           fi;
           pip install python-qsoptex;
           export CPATH="$HOME/qsopt-ex/include:$CPATH";
