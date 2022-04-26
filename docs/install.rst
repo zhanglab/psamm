@@ -132,7 +132,9 @@ is shown below:
      - Python 3.6
      - Python 3.7
      - Python 3.8
+     - Python 3.9
    * - Cplex
+     - Yes
      - Yes
      - Yes
      - Yes
@@ -142,13 +144,16 @@ is shown below:
      - Yes
      - Yes
      - Yes
+     - Yes
    * - Gurobi
      - No
      - No
      - Yes
      - Yes
+     - Yes
    * - GLPK
      - No
+     - Yes
      - Yes
      - Yes
      - Yes
