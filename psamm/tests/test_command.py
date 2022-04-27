@@ -341,7 +341,7 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         self.skip_test_if_no_solver()
         try:
             solver = generic.Solver()
-            if solver.properties['name'] == 'glpk':
+            if solver.properties['name'] == 'glpk' or solver.properties['name'] == 'qsoptex':
                 self.skipTest('Test has known issue with GLPK')
         except generic.RequirementsError:
             pass
