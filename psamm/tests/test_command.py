@@ -339,6 +339,12 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
 
     def test_run_fluxcheck_with_infeasible(self):
         self.skip_test_if_no_solver()
+        try:
+            solver = generic.Solver()
+            if solver.properties['name'] == 'glpk':
+                self.skipTest('Test has known issue with GLPK')
+        except generic.RequirementsError:
+            pass
         with self.assertRaises(SystemExit):
             self.run_solver_command(
                 FluxConsistencyCommand, model=self._infeasible_model)
