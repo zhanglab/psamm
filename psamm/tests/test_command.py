@@ -341,8 +341,10 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         self.skip_test_if_no_solver()
         try:
             solver = generic.Solver()
-            if solver.properties['name'] == 'glpk' or solver.properties['name'] == 'qsoptex':
-                self.skipTest('Test has known issue with GLPK')
+            if solver.properties['name'] == 'glpk' or
+                    solver.properties['name'] == 'qsoptex':
+                self.skipTest('Test has known issue with github actions. '
+                              'Known to work locally')
         except generic.RequirementsError:
             pass
         with self.assertRaises(SystemExit):

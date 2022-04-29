@@ -16,8 +16,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.7"]
-        solver: ["qsoptex"]
+        python-version: ["3.7", "3.8", "3.9"]
+        solver: ["qsoptex", "glpk", "nosolver"]
     env:
       PSAMM_SOLVER: ${{ matrix.solver }}
     steps:
@@ -65,9 +65,6 @@ jobs:
           fi;
           pip install python-qsoptex;
           ls src2/qsopt-ex
-          # export CPATH="${GITHUB_WORKSPACE}/src2/qsopt-ex/include:$CPATH";
-          # export LIBRARY_PATH="${GITHUB_WORKSPACE}/src2/qsopt-ex/lib:$LIBRARY_PATH";
-          # export LD_LIBRARY_PATH="${GITHUB_WORKSPACE}/src2/qsopt-ex/lib:$LD_LIBRARY_PATH";
         fi;
     - name: Lint with flake8
       run: |
