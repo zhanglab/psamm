@@ -28,8 +28,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo apt-get install libgmp-dev
-        sudo apt-get install libgmp10
+        apt-get install libgmp-dev
+        apt-get install libgmp10
         python -m pip install --upgrade pip
         python -m pip install flake8 pytest
         pip install .
@@ -41,24 +41,20 @@ jobs:
         if echo ${{ matrix.solver }} | grep -q "qsoptex"; then
           if [ ! -f "src" ]; then
             mkdir src;
-            mkdir src2;
           fi;
           pip install cython;
-          if [ ! -f "src/qsopt-ex/bin/esolver" ]; then
-            ( cd src/;
-              git clone https://github.com/jonls/qsopt-ex.git;
-              sudo ./qsopt-ex/bootstrap;
-              sudo ./qsopt-ex/configure && make install
-              cd ../ );
-          fi;
           if [ ! -f "src/python-qsoptex" ]; then
             ( cd src/;
+              git clone https://github.com/jonls/qsopt-ex.git;
+              ./qsopt-ex/bootstrap;
+              echo "$GITHUB_WORKSPACE"
+              ./qsopt-ex/configure --prefix="${GITHUB_WORKSPACE}/src/qsopt-ex";
+              make install;
               git clone https://github.com/jonls/python-qsoptex.git;
+              export QSOPTEX_INCLUDE_DIR=${GITHUB_WORKSPACE}/src/qsopt-ex/include/
+              export QSOPTEX_LIBRARY_DIR=${GITHUB_WORKSPACE}/src/qsopt-ex/lib/
               cd python-qsoptex/;
-              sudo ./setup.py install;
-              cd ..
-              sudo ./qsopt-ex/bootstrap
-              sudo ./qsopt-ex/configure --prefix="${GITHUB_WORKSPACE}/src2/qsopt-ex" && make install;
+              ./setup.py install;
               cd ../.. );
           fi;
           pip install python-qsoptex;
@@ -66,14 +62,17 @@ jobs:
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --ignore psamm/tests
+        flake8 . --count --select=E9,F63,F7,F82 --show-source \
+            --statistics --exclude ${GITHUB_WORKSPACE}/psamm/tests \
+            --ignore E226,D101,D102,D103,D104,D203,W503,W504,N814,E722,N804
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --ignore psamm/tests
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 \
+            --statistics
     - name: Test with pytest
       run: |
         if echo ${{ matrix.solver }} | grep -q "qsoptex"; then
-          export CPATH="${GITHUB_WORKSPACE}/src2/qsopt-ex/include:$CPATH";
-          export LIBRARY_PATH="${GITHUB_WORKSPACE}/src2/qsopt-ex/lib:$LIBRARY_PATH";
-          export LD_LIBRARY_PATH="${GITHUB_WORKSPACE}/src2/qsopt-ex/lib:$LD_LIBRARY_PATH";
+          export CPATH="${GITHUB_WORKSPACE}/src/qsopt-ex/include:$CPATH";
+          export LIBRARY_PATH="${GITHUB_WORKSPACE}/src/qsopt-ex/lib:$LIBRARY_PATH";
+          export LD_LIBRARY_PATH="${GITHUB_WORKSPACE}/src/qsopt-ex/lib:$LD_LIBRARY_PATH";
         fi;
-        pytest --ignore=src --ignore=src2
+        pytest --ignore=src
