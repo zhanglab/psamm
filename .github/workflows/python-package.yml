@@ -47,36 +47,29 @@ jobs:
           if [ ! -f "src/qsopt-ex/bin/esolver" ]; then
             ( cd src/;
               git clone https://github.com/jonls/qsopt-ex.git;
-              ./qsopt-ex/bootstrap;
-              ./qsopt-ex/configure && make install
-              # echo ${GITHUB_WORKSPACE}
-              # ls ../src2/qsopt-ex
+              sudo ./qsopt-ex/bootstrap;
+              sudo ./qsopt-ex/configure && make install
               cd ../ );
           fi;
           if [ ! -f "src/python-qsoptex" ]; then
             ( cd src/;
               git clone https://github.com/jonls/python-qsoptex.git;
               cd python-qsoptex/;
-              ./setup.py install;
+              sudo ./setup.py install;
               cd ..
-              ./qsopt-ex/bootstrap
-              ./qsopt-ex/configure --prefix="${GITHUB_WORKSPACE}/src2/qsopt-ex" && make install;
+              sudo ./qsopt-ex/bootstrap
+              sudo ./qsopt-ex/configure --prefix="${GITHUB_WORKSPACE}/src2/qsopt-ex" && make install;
               cd ../.. );
           fi;
           pip install python-qsoptex;
-          ls src2/qsopt-ex
         fi;
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --ignore psamm/tests
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --ignore psamm/tests
     - name: Test with pytest
-      # env:
-      #   CPATH: ${GITHUB_WORKSPACE}/src2/qsopt-ex/include
-      #   LIBRARY_PATH: ${GITHUB_WORKSPACE}/src2/qsopt-ex/lib
-      #   LD_LIBRARY_PATH: ${GITHUB_WORKSPACE}/src2/qsopt-ex/lib
       run: |
         if echo ${{ matrix.solver }} | grep -q "qsoptex"; then
           export CPATH="${GITHUB_WORKSPACE}/src2/qsopt-ex/include:$CPATH";
