@@ -22,7 +22,7 @@
 from __future__ import unicode_literals
 
 import abc
-from collections import Mapping
+from collections.abc import Mapping
 
 from six import add_metaclass
 

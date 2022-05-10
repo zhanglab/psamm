@@ -51,7 +51,7 @@ else:
 
 setup(
     name='psamm',
-    version='1.1.2',
+    version='1.2',
     description='PSAMM metabolic modeling tools',
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
@@ -68,6 +68,8 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
 
     package_data={'psamm': ['external-data/chebi_pH7_3_mapping.tsv',

@@ -57,6 +57,7 @@ class ExportTableCommand(Command):
     to determine which part of the model to export:
 
     - reactions: Export reactions and reaction metadata
+    - translated-reactions: Export reactions with translated compounds
     - compounds: Export compounds and compound metadata
     - exchange: Export the list of exchange compounds/reactions
     - limits: Export list of internal flux limits
@@ -117,8 +118,8 @@ class ExportTableCommand(Command):
             property_set, key=lambda x: (x != 'id', x != 'equation', x))
 
         print('\t'.join(
-            [text_type(x) for x in property_list_sorted] + ['in_model'] + \
-             ['translated_equation']))
+            [text_type(x) for x in property_list_sorted] + ['in_model'] +
+            ['translated_equation']))
 
         compounds_name = {}
         for cpd in self._model.compounds:

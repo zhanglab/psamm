@@ -20,7 +20,7 @@
 
 from __future__ import unicode_literals
 
-from collections import Mapping
+from collections.abc import Mapping
 
 from .database import MetabolicDatabase, StoichiometricMatrixView
 from .reaction import Reaction, Direction

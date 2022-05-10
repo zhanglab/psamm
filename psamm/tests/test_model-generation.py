@@ -31,10 +31,13 @@ import yaml
 import pandas as pd
 import numpy as np
 from io import StringIO
-from Bio import SeqIO
 
+
+if sys.version_info.minor < 6:
+    raise unittest.SkipTest("not compatible with py3.5")
 
 class TestGenerateTransporters(unittest.TestCase):
+
     def test_parse_orthology(self):
         test_egg = "gene1\ta\tb\tc\td\te\tf\tg\th\ti\t2.3.3.1\tK01647\tk"
         test_egg += "\tl\tR00351\tm\tn\t2.A.49.5.2\tp\tq\n"
@@ -77,7 +80,7 @@ class TestGenerateTransporters(unittest.TestCase):
 
         # read in the reaction families
         tp_fam_dict = defaultdict(lambda: "")
-        with open(family, "r") as infile:
+        with open(family, "r", encoding="utf8") as infile:
             for line in infile:
                 line = line.rstrip()
                 listall = re.split("\t", line)
@@ -123,6 +126,7 @@ class TestGenerateDatabase(unittest.TestCase):
     to check for errors is the composition of the ec, ko, reaction, or
     compound representation in KEGG.
     """
+
 
     def test_overall(self):
         # Check ability to create expected output files
@@ -317,9 +321,8 @@ class TestGenerateDatabase(unittest.TestCase):
                                                         generate_model.
                                                         ReactionEntry,
                                                         context=None)
-        rxn_out = generate_model.clean_reaction_equations(list(rxn_out))
-        self.assertEqual(str(rxn_out[0].equation), "C04488 + C03576 + 2 "
-                         "C01330[side1] <=> C01217 + C03920 + 2 C01330[side2]")
+        rxn_out, gen= generate_model.clean_reaction_equations(list(rxn_out))
+        self.assertTrue("R04347" in gen)
 
     def test_Compound_Contents(self):
         # Test that the downloaded compound contains the relevant information
@@ -421,6 +424,7 @@ class TestGenerateDatabase(unittest.TestCase):
 
 
 class TestGenerateBiomass(unittest.TestCase):
+
     def test_cpd_database_load(self):
         df = generate_biomass.load_compound_data()
         self.assertTrue(df.shape == (79, 7))
@@ -502,6 +506,7 @@ class TestGenerateBiomass(unittest.TestCase):
                                        [0.0833333, 0.0833333, 0.125, 0.125])
 
     def test_dna_entry(self):
+        from Bio import SeqIO
         with StringIO(">seq1\nAAGGGT\n>seq2\nAGCT") as seqfile:
             genome = {seq.name: seq.upper()
                       for seq in SeqIO.parse(seqfile, "fasta")}
@@ -517,6 +522,7 @@ class TestGenerateBiomass(unittest.TestCase):
         self.assertTrue(dna_output == proper_output)
 
     def test_rna_entry(self):
+        from Bio import SeqIO
         df = generate_biomass.load_compound_data()
         with StringIO(">seq1\nAAGGGT\n>seq2\nAGCT") as fna:
             genome = {seq.name: seq.upper()
@@ -535,6 +541,7 @@ class TestGenerateBiomass(unittest.TestCase):
         os.remove("temp.gff")
 
     def test_prot_entry(self):
+        from Bio import SeqIO
         df = generate_biomass.load_compound_data()
         with StringIO(">seq1\nLEW\n>seq2\nMIG") as faa:
             proteome = {seq.name: seq.upper()
