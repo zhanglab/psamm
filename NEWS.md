@@ -1,4 +1,4 @@
-v1.2 (2022-04-19)
+v1.2 (2022-05-10)
 ------------------
 
 - Adds the new `psamm-generate-model command` with the options of
