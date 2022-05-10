@@ -47,7 +47,7 @@ organism of interest within the class Mollicutes.
 
 
 Basic use of the ``generate-database`` command
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------------------------
 
 As noted above, the `generate-database` command uses an annotation file to
 query the KEGG database and download reaction data. You will need an
@@ -129,7 +129,7 @@ column in the table specified with `--annotations`
 
 
 Basic use of the ``generate-transporters`` command
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------------------------------
 
 In addition to the database of metabolic reactions, another important
 component of metabolic models is the presence of transporters. These
