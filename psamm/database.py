@@ -19,8 +19,8 @@
 """Representation of metabolic network databases."""
 
 import abc
-from collections import defaultdict, OrderedDict, Mapping
-
+from collections.abc import Mapping
+from collections import defaultdict, OrderedDict
 from six import iteritems, add_metaclass
 
 from .reaction import Reaction, Direction

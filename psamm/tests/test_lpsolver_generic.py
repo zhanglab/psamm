@@ -88,6 +88,7 @@ class TestSolverProblem(unittest.TestCase):
 
 class TestListSolversCommand(unittest.TestCase):
     def test_list_lpsolvers(self):
+        # This test case is for travis and will not pass on a local computer
         if os.environ.get('PSAMM_SOLVER') in ('nosolver', None):
             with self.assertRaises(SystemExit):
                 generic.list_solvers([])

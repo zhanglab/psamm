@@ -1,0 +1,78 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: PSAMM
+
+on:
+  push:
+    branches: [ master, release ]
+  pull_request:
+    branches: [ master, release ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.7", "3.8", "3.9"]
+        solver: ["qsoptex", "glpk", "nosolver"]
+    env:
+      PSAMM_SOLVER: ${{ matrix.solver }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        sudo apt-get install libgmp-dev
+        sudo apt-get install libgmp10
+        python -m pip install --upgrade pip
+        python -m pip install flake8 pytest
+        pip install .
+        pip install biopython
+        pip install libchebipy
+        if echo ${{ matrix.solver }} | grep -q "glpk"; then
+          pip install swiglpk;
+        fi
+        if echo ${{ matrix.solver }} | grep -q "qsoptex"; then
+          if [ ! -f "src" ]; then
+            mkdir src;
+          fi;
+          pip install cython;
+          if [ ! -f "src/python-qsoptex" ]; then
+            ( cd src/;
+              git clone https://github.com/jonls/qsopt-ex.git;
+              ./qsopt-ex/bootstrap;
+              echo "$GITHUB_WORKSPACE"
+              ./qsopt-ex/configure --prefix="${GITHUB_WORKSPACE}/src/qsopt-ex";
+              make install;
+              git clone https://github.com/jonls/python-qsoptex.git;
+              export QSOPTEX_INCLUDE_DIR=${GITHUB_WORKSPACE}/src/qsopt-ex/include/
+              export QSOPTEX_LIBRARY_DIR=${GITHUB_WORKSPACE}/src/qsopt-ex/lib/
+              cd python-qsoptex/;
+              ./setup.py install;
+              cd ../.. );
+          fi;
+          pip install python-qsoptex;
+        fi;
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source \
+            --statistics --exclude ${GITHUB_WORKSPACE}/psamm/tests \
+            --ignore E226,D101,D102,D103,D104,D203,W503,W504,N814,E722,N804
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 \
+            --statistics
+    - name: Test with pytest
+      run: |
+        if echo ${{ matrix.solver }} | grep -q "qsoptex"; then
+          export CPATH="${GITHUB_WORKSPACE}/src/qsopt-ex/include:$CPATH";
+          export LIBRARY_PATH="${GITHUB_WORKSPACE}/src/qsopt-ex/lib:$LIBRARY_PATH";
+          export LD_LIBRARY_PATH="${GITHUB_WORKSPACE}/src/qsopt-ex/lib:$LD_LIBRARY_PATH";
+        fi;
+        pytest --ignore=src

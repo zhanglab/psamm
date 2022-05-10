@@ -133,7 +133,7 @@ class MaybeRelative(object):
         return str('<{}, {}>').format(self.__class__.__name__, str(self))
 
 
-class FrozenOrderedSet(collections.Set, collections.Hashable):
+class FrozenOrderedSet(collections.abc.Set, collections.abc.Hashable):
     """An immutable set that retains insertion order."""
 
     def __init__(self, seq=[]):
@@ -160,7 +160,7 @@ class FrozenOrderedSet(collections.Set, collections.Hashable):
         return str('{}({})').format(self.__class__.__name__, list(self))
 
 
-class DictView(collections.Mapping):
+class DictView(collections.abc.Mapping):
     """An immutable wrapper around another dict-like object."""
 
     def __init__(self, d):

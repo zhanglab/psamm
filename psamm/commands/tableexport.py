@@ -57,6 +57,7 @@ class ExportTableCommand(Command):
     to determine which part of the model to export:
 
     - reactions: Export reactions and reaction metadata
+    - translated-reactions: Export reactions with translated compounds
     - compounds: Export compounds and compound metadata
     - exchange: Export the list of exchange compounds/reactions
     - limits: Export list of internal flux limits
@@ -69,13 +70,15 @@ class ExportTableCommand(Command):
         parser.add_argument(
             'export', metavar='export_type',
             choices=['reactions', 'compounds', 'medium', 'exchange', 'limits',
-                     'metadata', 'genes'],
+                     'metadata', 'genes', 'translated-reactions'],
             help='Type of model data to export')
 
     def run(self):
         export_type = self._args.export
         if export_type == 'reactions':
             self._reaction_export()
+        elif export_type == 'translated-reactions':
+            self._reaction_translated_export()
         elif export_type == 'compounds':
             self._compound_export()
         elif export_type == 'exchange' or export_type == 'medium':
@@ -104,6 +107,39 @@ class ExportTableCommand(Command):
                             for property in property_list_sorted]
             in_model = reaction.id in model_reactions
             line_content.append(in_model)
+            print('\t'.join(_encode_value(value) for value in line_content))
+
+    def _reaction_translated_export(self):
+        property_set = set()
+        for reaction in self._model.reactions:
+            property_set.update(reaction.properties)
+
+        property_list_sorted = sorted(
+            property_set, key=lambda x: (x != 'id', x != 'equation', x))
+
+        print('\t'.join(
+            [text_type(x) for x in property_list_sorted] + ['in_model'] +
+            ['translated_equation']))
+
+        compounds_name = {}
+        for cpd in self._model.compounds:
+            if cpd.name:
+                compounds_name[cpd.id] = cpd.name
+            else:
+                compounds_name[cpd.id] = cpd.id
+
+        model_reactions = set(self._model.model)
+        for reaction in self._model.reactions:
+            # get translated equation
+            rx = reaction.equation
+            translated_equation = str(rx.translated_compounds(
+                lambda x: compounds_name.get(x, x)))
+
+            line_content = [reaction.properties.get(property)
+                            for property in property_list_sorted]
+            in_model = reaction.id in model_reactions
+            line_content.append(in_model)
+            line_content.append(translated_equation)
             print('\t'.join(_encode_value(value) for value in line_content))
 
     def _compound_export(self):

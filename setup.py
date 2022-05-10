@@ -51,7 +51,7 @@ else:
 
 setup(
     name='psamm',
-    version='1.1.2',
+    version='1.2',
     description='PSAMM metabolic modeling tools',
     maintainer='Jon Lund Steffensen',
     maintainer_email='jon_steffensen@uri.edu',
@@ -68,7 +68,17 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
+
+    package_data={'psamm': ['external-data/chebi_pH7_3_mapping.tsv',
+                            'external-data/biomass_compound_descriptions.tsv',
+                            'external-data/biomass_reaction_descriptions.tsv',
+                            'external-data/tcdb_substrates.tsv',
+                            'external-data/tcdb_families.tsv',
+                            'external-data/biomass_compound_descriptions.tsv',
+                            'external-data/biomass_reaction_descriptions.tsv']},
 
     packages=find_packages(),
 
@@ -79,6 +89,7 @@ setup(
         psamm-list-lpsolvers = psamm.lpsolver.generic:list_solvers
         psamm-import = psamm.importer:main
         psamm-import-bigg = psamm.importer:main_bigg
+        psamm-generate-model = psamm.generate_model:main
 
         [psamm.commands]
         chargecheck = psamm.commands.chargecheck:ChargeBalanceCommand
@@ -112,6 +123,11 @@ setup(
         SBML = psamm.importers.sbml:NonstrictImporter
         SBML-strict = psamm.importers.sbml:StrictImporter
         MATLAB = psamm.importers.matlab:Importer
+
+        [psamm.generate_model]
+        generate-database = psamm.generate_model:main_databaseCommand
+        generate-biomass = psamm.generate_biomass:main
+        generate-transporters = psamm.generate_model:main_transporterCommand
     ''',
 
     test_suite='psamm.tests',
@@ -123,7 +139,7 @@ setup(
         'numpy',
         'scipy',
         'future',
-        'pandas'
+        'pandas',
     ],
     extras_require={
         'docs': ['sphinx', 'sphinx_rtd_theme', 'mock']

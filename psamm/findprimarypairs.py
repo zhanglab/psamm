@@ -28,7 +28,7 @@ from six.moves import reduce
 
 from .formula import Formula, Atom
 
-from fractions import gcd
+from math import gcd
 
 logger = logging.getLogger(__name__)
 
