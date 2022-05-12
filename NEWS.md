@@ -1,3 +1,8 @@
+v1.2.1 (2022-05-12)
+------------------
+- fix bug in `generate-database`
+- revise formatting of doc
+
 v1.2 (2022-05-10)
 ------------------
 

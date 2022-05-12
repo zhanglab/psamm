@@ -921,8 +921,7 @@ class main_databaseCommand(Command):
     def run(self):
         """Entry point for the database generation script"""
         # check if required packages are installed
-        if 'Bio.KEGG.Enzyme' not in sys.modules or \
-                'Bio.KEGG.REST' not in sys.modules:
+        if 'Bio.KEGG.REST' not in sys.modules:
             quit('No biopython package found. '
                  'Please run <pip install biopython>''')
         if "libchebipy._chebi_entity" not in sys.modules:
