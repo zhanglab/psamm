@@ -128,7 +128,6 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
             if 'genes' in i._properties:
                 if len(i._properties['genes']) > 0:
                     rxns_with_genes += 1
-            #print(i._properties['genes'])
 
         content_model.append(html.H5("General Model Statistics:"))
         content_model.append(html.P("Reactions in model: " + str(count)))
@@ -580,185 +579,240 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                 return contents
 
         @_app.callback(
-            Output("edit-confirm", "children"),
-            [Input("btn_save", "n_clicks")],
-            State("edit-data", "children"),
+            [Output("edit-confirm", "children"),
+            Output("net_curate", "elements"),],
+            [Input("btn_save", "n_clicks"),
+            Input("pathways_dropdown_curate", "value"),],
+            [State("edit-data", "children"),
+            State("net_curate", "selectedEdgeData"),
+            State("net_curate", "selectedNodeData"),]
         )
-        def update_model(nclicks, datalist):
-            #print(nclicks)
+        def update_model(nclicks, pathways_dropdown_curate, datalist, edge, node):
+            contents = []
 
             def rec_props(data, out):
                 for i in data:
                     if type(i) is dict:
                         if 'children' in i['props']:
-                            # print(i['props']['children'])
                             rec_props(i['props']['children'], out)
                         elif 'value' in i['props']:
                             out.append(i['props']['value'])
                         elif 'placeholder' in i['props']:
                             out.append(i['props']['placeholder'])
                 return out
-            if nclicks is not None:
-                direction = []
-                for i in datalist:
-                    if type(i) is dict:
-                        if 'id' in i['props']:
-                            if i['props']['id'] == 'direction':
-                                direction_temp = rec_props(i['props']['children'], [])
-                                direction.append(direction_temp)
-                left = []
-                for i in datalist:
-                    if type(i) is dict:
-                        if 'id' in i['props']:
-                            if i['props']['id'] == 'left':
-                                left_temp = rec_props(i['props']['children'], [])
-                                left.append(left_temp)
-                right = []
-                for i in datalist:
-                    if type(i) is dict:
-                        if 'id' in i['props']:
-                            if i['props']['id'] == 'right':
-                                right_temp = rec_props(i['props']['children'], [])
-                                right.append(right_temp)
+            if edge is not None:
+                if type(edge[0]) is dict:
+                    if nclicks is not None:
+                        direction = []
+                        for i in datalist:
+                            if type(i) is dict:
+                                if 'id' in i['props']:
+                                    if i['props']['id'] == 'direction':
+                                        direction_temp = rec_props(i['props']['children'], [])
+                                        direction.append(direction_temp)
+                        left = []
+                        for i in datalist:
+                            if type(i) is dict:
+                                if 'id' in i['props']:
+                                    if i['props']['id'] == 'left':
+                                        left_temp = rec_props(i['props']['children'], [])
+                                        left.append(left_temp)
+                        right = []
+                        for i in datalist:
+                            if type(i) is dict:
+                                if 'id' in i['props']:
+                                    if i['props']['id'] == 'right':
+                                        right_temp = rec_props(i['props']['children'], [])
+                                        right.append(right_temp)
+
+                        rid = re.split(" ", datalist[0]['props']['children'])[1]
+
+                        for r in self._model.reactions:
+                            if r.id.upper() == rid.upper():
+                                reaction = r
+
+                        eq_dict={}
+                        for l in left:
+                            eq_dict[Compound(l[1]).in_compartment(l[2])] = int(l[0])*-1
+                        for r in right:
+                            eq_dict[Compound(r[1]).in_compartment(r[2])] = int(r[0])
+                        dir = direction[0][0]
+
+                        if dir == "Direction.Forward":
+                            new_eq = Reaction(Direction.Forward, eq_dict)
+                        elif dir == "Direction.Reverse":
+                            new_eq = Reaction(Direction.Reverse, eq_dict)
+                        elif dir == "Direction.Both":
+                            new_eq = Reaction(Direction.Both, eq_dict)
+                        else:
+                            quit("Nonvalid direction")
+
+                        reaction.equation = new_eq
+                        self._model.reactions.add_entry(reaction)
 
 
-                rid = re.split(" ", datalist[0]['props']['children'])[1]
-                print(rid)
-                for r in self._model.reactions:
-                    if r.id.upper() == rid.upper():
-                        reaction = r
 
-                print(reaction.__dict__)
-                # Compound('x').in_compartment('c')
-                eq_dict={}
-                for l in left:
-                    eq_dict[Compound(l[1]).in_compartment(l[2])] = int(l[0])*-1
-                for r in right:
-                    eq_dict[Compound(l[1]).in_compartment(l[2])] = int(l[0])
-                dir = direction[0][0]
+                        contents.append(html.H5(
+                                        "{} has been updated".format(rid)))
+            if node is not None:
+                if type(node[0]) is dict:
+                    if nclicks is not None:
+                        comp = []
+                        for i in datalist:
+                            if type(i) is dict:
+                                if 'id' in i['props']:
+                                    comp_temp = rec_props(i['props']['children'], [])
+                                    comp.append(comp_temp)
+                        cid = re.split(" ", datalist[0]['props']['children'])[1]
+                        cid = str(cid)[0:(str(cid).find('['))]
 
-                if dir == "Direction.Forward":
-                    new_eq = Reaction(Direction.Forward, eq_dict)
-                elif dir == "Direction.Reverse":
-                    new_eq = Reaction(Direction.Reverse, eq_dict)
-                elif dir == "Direction.Both":
-                    new_eq = Reaction(Direction.Both, eq_dict)
-                else:
-                    quit("Nonvalid direction")
-                print(new_eq)
-                reaction.equation = new_eq
-                self._model.reactions.add_entry(reaction)
+                        for c in self._model.compounds:
+                            if c.id.upper() == cid.upper():
+                                compound = c
 
+                        compound.charge = comp[0][0]
+                        compound.formula = comp[0][1]
+                        self._model.compounds.add_entry(compound)
+                        contents.append(html.H5(
+                                        "{} has been updated".format(cid)))
 
-                contents = []
-                contents.append(html.H5(
-                                "Reaction has been updated"))
-                return contents
+            model = self._mm
+            nm, network = read_model(self._model, model, "C")
+            pathway_list, rxn_set = get_pathway_list(nm, pathways_dropdown_curate)
+            nodes, edges, obj_flux = build_network(self, nm, model, rxn_set, network, [])
+            elements=nodes+edges
+
+            return contents, elements
 
 
         @_app.callback(
             Output("edit-data", "children"),
-            [Input("net_curate", "selectedEdgeData")]
+            [Input("net_curate", "selectedEdgeData"),
+            Input("net_curate", "selectedNodeData")]
         )
-        def display_nodedata(datalist):
+        def display_nodedata(datalist_edge, datalist_node):
+                changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
                 contents = "Click on an edge to see its details here"
                 model = self._model
                 c_list = []
                 comp_set = set()
                 for i in model.compounds:
-                    c_list.append(i.name)
+                    c_list.append(i.id)
                 for i in model.reactions:
                     for j in i.equation.compounds:
                         comp_set.add(j[0].compartment)
                 comp_list = list(comp_set)
-                if datalist is not None:
-                        if len(datalist) > 0:
-                                data = datalist[-1]
-                                contents = []
-                                contents.append(html.H5(
-                                                "ID: " + data["rid"].title()))
-                                contents.append(html.H5(
-                                                "Name: " + data["label"].title()))
-                                for i in model.reactions:
-                                    if i.id == data["rid"]:
-                                        reaction = i
-
+                if str(changed_id) == "net_curate.selectedEdgeData":
+                    if datalist_edge is not None:
+                        if len(datalist_edge) > 0:
+                            data = datalist_edge[-1]
+                            contents = []
+                            contents.append(html.H5(
+                                            "ID: " + data["rid"].title()))
+                            contents.append(html.H5(
+                                            "Name: " + data["label"].title()))
+                            for i in model.reactions:
+                                if i.id == data["rid"]:
+                                    reaction = i
+                            contents.append(
+                            dbc.Row([
+                            dbc.Col([
+                            html.H5("Direction: ")
+                            ]),
+                            dbc.Col([
+                            dcc.Dropdown(
+                                id="direction",
+                                options=[{"label": x,
+                                    "value": x,}
+                                    for x in ["Direction.Forward",
+                                              "Direction.Reverse",
+                                              "Direction.Both"]],
+                                    placeholder = str(reaction.equation.direction),
+                                    multi=False
+                                    )
+                            ]),], id='direction'),)
+                            contents.append(html.H5("Left Equation:"))
+                            dropid = 0
+                            for j in reaction.equation.left:
                                 contents.append(
                                 dbc.Row([
                                 dbc.Col([
-                                html.H5("Direction: ")
+                                dcc.Input(id="stoich{}".format(str(dropid)),
+                                    type="number",
+                                    placeholder=str(j[1]))]),
+                                dbc.Col([
+                                dcc.Dropdown(
+                                    id="drop{}".format(str(dropid)),
+                                    options=[{"label": x,
+                                        "value": x,}
+                                        for x in list(c_list)],
+                                        placeholder = j[0].name,
+                                        multi=False
+                                        )
                                 ]),
                                 dbc.Col([
                                 dcc.Dropdown(
-                                    id="direction",
+                                    id="compartment{}".format(str(dropid)),
                                     options=[{"label": x,
                                         "value": x,}
-                                        for x in ["Direction.Forward",
-                                                  "Direction.Reverse",
-                                                  "Direction.Both"]],
-                                        placeholder = str(reaction.equation.direction),
+                                        for x in list(comp_list)],
+                                        placeholder = j[0].compartment,
                                         multi=False
                                         )
-                                ]),], id='direction'),)
-                                contents.append(html.H5("Left Equation:"))
-                                dropid = 0
-                                for j in reaction.equation.left:
-                                    contents.append(
-                                    dbc.Row([
-                                    dbc.Col([
-                                    dcc.Input(id="stoich{}".format(str(dropid)),
-                                        type="number",
-                                        placeholder=str(j[1]))]),
-                                    dbc.Col([
-                                    dcc.Dropdown(
-                                        id="drop{}".format(str(dropid)),
-                                        options=[{"label": x,
-                                            "value": x,}
-                                            for x in list(c_list)],
-                                            placeholder = j[0].name,
-                                            multi=False
-                                            )
-                                    ]),
-                                    dbc.Col([
-                                    dcc.Dropdown(
-                                        id="compartment{}".format(str(dropid)),
-                                        options=[{"label": x,
-                                            "value": x,}
-                                            for x in list(comp_list)],
-                                            placeholder = j[0].compartment,
-                                            multi=False
-                                            )
-                                    ]),], id="left"),)
-                                    dropid+=1
-                                contents.append(html.H5("Right Equation:"))
-                                for j in reaction.equation.right:
-                                    contents.append(
-                                    dbc.Row([
-                                    dbc.Col([
-                                    dcc.Input(id="stoich{}".format(str(dropid)),
-                                        type="number",
-                                        placeholder=str(j[1]))]),
-                                    dbc.Col([
-                                    dcc.Dropdown(
-                                        id="drop{}".format(str(dropid)),
-                                        options=[{"label": x,
-                                            "value": x,}
-                                            for x in list(c_list)],
-                                            placeholder = j[0].name,
-                                            multi=False
-                                            )
-                                    ]),
-                                    dbc.Col([
-                                    dcc.Dropdown(
-                                        id="compartment{}".format(str(dropid)),
-                                        options=[{"label": x,
-                                            "value": x,}
-                                            for x in list(comp_list)],
-                                            placeholder = j[0].compartment,
-                                            multi=False
-                                            )
-                                    ]),], id="right"),)
-                                    dropid+=1
+                                ]),], id="left"),)
+                                dropid+=1
+                            contents.append(html.H5("Right Equation:"))
+                            for j in reaction.equation.right:
+                                contents.append(
+                                dbc.Row([
+                                dbc.Col([
+                                dcc.Input(id="stoich{}".format(str(dropid)),
+                                    type="number",
+                                    placeholder=str(j[1]))]),
+                                dbc.Col([
+                                dcc.Dropdown(
+                                    id="drop{}".format(str(dropid)),
+                                    options=[{"label": x,
+                                        "value": x,}
+                                        for x in list(c_list)],
+                                        placeholder = j[0].name,
+                                        multi=False
+                                        )
+                                ]),
+                                dbc.Col([
+                                dcc.Dropdown(
+                                    id="compartment{}".format(str(dropid)),
+                                    options=[{"label": x,
+                                        "value": x,}
+                                        for x in list(comp_list)],
+                                        placeholder = j[0].compartment,
+                                        multi=False
+                                        )
+                                ]),], id="right"),)
+                                dropid+=1
+                if str(changed_id) == "net_curate.selectedNodeData":
+                    if datalist_node is not None:
+                        if len(datalist_node) > 0:
+                            data = datalist_node[-1]
+                            contents = []
+                            contents.append(html.H5(
+                                            "ID: " + data["id"].title()))
+                            contents.append(html.H5(
+                                            "Name: " + data["label"].title()))
+                            contents.append(
+                            dbc.Row([
+                            dbc.Col([
+                            dcc.Input(id="charge",
+                                type="number",
+                                placeholder=data['charge'])]),
+                            dbc.Col([
+                            dcc.Input(
+                                id="formula",
+                                type='text',
+                                placeholder=data['formula']
+                                    )
+                            ]),], id='compounds'),)
+
                 return contents
 
         @_app.callback(
@@ -864,24 +918,6 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                     contents.append(html.H5("No flux through the network"))
 
                 return elements, contents
-
-        @_app.callback(
-                [Output("net_curate", "elements")],
-                [
-                        Input("pathways_dropdown_curate", "value"),
-                ],
-                prevent_initial_call=True,
-        )
-        def filter_nodes(pathways_dropdown):
-            if isinstance(pathways_dropdown, list):
-                model = self._mm
-                nm, network = read_model(self._model, model, "C")
-                pathway_list, rxn_set = get_pathway_list(nm, pathways_dropdown)
-
-                nodes, edges, obj_flux = build_network(self, nm, model, rxn_set, network, [])
-                elements=nodes+edges
-
-                return [elements]
 
         # @_app.callback(
         #         Output("fba-data", "children"), [Input("fba_dropdown", "value")],
@@ -1139,9 +1175,11 @@ def bfs_compounds(start, end, network, rxn_list, rxn_set, middle2, middle3):
 def build_network(self, nm, mm, rxn_set, network, fba_dropdown):
         name={}
         formula={}
+        charge={}
         for i in nm.compounds:
             name[i.id]=i.name
             formula[i.id]=i.formula
+            charge[i.id]=i.charge
         nodes=[]
         edges=[]
         obj = 0
@@ -1179,13 +1217,15 @@ def build_network(self, nm, mm, rxn_set, network, fba_dropdown):
                                   'label': name[str(cpd[0])[0:(str(cpd[0]).find('['))]],
                                   'formula': formula[str(cpd[0])[0:(str(cpd[0]).find('['))]],
                                   'compartment': cpd[0].compartment,
-                                  'col': col_dict[cpd[0].compartment]
+                                  'col': col_dict[cpd[0].compartment],
+                                  'charge': charge[str(cpd[0])[0:(str(cpd[0]).find('['))]]
                                   }})
                     nodes.append({'data':{'id':str(cpd[1]),
                                   'label': name[str(cpd[1])[0:(str(cpd[1]).find('['))]],
                                   'formula': formula[str(cpd[1])[0:(str(cpd[1]).find('['))]],
                                   'compartment': cpd[0].compartment,
-                                  'col': col_dict[cpd[0].compartment]
+                                  'col': col_dict[cpd[0].compartment],
+                                  'charge': charge[str(cpd[0])[0:(str(cpd[0]).find('['))]]
                                   }})
                     if  'pathways' in rxn.properties:
                         path = rxn.properties['pathways']
