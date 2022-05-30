@@ -69,6 +69,15 @@ ALT_COLOR = '#b3fcb8'
 
 EPSILON = 1e-5
 
+class HiddenPrints:
+    def __enter__(self):
+        self._original_stdout = sys.stdout
+        sys.stdout = open(os.devnull, 'w')
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout.close()
+        sys.stdout = self._original_stdout
+
 class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                            Command, FilePrefixAppendAction):
     """Generate graphical representations of the model"""
@@ -142,7 +151,7 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
         except:
             content_model.append(html.P("Total genes: Unable to count genes"))
 
-        unbalanced, count, unchecked, exclude = charge_check(self, 1e-6)
+        unbalanced, count, unchecked, exclude, unbalanced_list, unbalance_dict = charge_check(self, 1e-6)
         content_model.append(html.H5("Chargecheck results:"))
         content_model.append(html.P("Unblanced reactions: " + str(unbalanced)))
         content_model.append(html.P("Unchecked reactions: " + str(unchecked)))
@@ -449,11 +458,13 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                 ],style={"marginTop": 20},),]),
                                 dcc.Tab(label='Curate', value='cur', children=[
                                 html.Div(id='curate-control-tabs', className='curate-tabs', children=[
-                                    dbc.Row([
-                                    dbc.Col([
+                                    # dbc.Row([
+                                    # dbc.Col([
                                     dcc.Tabs(id="curate-subtabs", value="what is", children=[
                                         dcc.Tab(label='Edit', value='edit',
                                             children=html.Div(className='control-tab',children=[
+                                            dbc.Row([
+                                            dbc.Col([
                                             dbc.Alert(
                                                     id="edit-data",
                                                     children="Click on a node to see its details here",
@@ -467,10 +478,94 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                                     children="Click save to confirm changes to model",
                                                     color="secondary",
                                             ),
+                                            ]),
+                                            dbc.Col([
+                                            html.H5("Pathways:"),
+                                            dbc.Row(
+                                            [dcc.Dropdown(
+                                                id="pathways_dropdown_curate",
+                                                options=[
+                                                {"label": i,
+                                                "value": i,}
+                                                for i in list(pathway_list)],
+                                            value=pathway_list[0],
+                                            multi=True,
+                                            placeholder="",
+                                            style={"width": "100%"},),]),
+                                            cyto.Cytoscape(id = 'net_curate',
+                                            layout={'name':'cose',
+                                                    'animate':True,
+                                                    'animationDuration':1000},
+                                            style={'width': '100%', 'height': '600px'},
+                                            elements=nodes+edges,
+                                            stylesheet=[{
+                                                        'selector': 'node',
+                                                        'style': {
+                                                                'background-color': 'data(col)',
+                                                                'label': 'data(label)'}},
+                                                        {
+                                                        "selector": "edge",
+                                                        "style": {
+                                                                "width": 1,
+                                                                "curve-style": "bezier",
+                                                                "target-arrow-shape":"triangle"}},
+                                                        {
+                                                        "selector": "[flux > 0]",
+                                                        "style": {
+                                                                "line-color": "blue",
+                                                                "target-arrow-color":"blue",
+                                                                "width": 1,
+                                                                "curve-style": "bezier",
+                                                                "target-arrow-shape":"triangle",
+                                                                "line-dash-pattern": [6,3],
+                                                                "line-dash-offset": 24
+                                                                }
+                                                        },
+
+                                                        ],
+                                                        minZoom=0.06
+                                                        ),
+                                            ]),]),
                                             ]),),
                                         dcc.Tab(label='Charge Check', value='chargeCheck',
                                             children=html.Div(className='control-tab',children=[
-                                            html.H5("")
+                                            dbc.Row(
+                                            [html.H5("Unbalanced Reactions:"),
+                                            dcc.Dropdown(
+                                                id="unbalanced_rxns",
+                                                options=[
+                                                {"label": i,
+                                                "value": i,}
+                                                for i in list(unbalanced_list)],
+                                            value=pathway_list[0],
+                                            multi=False,
+                                            placeholder="",),
+                                            dbc.Alert(
+                                                    id="chargeCheckCuration",
+                                                    children="Select a reaction above to curate the charge balance",
+                                                    color="secondary",
+                                            ),
+                                            dbc.Row([
+                                            dbc.Col([
+                                            dbc.Alert(
+                                                    id="chargeLeftCuration",
+                                                    children="The left side of the reaction will display here",
+                                                    color="secondary",
+                                            ),
+                                            html.Div([
+                                                html.Button("Save", id="btn_save_charge")
+                                            ]),
+                                            ]),
+                                            dbc.Col([
+                                            dbc.Alert(
+                                                    id="chargeRightCuration",
+                                                    children="The right side of the reaction will display here",
+                                                    color="secondary",
+                                            ),
+                                            ]),
+                                            ]),
+                                            ]),
+
                                             ]),),
                                         dcc.Tab(label='Formula Check', value='formulaCheck',
                                             children=html.Div(className='control-tab',children=[
@@ -479,54 +574,16 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                         ]),
 
                                         ]),
-                                    dbc.Col([
-                                    html.H5("Pathways:"),
-                                    dbc.Row(
-                                    [dcc.Dropdown(
-                                        id="pathways_dropdown_curate",
-                                        options=[
-                                        {"label": i,
-                                        "value": i,}
-                                        for i in list(pathway_list)],
-                                    value=pathway_list[0],
-                                    multi=True,
-                                    placeholder="",
-                                    style={"width": "100%"},),]),
-                                    cyto.Cytoscape(id = 'net_curate',
-                                    layout={'name':'cose',
-                                            'animate':True,
-                                            'animationDuration':1000},
-                                    style={'width': '100%', 'height': '600px'},
-                                    elements=nodes+edges,
-                                    stylesheet=[{
-                                                'selector': 'node',
-                                                'style': {
-                                                        'background-color': 'data(col)',
-                                                        'label': 'data(label)'}},
-                                                {
-                                                "selector": "edge",
-                                                "style": {
-                                                        "width": 1,
-                                                        "curve-style": "bezier",
-                                                        "target-arrow-shape":"triangle"}},
-                                                {
-                                                "selector": "[flux > 0]",
-                                                "style": {
-                                                        "line-color": "blue",
-                                                        "target-arrow-color":"blue",
-                                                        "width": 1,
-                                                        "curve-style": "bezier",
-                                                        "target-arrow-shape":"triangle",
-                                                        "line-dash-pattern": [6,3],
-                                                        "line-dash-offset": 24
-                                                        }
-                                                },
+                                        dbc.Row([dcc.Markdown(
+                                            """
+                                            -----
 
-                                                ],
-                                                minZoom=0.06
-                                                ),
-                                    ]),]),
-                                ]),
+                                            \* Writing this here so bottom of screen has a buffer. Put real words sometime
+
+                                            -----
+                                            """
+                                            )],
+                                            style={"fontSize": 11, "color": "gray"},),
 
 
 
@@ -550,33 +607,360 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
     def callbacks(self, _app):
 
         @_app.callback(
+                [Output("chargeCheckCuration", "children"),
+                Output("chargeLeftCuration", "children"),
+                Output("chargeRightCuration", "children"),
+                Output("unbalanced_rxns", "options")],
+                [Input("unbalanced_rxns", "value"),
+                Input("btn_save_charge", "n_clicks")],
+                [State("chargeLeftCuration", "children"),
+                State("chargeRightCuration", "children")],
+                prevent_initial_call=True,
+        )
+        def select_chargeCheck(rxn, chargeClick, leftdata, rightdata):
+            changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
+
+            def rec_props(data, out):
+                for i in data:
+                    if type(i) is dict:
+                        if 'children' in i['props']:
+                            rec_props(i['props']['children'], out)
+                        elif 'value' in i['props']:
+                            out.append(i['props']['value'])
+                        elif 'placeholder' in i['props']:
+                            out.append(i['props']['placeholder'])
+                return out
+
+            def compound_name(id):
+                if id not in self._model.compounds:
+                    return id
+                return self._model.compounds[id].properties.get('name', id)
+            if isinstance(rxn, str):
+                if dash.callback_context.triggered[0]['prop_id'] == 'btn_save_charge.n_clicks':
+                    left_out = []
+                    eq_dict={}
+                    print("LEFTDATA", leftdata)
+                    for i in leftdata:
+                        if type(i) is dict:
+                            left_out_temp = rec_props(i['props']['children'], [])
+                            if len(left_out_temp) > 0:
+                                if left_out_temp[0] != '':
+                                    left_out.append(left_out_temp)
+                    for l in left_out:
+                        for c in self._model.compounds:
+                            if c.id.upper() == l[0].upper():
+                                compound = c
+                        compound.charge = int(l[3])
+                        compound.formula = l[2]
+                        self._model.compounds.add_entry(compound)
+                        eq_dict[Compound(l[0]).in_compartment(l[4])] = int(l[1])*-1
+
+                    right_out = []
+                    for i in rightdata:
+                        if type(i) is dict:
+                            right_out_temp = rec_props(i['props']['children'], [])
+                            if len(right_out_temp) > 0:
+                                if right_out_temp[0] != '':
+                                    right_out.append(right_out_temp)
+                    for r in right_out:
+                        for c in self._model.compounds:
+                            if c.id.upper() == r[0].upper():
+                                compound = c
+                        compound.charge = int(r[3])
+                        compound.formula = r[2]
+                        self._model.compounds.add_entry(compound)
+                        eq_dict[Compound(r[0]).in_compartment(r[4])] = int(r[1])
+
+                    for r in self._model.reactions:
+                        if r.id.upper() == rxn.upper():
+                            reaction = r
+                    new_eq = Reaction(reaction.equation.__dict__['_direction'], eq_dict)
+                    reaction.equation = new_eq
+                    self._model.reactions.add_entry(reaction)
+
+
+
+                # print("LEFT_OUT", left_out)
+
+
+
+            with HiddenPrints():
+                unbalanced, count, unchecked, exclude, unbalanced_list, unbalance_dict = charge_check(self, 1e-6)
+            model = self._model
+            c_list = []
+            formula_dict = {}
+            charge_dict = {}
+            comp_set = set()
+            for i in model.compounds:
+                c_list.append(i.id)
+                formula_dict[i.id] = i.formula
+                charge_dict[i.id] = i.charge
+            for i in model.reactions:
+                for j in i.equation.compounds:
+                    comp_set.add(j[0].compartment)
+            comp_list = list(comp_set)
+            if isinstance(rxn, str):
+                for i in self._model.reactions:
+                    if i.id == rxn:
+                        r = i
+                contents = []
+                contents.append(
+                    html.H5("Reaction: {}".format(r.id))
+                    )
+                contents.append(
+                    html.H5("Equation: ")
+                    )
+                contents.append(
+                    html.P("{}".format(r.equation))
+                    )
+
+                contents.append(
+                    html.H5("Translated Equation:")
+                    )
+                contents.append(
+                    html.P("{}".format(r.equation.translated_compounds(compound_name)))
+                    )
+                try:
+                    contents.append(
+                        html.P("Charge off by {}".format(unbalance_dict[r.id]))
+
+                    )
+                except KeyError:
+                    contents = ["{} was successfully balanced! Select a reaction above to curate the charge balance".format(r.id)]
+                    left_contents = ["The left side of the reaction will display here"]
+                    right_contents = ["The right side of the reaction will display here"]
+                    return contents, left_contents, right_contents, [{"label": i,"value": i,} for i in list(unbalanced_list)]
+
+                left_contents = []
+                # for i in r.equation.left:
+                #     left_contents.append(html.H5("test"))
+
+                left_contents.append(html.H5("Left:"))
+                left_contents.append(
+                dbc.Row([
+                dbc.Col([
+                    html.P("ID")
+                ], width = 3),
+                dbc.Col([
+                    html.P("Stoich.")
+                ], width = 2),
+                dbc.Col([
+                    html.P("Formula")
+                ], width = 3),
+                dbc.Col([
+                    html.P("Charge")
+                ], width = 2),
+                dbc.Col([
+                    html.P("Comp")
+                ], width = 2),
+                ]))
+                cur_id = 0
+                for i in r.equation.left:
+                    left_contents.append(
+                    dbc.Row([
+                    dbc.Col([
+                    dcc.Dropdown(
+                        id="drop{}".format(str(cur_id)),
+                        options=[{"label": x,
+                            "value": x,}
+                            for x in list(c_list)],
+                            placeholder = i[0].name,
+                            multi=False
+                            )], width = 3),
+                    dbc.Col([
+                    dcc.Input(id="stoich{}".format(str(cur_id)),
+                        type="number",
+                        placeholder=str(i[1]), style={'width': '75%'})], width = 2),
+                    dbc.Col([
+                    dcc.Input(id="formula{}".format(str(cur_id)),
+                        type="text",
+                        placeholder=str(formula_dict[i[0].name]), style={'width': '85%'})], width = 3),
+                    dbc.Col([
+                    dcc.Input(id="charge{}".format(str(cur_id)),
+                        type="number",
+                        placeholder=str(charge_dict[i[0].name]),
+                        style={'width': '75%'})], width = 2),
+                    dbc.Col([
+                    dcc.Dropdown(
+                        id="compartment{}".format(str(cur_id)),
+                        options=[{"label": x,
+                            "value": x,}
+                            for x in list(comp_list)],
+                            placeholder = i[0].compartment,
+                            multi=False
+                            )
+                    ], width = 2),
+                    ]),
+                    )
+                    cur_id += 1
+                left_contents.append(html.P("Add to left:"))
+                left_contents.append(
+                dbc.Row([
+                dbc.Col([
+                dcc.Dropdown(
+                    id="drop{}".format(str(cur_id)),
+                    options=[{"label": x,
+                        "value": x,}
+                        for x in list(c_list)],
+                        placeholder = '',
+                        multi=False
+                        )], width = 3),
+                dbc.Col([
+                dcc.Input(id="stoich{}".format(str(cur_id)),
+                    type="number",
+                    placeholder="0", style={'width': '75%'})], width = 2),
+                dbc.Col([
+                dcc.Input(id="formula{}".format(str(cur_id)),
+                    type="text",
+                    placeholder='', style={'width': '85%'})], width = 3),
+                dbc.Col([
+                dcc.Input(id="charge{}".format(str(cur_id)),
+                    type="number",
+                    placeholder="0",
+                    style={'width': '75%'})], width = 2),
+                dbc.Col([
+                dcc.Dropdown(
+                    id="compartment{}".format(str(cur_id)),
+                    options=[{"label": x,
+                        "value": x,}
+                        for x in list(comp_list)],
+                        placeholder = '',
+                        multi=False
+                        )], width = 2),
+
+                ]),
+                )
+
+                right_contents = []
+
+                right_contents.append(html.H5("Right:"))
+                right_contents.append(
+                dbc.Row([
+                dbc.Col([
+                    html.P("ID")
+                ], width = 3),
+                dbc.Col([
+                    html.P("Stoich.")
+                ], width = 2),
+                dbc.Col([
+                    html.P("Formula")
+                ], width = 3),
+                dbc.Col([
+                    html.P("Charge")
+                ], width = 2),
+                dbc.Col([
+                    html.P("Comp")
+                ], width = 2),
+                ]))
+                cur_id = 0
+                for i in r.equation.right:
+                    right_contents.append(
+                    dbc.Row([
+                    dbc.Col([
+                    dcc.Dropdown(
+                        id="drop{}".format(str(cur_id)),
+                        options=[{"label": x,
+                            "value": x,}
+                            for x in list(c_list)],
+                            placeholder = i[0].name,
+                            multi=False
+                            )], width = 3),
+                    dbc.Col([
+                    dcc.Input(id="stoich{}".format(str(cur_id)),
+                        type="number",
+                        placeholder=str(i[1]), style={'width': '75%'})], width = 2),
+                    dbc.Col([
+                    dcc.Input(id="formula{}".format(str(cur_id)),
+                        type="text",
+                        placeholder=str(formula_dict[i[0].name]), style={'width': '85%'})], width = 3),
+                    dbc.Col([
+                    dcc.Input(id="charge{}".format(str(cur_id)),
+                        type="number",
+                        placeholder=str(charge_dict[i[0].name]),
+                        style={'width': '75%'})], width = 2),
+                    dbc.Col([
+                    dcc.Dropdown(
+                        id="compartment{}".format(str(cur_id)),
+                        options=[{"label": x,
+                            "value": x,}
+                            for x in list(comp_list)],
+                            placeholder = i[0].compartment,
+                            multi=False
+                            )
+                    ], width = 2),
+                    ]),
+                    )
+                    cur_id += 1
+                right_contents.append(html.P("Add to right:"))
+                right_contents.append(
+                dbc.Row([
+                dbc.Col([
+                dcc.Dropdown(
+                    id="drop{}".format(str(cur_id)),
+                    options=[{"label": x,
+                        "value": x,}
+                        for x in list(c_list)],
+                        placeholder = '',
+                        multi=False
+                        )], width = 3),
+                dbc.Col([
+                dcc.Input(id="stoich{}".format(str(cur_id)),
+                    type="number",
+                    placeholder="0", style={'width': '75%'})], width = 2),
+                dbc.Col([
+                dcc.Input(id="formula{}".format(str(cur_id)),
+                    type="text",
+                    placeholder='', style={'width': '85%'})], width = 3),
+                dbc.Col([
+                dcc.Input(id="charge{}".format(str(cur_id)),
+                    type="number",
+                    placeholder="0",
+                    style={'width': '75%'})], width = 2),
+                dbc.Col([
+                dcc.Dropdown(
+                    id="compartment{}".format(str(cur_id)),
+                    options=[{"label": x,
+                        "value": x,}
+                        for x in list(comp_list)],
+                        placeholder = '',
+                        multi=False
+                        )], width = 2),
+                ]),
+                )
+                return contents, left_contents, right_contents, [{"label": i,"value": i,} for i in list(unbalanced_list)]
+            else:
+                contents = ["Select a reaction above to curate the charge balance"]
+                left_contents = ["The left side of the reaction will display here"]
+                right_contents = ["The right side of the reaction will display here"]
+
+        @_app.callback(
                 Output("node-data", "children"),
                 [Input("net", "selectedNodeData")]
         )
         def display_nodedata(datalist):
-                contents = "Click on a node to see its details here"
-                if datalist is not None:
-                        if len(datalist) > 0:
-                                data = datalist[-1]
-                                contents = []
-                                contents.append(
-                                        html.H5(
-                                            "ID: " + data["id"].title()
-                                        )
-                                )
-                                contents.append(
-                                        html.P(
-                                                "Name: " + data["label"]
-                                        )
-                                )
-                                contents.append(
-                                        html.P(
-                                                "Formula: "
-                                                + str(data["formula"])
-                                        )
-                                )
+            contents = "Click on a node to see its details here"
+            if datalist is not None:
+                if len(datalist) > 0:
+                    data = datalist[-1]
+                    contents = []
+                    contents.append(
+                        html.H5(
+                            "ID: " + data["id"].title()
+                        )
+                    )
+                    contents.append(
+                        html.P(
+                                "Name: " + data["label"]
+                        )
+                    )
+                    contents.append(
+                        html.P(
+                                "Formula: "
+                                + str(data["formula"])
+                        )
+                    )
 
-                return contents
+            return contents
 
         @_app.callback(
             [Output("edit-confirm", "children"),
@@ -585,7 +969,8 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
             Input("pathways_dropdown_curate", "value"),],
             [State("edit-data", "children"),
             State("net_curate", "selectedEdgeData"),
-            State("net_curate", "selectedNodeData"),]
+            State("net_curate", "selectedNodeData"),],
+            prevent_initial_call=True,
         )
         def update_model(nclicks, pathways_dropdown_curate, datalist, edge, node):
             contents = []
@@ -617,6 +1002,10 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                     if i['props']['id'] == 'left':
                                         left_temp = rec_props(i['props']['children'], [])
                                         left.append(left_temp)
+                                    elif i['props']['id'] == 'left_new':
+                                        left_temp = rec_props(i['props']['children'], [])
+                                        if left_temp[1] != '':
+                                            left.append(left_temp)
                         right = []
                         for i in datalist:
                             if type(i) is dict:
@@ -624,6 +1013,10 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                     if i['props']['id'] == 'right':
                                         right_temp = rec_props(i['props']['children'], [])
                                         right.append(right_temp)
+                                    elif i['props']['id'] == 'right_new':
+                                        right_temp = rec_props(i['props']['children'], [])
+                                        if right_temp[1] != '':
+                                            right.append(right_temp)
 
                         rid = re.split(" ", datalist[0]['props']['children'])[1]
 
@@ -690,6 +1083,7 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
             [Input("net_curate", "selectedEdgeData"),
             Input("net_curate", "selectedNodeData")]
         )
+
         def display_nodedata(datalist_edge, datalist_node):
                 changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
                 contents = "Click on an edge to see its details here"
@@ -761,6 +1155,34 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                         )
                                 ]),], id="left"),)
                                 dropid+=1
+                            contents.append(html.P("Add new compound to left side"))
+                            contents.append(
+                            dbc.Row([
+                            dbc.Col([
+                            dcc.Input(id="stoich{}".format(str(dropid)),
+                                type="number",
+                                placeholder=0)]),
+                            dbc.Col([
+                            dcc.Dropdown(
+                                id="drop{}".format(str(dropid)),
+                                options=[{"label": x,
+                                    "value": x,}
+                                    for x in list(c_list)],
+                                    placeholder = '',
+                                    multi=False
+                                    )
+                            ]),
+                            dbc.Col([
+                            dcc.Dropdown(
+                                id="compartment{}".format(str(dropid)),
+                                options=[{"label": x,
+                                    "value": x,}
+                                    for x in list(comp_list)],
+                                    placeholder = '',
+                                    multi=False
+                                    )
+                            ]),], id="left_new"))
+                            dropid+=1
                             contents.append(html.H5("Right Equation:"))
                             for j in reaction.equation.right:
                                 contents.append(
@@ -790,6 +1212,34 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                         )
                                 ]),], id="right"),)
                                 dropid+=1
+                            contents.append(html.P("Add new compound to right side"))
+                            contents.append(
+                            dbc.Row([
+                            dbc.Col([
+                            dcc.Input(id="stoich{}".format(str(dropid)),
+                                type="number",
+                                placeholder=0)]),
+                            dbc.Col([
+                            dcc.Dropdown(
+                                id="drop{}".format(str(dropid)),
+                                options=[{"label": x,
+                                    "value": x,}
+                                    for x in list(c_list)],
+                                    placeholder = '',
+                                    multi=False
+                                    )
+                            ]),
+                            dbc.Col([
+                            dcc.Dropdown(
+                                id="compartment{}".format(str(dropid)),
+                                options=[{"label": x,
+                                    "value": x,}
+                                    for x in list(comp_list)],
+                                    placeholder = j[0].compartment,
+                                    multi=False
+                                    )
+                            ]),], id="right_new"))
+                            dropid+=1
                 if str(changed_id) == "net_curate.selectedNodeData":
                     if datalist_node is not None:
                         if len(datalist_node) > 0:
@@ -839,12 +1289,21 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                                 + str(data["equation"])
                                         )
                                 )
-                                contents.append(
-                                        html.P(
+                                if type(data["pathways"]) is str:
+                                    contents.append(
+                                            html.P(
+                                                    "Pathways: "
+                                                    + data["pathways"]
+                                            )
+                                    )
+                                elif type(data["pathways"]) is list:
+                                    contents.append(
+                                            html.P(
                                                 "Pathways: "
-                                                + data["pathways"]
-                                        )
-                                )
+                                                + ";".join(data["pathways"])
+                                            )
+                                    )
+
                                 contents.append(
                                         html.P(
                                                 "Flux: "
@@ -919,26 +1378,6 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
 
                 return elements, contents
 
-        # @_app.callback(
-        #         Output("fba-data", "children"), [Input("fba_dropdown", "value")],
-        #         prevent_initial_call=True,
-        # )
-        # def Run_FBA(fba_dropdown):
-        #   if not isinstance(fba_dropdown, list):
-        #       objective=str(fba_dropdown)
-        #       # First read in the base model
-        #       nm, network = read_model(self._model, self._mm, element_dropdown)
-        #       # Set up the solver
-        #       solver = glpk.Solver()
-        #       # Define the flux balance
-        #       problem = fluxanalysis.FluxBalanceProblem(nm, solver)
-        #       problem.maximize(fba_dropdown)
-        #
-        #
-        #
-        #       return(str(problem.get_flux(fba_dropdown)))
-        #   else:
-        #       return("More than one reaction selected")
 
         @_app.callback(
             Output("download", "data"),
