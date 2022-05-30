@@ -87,7 +87,7 @@ def _reaction_to_dicts(reaction):
             d[k] += int(v / div)
         return d
 
-    div = reduce(gcd, (abs(v) for _, v in reaction.compounds), 0)
+    div = reduce(gcd, (int(abs(v)) for _, v in reaction.compounds), 0)
     if div == 0:
         raise ValueError('Empty reaction')
 

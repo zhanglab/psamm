@@ -59,6 +59,7 @@ import pandas as pd
 import webbrowser
 from psamm.commands.chargecheck import charge_check
 from psamm.commands.formulacheck import formula_check
+from decimal import *
 
 logger = logging.getLogger(__name__)
 
@@ -150,14 +151,15 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
             content_model.append(html.P("Total genes: " + str(count_genes(self._model))))
         except:
             content_model.append(html.P("Total genes: Unable to count genes"))
-
-        unbalanced, count, unchecked, exclude, unbalanced_list, unbalance_dict = charge_check(self, 1e-6)
+        with HiddenPrints():
+            unbalanced, count, unchecked, exclude, unbalanced_list, unbalance_dict = charge_check(self, 1e-6)
         content_model.append(html.H5("Chargecheck results:"))
         content_model.append(html.P("Unblanced reactions: " + str(unbalanced)))
         content_model.append(html.P("Unchecked reactions: " + str(unchecked)))
         content_model.append(html.P("Excluded reactions: " + str(len(exclude))))
 
-        unbalanced, count, unchecked, exclude = formula_check(self)
+        with HiddenPrints():
+            unbalanced, count, unchecked, exclude = formula_check(self)
         content_model.append(html.H5("Formulacheck results:"))
         content_model.append(html.P("Unblanced reactions: " + str(unbalanced)))
         content_model.append(html.P("Unchecked reactions: " + str(unchecked)))
@@ -639,7 +641,6 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                 if dash.callback_context.triggered[0]['prop_id'] == 'btn_save_charge.n_clicks':
                     left_out = []
                     eq_dict={}
-                    print("LEFTDATA", leftdata)
                     for i in leftdata:
                         if type(i) is dict:
                             left_out_temp = rec_props(i['props']['children'], [])
