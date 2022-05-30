@@ -38,6 +38,8 @@ def charge_check(self, epsilon):
     count = 0
     unbalanced = 0
     unchecked = 0
+    unbalance_list = []
+    unbalance_dict = {}
     for reaction, charge in charge_balance(self._model):
         count += 1
 
@@ -50,9 +52,11 @@ def charge_check(self, epsilon):
             unchecked += 1
         elif abs(charge) > epsilon:
             unbalanced += 1
+            unbalance_list.append(reaction.id)
+            unbalance_dict[reaction.id] = charge
             rxt = reaction.equation.translated_compounds(compound_name)
             print('{}\t{}\t{}'.format(reaction.id, charge, rxt))
-    return(unbalanced, count, unchecked, exclude)
+    return(unbalanced, count, unchecked, exclude, unbalance_list, unbalance_dict)
 
 class ChargeBalanceCommand(Command):
     """Check whether compound charge is balanced.
@@ -77,7 +81,7 @@ class ChargeBalanceCommand(Command):
     def run(self):
         """Run charge balance command"""
         epsilon = self._args.epsilon
-        unbalanced, count, unchecked, exclude = charge_check(self, epsilon)
+        unbalanced, count, unchecked, exclude, list, unbalance_dict = charge_check(self, epsilon)
 
         logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))
         logger.info('Unchecked reactions due to missing charge: {}/{}'.format(
