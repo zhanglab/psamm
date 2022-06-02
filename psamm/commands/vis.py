@@ -1623,7 +1623,7 @@ def build_network(self, nm, mm, rxn_set, network, fba_dropdown):
         nodes=[]
         edges=[]
         obj = 0
-        if not isinstance(fba_dropdown, list):
+        if not isinstance(fba_dropdown, list) and fba_dropdown[0] != '':
             objective=str(fba_dropdown)
             #mm = nm.create_metabolic_model()
 
