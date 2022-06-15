@@ -32,6 +32,8 @@ def formula_check(self):
     count = 0
     unbalanced = 0
     unchecked = 0
+    form_list = []
+    form_dict = {}
     for reaction, result in formula_balance(self._model):
         count += 1
 
@@ -47,11 +49,13 @@ def formula_check(self):
             unbalanced += 1
             right_missing, left_missing = Formula.balance(
                 right_form, left_form)
+            form_list.append(reaction.id)
+            form_dict[reaction.id]=(left_form, left_missing, right_form, right_missing)
 
             print('{}\t{}\t{}\t{}\t{}'.format(
                 reaction.id, left_form, right_form,
                 left_missing, right_missing))
-    return(unbalanced, count, unchecked, exclude)
+    return(unbalanced, count, unchecked, exclude, form_list, form_dict)
 
 class FormulaBalanceCommand(Command):
     """Check whether reactions in the model are elementally balanced.
@@ -71,7 +75,7 @@ class FormulaBalanceCommand(Command):
 
     def run(self):
         """Run formula balance command"""
-        unbalanced, count, unchecked, exclude = formula_check(self)
+        unbalanced, count, unchecked, exclude, form_list, form_dict = formula_check(self)
 
         logger.info('Unbalanced reactions: {}/{}'.format(unbalanced, count))
         logger.info('Unchecked reactions due to missing formula: {}/{}'.format(
