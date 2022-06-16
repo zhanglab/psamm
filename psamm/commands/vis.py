@@ -362,36 +362,28 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                                 style={"width": "75%"}),
                                             ]),
                                             ),
-                                        dcc.Tab(label='About', value='what-is',
+                                        dcc.Tab(label='Exchange', value='what-is',
                                             children=html.Div(className='about-tab', children=[
-                                            html.H4(
-                                            className='what-is',
-                                            children='What is PSAMM?'
-                                            ),
-                                            html.P(
+                                            dbc.Row([html.P(
                                                 """
-                                                The Portable System for the Analysis of Metabolic Models
-                                                or PSAMM is a platform that allows for the analysis of
-                                                genome scale metabolic models implemented in the python
-                                                programming language.
+                                                Set the media and exchanges below.
                                                 """
                                             ),
-                                            html.H5('ChargeCheck'),
-                                            html.P(
-                                                """
-                                                The charge check function essentially compares the right
-                                                and left sides of a reaction and verifies that the net
-                                                charge of the reaction is zero
-                                                """
-                                            ),
-                                            html.H5('FormulaCheck'),
-                                            html.P(
-                                                """
-                                                The charge check function essentially compares the right
-                                                and left sides of a reaction and verifies that the net
-                                                mass of the reaction is zero
-                                                """
-                                            ),
+                                            dbc.Alert(id="exchange",
+                                            children="display exchange here",
+                                            color="secondary",),
+                                            html.Div([
+                                            dbc.Row([
+                                            dbc.Col([
+                                            html.Button("Load exchange", id="exchange-load")
+                                            ]),
+                                            dbc.Col([
+                                            html.Button("Save exchange", id="exchange-modify")
+                                            ])]),]),
+                                            dbc.Alert(id="exchange-confirm",
+                                            children="This will confirm that the exchange was modified",
+                                            color="secondary",),
+                                            ]),
                                             ]),
                                             ),
 
@@ -676,11 +668,104 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
 
     def callbacks(self, _app):
         @_app.callback(
+        Output("exchange-confirm", "children"),
+        Input("exchange-modify", "n_clicks"),
+        State("exchange", "children")
+        )
+        def modify_exchange(nclicks, datalist):
+            def rec_props(data, out):
+                for i in data:
+                    if type(i) is dict:
+                        if 'children' in i['props']:
+                            rec_props(i['props']['children'], out)
+                        elif 'value' in i['props']:
+                            out.append(i['props']['value'])
+                        elif 'placeholder' in i['props']:
+                            out.append(i['props']['placeholder'])
+                return out
+            if dash.callback_context.triggered[0]['prop_id'] == 'exchange-modify.n_clicks':
+                ex = []
+                for i in datalist:
+                    if type(i) is dict:
+                        ex_temp = rec_props(i['props']['children'], [])
+                        if len(ex_temp) > 0:
+                            ex.append(ex_temp)
+                for e in ex:
+                    tup = (Compound(e[0]).in_compartment(e[1]), None, e[2], e[3])
+                    self._model._exchange[Compound(e[0]).in_compartment(e[1])] = tup
+                    self._mm._limits_lower["EX_{}[{}]".format(e[0], e[1])] = float(e[2])
+                    self._mm._limits_upper["EX_{}[{}]".format(e[0], e[1])] = float(e[3])
+
+
+
+        @_app.callback(
+        Output("exchange", "children"),
+        Input("exchange-load", "n_clicks")
+        )
+        def load_exchange(nclicks):
+            print(self._mm.__dict__)
+            comp_set = set()
+            for i in self._model.reactions:
+                for j in i.equation.compounds:
+                    comp_set.add(j[0].compartment)
+            comp_list = list(comp_set)
+            contents = []
+            contents.append(
+                dbc.Row([
+                dbc.Col([
+                html.P("ID")], width = 3),
+                dbc.Col([
+                html.P("compartment")
+                ], width = 3),
+                dbc.Col([
+                html.P("Lower")], width = 3),
+                dbc.Col([
+                html.P("Upper")], width = 3),
+                ]),)
+            if dash.callback_context.triggered[0]['prop_id'] == 'exchange-load.n_clicks':
+                exchange = set()
+                for e in self._model._exchange:
+                    lower = self._model._exchange[e][2]
+                    upper = self._model._exchange[e][3]
+                    if float(lower) != 0 and float(lower) != -1000:
+                        exchange.add(e)
+                    if float(upper) != 0 and float(upper) != 1000:
+                        exchange.add(e)
+                for e in exchange:
+                    print(e)
+                    contents.append(
+                dbc.Row([
+                dbc.Col([
+                dcc.Input(id="id{}".format(str(e.name)),
+                    type="text",
+                    placeholder=str(e.name), style={'width': '75%'})], width = 3),
+                dbc.Col([
+                dcc.Dropdown(
+                    id="compartment{}".format(str(e.name)),
+                    options=[{"label": x,
+                        "value": x,}
+                        for x in list(comp_list)],
+                        placeholder = e.compartment,
+                        multi=False
+                        )
+                ], width = 3),
+                dbc.Col([
+                dcc.Input(id="lower{}".format(str(e.name)),
+                    type="number",
+                    placeholder=float(self._model._exchange[e][2]), style={'width': '85%'})], width = 3),
+                dbc.Col([
+                dcc.Input(id="upper{}".format(str(e.name)),
+                    type="number",
+                    placeholder=float(self._model._exchange[e][3]),
+                    style={'width': '85%'})], width = 3),
+                ]),)
+            return(contents)
+
+        @_app.callback(
                 [Output("save_confirmation", "children"),],
                 [Input("btn_save_model", "n_clicks")],
                 prevent_initial_call=True,)
         def save_model(clicks):
-            print("test running")
             if dash.callback_context.triggered[0]['prop_id'] == 'btn_save_model.n_clicks':
                 out_mw = ModelWriter()
                 path = FilePathContext(self._args.model)
