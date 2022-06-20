@@ -66,6 +66,8 @@ from psamm.datasource.entry import (DictCompoundEntry as CompoundEntry,
                     DictCompartmentEntry as CompartmentEntry)
 from decimal import *
 import yaml
+from psamm.datasource.native import parse_reaction_equation_string
+from psamm.datasource.reaction import parse_reaction
 
 logger = logging.getLogger(__name__)
 
@@ -284,9 +286,9 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                             dcc.Dropdown(
                                                 id="reaction_dropdown",
                                                 options=[
-                                                {"label": i,
-                                                "value": i,}
-                                                for i in list(rxns_full)],
+                                                {"label": i.name,
+                                                "value": i.id,}
+                                                for i in list(self._model.reactions)],
                                             value=pathway_list[0],
                                             multi=True,
                                             placeholder="",
@@ -487,8 +489,75 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                                     # dbc.Row([
                                     # dbc.Col([
                                     dcc.Tabs(id="curate-subtabs", value="what is", children=[
-                                        dcc.Tab(label='Edit', value='edit',
-                                            children=html.Div(className='control-tab',children=[
+                                        dcc.Tab(label = 'Add', value='add',
+                                            children = html.Div(className = 'add-tab', children = [
+                                            dbc.Row([
+                                            dbc.Col([
+                                                html.H5("Add a new reaction"),
+                                                dbc.Row([
+                                                dbc.Col([
+                                                html.P("ID:"),
+                                                dcc.Input(id = "r_id_input"),
+                                                ], width = 11),
+                                                ]),
+                                                dbc.Row([
+                                                dbc.Col([
+                                                html.P("Name:"),
+                                                dcc.Input(id = "r_name_input"),
+                                                ], width = 11),
+                                                ]),
+                                                dbc.Row([
+                                                dbc.Col([
+                                                html.P("Equation:"),
+                                                dcc.Input(id = "r_eq_input"),
+                                                ], width = 11),
+                                                ]),
+                                                dbc.Row([
+                                                dbc.Col([
+                                                html.P("Pathway:"),
+                                                dcc.Input(id = "r_pathway_input"),
+                                                ], width = 11),
+                                                ]),
+                                                html.Div([
+                                                html.Button("Save reaction", id="btn_rxn")
+                                                ]),
+                                                dbc.Alert(id = "rxn-save-confirm")
+                                            ]),
+                                            dbc.Col([
+                                                html.H5("Add a new compound"),
+                                                dbc.Row([
+                                                dbc.Col([
+                                                html.P("ID:"),
+                                                dcc.Input(id = "c_id_input"),
+                                                ], width = 11),
+                                                ]),
+                                                dbc.Row([
+                                                dbc.Col([
+                                                html.P("Name:"),
+                                                dcc.Input(id = "c_name_input"),
+                                                ], width = 11),
+                                                ]),
+                                                dbc.Row([
+                                                dbc.Col([
+                                                html.P("Charge:"),
+                                                dcc.Input(id = "c_charge_input"),
+                                                ], width = 11),
+                                                ]),
+                                                dbc.Row([
+                                                dbc.Col([
+                                                html.P("Formula:"),
+                                                dcc.Input(id = "c_form_input"),
+                                                ], width = 11),
+                                                ]),
+                                                html.Div([
+                                                html.Button("Save compound", id="btn_cpd")
+                                                ]),
+                                                dbc.Alert(id = "cpd-save-confirm")
+                                            ]),
+                                            ]),
+                                            ]),),
+                                        dcc.Tab(label = 'Edit', value = 'edit',
+                                            children = html.Div(className = 'control-tab',children=[
                                             dbc.Row([
                                             dbc.Col([
                                             html.H5("Reaction to edit:"),
@@ -698,6 +767,44 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
 
     def callbacks(self, _app):
         @_app.callback(
+        Output("rxn-save-confirm", "children"),
+        Input("btn_rxn", "n_clicks"),
+        [State("r_id_input", "value"),
+        State("r_name_input", "value"),
+        State("r_eq_input", "value"),
+        State("r_pathway_input", "value")]
+        )
+        def save_rxn(nclicks, id, name, eq, path):
+            if dash.callback_context.triggered[0]['prop_id'] == 'btn_rxn.n_clicks':
+                equation = parse_reaction_equation_string(eq, "c")
+                properties = {"id":id, "name": name, "equation": equation, "pathways": [path]}
+                reaction = ReactionEntry(properties, filemark = None)
+                self._model.reactions.add_entry(reaction)
+                self._mm._reaction_set.add(reaction.id)
+                self._mm._database.set_reaction(reaction.id, equation)
+                return("Added {} to the model".format(id))
+
+        @_app.callback(
+        Output("cpd-save-confirm", "children"),
+        Input("btn_cpd", "n_clicks"),
+        [State("c_id_input", "value"),
+        State("c_name_input", "value"),
+        State("c_charge_input", "value"),
+        State("c_form_input", "value")]
+        )
+        def save_rxn(nclicks, id, name, charge, form):
+            if dash.callback_context.triggered[0]['prop_id'] == 'btn_cpd.n_clicks':
+                properties = {"id":id, "name": name, "charge": charge, "formula": form}
+                compound = CompoundEntry(properties, filemark = None)
+                self._model.compounds.add_entry(compound)
+                # reaction = ReactionEntry(properties, filemark = None)
+                # self._model.reactions.add_entry(reaction)
+                # self._mm._reaction_set.add(reaction.id)
+                # self._mm._database.set_reaction(reaction.id, equation)
+                return("Added {} to the model".format(id))
+
+
+        @_app.callback(
         Output("exchange-save-confirm", "children"),
         Input("exchange-save", "n_clicks"),
         State("exchange", "children")
@@ -881,25 +988,42 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                 path = FilePathContext(self._args.model)
                 with open('{}/model.yaml'.format(path), 'r') as f:
                     modelfile = yaml.safe_load(f)
-                print(modelfile)
+
+                exported = []
                 for i in modelfile['reactions']:
                     out_nm = NativeModel()
                     with open('{}/{}'.format(path, i['include']), 'r') as f:
                         reactionfile = yaml.safe_load(f)
                         for j in reactionfile:
+                            exported.append(j['id'])
                             if j['id'] in self._model.reactions:
                                 out_nm.reactions.add_entry(self._model.reactions[j['id']])
                         with open('{}/{}'.format(path, i['include']), "w") as f:
                             out_mw.write_reactions(f, out_nm.reactions)
+                out_nm = NativeModel()
+                for j in self._model.reactions:
+                    if j.id not in exported:
+                        out_nm.reactions.add_entry(self._model.reactions[j.id])
+                with open('{}/{}'.format(path, "reactions_curated.yaml"), "a+") as f:
+                    out_mw.write_compounds(f, out_nm.reactions)
+
+                exported = []
                 for i in modelfile['compounds']:
                     out_nm = NativeModel()
                     with open('{}/{}'.format(path, i['include']), 'r') as f:
                         compoundfile = yaml.safe_load(f)
                         for j in compoundfile:
+                            exported.append(j['id'])
                             if j['id'] in self._model.compounds:
                                 out_nm.compounds.add_entry(self._model.compounds[j['id']])
                         with open('{}/{}'.format(path, i['include']), "w") as f:
                             out_mw.write_compounds(f, out_nm.compounds)
+                out_nm = NativeModel()
+                for j in self._model.compounds:
+                    if j.id not in exported:
+                        out_nm.compounds.add_entry(self._model.compounds[j.id])
+                with open('{}/{}'.format(path, "compounds_curated.yaml"), "a+") as f:
+                    out_mw.write_compounds(f, out_nm.compounds)
 
                 #
                 # with open('{}/reactions_curated.yaml'.format(path), "w") as f:
