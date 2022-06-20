@@ -891,8 +891,6 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
         Input("exchange-load", "n_clicks")
         )
         def load_exchange(nclicks):
-            if "EX_ac[cbth]" in self._mm._limits_lower:
-                print(self._mm._limits_lower["EX_ac[cbth]"])
             comp_set = set()
             for i in self._model.reactions:
                 for j in i.equation.compounds:
@@ -983,7 +981,6 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                 prevent_initial_call=True,)
         def save_model(clicks):
             if dash.callback_context.triggered[0]['prop_id'] == 'btn_save_model.n_clicks':
-                print(self._args)
                 out_mw = ModelWriter()
                 path = FilePathContext(self._args.model)
                 with open('{}/model.yaml'.format(path), 'r') as f:
@@ -2261,29 +2258,26 @@ def get_pathway_list(nm, pathway):
     if type(pathway) == str:
         pathway = [pathway]
     for path in pathway:
-        print(path)
         if path == "None":
             rxn_set = set()
             for i in nm.reactions:
                 if 'pathways' in i.properties:
                     if type(i.properties['pathways']) == list:
-                        for j in i.properties['pathways']:
+                        for j in [i.properties['pathways']]:
                             pathway_list.add(j)
                     else:
                         pathway_list.add(i.properties['pathways'])
-                elif  'subsystem' in i.properties:
+                elif 'subsystem' in i.properties:
                     if type(i.properties['subsystem']) == list:
                         for j in i.properties['subsystem']:
                             pathway_list.add(j)
                     else:
                         pathway_list.add(i.properties['subsystem'])
         elif path != "All":
-
             for i in nm.reactions:
-
                 if 'pathways' in i.properties:
                     if type(i.properties['pathways']) == list:
-                        for j in i.properties['pathways']:
+                        for j in [i.properties['pathways']]:
                             pathway_list.add(j)
                     else:
                         pathway_list.add(i.properties['pathways'])
@@ -2301,11 +2295,17 @@ def get_pathway_list(nm, pathway):
         else:
             for i in nm.reactions:
                 if  'pathways' in i.properties:
-                    for j in i.properties['pathways']:
-                        pathway_list.add(j)
+                    if type(i.properties['pathways']) == list:
+                        for j in i.properties['pathways']:
+                            pathway_list.add(j)
+                    else:
+                        pathway_list.add(i.properties['pathways'])
                 elif  'subsystem' in i.properties:
-                    for j in i.properties['subsystem']:
-                        pathway_list.add(j)
+                    if type(i.properties['subsystem']) == list:
+                        for j in i.properties['subsystem']:
+                            pathway_list.add(j)
+                    else:
+                        pathway_list.add(i.properties['subsystem'])
                 rxn_set.add(i.id)
     pathway_list = ["None"] + ["All"] + list(pathway_list)
     return pathway_list, rxn_set
