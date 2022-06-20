@@ -60,11 +60,12 @@ import pandas as pd
 import webbrowser
 from psamm.commands.chargecheck import charge_check
 from psamm.commands.formulacheck import formula_check
-from psamm.datasource.native import ModelWriter
+from psamm.datasource.native import ModelWriter, NativeModel
 from psamm.datasource.entry import (DictCompoundEntry as CompoundEntry,
                     DictReactionEntry as ReactionEntry,
                     DictCompartmentEntry as CompartmentEntry)
 from decimal import *
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -875,12 +876,36 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                 prevent_initial_call=True,)
         def save_model(clicks):
             if dash.callback_context.triggered[0]['prop_id'] == 'btn_save_model.n_clicks':
+                print(self._args)
                 out_mw = ModelWriter()
                 path = FilePathContext(self._args.model)
-                with open('{}/reactions_curated.yaml'.format(path), "w") as f:
-                    out_mw.write_reactions(f, self._model.reactions)
-                with open('{}/compounds_curated.yaml'.format(path), "w") as f:
-                    out_mw.write_reactions(f, self._model.compounds)
+                with open('{}/model.yaml'.format(path), 'r') as f:
+                    modelfile = yaml.safe_load(f)
+                print(modelfile)
+                for i in modelfile['reactions']:
+                    out_nm = NativeModel()
+                    with open('{}/{}'.format(path, i['include']), 'r') as f:
+                        reactionfile = yaml.safe_load(f)
+                        for j in reactionfile:
+                            if j['id'] in self._model.reactions:
+                                out_nm.reactions.add_entry(self._model.reactions[j['id']])
+                        with open('{}/{}'.format(path, i['include']), "w") as f:
+                            out_mw.write_reactions(f, out_nm.reactions)
+                for i in modelfile['compounds']:
+                    out_nm = NativeModel()
+                    with open('{}/{}'.format(path, i['include']), 'r') as f:
+                        compoundfile = yaml.safe_load(f)
+                        for j in compoundfile:
+                            if j['id'] in self._model.compounds:
+                                out_nm.compounds.add_entry(self._model.compounds[j['id']])
+                        with open('{}/{}'.format(path, i['include']), "w") as f:
+                            out_mw.write_compounds(f, out_nm.compounds)
+
+                #
+                # with open('{}/reactions_curated.yaml'.format(path), "w") as f:
+                #     out_mw.write_reactions(f, self._model.reactions)
+                # with open('{}/compounds_curated.yaml'.format(path), "w") as f:
+                #     out_mw.write_reactions(f, self._model.compounds)
                 return(["Model successfully saved"])
             else:
                 return(["Press Save Model to save changes"])
