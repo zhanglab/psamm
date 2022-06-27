@@ -194,25 +194,16 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
 
         # Set styles for the app
         styles = {
-                'output': {
-                        'border': 'thin lightgrey solid',
-                        'overflowX': 'scroll'
-                },
-                #'tab': {'height': 'calc(98vh - 115px)'}
-        }
+            'output': {'border': 'thin lightgrey solid','overflowX': 'scroll'},
+            }
         col_swatch = px.colors.qualitative.Dark24
         default_stylesheet = [
-                {
-                        'selector': 'node',
-                        'style': {
-                                'background-color': '#BFD7B5',
-                                'label': 'data(label)'}},
-                {
-                        "selector": "edge",
-                        "style": {
-                                "width": 1,
-                                "curve-style": "bezier"}}
-        ]
+            {
+                'selector': 'node',
+                'style': {'background-color': '#BFD7B5',
+                          'label': 'data(label)'}},
+            {"selector": "edge", "style": {"width": 1,
+                                           "curve-style": "bezier"}}]
 
         # Set the navigation bar for the app
         navbar = dbc.NavbarSimple(
@@ -245,245 +236,244 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
 
         # Define the body of the app
         body_layout = dbc.Container(
-                [dbc.Row([
-                                dcc.Markdown(
-                                """
-                                -----
-                                ### Filter / Explore metabolic models
-                                Use these filters to highlight reactions and compounds associated with different reactions.
+            [dbc.Row([
+                dcc.Markdown(
+                """
+                -----
+                ### Filter / Explore metabolic models
+                Use these filters to highlight reactions and compounds associated with different reactions.
 
-                                -----
-                                """
-                                        ),
-                                dbc.Row([
-                                    html.Div(id='modelling-tabs', className='control-tabs', children=[
-                                    dcc.Tabs(id="parent-tabs", value="what is", children=[
-                                        dcc.Tab(label='Simulate', value='sim', children=[
-
-
-                                dbc.Row([
-                                dbc.Col([
-
-                                    html.Div(id='model-control-tabs', className='control-tabs', children=[
-                                    dcc.Tabs(id="model-tabs", value="what is", children=[
-
-                                        dcc.Tab(label='Controls', value='Controls',
-                                            children=html.Div(className='control-tab',children=[
-                                            html.H5("Pathways:"),
-                                            dbc.Row(
-                                            [dcc.Dropdown(
-                                                id="pathways_dropdown",
-                                                options=[
+                -----
+                """
+                        ),
+                dbc.Row([
+                    html.Div(id='modelling-tabs', className='control-tabs', children=[
+                    dcc.Tabs(id="parent-tabs", value="what is", children=[
+                        dcc.Tab(label='Simulate', value='sim', children=[
+                            dbc.Row([
+                            dbc.Col([
+                                html.Div(id='model-control-tabs',
+                                         className='control-tabs',
+                                         children=[
+                                dcc.Tabs(id="model-tabs", value="what is", children=[
+                                    dcc.Tab(label='Controls', value='Controls',
+                                        children=html.Div(className='control-tab',children=[
+                                        html.H5("Pathways:"),
+                                        dbc.Row(
+                                        [dcc.Dropdown(
+                                            id="pathways_dropdown",
+                                            options=[
+                                            {"label": i,
+                                            "value": i,}
+                                            for i in list(pathway_list)],
+                                        value=pathway_list[0],
+                                        multi=True,
+                                        placeholder="",
+                                        style={"width": "100%"},),]),
+                                        html.H5("Reactions:"),
+                                        dbc.Row([
+                                        dcc.Dropdown(
+                                            id="reaction_dropdown",
+                                            options=[
+                                            {"label": i.id,
+                                            "value": i.id,}
+                                            for i in list(self._model.reactions)],
+                                        value=pathway_list[0],
+                                        multi=True,
+                                        placeholder="",
+                                        style={"width": "100%"},)
+                                        ]),
+                                        html.H5("Element Transfer Networks:"),
+                                        dbc.Row([dcc.Dropdown(
+                                            id="element_dropdown",
+                                            options=[
                                                 {"label": i,
                                                 "value": i,}
-                                                for i in list(pathway_list)],
-                                            value=pathway_list[0],
-                                            multi=True,
-                                            placeholder="",
+                                                for i in ["C","N","S","P"]],
+                                            value=["C","N","S","P"],
+                                            multi=False,
                                             style={"width": "100%"},),]),
-                                            html.H5("Reactions:"),
-                                            dbc.Row([
-                                            dcc.Dropdown(
-                                                id="reaction_dropdown",
-                                                options=[
-                                                {"label": i.name,
-                                                "value": i.id,}
-                                                for i in list(self._model.reactions)],
-                                            value=pathway_list[0],
-                                            multi=True,
-                                            placeholder="",
-                                            style={"width": "100%"},)
-                                            ]),
-                                            html.H5("Element Transfer Networks:"),
-                                            dbc.Row([dcc.Dropdown(
-                                                id="element_dropdown",
-                                                options=[
-                                                    {"label": i,
-                                                    "value": i,}
-                                                    for i in ["C","N","S","P"]],
-                                                value=["C","N","S","P"],
-                                                multi=False,
-                                                style={"width": "100%"},),]),
-                                            html.H5("Compound Search:"),
-                                            dbc.Row([dcc.Dropdown(
-                                                id="compounds_dropdown",
-                                                options=[
-                                                {"label": i,
+                                        html.H5("Compound Search:"),
+                                        dbc.Row([dcc.Dropdown(
+                                            id="compounds_dropdown",
+                                            options=[
+                                            {"label": i,
+                                            "value": i,}
+                                        for i in list(compounds_list)],
+                                            value=compounds_list,
+                                            multi=False,
+                                            style={"width": "100%"},),]),
+                                        html.H5("Path Search:"),
+                                        dbc.Row([
+                                        dbc.Col([
+                                        html.P("Compound 1:"),
+                                        dbc.Row([dcc.Dropdown(
+                                            id="filter1_dropdown",
+                                            options=[{"label": i,
                                                 "value": i,}
                                             for i in list(compounds_list)],
                                                 value=compounds_list,
                                                 multi=False,
                                                 style={"width": "100%"},),]),
-                                            html.H5("Path Search:"),
-                                            dbc.Row([
-                                            dbc.Col([
-                                            html.P("Compound 1:"),
+                                        ]),
+                                        dbc.Col([
+                                        html.P("Compound 2:"),
+                                        dcc.Dropdown(
+                                            id="filter2_dropdown",
+                                            options=[{"label": i,
+                                                "value": i,}
+                                        for i in list(compounds_list)],
+                                            value=compounds_list,
+                                            multi=False,
+                                            style={"width": "100%"},),]),
+                                        ]),
+                                        html.H5("Gene Delete:"),
                                             dbc.Row([dcc.Dropdown(
-                                                id="filter1_dropdown",
+                                                id="delete_dropdown",
                                                 options=[{"label": i,
                                                     "value": i,}
-                                                for i in list(compounds_list)],
-                                                    value=compounds_list,
-                                                    multi=False,
-                                                    style={"width": "100%"},),]),
-
-                                            ]),
-                                            dbc.Col([
-                                            html.P("Compound 2:"),
-                                            dcc.Dropdown(
-                                                id="filter2_dropdown",
+                                            for i in list(gene_content)],
+                                                value=None,
+                                                multi=True,
+                                                style={"width": "100%"},),]),
+                                        html.H5("Flux Analysis:"),
+                                            dbc.Row([dcc.Dropdown(
+                                                id="fba_dropdown",
                                                 options=[{"label": i,
                                                     "value": i,}
-                                            for i in list(compounds_list)],
-                                                value=compounds_list,
+                                            for i in list(rxns_full)],
+                                                value=rxns,
                                                 multi=False,
                                                 style={"width": "100%"},),]),
-                                            ]),
-                                            html.H5("Gene Delete:"),
-                                                dbc.Row([dcc.Dropdown(
-                                                    id="delete_dropdown",
-                                                    options=[{"label": i,
-                                                        "value": i,}
-                                                for i in list(gene_content)],
-                                                    value=None,
-                                                    multi=True,
-                                                    style={"width": "100%"},),]),
-                                            html.H5("Flux Analysis:"),
-                                                dbc.Row([dcc.Dropdown(
-                                                    id="fba_dropdown",
-                                                    options=[{"label": i,
-                                                        "value": i,}
-                                                for i in list(rxns_full)],
-                                                    value=rxns,
-                                                    multi=False,
-                                                    style={"width": "100%"},),]),
-                                            dbc.Alert(id="fba-data",
-                                                children="Select a reaction to see the flux here",
-                                                color="secondary",
-                                                style={"width": "75%"}),
-                                            dbc.Col([
-                                                html.Div([
-                                                    html.Button("Submit", id="btn_sub")
-                                                        ]),
-                                                html.Div([
-                                                html.Button("Download CSV", id="btn_tsv"),
-                                                dcc.Download(id="download"),
-                                                ]),
-                                                html.Div([
-                                                html.Button("Download png", id="btn-get-png"),
-                                                dcc.Download(id="downloadpng"),
-                                                ]),
-                                            ]),
-                                            ]),
-                                            ),
-                                        dcc.Tab(label='Model Stats', value='Statistics',
-                                            children=html.Div(className='about-tab', children=[
-                                            html.H4(
-                                            className='Statistics',
-                                            children='Model Statistics:'
-                                            ),
-
-                                            html.P(
-                                                """
-                                                Below shows some basic information for the
-                                                model.
-                                                """
-                                            ),
-                                            dbc.Alert(id="model-stats",
-                                                children=content_model,
-                                                color="white",
-                                                style={"width": "75%"}),
-                                            ]),
-                                            ),
-                                        dcc.Tab(label='Exchange', value='what-is',
-                                            children=html.Div(className='about-tab', children=[
-                                            dbc.Row([html.P(
-                                                """
-                                                Set the media and exchanges below.
-                                                """
-                                            ),
-                                            dbc.Alert(id="exchange",
-                                            children="display exchange here",
-                                            color="secondary",),
+                                        dbc.Alert(id="fba-data",
+                                            children="Select a reaction "
+                                                     "to see the flux here",
+                                            color="secondary",
+                                            style={"width": "75%"}),
+                                        dbc.Col([
                                             html.Div([
-                                            dbc.Row([
-                                            dbc.Col([
-                                            html.Button("Load exchange", id="exchange-load")
+                                                html.Button("Submit",
+                                                            id="btn_sub")]),
+                                            html.Div([
+                                            html.Button("Download CSV",
+                                                        id="btn_tsv"),
+                                            dcc.Download(id="download"),
                                             ]),
-                                            dbc.Col([
-                                            html.Button("Update exchange", id="exchange-modify")
+                                            html.Div([
+                                            html.Button("Download png", id="btn-get-png"),
+                                            dcc.Download(id="downloadpng"),
                                             ]),
-                                            dbc.Col([
-                                            html.Button("Save exchange", id="exchange-save")
-                                            ])]),]),
-                                            dbc.Alert(id="exchange-confirm",
-                                            children="This will confirm that the exchange was modified",
-                                            color="secondary",),
-                                            dbc.Alert(id="exchange-save-confirm",
-                                            children="confirm that exchange is saved",
-                                            color="secondary",),
-                                            ]),
-                                            ]),
-                                            ),
+                                        ]),
+                                        ]),
+                                        ),
+                                    dcc.Tab(label='Model Stats', value='Statistics',
+                                        children=html.Div(className='about-tab', children=[
+                                        html.H4(
+                                        className='Statistics',
+                                        children='Model Statistics:'
+                                        ),
 
-                                        ], style={'display':'inline-block','width': '100%'}),
-                                    # sm=12,
-                                    # md=4,
-                                    ]),]),
-                                    dbc.Col([
-                                        cyto.Cytoscape(id = 'net',
-                                        layout={'name':'cose',
-                                                'animate':True,
-                                                'animationDuration':1000},
-                                        style={'width': '100%', 'height': '600px'},
-                                        elements=nodes+edges,
-                                        stylesheet=[{
-                                                    'selector': 'node',
-                                                    'style': {
-                                                            'background-color': 'data(col)',
-                                                            'label': 'data(label)'}},
-                                                    {
-                                                    "selector": "edge",
-                                                    "style": {
-                                                            "width": 1,
-                                                            "curve-style": "bezier",
-                                                            "target-arrow-shape":"triangle"}},
-                                                    {
-                                                    "selector": "[flux > 1e-10]",
-                                                    "style": {
-                                                            "line-color": "blue",
-                                                            "target-arrow-color":"blue",
-                                                            "width": 1,
-                                                            "curve-style": "bezier",
-                                                            "target-arrow-shape":"triangle",
-                                                            "line-dash-pattern": [6,3],
-                                                            "line-dash-offset": 24
-                                                            }
-                                                    },
+                                        html.P(
+                                            """
+                                            Below shows some basic information for the
+                                            model.
+                                            """
+                                        ),
+                                        dbc.Alert(id="model-stats",
+                                            children=content_model,
+                                            color="white",
+                                            style={"width": "75%"}),
+                                        ]),
+                                        ),
+                                    dcc.Tab(label='Exchange', value='what-is',
+                                        children=html.Div(className='about-tab', children=[
+                                        dbc.Row([html.P(
+                                            """
+                                            Set the media and exchanges below.
+                                            """
+                                        ),
+                                        dbc.Alert(id="exchange",
+                                        children="display exchange here",
+                                        color="secondary",),
+                                        html.Div([
+                                        dbc.Row([
+                                        dbc.Col([
+                                        html.Button("Load exchange", id="exchange-load")
+                                        ]),
+                                        dbc.Col([
+                                        html.Button("Update exchange", id="exchange-modify")
+                                        ]),
+                                        dbc.Col([
+                                        html.Button("Save exchange", id="exchange-save")
+                                        ])]),]),
+                                        dbc.Alert(id="exchange-confirm",
+                                        children="This will confirm that the exchange was modified",
+                                        color="secondary",),
+                                        dbc.Alert(id="exchange-save-confirm",
+                                        children="confirm that exchange is saved",
+                                        color="secondary",),
+                                        ]),
+                                        ]),
+                                        ),
 
-                                                    ],
-                                                    minZoom=0.06
-                                                    ),
-                                            dbc.Row([
-                                                    dbc.Alert(
-                                                            id="node-data",
-                                                            children="Click on a node to see its details here",
-                                                            color="secondary",
-                                                    ),
-                                            ]),]),
+                                    ], style={'display':'inline-block','width': '100%'}),
+                                # sm=12,
+                                # md=4,
+                                ]),]),
+                                dbc.Col([
+                                    cyto.Cytoscape(id = 'net',
+                                    layout={'name':'cose',
+                                            'animate':True,
+                                            'animationDuration':1000},
+                                    style={'width': '100%', 'height': '600px'},
+                                    elements=nodes+edges,
+                                    stylesheet=[{
+                                                'selector': 'node',
+                                                'style': {
+                                                        'background-color': 'data(col)',
+                                                        'label': 'data(label)'}},
+                                                {
+                                                "selector": "edge",
+                                                "style": {
+                                                        "width": 1,
+                                                        "curve-style": "bezier",
+                                                        "target-arrow-shape":"triangle"}},
+                                                {
+                                                "selector": "[flux > 1e-10]",
+                                                "style": {
+                                                        "line-color": "blue",
+                                                        "target-arrow-color":"blue",
+                                                        "width": 1,
+                                                        "curve-style": "bezier",
+                                                        "target-arrow-shape":"triangle",
+                                                        "line-dash-pattern": [6,3],
+                                                        "line-dash-offset": 24
+                                                        }
+                                                },
+
+                                                ],
+                                                minZoom=0.06
+                                                ),
+                                        dbc.Row([
+                                                dbc.Alert(
+                                                        id="node-data",
+                                                        children="Click on a node to see its details here",
+                                                        color="secondary",
+                                                ),
+                                        ]),]),
 
 
 
 
 
-                                dbc.Row([dcc.Markdown(
-                                    """
-                                    \* Data analysis carried out for demonstration of data visualisation purposes only.
-                                    """
-                                    )],
-                                    style={"fontSize": 11, "color": "gray"},),
+                            dbc.Row([dcc.Markdown(
+                                """
+                                \* Data analysis carried out for demonstration of data visualisation purposes only.
+                                """
+                                )],
+                                style={"fontSize": 11, "color": "gray"},),
 
-                                ],style={"marginTop": 20},),]),
+                            ],style={"marginTop": 20},),]),
                                 dcc.Tab(label='Curate', value='cur', children=[
                                 html.Div(id='curate-control-tabs', className='curate-tabs', children=[
                                     # dbc.Row([
@@ -1723,41 +1713,19 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                         else:
                             path = data["pathways"]
                         contents = []
-                        contents.append(html.H5("ID: " + data["orig_id"].title()))
-                        contents.append(
-                                html.P(
-                                        "Name: "
-                                        + data["label"]
-                                )
-                        )
-                        contents.append(
-                                html.P(
-                                        "Equation: "
-                                        + str(data["equation"])
-                                )
-                        )
+                        contents.append(html.H5("ID: " +
+                                                data["orig_id"].title()))
+                        contents.append(html.P("Name: " + data["label"]))
+                        contents.append(html.P("Equation: " +
+                                               str(data["equation"])))
                         if type(data["pathways"]) is str:
-                            contents.append(
-                                    html.P(
-                                            "Pathways: "
-                                            + data["pathways"]
-                                    )
-                            )
+                            contents.append(html.P("Pathways: " +
+                                                   data["pathways"]))
                         elif type(data["pathways"]) is list:
-                            contents.append(
-                                    html.P(
-                                        "Pathways: "
-                                        + ";".join(data["pathways"])
-                                    )
-                            )
-
-                        contents.append(
-                                html.P(
-                                        "Flux: "
-                                        + str(data["flux_node"])
-                                )
-                        )
-
+                            contents.append(html.P("Pathways: " +
+                                                   ";".join(data["pathways"])))
+                        contents.append(html.P("Flux: " +
+                                               str(data["flux_node"])))
             return contents
 
         @_app.callback(
@@ -1787,14 +1755,14 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
             prevent_initial_call=True,
         )
         def updated_selected(edge, node):
-            if dash.callback_context.triggered[0]['prop_id'] == 'net_curate.selectedEdgeData' and len(edge) > 0:
+            if dash.callback_context.triggered[0]['prop_id'] == \
+                    'net_curate.selectedEdgeData' and len(edge) > 0:
                 return(edge[0]['rid'], [])
-            elif dash.callback_context.triggered[0]['prop_id'] == 'net_curate.selectedNodeData' and len(node) > 0:
-
+            elif dash.callback_context.triggered[0]['prop_id'] == \
+                    'net_curate.selectedNodeData' and len(node) > 0:
                 return([], node[0]['id'][0:(str(node[0]['id']).find('['))])
             else:
                 return([], [])
-
 
         @_app.callback(
             [Output("edit-confirm", "children"),
@@ -1805,8 +1773,10 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
             State("edit-data", "children"),],
             prevent_initial_call=True,
         )
-        def update_model(nclicks, r_dropdown_curate, c_dropdown_curate, datalist):
-            changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
+        def update_model(nclicks, r_dropdown_curate, \
+                c_dropdown_curate, datalist):
+            changed_id = [p['prop_id'] for p in
+                          dash.callback_context.triggered][0]
             contents = []
 
             def rec_props(data, out):
@@ -1819,94 +1789,103 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                         elif 'placeholder' in i['props']:
                             out.append(i['props']['placeholder'])
                 return out
-            if dash.callback_context.triggered[0]['prop_id'] == 'btn_save.n_clicks':
-                if type(r_dropdown_curate) == str and len(r_dropdown_curate) > 0:
+            if dash.callback_context.triggered[0]['prop_id'] == \
+                    'btn_save.n_clicks':
+                if type(r_dropdown_curate) == str and \
+                        len(r_dropdown_curate) > 0:
                     direction = []
                     for i in datalist:
                         if type(i) is dict:
                             if 'id' in i['props']:
                                 if i['props']['id'] == 'direction':
-                                    direction_temp = rec_props(i['props']['children'], [])
+                                    direction_temp = rec_props(i['props']
+                                                               ['children'],
+                                                               [])
                                     direction.append(direction_temp)
-                    left = []
+                    left=[]
                     for i in datalist:
                         if type(i) is dict:
                             if 'id' in i['props']:
                                 if i['props']['id'] == 'left':
-                                    left_temp = rec_props(i['props']['children'], [])
+                                    left_temp = rec_props(i['props']
+                                                          ['children'], [])
                                     left.append(left_temp)
                                 elif i['props']['id'] == 'left_new':
-                                    left_temp = rec_props(i['props']['children'], [])
+                                    left_temp = rec_props(i['props']
+                                                          ['children'], [])
                                     if left_temp[1] != '':
                                         left.append(left_temp)
-                    right = []
+                    right=[]
                     for i in datalist:
                         if type(i) is dict:
                             if 'id' in i['props']:
                                 if i['props']['id'] == 'right':
-                                    right_temp = rec_props(i['props']['children'], [])
+                                    right_temp = rec_props(i['props']
+                                                           ['children'], [])
                                     right.append(right_temp)
                                 elif i['props']['id'] == 'right_new':
-                                    right_temp = rec_props(i['props']['children'], [])
+                                    right_temp = rec_props(i['props']
+                                                           ['children'], [])
                                     if right_temp[1] != '':
                                         right.append(right_temp)
 
-                    rid = re.split(" ", datalist[0]['props']['children'])[1]
+                    rid=re.split(" ", datalist[0]['props']['children'])[1]
 
                     for r in self._model.reactions:
                         if r.id.upper() == rid.upper():
-                            reaction = r
+                            reaction=r
 
                     eq_dict={}
                     for l in left:
-                        eq_dict[Compound(l[1]).in_compartment(l[2])] = int(l[0])*-1
+                        eq_dict[Compound(l[1]).in_compartment(l[2])] = \
+                             int(l[0]) *- 1
                     for r in right:
-                        eq_dict[Compound(r[1]).in_compartment(r[2])] = int(r[0])
-                    dir = direction[0][0]
+                        eq_dict[Compound(r[1]).in_compartment(r[2])] = \
+                            int(r[0])
+                    dir=direction[0][0]
 
                     if dir == "Direction.Forward":
-                        new_eq = Reaction(Direction.Forward, eq_dict)
+                        new_eq=Reaction(Direction.Forward, eq_dict)
                     elif dir == "Direction.Reverse":
-                        new_eq = Reaction(Direction.Reverse, eq_dict)
+                        new_eq=Reaction(Direction.Reverse, eq_dict)
                     elif dir == "Direction.Both":
-                        new_eq = Reaction(Direction.Both, eq_dict)
+                        new_eq=Reaction(Direction.Both, eq_dict)
                     else:
                         quit("Nonvalid direction")
 
-                    reaction.equation = new_eq
+                    reaction.equation=new_eq
                     self._model.reactions.add_entry(reaction)
 
 
 
                     contents.append(html.H5(
                                     "{} has been updated".format(rid)))
-                elif type(c_dropdown_curate) == str and len(c_dropdown_curate) > 0:
-                    comp = rec_props(datalist[-1]['props']['children'], [])
+                elif type(c_dropdown_curate) == str and \
+                        len(c_dropdown_curate) > 0:
+                    comp=rec_props(datalist[-1]['props']['children'], [])
 
-                    cid = re.split(" ", datalist[0]['props']['children'])[1]
+                    cid=re.split(" ", datalist[0]['props']['children'])[1]
 
                     for c in self._model.compounds:
                         if c.id.upper() == cid.upper():
-                            compound = c
+                            compound=c
 
-                    compound.charge = comp[0]
-                    compound.formula = comp[1]
+                    compound.charge=comp[0]
+                    compound.formula=comp[1]
                     self._model.compounds.add_entry(compound)
                     contents.append(html.H5(
                                     "{} has been updated".format(cid)))
-
                 return contents
 
 
-        @_app.callback(
-            [Output("edit-data", "children"),
-            Output("edit-data", "is_open")],
-            [Input("btn_update", "n_clicks"),
-            Input("reaction_dropdown_curate", "value"),
-            Input("compound_dropdown_curate", "value")]
-        )
+        @_app.callback([Output("edit-data", "children"),
+                        Output("edit-data", "is_open")],
+                       [Input("btn_update", "n_clicks"),
+                        Input("reaction_dropdown_curate", "value"),
+                        Input("compound_dropdown_curate", "value")])
         def display_nodedata(clicks, r, c):
-            changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
+            changed_id = [p['prop_id'] for p in
+                          dash.callback_context.triggered][0]
             contents = "Click on an edge to see its details here"
             model = self._model
             c_list = []
@@ -1917,7 +1896,8 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                 for j in i.equation.compounds:
                     comp_set.add(j[0].compartment)
             comp_list = list(comp_set)
-            if dash.callback_context.triggered[0]['prop_id'] == 'btn_update.n_clicks':
+            if dash.callback_context.triggered[0]['prop_id'] == \
+                    'btn_update.n_clicks':
                 if r is not None and len(r) > 0:
                     for i in model.reactions:
                         if i.id == r:
@@ -1940,12 +1920,12 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                             for x in ["Direction.Forward",
                                       "Direction.Reverse",
                                       "Direction.Both"]],
-                            placeholder = str(reaction.equation.direction),
+                            placeholder=str(reaction.equation.direction),
                             multi=False
                             )
-                    ]),], id='direction'),)
+                    ]), ], id='direction'),)
                     contents.append(html.H5("Left Equation:"))
-                    dropid = 0
+                    dropid=0
                     for j in reaction.equation.left:
                         contents.append(
                         dbc.Row([
@@ -1959,7 +1939,7 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                             options=[{"label": x,
                                 "value": x,}
                                 for x in list(c_list)],
-                                placeholder = j[0].name,
+                                placeholder=j[0].name,
                                 multi=False
                                 )
                         ]),
@@ -1969,11 +1949,11 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                             options=[{"label": x,
                                 "value": x,}
                                 for x in list(comp_list)],
-                                placeholder = j[0].compartment,
+                                placeholder=j[0].compartment,
                                 multi=False
                                 )
-                        ]),], id="left"),)
-                        dropid+=1
+                        ]), ], id="left"),)
+                        dropid += 1
                     contents.append(html.P("Add new compound to left side"))
                     contents.append(
                     dbc.Row([
@@ -1987,7 +1967,7 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                         options=[{"label": x,
                             "value": x,}
                             for x in list(c_list)],
-                            placeholder = '',
+                            placeholder='',
                             multi=False
                             )
                     ]),
@@ -1997,11 +1977,11 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                         options=[{"label": x,
                             "value": x,}
                             for x in list(comp_list)],
-                            placeholder = '',
+                            placeholder='',
                             multi=False
                             )
-                    ]),], id="left_new"))
-                    dropid+=1
+                    ]), ], id="left_new"))
+                    dropid += 1
                     contents.append(html.H5("Right Equation:"))
                     for j in reaction.equation.right:
                         contents.append(
@@ -2009,14 +1989,14 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                         dbc.Col([
                         dcc.Input(id="stoich{}".format(str(dropid)),
                             type="number",
-                            placeholder=str(j[1]))]),
+                            placeholder = str(j[1]))]),
                         dbc.Col([
                         dcc.Dropdown(
                             id="drop{}".format(str(dropid)),
                             options=[{"label": x,
                                 "value": x,}
                                 for x in list(c_list)],
-                                placeholder = j[0].name,
+                                placeholder=j[0].name,
                                 multi=False
                                 )
                         ]),
@@ -2026,39 +2006,34 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                             options=[{"label": x,
                                 "value": x,}
                                 for x in list(comp_list)],
-                                placeholder = j[0].compartment,
-                                multi=False
-                                )
-                        ]),], id="right"),)
-                        dropid+=1
+                                placeholder=j[0].compartment,
+                                multi=False)
+                        ]), ], id="right"), )
+                        dropid += 1
                     contents.append(html.P("Add new compound to right side"))
                     contents.append(
-                    dbc.Row([
-                    dbc.Col([
-                    dcc.Input(id="stoich{}".format(str(dropid)),
-                        type="number",
-                        placeholder=0)]),
-                    dbc.Col([
-                    dcc.Dropdown(
-                        id="drop{}".format(str(dropid)),
-                        options=[{"label": x,
-                            "value": x,}
-                            for x in list(c_list)],
-                            placeholder = '',
-                            multi=False
-                            )
-                    ]),
-                    dbc.Col([
-                    dcc.Dropdown(
-                        id="compartment{}".format(str(dropid)),
-                        options=[{"label": x,
-                            "value": x,}
-                            for x in list(comp_list)],
-                            placeholder = j[0].compartment,
-                            multi=False
-                            )
-                    ]),], id="right_new"))
-                    dropid+=1
+                        dbc.Row(
+                            [dbc.Col([
+                                dcc.Input(id="stoich{}".format(str(dropid)),
+                                     type="number",
+                                     placeholder=0)]),
+                                dbc.Col([
+                                    dcc.Dropdown(id="drop{}".format(str(dropid)),
+                                                 options=[{"label": x, "value": x}
+                                                          for x in list(c_list)],
+                                                 placeholder='',
+                                                 multi=False)]),
+                                dbc.Col([
+                                    dcc.Dropdown(id="compart{}".
+                                                 format(str(dropid)),
+                                                 options=[{"label": x, "value": x}
+                                                          for x in
+                                                          list(comp_list)],
+                                                 placeholder=j[0].
+                                                 compartment,
+                                                 multi=False)])],
+                                id="right_new"))
+                    dropid += 1
                 elif c is not None and len(c) > 0:
                     for i in model.compounds:
                         if i.id == c:
@@ -2069,18 +2044,15 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                     contents.append(html.H5(
                                     "Name: " + compound.name))
                     contents.append(
-                    dbc.Row([
-                    dbc.Col([
-                    dcc.Input(id="charge",
-                        type="number",
-                        placeholder=compound.charge)]),
-                    dbc.Col([
-                    dcc.Input(
-                        id="formula",
-                        type='text',
-                        placeholder=compound.formula
-                            )
-                    ]),], id='compounds'),)
+                        dbc.Row([
+                            dbc.Col([
+                                dcc.Input(id="charge",
+                                    type="number",
+                                    placeholder=compound.charge)]),
+                                dbc.Col([
+                                    dcc.Input(id="formula", type='text',
+                                              placeholder=compound.formula)]),
+                                ],id='compounds'), )
 
                 return contents, True
             else:
@@ -2088,32 +2060,29 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
 
         @_app.callback(
                 [Output("net", "elements"),
-                Output("fba-data", "children")],
-                [
-                        Input("btn_sub", "n_clicks"),
-                ],
-                [
-                        State("pathways_dropdown", "value"),
-                        State("element_dropdown", "value"),
-                        State("compounds_dropdown", "value"),
-                        State("fba_dropdown", "value"),
-                        State("filter1_dropdown", "value"),
-                        State("filter2_dropdown", "value"),
-                        State("delete_dropdown", "value"),
-                        State("reaction_dropdown", "value")
-                ],
-                prevent_initial_call=True,
-        )
-        def filter_nodes(n_clicks, pathways_dropdown, element_dropdown, \
-                         compounds_dropdown, fba_dropdown, \
+                 Output("fba-data", "children")],
+                [Input("btn_sub", "n_clicks"), ],
+                [State("pathways_dropdown", "value"),
+                 State("element_dropdown", "value"),
+                 State("compounds_dropdown", "value"),
+                 State("fba_dropdown", "value"),
+                 State("filter1_dropdown", "value"),
+                 State("filter2_dropdown", "value"),
+                 State("delete_dropdown", "value"),
+                 State("reaction_dropdown", "value")],
+                prevent_initial_call=True, )
+        def filter_nodes(n_clicks, pathways_dropdown, element_dropdown,
+                         compounds_dropdown, fba_dropdown,
                          filter1_dropdown, filter2_dropdown, delete_dropdown,
                          r_dropdown):
             if isinstance(pathways_dropdown, list) \
-            or isinstance(delete_dropdown, list) \
-            or isinstance(element_dropdown, str) \
-            or isinstance(compounds_dropdown, str) or isinstance(fba_dropdown, str) \
-            or (isinstance(filter1_dropdown, str) and isinstance(filter1_dropdown, str)) \
-            or isinstance(r_dropdown, list):
+                    or isinstance(delete_dropdown, list) \
+                    or isinstance(element_dropdown, str) \
+                    or isinstance(compounds_dropdown, str) \
+                    or isinstance(fba_dropdown, str) \
+                    or (isinstance(filter1_dropdown, str)
+                        and isinstance(filter1_dropdown, str)) \
+                    or isinstance(r_dropdown, list):
                 model = self._mm.copy()
                 if delete_dropdown is not None:
                     genes = set()
@@ -2121,12 +2090,13 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                     deleted_reactions = set()
                     for reaction in self._model.reactions:
                         assoc = None
-                        if reaction.genes is None  or reaction.genes == '':
+                        if reaction.genes is None or reaction.genes == '':
                             continue
                         elif isinstance(reaction.genes, string_types):
                             assoc = boolean.Expression(reaction.genes)
                         else:
-                            variables = [boolean.Variable(g) for g in reaction.genes]
+                            variables = [boolean.Variable(g)
+                                         for g in reaction.genes]
                             assoc = boolean.Expression(boolean.And(*variables))
                         genes.update(v.symbol for v in assoc.variables)
                         gene_assoc[reaction.id] = assoc
@@ -2138,9 +2108,11 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                         if any(boolean.Variable(gene) in assoc.variables
                                 for gene in delete_dropdown):
                             new_assoc = assoc.substitute(
-                                lambda v: v if v.symbol not in delete_dropdown else False)
+                                lambda v: v if v.symbol not in
+                                delete_dropdown else False)
                             if new_assoc.has_value() and not new_assoc.value:
-                                logger.info('Deleting reaction {}...'.format(reaction))
+                                logger.info('Deleting reaction {}...'.
+                                            format(reaction))
                                 deleted_reactions.add(reaction)
                     for r in deleted_reactions:
                         model.remove_reaction(r)
@@ -2151,59 +2123,72 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                 for i in r_dropdown:
                     rxn_set.add(i)
 
-                if isinstance(filter1_dropdown, str) and isinstance(filter2_dropdown, str):
+                if isinstance(filter1_dropdown, str) and \
+                        isinstance(filter2_dropdown, str):
                     rxn_list = set()
                     cpd_list = [filter1_dropdown, filter2_dropdown]
                     middle2 = []
                     middle3 = []
-                    middle2, rxn_list = bfs_compounds(filter1_dropdown, filter2_dropdown, network, rxn_list, rxn_set, middle2, middle3)
-                    if len(rxn_list)==0:
+                    middle2, rxn_list = bfs_compounds(filter1_dropdown,
+                                                      filter2_dropdown,
+                                                      network, rxn_list,
+                                                      rxn_set, middle2,
+                                                      middle3)
+                    if len(rxn_list) == 0:
                         return []
                 elif isinstance(compounds_dropdown, str):
                     rxn_list = []
                     for rxn in network[0]:
                         for cpd in network[0][rxn][0]:
                             for i in cpd:
-                                if i.name == compounds_dropdown and rxn.id in rxn_set:
+                                if i.name == compounds_dropdown and \
+                                        rxn.id in rxn_set:
                                     rxn_list.append(rxn.id)
                 else:
                     rxn_list = rxn_set
-                nodes, edges, obj_flux = build_network(self, nm, model, rxn_list, network, fba_dropdown)
-                elements=nodes+edges
+                nodes, edges, obj_flux = build_network(self, nm, model,
+                                                       rxn_list, network,
+                                                       fba_dropdown)
+                elements = nodes + edges
 
                 if obj_flux != 0:
                     contents = []
-                    contents.append(html.H5("{} flux is {}".format(fba_dropdown, obj_flux)))
+                    contents.append(html.H5("{} flux "
+                                    "is {}".format(fba_dropdown, obj_flux)))
                 else:
                     contents = []
                     contents.append(html.H5("No flux through the network"))
 
                 return elements, contents
 
-
-        @_app.callback(
-            Output("download", "data"),
-            [Input("btn_tsv", "n_clicks"),
-            Input("pathways_dropdown", "value"),
-            Input("element_dropdown", "value"),
-            Input("compounds_dropdown", "value"),
-            Input("fba_dropdown", "value"),
-            Input("filter1_dropdown", "value"),
-            Input("filter2_dropdown", "value"),
-            ],
-            prevent_initial_call=True,
-        )
-        def func(n_clicks, pathways_dropdown, element_dropdown, compounds_dropdown, fba_dropdown, filter1_dropdown, filter2_dropdown):
+        @_app.callback(Output("download", "data"),
+                       [Input("btn_tsv", "n_clicks"),
+                        Input("pathways_dropdown", "value"),
+                        Input("element_dropdown", "value"),
+                        Input("compounds_dropdown", "value"),
+                        Input("fba_dropdown", "value"),
+                        Input("filter1_dropdown", "value"),
+                        Input("filter2_dropdown", "value"), ],
+                       prevent_initial_call=True,)
+        def func(n_clicks, pathways_dropdown, element_dropdown,
+                 compounds_dropdown, fba_dropdown,
+                 filter1_dropdown, filter2_dropdown):
             if n_clicks is not None:
-                nm, network = read_model(self._model, self._mm, element_dropdown)
+                nm, network = read_model(self._model, self._mm,
+                                         element_dropdown)
                 pathway_list, rxn_set = get_pathway_list(nm, pathways_dropdown)
 
-                if isinstance(filter1_dropdown, str) and isinstance(filter2_dropdown, str):
+                if isinstance(filter1_dropdown, str) and \
+                        isinstance(filter2_dropdown, str):
                     rxn_list = set()
                     cpd_list = [filter1_dropdown, filter2_dropdown]
                     middle2 = []
                     middle3 = []
-                    middle2, rxn_list = bfs_compounds(filter1_dropdown, filter2_dropdown, network, rxn_list, rxn_set, middle2, middle3)
+                    middle2, rxn_list = bfs_compounds(filter1_dropdown,
+                                                      filter2_dropdown,
+                                                      network, rxn_list,
+                                                      rxn_set, middle2,
+                                                      middle3)
                     if rxn_list is str:
                         raise PreventUpdate
                 elif isinstance(compounds_dropdown, str):
@@ -2211,50 +2196,52 @@ class InteractiveCommand(MetabolicMixin,SolverCommandMixin,
                     for rxn in network[0]:
                         for cpd in network[0][rxn][0]:
                             for i in cpd:
-                                if i.name == compounds_dropdown and rxn.id in rxn_set:
+                                if i.name == compounds_dropdown and \
+                                        rxn.id in rxn_set:
                                     rxn_list.append(rxn.id)
                 else:
                     rxn_list = rxn_set
-                id=[]
-                name=[]
-                equation=[]
+                id = []
+                name = []
+                equation = []
                 for rxn in nm.reactions:
                     if rxn.id in rxn_list:
                         id.append(rxn.id)
                         name.append(rxn.name)
                         equation.append(str(rxn.properties["equation"]))
-                df = pd.DataFrame({"id": id, "name": name, "equation": equation})
+                df = pd.DataFrame({"id": id, "name": name,
+                                   "equation": equation})
                 return(dcc.send_data_frame(df.to_csv, "exported_rxns.csv"))
 
-        @_app.callback(
-            Output("net", "generateImage"),
-            [Input('btn-get-png', 'n_clicks')
-            ],
-            prevent_initial_call=True,
-        )
+        @_app.callback(Output("net", "generateImage"),
+                       [Input('btn-get-png', 'n_clicks')],
+                       prevent_initial_call=True,)
         def get_image(n_clicks):
             if n_clicks is not None:
                 ftype = "png"
                 action = "download"
-                return {'type':ftype, 'action':action}
+                return {'type': ftype, 'action': action}
+
 
 def read_model(model, mm, el):
-        if isinstance(el, list) or el == None:
-            el = "C"
-        excluded_reactions=[]
-        for rxn in model.reactions:
-            for cpd, v in rxn.equation.compounds:
-                if (float(v)).is_integer()==False or float(v) > 10:
-                    excluded_reactions.append(rxn.id)
-        network = make_network_dict(model, mm, subset=None, method='fpp',
-                                    element=el, excluded_reactions=excluded_reactions,
-                                    reaction_dict={}, analysis=None)
-        return model, network
+    if isinstance(el, list) or el is None:
+        el = "C"
+    excluded_reactions = []
+    for rxn in model.reactions:
+        for cpd, v in rxn.equation.compounds:
+            if (float(v)).is_integer() is False or float(v) > 10:
+                excluded_reactions.append(rxn.id)
+    network = make_network_dict(model, mm, subset=None, method='fpp',
+                                element=el,
+                                excluded_reactions=excluded_reactions,
+                                reaction_dict={}, analysis=None)
+    return model, network
+
 
 # Builds a reaction set from a model based on a pathway of interest
 def get_pathway_list(nm, pathway):
-    pathway_list=set()
-    rxn_set=set()
+    pathway_list = set()
+    rxn_set = set()
     if type(pathway) == str:
         pathway = [pathway]
     for path in pathway:
@@ -2283,7 +2270,7 @@ def get_pathway_list(nm, pathway):
                         pathway_list.add(i.properties['pathways'])
                     if path in i.properties['pathways']:
                         rxn_set.add(i.id)
-                elif  'subsystem' in i.properties:
+                elif 'subsystem' in i.properties:
                     if type(i.properties['subsystem']) == list:
                         for j in i.properties['subsystem']:
                             pathway_list.add(j)
@@ -2294,13 +2281,13 @@ def get_pathway_list(nm, pathway):
 
         else:
             for i in nm.reactions:
-                if  'pathways' in i.properties:
+                if 'pathways' in i.properties:
                     if type(i.properties['pathways']) == list:
                         for j in i.properties['pathways']:
                             pathway_list.add(j)
                     else:
                         pathway_list.add(i.properties['pathways'])
-                elif  'subsystem' in i.properties:
+                elif 'subsystem' in i.properties:
                     if type(i.properties['subsystem']) == list:
                         for j in i.properties['subsystem']:
                             pathway_list.add(j)
@@ -2310,346 +2297,395 @@ def get_pathway_list(nm, pathway):
     pathway_list = ["None"] + ["All"] + list(pathway_list)
     return pathway_list, rxn_set
 
+
 def get_compounds_list(nm):
-    compounds_list=[]
+    compounds_list = []
     for i in nm.compounds:
         compounds_list.append(i.id)
     return compounds_list
 
+
 def bfs_compounds(start, end, network, rxn_list, rxn_set, middle2, middle3):
-
     # initialize useful variables
-    generic=['h2o', 'h', 'accoa', 'coa', 'nad', 'nadh', 'nadp', 'nadph', 'pi', \
-             'co2', 'ppi', 'q8h2', 'q8', 'atp', 'gtp', 'utp', 'ttp']
-    depth_start = {(start, "none"):0}
-    depth_end={(end, "none"):0}
-    i=1
+    generic = ['h2o', 'h', 'accoa', 'coa', 'nad', 'nadh', 'nadp', 'nadph',
+               'pi', 'co2', 'ppi', 'q8h2', 'q8', 'atp', 'gtp', 'utp', 'ttp']
+    depth_start = {(start, "none"): 0}
+    depth_end = {(end, "none"): 0}
+    i = 1
 
-    frontier_start=[(start, "none")]
-    frontier_end=[(end, "none")]
-    parent_start={}
-    parent_start[(start, "none")]="none"
-    parent_end={}
-    parent_end[(end, "none")]="none"
-    frontier_check="False"
-    move_start={}
-    move_end={}
-    final_list={}
+    frontier_start = [(start, "none")]
+    frontier_end = [(end, "none")]
+    parent_start = {}
+    parent_start[(start, "none")] = "none"
+    parent_end = {}
+    parent_end[(end, "none")] = "none"
+    frontier_check = "False"
+    move_start = {}
+    move_end = {}
+    final_list = {}
 
-    while frontier_check=="False":
-        next=[]
+    while frontier_check == "False":
+        next = []
         for u in frontier_start:
-            adj={}
+            adj = {}
             for rxn in network[0]:
-                left=[]
-                for l in rxn._properties['equation'].__dict__['_left']:
-                    left.append(l[0].__dict__['_name'])
-                right=[]
-                for r in rxn._properties['equation'].__dict__['_right']:
-                    right.append(r[0].__dict__['_name'])
+                left = []
+                for le in rxn._properties['equation'].__dict__['_left']:
+                    left.append(le[0].__dict__['_name'])
+                right = []
+                for ri in rxn._properties['equation'].__dict__['_right']:
+                    right.append(ri[0].__dict__['_name'])
                 for cpd in network[0][rxn][0]:
                     for j in cpd:
-                        if j.name==u[0]:
+                        if j.name == u[0]:
                             for k in cpd:
-                                if j.name in left and k.name in right and (str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Forward" or str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Both"):
-                                    adj[k.name]=rxn.id
-                                elif j.name in right and k.name in left and (str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Reverse" or str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Both"):
-                                    adj[k.name]=rxn.id
+                                if j.name in left and k.name in right \
+                                    and (str(rxn._properties['equation'].
+                                             __dict__['_direction']) ==
+                                         "Direction.Forward" or
+                                         str(rxn._properties['equation'].
+                                             __dict__['_direction']) ==
+                                         "Direction.Both"):
+                                    adj[k.name] = rxn.id
+                                elif j.name in right and k.name in left and \
+                                    (str(rxn._properties['equation'].
+                                         __dict__['_direction']) ==
+                                     "Direction.Reverse" or
+                                     str(rxn._properties['equation'].
+                                         __dict__['_direction']) ==
+                                     "Direction.Both"):
+                                    adj[k.name] = rxn.id
             for v, r in adj.items():
-                if (v, r) not in depth_start and v not in generic and (v, r) != middle2 and (v, r) != middle3:
-                    depth_start[(v, r)]=i
-                    parent_start[(v, r)]=u
+                if (v, r) not in depth_start and v not in generic and \
+                        (v, r) != middle2 and (v, r) != middle3:
+                    depth_start[(v, r)] = i
+                    parent_start[(v, r)] = u
                     next.append((v, r))
-                    move_start[(v, r)]=adj[v]
-                if (v, r) in depth_end and v not in generic and (v, r) != middle2 and (v, r) != middle3:
-                    frontier_check="True"
-                    middle=(v, r)
-        frontier_start=next
-        next=[]
+                    move_start[(v, r)] = adj[v]
+                if (v, r) in depth_end and v not in generic and (v, r) \
+                        != middle2 and (v, r) != middle3:
+                    frontier_check = "True"
+                    middle = (v, r)
+        frontier_start = next
+        next = []
         for u in frontier_end:
-            adj={}
+            adj = {}
             for rxn in network[0]:
-                left=[]
-                for l in rxn._properties['equation'].__dict__['_left']:
-                    left.append(l[0].__dict__['_name'])
-                right=[]
-                for r in rxn._properties['equation'].__dict__['_right']:
-                    right.append(r[0].__dict__['_name'])
+                left = []
+                for le in rxn._properties['equation'].__dict__['_left']:
+                    left.append(le[0].__dict__['_name'])
+                right = []
+                for ri in rxn._properties['equation'].__dict__['_right']:
+                    right.append(ri[0].__dict__['_name'])
                 for cpd in network[0][rxn][0]:
                     for j in cpd:
-                        if j.name==u[0]:
+                        if j.name == u[0]:
                             for k in cpd:
-                                if j.name in left and k.name in right and (str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Forward" or str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Both"):
-                                    adj[k.name]=rxn.id
-                                elif j.name in right and k.name in left and (str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Reverse" or str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Both"):
-                                    adj[k.name]=rxn.id
+                                if j.name in left and k.name in right and \
+                                    (str(rxn._properties['equation'].
+                                     __dict__['_direction']) ==
+                                     "Direction.Forward" or
+                                     str(rxn._properties['equation'].
+                                         __dict__['_direction']) ==
+                                        "Direction.Both"):
+                                    adj[k.name] = rxn.id
+                                elif j.name in right and k.name in left and \
+                                    (str(rxn._properties['equation'].
+                                     __dict__['_direction']) ==
+                                     "Direction.Reverse" or
+                                     str(rxn._properties['equation'].
+                                         __dict__['_direction']) ==
+                                        "Direction.Both"):
+                                    adj[k.name] = rxn.id
             for v, r in adj.items():
-                if (v, r) not in depth_end and v not in generic and (v, r) != middle2 and (v, r) != middle3:
-                    depth_end[(v, r)]=i
-                    parent_end[(v, r)]=u
+                if (v, r) not in depth_end and v not in generic and \
+                        (v, r) != middle2 and (v, r) != middle3:
+                    depth_end[(v, r)] = i
+                    parent_end[(v, r)] = u
                     next.append((v, r))
-                    move_end[(v, r)]=adj[v]
-                if (v, r) in depth_start and frontier_check!="True" and v not in generic and (v, r) != middle2  and (v, r) != middle3:
-                    frontier_check="True"
-                    middle=(v, r)
-        frontier_end=next
-        i+=1
+                    move_end[(v, r)] = adj[v]
+                if (v, r) in depth_start and frontier_check != "True" and \
+                        v not in generic and (v, r) != \
+                        middle2 and (v, r) != middle3:
+                    frontier_check = "True"
+                    middle = (v, r)
+        frontier_end = next
+        i += 1
         if i > 50:
             return([], [])
     # collect the rxns from the start frontier into a final list of rxns
-    i=depth_start[middle]
+    i = depth_start[middle]
 
-    j=1
-    final_list[i]=move_start[middle]
-    parent=parent_start[middle]
-    while parent!=(start, "none"):
-        i-=1
-        j+=1
-        final_list[i]=move_start[parent]
-        parent=parent_start[parent]
+    j = 1
+    final_list[i] = move_start[middle]
+    parent = parent_start[middle]
+    while parent != (start, "none"):
+        i -= 1
+        j += 1
+        final_list[i] = move_start[parent]
+        parent = parent_start[parent]
 
     # Checks to make sure the solution isnt a 0 path solution
     if depth_end[middle] > 0:
         # Collects the moves from the end frontier into a final list of moves
-        j+=1
-        final_list[j]=move_end[middle]
-        parent=parent_end[middle]
-        while parent!=(end, "none"):
-            j+=1
-            final_list[j]=move_end[parent]
-            parent=parent_end[parent]
-    sorted_list=[]
+        j += 1
+        final_list[j] = move_end[middle]
+        parent = parent_end[middle]
+        while parent != (end, "none"):
+            j += 1
+            final_list[j] = move_end[parent]
+            parent = parent_end[parent]
+    sorted_list = []
     # Sorts the moves by their index and store them in a final list
-    for k in range(1,len(final_list)+1):
+    for k in range(1, len(final_list) + 1):
         sorted_list.append(final_list[k])
     return(middle, sorted_list)
-    #raise NotImplementedError
-
-
 
 
 # Useful function to build the subset network. Returns nodes and edges
 # from the network associated with the rxn_set of interest
 def build_network(self, nm, mm, rxn_set, network, fba_dropdown):
-        name={}
-        formula={}
-        charge={}
-        for i in nm.compounds:
-            if i.name:
-                name[i.id]=i.name
-            else:
-                name[i.id]=i.id
-            formula[i.id]=i.formula
-            charge[i.id]=i.charge
-        nodes=[]
-        edges=[]
-
-        obj = 0
-        if not isinstance(fba_dropdown, list):
-            objective=str(fba_dropdown)
-            #mm = nm.create_metabolic_model()
-
-            # Set up the solver
-            solver = self._get_solver()
-            # Define the flux balance
-            problem = fluxanalysis.FluxBalanceProblem(mm, solver)
-            problem.maximize(fba_dropdown)
-            obj = problem.get_flux(fba_dropdown)
-            flux_carrying=defaultdict(lambda:0)
-            for i in mm.reactions:
-                flux_carrying[i]=problem.get_flux(i)
+    name = {}
+    formula = {}
+    charge = {}
+    for i in nm.compounds:
+        if i.name:
+            name[i.id] = i.name
         else:
-            flux_carrying={}
-            for i in mm.reactions:
-                flux_carrying[i]=0
-        comp=[]
-        for i in nm.compartments:
-            comp.append(i.id)
-        color = ["#6FB2D2","#85C88A","#EBD671","#EEEEEE"]
-        col_dict = {}
-        for col in range(0,len(comp)):
-            col_dict[comp[col]]=color[col]
+            name[i.id] = i.id
+        formula[i.id] = i.formula
+        charge[i.id] = i.charge
+    nodes = []
+    edges = []
 
+    obj = 0
+    if not isinstance(fba_dropdown, list):
+        objective = str(fba_dropdown)
 
-        for rxn in network[0]:
-
-            if rxn.id in rxn_set:
-                if rxn.name:
-                    rname = rxn.name
-                else:
-                    rname - rxn.id
-                rxn_num=0
-                visited = set()
-                for cpd in network[0][rxn][0]:
-                    if cpd[0] not in visited:
-                        visited.add(cpd[0])
-                        visited.add(cpd[1])
-                        nodes.append({'data':{'id':str(cpd[0]),
-                                      'label': name[str(cpd[0])[0:(str(cpd[0]).find('['))]],
-                                      'formula': formula[str(cpd[0])[0:(str(cpd[0]).find('['))]],
-                                      'compartment': cpd[0].compartment,
-                                      'col': col_dict[cpd[0].compartment],
-                                      'charge': charge[str(cpd[0])[0:(str(cpd[0]).find('['))]],
-                                      'type': 'compound'
-                                      }})
-                        nodes.append({'data':{'id':str(cpd[1]),
-                                      'label': name[str(cpd[1])[0:(str(cpd[1]).find('['))]],
-                                      'formula': formula[str(cpd[1])[0:(str(cpd[1]).find('['))]],
-                                      'compartment': cpd[0].compartment,
-                                      'col': col_dict[cpd[0].compartment],
-                                      'charge': charge[str(cpd[0])[0:(str(cpd[0]).find('['))]],
-                                      'type': 'compound'
-                                      }})
-                        if 'pathways' in rxn.properties:
-                            path = rxn.properties['pathways']
-                        elif 'subsystem' in rxn.properties:
-                            path = rxn.properties['subsystem']
+        # Set up the solver
+        solver = self._get_solver()
+        # Define the flux balance
+        problem = fluxanalysis.FluxBalanceProblem(mm, solver)
+        problem.maximize(fba_dropdown)
+        obj = problem.get_flux(fba_dropdown)
+        flux_carrying = defaultdict(lambda: 0)
+        for i in mm.reactions:
+            flux_carrying[i] = problem.get_flux(i)
+    else:
+        flux_carrying = {}
+        for i in mm.reactions:
+            flux_carrying[i] = 0
+    comp = []
+    for i in nm.compartments:
+        comp.append(i.id)
+    color = ["#6FB2D2", "#85C88A", "#EBD671", "#EEEEEE"]
+    col_dict = {}
+    for col in range(0, len(comp)):
+        col_dict[comp[col]] = color[col]
+    for rxn in network[0]:
+        if rxn.id in rxn_set:
+            if rxn.name:
+                rname = rxn.name
+            else:
+                rname - rxn.id
+            rxn_num = 0
+            visited = set()
+            for cpd in network[0][rxn][0]:
+                if cpd[0] not in visited:
+                    visited.add(cpd[0])
+                    visited.add(cpd[1])
+                    nodes.append({'data': {
+                                  'id': str(cpd[0]),
+                                  'label': name[str(cpd[0])
+                                                [0:(str(cpd[0]).
+                                                 find('['))]],
+                                  'formula': formula[str(cpd[0])
+                                                     [0:(str(cpd[0]).
+                                                      find('['))]],
+                                  'compartment': cpd[0].compartment,
+                                  'col': col_dict[cpd[0].compartment],
+                                  'charge': charge[str(cpd[0])
+                                                   [0:(str(cpd[0]).
+                                                    find('['))]],
+                                  'type': 'compound'
+                                  }})
+                    nodes.append({'data': {
+                                  'id': str(cpd[1]),
+                                  'label': name[str(cpd[1])
+                                                [0:(str(cpd[1]).
+                                                 find('['))]],
+                                  'formula': formula[str(cpd[1])
+                                                     [0:(str(cpd[1]).
+                                                      find('['))]],
+                                  'compartment': cpd[0].compartment,
+                                  'col': col_dict[cpd[0].compartment],
+                                  'charge': charge[str(cpd[0])
+                                                   [0:(str(cpd[0]).
+                                                    find('['))]],
+                                  'type': 'compound'
+                                  }})
+                    if 'pathways' in rxn.properties:
+                        path = rxn.properties['pathways']
+                    elif 'subsystem' in rxn.properties:
+                        path = rxn.properties['subsystem']
+                    else:
+                        path = ['No pathway exists']
+                    if "{}_node".format(rxn.id) not in nodes:
+                        if "name" not in rxn.properties:
+                            rxn.properties['name'] = "None"
+                        if "genes" not in rxn.properties:
+                            rxn.properties['genes'] = "None"
+                        if "pathways" in rxn.properties:
+                            path_prop = rxn.properties['pathways']
+                        elif "subsystem" in rxn.properties:
+                            path_prop = rxn.properties['subsystem']
                         else:
-                            path = ['No pathway exists']
-                        if "{}_node".format(rxn.id) not in nodes:
-                            if "name" not in rxn.properties:
-                                rxn.properties['name'] = "None"
-                            if "genes" not in rxn.properties:
-                                rxn.properties['genes'] = "None"
-                            if "pathways" in rxn.properties:
-                                path_prop = rxn.properties['pathways']
-                            elif "subsystem" in rxn.properties:
-                                path_prop = rxn.properties['subsystem']
-                            else:
-                                path_prop = "None"
-                            if "EC" not in rxn.properties:
-                                rxn.properties['EC'] = "None"
-                            nodes.append({'data':{'id':"{}_node".format(rxn.id),
-                                          'label': rxn.id,
-                                          'type': 'reaction',
-                                          'equation': str(rxn.properties["equation"]),
-                                          'pathways': path,
-                                          'orig_id': rxn.id,
-                                          'name': rxn.properties["name"],
-                                          'genes': rxn.properties["genes"],
-                                          'pathways': path_prop,
-                                          'EC': rxn.properties["EC"],
-                                          'flux_node':flux_carrying[rxn.id]
-                                          },
-                                          'style': {
-                                          'shape': 'rectangle'
-                                          }})
-                            if str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Forward":
-                                flux = flux_carrying[rxn.id]
-                                edges.append({'data':{
-                                    'id':"".join([rxn.id, "_", str(cpd[1]), "for"]),
-                                    'orig_id': rxn.id,
-                                    'source':"{}_node".format(rxn.id),
-                                    'target':str(cpd[1]),
-                                    'rid':rxn.id,
-                                    'label': "".join([rxn.name]),
-                                    'equation': str(rxn.properties["equation"]),
-                                    'pathways':path,
-                                    'flux':flux
-            #                            'equation':rxn.equation
-                                    }})
-                                rxn_num+=1
-                                edges.append({'data':{
-                                    'id':"".join([rxn.id, "_", str(cpd[0]), "for"]),
-                                    'orig_id': rxn.id,
-                                    'source':str(cpd[0]),
-                                    'target':"{}_node".format(rxn.id),
-                                    'rid':rxn.id,
-                                    'label': "".join([rxn.name]),
-                                    'equation': str(rxn.properties["equation"]),
-                                    'pathways':path,
-                                    'flux':flux
-            #                            'equation':rxn.equation
-                                    }})
-                                rxn_num+=1
-                            elif str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Reverse":
-                                flux = 0-float(flux_carrying[rxn.id])
-                                edges.append({'data':{
-                                    'id':"".join([rxn.id, "_", str(cpd[0]), "rev"]),
-                                    'orig_id': rxn.id,
-                                    'source':"{}_node".format(rxn.id),
-                                    'target':str(cpd[0]),
-                                    'rid':rxn.id,
-                                    'label': "".join([rxn.name]),
-                                    'equation': str(rxn.properties["equation"]),
-                                    'pathways':path,
-                                    'flux':flux
-            #                            'equation':rxn.equation
-                                    }})
-                                rxn_num+=1
-                                edges.append({'data':{
-                                    'id':"".join([rxn.id, "_", str(cpd[1]), "rev"]),
-                                    'orig_id': rxn.id,
-                                    'source':str(cpd[1]),
-                                    'target':"{}_node".format(rxn.id),
-                                    'rid':rxn.id,
-                                    'label': "".join([rxn.name]),
-                                    'equation': str(rxn.properties["equation"]),
-                                    'pathways':path,
-                                    'flux':flux
-            #                            'equation':rxn.equation
-                                    }})
-                                rxn_num+=1
-                            elif str(rxn._properties['equation'].__dict__['_direction']) == "Direction.Both":
-                                flux = flux_carrying[rxn.id]
-                                edges.append({'data':{
-                                    'id':"".join([rxn.id, "_", str(cpd[1]), "for"]),
-                                    'orig_id': rxn.id,
-                                    'source':"{}_node".format(rxn.id),
-                                    'target':str(cpd[1]),
-                                    'rid':rxn.id,
-                                    'label': "".join([rxn.name]),
-                                    'equation': str(rxn.properties["equation"]),
-                                    'pathways':path,
-                                    'flux':flux
-            #                            'equation':rxn.equation
-                                    }})
-                                rxn_num+=1
-                                flux = 0-float(flux_carrying[rxn.id])
-                                edges.append({'data':{
-                                    'id':"".join([rxn.id, "_", str(cpd[0]), "for"]),
-                                    'orig_id': rxn.id,
-                                    'source':"{}_node".format(rxn.id),
-                                    'target':str(cpd[0]),
-                                    'rid':rxn.id,
-                                    'label': "".join([rxn.name]),
-                                    'equation': str(rxn.properties["equation"]),
-                                    'pathways':path,
-                                    'flux':flux
-            #                            'equation':rxn.equation
-                                    }})
-                                rxn_num+=1
-                                flux = flux_carrying[rxn.id]
-                                edges.append({'data':{
-                                    'id':"".join([rxn.id, "_", str(cpd[0]), "rev"]),
-                                    'orig_id': rxn.id,
-                                    'source':str(cpd[0]),
-                                    'target':"{}_node".format(rxn.id),
-                                    'rid':rxn.id,
-                                    'label': "".join([rxn.name]),
-                                    'equation': str(rxn.properties["equation"]),
-                                    'pathways':path,
-                                    'flux':flux
-            #                            'equation':rxn.equation
-                                    }})
-                                rxn_num+=1
-                                flux = 0-float(flux_carrying[rxn.id])
-                                edges.append({'data':{
-                                    'id':"".join([rxn.id, "_", str(cpd[1]), "rev"]),
-                                    'orig_id': rxn.id,
-                                    'source':str(cpd[1]),
-                                    'target':"{}_node".format(rxn.id),
-                                    'rid':rxn.id,
-                                    'label': "".join([rxn.name]),
-                                    'equation': str(rxn.properties["equation"]),
-                                    'pathways':path,
-                                    'flux':flux
-            #                            'equation':rxn.equation
-                                    }})
-                                rxn_num+=1
-
-
-        return nodes, edges, obj
+                            path_prop = "None"
+                        if "EC" not in rxn.properties:
+                            rxn.properties['EC'] = "None"
+                        nodes.append({'data': {
+                                      'id': "{}_node".format(rxn.id),
+                                      'label': rxn.id,
+                                      'type': 'reaction',
+                                      'equation': str(rxn.properties
+                                                      ["equation"]),
+                                      'pathways': path,
+                                      'orig_id': rxn.id,
+                                      'name': rxn.properties["name"],
+                                      'genes': rxn.properties["genes"],
+                                      'pathways': path_prop,
+                                      'EC': rxn.properties["EC"],
+                                      'flux_node': flux_carrying[rxn.id]
+                                      },
+                                      'style': {
+                                      'shape': 'rectangle'
+                                      }})
+                        if str(rxn._properties['equation'].__dict__
+                               ['_direction']) == "Direction.Forward":
+                            flux = flux_carrying[rxn.id]
+                            edges.append({'data': {
+                                'id': "".join([rxn.id, "_",
+                                               str(cpd[1]), "for"]),
+                                'orig_id': rxn.id,
+                                'source': "{}_node".format(rxn.id),
+                                'target': str(cpd[1]),
+                                'rid': rxn.id,
+                                'label': "".join([rxn.name]),
+                                'equation': str(rxn.properties
+                                                ["equation"]),
+                                'pathways': path,
+                                'flux': flux
+                                }})
+                            rxn_num += 1
+                            edges.append({'data': {
+                                'id': "".join([rxn.id, "_",
+                                               str(cpd[0]), "for"]),
+                                'orig_id': rxn.id,
+                                'source': str(cpd[0]),
+                                'target': "{}_node".format(rxn.id),
+                                'rid': rxn.id,
+                                'label': "".join([rxn.name]),
+                                'equation': str(rxn.properties
+                                                ["equation"]),
+                                'pathways': path,
+                                'flux': flux
+                                }})
+                            rxn_num += 1
+                        elif str(rxn._properties['equation'].__dict__
+                                 ['_direction']) == "Direction.Reverse":
+                            flux = 0-float(flux_carrying[rxn.id])
+                            edges.append({'data': {
+                                'id': "".join([rxn.id, "_",
+                                              str(cpd[0]), "rev"]),
+                                'orig_id': rxn.id,
+                                'source': "{}_node".format(rxn.id),
+                                'target': str(cpd[0]),
+                                'rid': rxn.id,
+                                'label': "".join([rxn.name]),
+                                'equation': str(rxn.properties
+                                                ["equation"]),
+                                'pathways': path,
+                                'flux': flux
+                                }})
+                            rxn_num += 1
+                            edges.append({'data': {
+                                'id': "".join([rxn.id, "_",
+                                               str(cpd[1]), "rev"]),
+                                'orig_id': rxn.id,
+                                'source': str(cpd[1]),
+                                'target': "{}_node".format(rxn.id),
+                                'rid': rxn.id,
+                                'label': "".join([rxn.name]),
+                                'equation': str(rxn.properties
+                                                ["equation"]),
+                                'pathways': path,
+                                'flux': flux
+                                }})
+                            rxn_num += 1
+                        elif str(rxn._properties['equation'].
+                                 __dict__['_direction']) \
+                                == "Direction.Both":
+                            flux = flux_carrying[rxn.id]
+                            edges.append({'data': {
+                                'id': "".join([rxn.id, "_", str(cpd[1]),
+                                              "for"]),
+                                'orig_id': rxn.id,
+                                'source': "{}_node".format(rxn.id),
+                                'target': str(cpd[1]),
+                                'rid': rxn.id,
+                                'label': "".join([rxn.name]),
+                                'equation': str(rxn.properties
+                                                ["equation"]),
+                                'pathways': path,
+                                'flux': flux
+                                }})
+                            rxn_num += 1
+                            flux = 0-float(flux_carrying[rxn.id])
+                            edges.append({'data': {
+                                'id': "".join([rxn.id, "_", str(cpd[0]),
+                                               "for"]),
+                                'orig_id': rxn.id,
+                                'source': "{}_node".format(rxn.id),
+                                'target': str(cpd[0]),
+                                'rid': rxn.id,
+                                'label': "".join([rxn.name]),
+                                'equation': str(rxn.properties
+                                                ["equation"]),
+                                'pathways': path,
+                                'flux': flux
+                                }})
+                            rxn_num += 1
+                            flux = flux_carrying[rxn.id]
+                            edges.append({'data': {
+                                'id': "".join([rxn.id, "_", str(cpd[0]),
+                                               "rev"]),
+                                'orig_id': rxn.id,
+                                'source': str(cpd[0]),
+                                'target': "{}_node".format(rxn.id),
+                                'rid': rxn.id,
+                                'label': "".join([rxn.name]),
+                                'equation': str(rxn.properties
+                                                ["equation"]),
+                                'pathways': path,
+                                'flux': flux
+                                }})
+                            rxn_num += 1
+                            flux = 0-float(flux_carrying[rxn.id])
+                            edges.append({'data': {
+                                'id': "".join([rxn.id, "_", str(cpd[1]),
+                                              "rev"]),
+                                'orig_id': rxn.id,
+                                'source': str(cpd[1]),
+                                'target': "{}_node".format(rxn.id),
+                                'rid': rxn.id,
+                                'label': "".join([rxn.name]),
+                                'equation': str(rxn.
+                                                properties["equation"]),
+                                'pathways': path,
+                                'flux': flux
+                                }})
+                            rxn_num += 1
+    return nodes, edges, obj
 
 
 class VisualizationCommand(MetabolicMixin,
