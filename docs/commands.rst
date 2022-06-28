@@ -437,8 +437,6 @@ constraints are imposed when considering whether reactions can take a non-zero
 flux. This automatically removes internal flux loops but is also much more
 time-consuming.
 
-Some reactions could
-
 Reaction duplicates check (``dupcheck``)
 -----------------------------------------------
 
