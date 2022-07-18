@@ -34,7 +34,10 @@ def charge_check(self, epsilon):
         return self._model.compounds[id].properties.get('name', id)
 
     # Create a set of excluded reactions
-    exclude = set(self._args.exclude)
+    if hasattr(self, '_args'):
+        exclude = set(self._args.exclude)
+    else:
+        exclude = set()
     count = 0
     unbalanced = 0
     unchecked = 0

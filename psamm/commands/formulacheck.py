@@ -28,7 +28,10 @@ logger = logging.getLogger(__name__)
 
 def formula_check(self):
     # Create a set of excluded reactions
-    exclude = set(self._args.exclude)
+    if hasattr(self, '_args'):
+        exclude = set(self._args.exclude)
+    else:
+        exclude = set()
     count = 0
     unbalanced = 0
     unchecked = 0
