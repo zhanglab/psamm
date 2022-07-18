@@ -94,6 +94,7 @@ class HiddenPrints:
         sys.stdout = self._original_stdout
 
 
+
 class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
                          Command, FilePrefixAppendAction):
     """Launches an interactive interface for the analysis """
@@ -107,830 +108,14 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
         super(InteractiveCommand, cls).init_parser(parser)
 
     def run(self):
-        '''
-        Generates the initial required data for the visualization and
-        launches the app on a local port.
-        '''
-
-        # enable svg export
-        cyto.load_extra_layouts()
-
-        # Start with default of carbon tranfer network
-        el = 'C'
-        # generate the initial network
-        pathway = 'All'
-        pathway_list, rxn_set = get_pathway_list(self._model, "All")
-        rxns = list(rxn_set)
-
-        # get a list of all compound in the model
-        compounds_list = get_compounds_list(self._model)
-
-        # generate information about number of genes in the model
-        count = 0
-        rxns_with_genes = 0
-        gene_content = set()
-        rxns_full = []
-        for reaction in self._model.reactions:
-            rxns_full.append(reaction.id)
-            count += 1
-            if reaction.genes is None or reaction.genes == '':
-                continue
-            elif isinstance(reaction.genes, string_types):
-                rxns_with_genes += 1
-                assoc = boolean.Expression(reaction.genes)
-            else:
-                rxns_with_genes += 1
-                variables = [boolean.Variable(g) for g in reaction.genes]
-                assoc = boolean.Expression(boolean.And(*variables))
-            gene_content.update(v.symbol for v in assoc.variables)
-
-        # stores the initial model stats in content_model and generate the
-        # initial stats
-        content_model = []
-        content_model.append(html.H5("General Model Statistics:"))
-        content_model.append(html.P("Reactions in model: " + str(count)))
-        count = 0
-        for i in self._model.compounds:
-            count += 1
-        content_model.append(html.P("Compounds in model: " + str(count)))
-        content_model.append(
-            html.P("Pathways in mode: " + str(len(pathway_list))))
-        content_model.append(
-            html.P(
-                "Reactions with gene assocations: " +
-                str(rxns_with_genes)))
-        try:
-            content_model.append(
-                html.P("Total genes: " + str(count_genes(self._model))))
-        except BaseException:
-            content_model.append(html.P("Total genes: Unable to count genes"))
-        with HiddenPrints():
-            unbalanced, count, unchecked, exclude, unbalanced_list, \
-                unbalance_dict = charge_check(self, 1e-6)
-        content_model.append(html.H5("Chargecheck results:"))
-        content_model.append(html.P("Unblanced reactions: " + str(unbalanced)))
-        content_model.append(html.P("Unchecked reactions: " + str(unchecked)))
-        content_model.append(
-            html.P("Excluded reactions: " + str(len(exclude))))
-
-        with HiddenPrints():
-            unbalanced, count, unchecked, exclude, form_list, \
-                form_dict = formula_check(self)
-        content_model.append(html.H5("Formulacheck results:"))
-        content_model.append(html.P("Unblanced reactions: " + str(unbalanced)))
-        content_model.append(html.P("Unchecked reactions: " + str(unchecked)))
-        content_model.append(
-            html.P("Excluded reactions: " + str(len(exclude))))
-
-        # initialize an empty list. the full is messy
-        nodes, edges = [], []
-
-        # Initialize the app and launch the server
         self._app = dash.Dash(
             __name__, external_stylesheets=[
                 dbc.themes.BOOTSTRAP])
         server = self._app.server
         if self._app is not None and hasattr(self, "callbacks"):
             self.callbacks(self._app)
-
-        # Set styles for the app
-        styles = {
-            'output': {
-                'border': 'thin lightgrey solid',
-                'overflowX': 'scroll'},
-        }
-        col_swatch = px.colors.qualitative.Dark24
-        default_stylesheet = [
-            {
-                'selector': 'node',
-                'style': {'background-color': '#BFD7B5',
-                          'label': 'data(label)'}},
-            {"selector": "edge", "style": {"width": 1,
-                                           "curve-style": "bezier"}}]
-
-        # Set the navigation bar for the app
-        navbar = dbc.Navbar(
-            dbc.Container(
-                [
-                    html.A(
-                        # Use row and col to control vertical alignment of logo
-                        # / brand
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    html.Img(
-                                        src='/assets/PSAMM_logo.png',
-                                        height="30px")),
-                                dbc.Col(
-                                    dbc.NavbarBrand(
-                                        "Interactive Metabolic Modelling",
-                                        className="ms-2")),
-                            ],
-                            align="center",
-                            className="g-0",
-                        ),
-                        href="https://psamm.readthedocs.io",
-                        style={"textDecoration": "none"},
-                    ),
-                ]
-            ),
-            color="dark",
-            dark=True,
-        )
-
-        # navbar = dbc.NavbarSimple(
-        #     children=[
-        #         html.Img(src=PSAMM_LOGO, height="30px"),
-        #         dbc.NavItem(
-        #             dbc.NavLink(
-        #                 "Source Code",
-        #                 href="https://github.com/cpowers11060/metavis",
-        #             )
-        #         ),
-        #         dbc.NavItem(
-        #             dbc.NavLink(
-        #                 "Psamm documentation",
-        #                 href="https://psamm.readthedocs.io",
-        #             )
-        #         ),
-        #         dbc.NavItem(
-        #             dbc.NavLink(
-        #                 "Psamm publication",
-        #                 href="https://journals.plos.org/ploscompbiol/"
-        #                      "article?id=10.1371/journal.pcbi.1004732",
-        #             )
-        #         ), ],
-        #
-        #     brand="Psamm web-based visualization of metabolic models",
-        #     brand_href="#",
-        #     color="dark",
-        #     dark=True,
-        # )
-
-        # control_tabs is an object that stores the control tabs under the
-        # s_c - simulate tab
-        s_c = dcc.Tab(label='Controls', value='Controls',
-                      children=html.Div(className='control-tab', children=[
-                          html.H5(
-                              "Pathways:"),
-                          dcc.ConfirmDialog(id="pathway_dialog",
-                                            message="Select the pathways you "
-                                            "want to display from the "
-                                            "metabolic model. Multiple can be "
-                                            "selected. Reactions can be added "
-                                            "to this display from the "
-                                            "Reactions dropdown."),
-                          dbc.Row([
-                                  dbc.Col(
-                                      dcc.Dropdown(
-                                          id="pathways_dropdown",
-                                          options=[
-                                              {"label": i,
-                                               "value": i, }
-                                              for i in list(pathway_list)],
-                                          value=pathway_list[0],
-                                          multi=True,
-                                          placeholder="",
-                                          style={"width": "100%"}), width=11),
-                                  dbc.Col(dbc.Button("i", id='pathway_help',
-                                                     outline=True,
-                                                     color="primary",
-                                                     size="sm"),
-                                          width=1), ]),
-
-
-                          html.H5("Reactions:"),
-                          dcc.ConfirmDialog(id="reaction_dialog",
-                                            message="Select the reactions you "
-                                            "want to display from the "
-                                            "metabolic model. Multiple can "
-                                            "be selected."),
-                          dbc.Row([
-                                  dbc.Col(
-                                      dcc.Dropdown(
-                                          id="reaction_dropdown",
-                                          options=[
-                                              {"label": i.id,
-                                               "value": i.id, }
-                                              for i in
-                                              list(self._model.reactions)],
-                                          value=pathway_list[0],
-                                          multi=True,
-                                          placeholder="",
-                                          style={"width": "100%"},), width=11),
-                                  dbc.Col(dbc.Button("i", id='reaction_help',
-                                                     outline=True,
-                                                     color="primary",
-                                                     size="sm"), width=1), ]),
-                          html.H5("Element Transfer Networks:"),
-                          dcc.ConfirmDialog(id="element_dialog",
-                                            message="Choose the chemical "
-                                            "element for the network. Default "
-                                            "is Carbon (C). Options are "
-                                            "Carbon (C), Nitrogen (N), Sulfur "
-                                            "(S), or Phosphorous (P)"),
-                          dbc.Row([
-                                  dbc.Col(
-                                      dcc.Dropdown(
-                                          id="element_dropdown",
-                                          options=[
-                                              {"label": i,
-                                               "value": i, }
-                                              for i in ["C", "N", "S", "P"]],
-                                          value=[
-                                              "C", "N", "S", "P"],
-                                          multi=False),
-                                      width=11),
-                                  dbc.Col(dbc.Button("i", id='element_help',
-                                                     outline=True,
-                                                     color="primary",
-                                                     size="sm"),
-                                          width=1), ]),
-                          html.H5("Compound Search:"),
-                          dcc.ConfirmDialog(id="compound_dialog",
-                                            message="Select a compound to "
-                                            "show all reactions containing "
-                                            "that compound. Note that this "
-                                            "combines with the pathways and "
-                                            "reactions options above. If you "
-                                            "want to see all reactions with "
-                                            "that comound, select All for "
-                                            "pathways."),
-                          dbc.Row([
-                                  dbc.Col(
-                                      dcc.Dropdown(
-                                          id="compounds_dropdown",
-                                          options=[
-                                              {"label": i,
-                                               "value": i, }
-                                              for i in list(compounds_list)],
-                                          value=compounds_list,
-                                          multi=False,
-                                          style={"width": "100%"}, ),
-                                      width=11),
-                                  dbc.Col(
-                                      dbc.Col(dbc.Button("i",
-                                                         id='compound_help',
-                                                         outline=True,
-                                                         color="primary",
-                                                         size="sm"), width=1),
-                                  ), ]),
-                          html.H5(
-                              "Path Search:"),
-                          dcc.ConfirmDialog(id="bfs_dialog",
-                                            message="Select two compounds to "
-                                            "conduct a bidirectional breadth "
-                                            "first search to show the "
-                                            "shortest path."),
-                          dbc.Row([
-                                  dbc.Col([
-                                      html.P(
-                                          "Compound 1:"),
-                                      dcc.Dropdown(
-                                          id="filter1_dropdown",
-                                          options=[{"label": i,
-                                                    "value": i, }
-                                                   for i in
-                                                   list(compounds_list)],
-                                          value=compounds_list,
-                                          multi=False,
-                                          style={"width": "100%"},), ],
-                                          width=6),
-                                  dbc.Col([
-                                      html.P(
-                                          "Compound 2:"),
-                                      dcc.Dropdown(
-                                          id="filter2_dropdown",
-                                          options=[{"label": i,
-                                                    "value": i, }
-                                                   for i in
-                                                   list(compounds_list)],
-                                          value=compounds_list,
-                                          multi=False,
-                                          style={"width": "100%"},)], width=5),
-                                  dbc.Col(dbc.Button("i", id='bfs_help',
-                                                     outline=True,
-                                                     color="primary",
-                                                     size="sm"), width=1)]),
-                          html.H5(
-                              "Gene Delete:"),
-                          dcc.ConfirmDialog(id="gene_dialog",
-                                            message="Select genes to delete "
-                                            "the gene from the model. If all "
-                                            "of the genes selected constitute "
-                                            "all of the genes associated with "
-                                            "a reaction. That reaction will "
-                                            "be removed from the analysis."),
-                          dbc.Row([dbc.Col(
-                                  dcc.Dropdown(
-
-                                      id="delete_dropdown",
-                                      options=[{"label": i,
-                                                "value": i, }
-                                               for i in list(gene_content)],
-                                      value=None,
-                                      multi=True,
-                                      style={"width": "100%"}), width=11),
-                              dbc.Col(dbc.Button("i", id='gene_help',
-                                                 outline=True, color="primary",
-                                                 size="sm"), width=1)
-                          ]),
-                          html.H5(
-                              "Flux Analysis:"),
-                          dcc.ConfirmDialog(id="fba_dialog",
-                                            message="Choose a reaction to "
-                                            "optimize for flux balance "
-                                            "analysis. Reactions carrying "
-                                            "flux will be visualized with "
-                                            "a blue color."),
-                          dbc.Row([
-                                  dbc.Col(dcc.Dropdown(
-                                      id="fba_dropdown",
-                                      options=[{"label": i,
-                                                "value": i, }
-                                               for i in list(rxns_full)],
-                                      value=rxns,
-                                      multi=False,
-                                      style={"width": "100%"},), width=11),
-                                  dbc.Col(dbc.Button("i", id='fba_help',
-                                                     outline=True,
-                                                     color="primary",
-                                                     size="sm"), width=1)]),
-                          dbc.Alert(id="fba-data",
-                                    children="Select a reaction "
-                                    "to see the flux here",
-                                    color="secondary",
-                                    style={"width": "75%"}),
-                          dbc.Col([
-                                  html.Div([
-                                      html.Button("Submit",
-                                                  id="btn_sub")]),
-                                  html.Div([
-                                      html.Button("Download CSV",
-                                                  id="btn_tsv"),
-                                      dcc.Download(
-                                          id="download"),
-                                  ]),
-                                  html.Div([
-                                      html.Button(
-                                          "Download png", id="btn-get-png"),
-                                      dcc.Download(
-                                          id="downloadpng"),
-                                  ]),
-                                  ]),
-                      ]),
-                      )
-        simulate_stats = dcc.Tab(
-            label='Model Stats',
-            value='Statistics',
-            children=html.Div(
-                className='about-tab',
-                children=[
-                    html.H4(
-                        className='Statistics',
-                        children='Model Statistics:'),
-                    html.P("""
-                        Below shows some basic information for the
-                        model.
-                        """),
-                    dbc.Alert(
-                        id="model-stats",
-                        children=content_model,
-                        color="white",
-                        style={
-                            "width": "75%"}),
-                ]),
-        )
-        s_ex = dcc.Tab(label='Exchange', value='what-is',
-                       children=html.Div(className='about-tab', children=[
-                             dbc.Row([html.P(
-                                 """
-                        Select Load exchange to load the exchange
-                        constraints. To modify, select update exchange.
-                        To export changes as a new media, select save
-                        exchange.
-                        """
-                             ),
-                                 dbc.Alert(id="exchange",
-                                           children="display exchange here",
-                                           color="secondary",),
-                                 html.Div([
-                                          dbc.Row([
-                                              dbc.Col([
-                                                  html.Button(
-                                                      "Load exchange",
-                                                      id="exchange-load")
-                                              ]),
-                                              dbc.Col([
-                                                  html.Button(
-                                                      "Update exchange",
-                                                      id="exchange-modify")
-                                              ]),
-                                              dbc.Col([
-                                                  html.Button(
-                                                      "Save exchange",
-                                                      id="exchange-save")
-                                              ])]), ]),
-                                 dbc.Alert(id="exchange-confirm",
-                                           children="This will confirm that "
-                                           "the exchange was modified",
-                                           color="secondary",),
-                                 dbc.Alert(id="exchange-save-confirm",
-                                           children="confirm that exchange "
-                                           "is saved",
-                                           color="secondary",),
-                             ]),
-                       ]),
-                       )
-
-        simulate_tabs = dcc.Tabs(id="model-tabs", value="model", children=[
-            s_c,
-            simulate_stats,
-            s_ex,
-
-        ], style={'display': 'inline-block', 'width': '100%'})
-
-        s_n = cyto.Cytoscape(id='net',
-                             layout={'name': 'cose',
-                                     'animate': True,
-                                     'animationDuration': 1000},
-                             style={'width': '100%',
-                                    'height': '600px'},
-                             elements=nodes + edges,
-                             stylesheet=[{'selector': 'node',
-                                          'style': {'background-color':
-                                                    'data(col)',
-                                                    'label': 'data(label)'}},
-                                         {"selector": "edge",
-                                          "style": {"width": 1,
-                                                    "curve-style": "bezier",
-                                                    "target-arrow-shape":
-                                                    "triangle"}},
-                                         {"selector": "[flux > 1e-10]",
-                                         "style": {"line-color": "blue",
-                                                   "target-arrow-color":
-                                                   "blue",
-                                                   "width": 1,
-                                                   "curve-style": "bezier",
-                                                   "target-arrow-shape":
-                                                   "triangle",
-                                                   "line-dash-pattern": [6, 3],
-                                                   "line-dash-offset": 24}}, ],
-                                minZoom=0.06)
-
-        # Define components of the curate tab
-        add_tab = dcc.Tab(label='Add', value='add',
-                          children=html.Div(className='add-tab', children=[
-                              dbc.Row([
-                                  dbc.Col([
-                                      html.H5(
-                                          "Add a new reaction"),
-                                      dbc.Row([
-                                          dbc.Col([
-                                              html.P(
-                                                  "ID:"),
-                                              dcc.Input(
-                                                  id="r_id_input"),
-                                          ], width=11),
-                                      ]),
-                                      dbc.Row([
-                                          dbc.Col([
-                                              html.P(
-                                                  "Name:"),
-                                              dcc.Input(
-                                                  id="r_name_input"),
-                                          ], width=11),
-                                      ]),
-                                      dbc.Row([
-                                          dbc.Col([
-                                              html.P(
-                                                  "Equation:"),
-                                              dcc.Input(
-                                                  id="r_eq_input"),
-                                          ], width=11),
-                                      ]),
-                                      dbc.Row([
-                                          dbc.Col([
-                                              html.P(
-                                                  "Pathway:"),
-                                              dcc.Input(
-                                                  id="r_pathway_input"),
-                                          ], width=11),
-                                      ]),
-                                      html.Div([
-                                          html.Button(
-                                              "Save reaction", id="btn_rxn")
-                                      ]),
-                                      dbc.Alert(
-                                          id="rxn-save-confirm")
-                                  ]),
-                                  dbc.Col([
-                                      html.H5(
-                                          "Add a new compound"),
-                                      dbc.Row([
-                                          dbc.Col([
-                                              html.P(
-                                                  "ID:"),
-                                              dcc.Input(
-                                                  id="c_id_input"),
-                                          ], width=11),
-                                      ]),
-                                      dbc.Row([
-                                          dbc.Col([
-                                              html.P(
-                                                  "Name:"),
-                                              dcc.Input(
-                                                  id="c_name_input"),
-                                          ], width=11),
-                                      ]),
-                                      dbc.Row([
-                                          dbc.Col([
-                                              html.P(
-                                                  "Charge:"),
-                                              dcc.Input(
-                                                  id="c_charge_input"),
-                                          ], width=11),
-                                      ]),
-                                      dbc.Row([
-                                          dbc.Col([
-                                              html.P(
-                                                  "Formula:"),
-                                              dcc.Input(
-                                                  id="c_form_input"),
-                                          ], width=11),
-                                      ]),
-                                      html.Div([
-                                          html.Button(
-                                              "Save compound", id="btn_cpd")
-                                      ]),
-                                      dbc.Alert(
-                                          id="cpd-save-confirm")
-                                  ]),
-                              ]),
-                          ]),)
-        c_n = cyto.Cytoscape(id='net_curate',
-                             layout={'name': 'cose',
-                                     'animate': True,
-                                     'animationDuration': 1000},
-                             style={'width': '100%', 'height': '600px'},
-                             elements=nodes + edges,
-                             stylesheet=[{'selector': 'node',
-                                          'style': {'background-color':
-                                                    'data(col)',
-                                                    'label': 'data(label)'}},
-                                         {"selector": "edge",
-                                          "style": {"width": 1,
-                                                    "curve-style": "bezier",
-                                                    "target-arrow-shape":
-                                                    "triangle"}},
-                                         {"selector": "[flux > 0]",
-                                          "style": {"line-color": "blue",
-                                                    "target-arrow-color":
-                                                    "blue",
-                                                    "width": 1,
-                                                    "curve-style": "bezier",
-                                                    "target-arrow-shape":
-                                                    "triangle",
-                                                    "line-dash-pattern":
-                                                    [6, 3],
-                                                    "line-dash-offset": 24}}],
-                             minZoom=0.06)
-        e_child = html.Div(className='control-tab',
-                           children=[
-                            dbc.Row([
-                                dbc.Col([
-                                    html.H5("Reaction to edit:"),
-                                    dbc.Row([
-                                        dcc.Dropdown(
-                                            id="reaction_dropdown_curate",
-                                            options=[{"label": i,
-                                                      "value": i, }
-                                                     for i in [rxns_full]],
-                                            value='',
-                                            multi=False,
-                                            placeholder="",
-                                            style={"width": "100%"})]),
-                                    html.H5("Compound to edit:"),
-                                    dbc.Row([
-                                        dcc.Dropdown(
-                                            id="compound_dropdown_curate",
-                                            options=[{"label": i,
-                                                      "value": i}
-                                                     for i in
-                                                     list(compounds_list)],
-                                            value='',
-                                            multi=False,
-                                            placeholder="",
-                                            style={"width": "100%"}), ]),
-                                    html.Div([html.Button("Confirm Edit",
-                                                          id="btn_update")]),
-                                    dbc.Alert(id="edit-data",
-                                              children="Click on a node",
-                                              color="secondary"),
-                                    html.Div([html.Button("Save",
-                                                          id="btn_save")]),
-                                    dbc.Alert(id="edit-confirm",
-                                              children="Click save to confirm "
-                                                       "changes to model",
-                                              color="secondary")]),
-                                dbc.Col([
-                                    html.H5("Pathways:"),
-                                    dbc.Row([
-                                        dcc.Dropdown(
-                                            id="pathways_dropdown_curate",
-                                            options=[{"label": i, "value": i}
-                                                     for i in [pathway_list]],
-                                            value=pathway_list[0],
-                                            multi=True,
-                                            placeholder="",
-                                            style={"width": "100%"}, ), ]),
-                                    html.Div([
-                                        html.Button("Submit",
-                                                    id="btn_update_cur_net")]),
-                                    c_n,
-                                                   ]),
-                                          ]),
-                                 ])
-        e_t = dcc.Tab(label='Edit',
-                      value='edit',
-                      children=e_child, )
-
-        chargecheck = dcc.Tab(label='Charge Check', value='chargeCheck',
-                              children=html.Div(className='c-tab', children=[
-                                  dbc.Row(
-                                      [html.H5("Unbalanced Reactions:"),
-                                       dcc.Dropdown(
-                                          id="unbalanced_rxns",
-                                          options=[
-                                              {"label": i,
-                                               "value": i, }
-                                              for i in list(unbalanced_list)],
-                                          value=pathway_list[0],
-                                          multi=False,
-                                          placeholder="",),
-                                          dbc.Alert(
-                                          id="chargeCheckCuration",
-                                          children="Select a reaction above "
-                                          "to curate the charge balance",
-                                          color="secondary",
-                                      ),
-                                          dbc.Row([
-                                              dbc.Col([
-                                                  dbc.Alert(
-                                                      id="chargeLeftCuration",
-                                                      children="The left side "
-                                                      "of the reaction will "
-                                                      "display here",
-                                                      color="secondary",
-                                                  ),
-                                                  html.Div([
-                                                      html.Button(
-                                                          "Save Changes",
-                                                          id="btn_save_charge")
-                                                  ]),
-                                              ]),
-                                              dbc.Col([
-                                                  dbc.Alert(
-                                                      id="chargeRightCuration",
-                                                      children="The right "
-                                                      "side of the reaction "
-                                                      "will display here",
-                                                      color="secondary",
-                                                  ),
-                                              ]),
-                                          ]),
-                                      ]),
-
-                              ]),)
-
-        fc = dcc.Tab(label='Formula Check', value='formulaCheck',
-                     children=html.Div(className='control-tab',
-                                       children=[dbc.Row(
-                                            [html.H5("Unbalanced Reactions:"),
-                                                dcc.Dropdown(
-                                                id="unbalanced_rxns_formula",
-                                                options=[{"label": i,
-                                                          "value": i, }
-                                                         for i in
-                                                         list(form_list)],
-                                                value=pathway_list[0],
-                                                multi=False,
-                                                placeholder="",),
-                                                dbc.Alert(
-                                                id="formCheckCuration",
-                                                children="Select a reaction "
-                                                "above to curate the formula "
-                                                "balance",
-                                                color="secondary",),
-                                                dbc.Row([
-                                                    dbc.Col([
-                                                        dbc.Alert(
-                                                            id="formLeft"
-                                                               "Curation",
-                                                            children="The "
-                                                                     "left "
-                                                                     "side of "
-                                                                     "the "
-                                                                     "reaction"
-                                                                     " will "
-                                                                     "display "
-                                                                     "here",
-                                                            color="secondary"),
-                                                        html.Div([
-                                                            html.Button(
-                                                                "Save Changes",
-                                                                id="btn_save"
-                                                                "_form")]), ]),
-                                                    dbc.Col([
-                                                        dbc.Alert(
-                                                            id="formRight"
-                                                               "Curation",
-                                                            children="The "
-                                                                     "right "
-                                                                     "side of "
-                                                                     "the "
-                                                                     "reaction"
-                                                                     " will "
-                                                                     "display "
-                                                                     "here",
-                                                            color="secondary"),
-                                                            ]), ]), ]), ]), )
-
-        # Define the main body of the app
-        body_layout = dbc.Container(
-            [dbc.Row([
-                dcc.Markdown(
-                    """
-                    -----
-                    ### Filter / Explore metabolic models
-                    Use these filters to highlight reactions and compounds
-                    associated with different reactions.
-                    -----
-                    """
-                ),
-                dbc.Row([
-                    html.Div(id='modelling', className='modelling', children=[
-                        dcc.Tabs(id="parent-tabs", value="what is", children=[
-                            dcc.Tab(label='Simulate', value='sim', children=[
-                                dbc.Row([
-                                    dbc.Col([
-                                        html.Div(id='model-control-tabs',
-                                                 className='control-tabs',
-                                                 children=[
-                                                     simulate_tabs
-                                                 ]), ]),
-                                    dbc.Col([
-                                        s_n,
-                                        dbc.Row([
-                                            dbc.Alert(
-                                                id="node-data",
-                                                children="Click on a node to "
-                                                         "see its details",
-                                                color="secondary",
-                                            ),
-                                        ]), ]),
-                                    dbc.Row([dcc.Markdown(
-                                        """
-                                        \\* Data analysis carried out for
-                                        demonstration of data visualisation
-                                        purposes only.
-                                        """)], style={"fontSize": 11,
-                                                      "color": "gray"},), ],
-                                        style={"marginTop": 20},)]),
-                            dcc.Tab(label='Curate', value='cur',
-                                    children=[
-                                        html.Div(id='curate-control-tabs',
-                                                 className='curate-tabs',
-                                                 children=[dcc.Tabs(
-                                                    id="curate-subtabs",
-                                                    value="what is",
-                                                    children=[add_tab,
-                                                              e_t,
-                                                              chargecheck,
-                                                              fc, ]),
-
-                                                           ]),
-                                        dbc.Row([
-                                            dbc.Alert(
-                                                id="save_confirmation",
-                                                children="Press Save Model "
-                                                "to save the model",
-                                                color="secondary",
-                                            ),
-                                            dbc.Row([
-                                                dbc.Col([
-                                                    html.Button("Save Model",
-                                                        id="btn_save_model"),
-                                                ]), ]), ],
-                                            style={"fontSize": 16,
-                                                   "color": "gray"},),
-                                    ]),
-                        ]),
-                    ]), ]),
-            ]),
-            ])
-
-        self._app.layout = html.Div([navbar, body_layout])
+        application = build_app(self)
+        self._app.layout = application
         webbrowser.open_new("http://localhost:{}".format("8050"))
         self._app.run_server(debug=True)
 
@@ -950,7 +135,7 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
             Output('reaction_dialog', 'displayed'),
             Input('reaction_help', 'n_clicks')
         )
-        def pathway_help(nclicks):
+        def reaction_help(nclicks):
             if dash.callback_context.triggered[0]['prop_id'] == \
                     'reaction_help.n_clicks':
                 return True
@@ -961,7 +146,7 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
             Output('gene_dialog', 'displayed'),
             Input('gene_help', 'n_clicks')
         )
-        def pathway_help(nclicks):
+        def gene_help(nclicks):
             if dash.callback_context.triggered[0]['prop_id'] == \
                     'gene_help.n_clicks':
                 return True
@@ -972,7 +157,7 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
             Output('fba_dialog', 'displayed'),
             Input('fba_help', 'n_clicks')
         )
-        def pathway_help(nclicks):
+        def fba_help(nclicks):
             if dash.callback_context.triggered[0]['prop_id'] == \
                     'fba_help.n_clicks':
                 return True
@@ -983,7 +168,7 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
             Output('bfs_dialog', 'displayed'),
             Input('bfs_help', 'n_clicks')
         )
-        def pathway_help(nclicks):
+        def bfs_help(nclicks):
             if dash.callback_context.triggered[0]['prop_id'] == \
                     'bfs_help.n_clicks':
                 return True
@@ -994,7 +179,7 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
             Output('compound_dialog', 'displayed'),
             Input('compound_help', 'n_clicks')
         )
-        def pathway_help(nclicks):
+        def compound_help(nclicks):
             if dash.callback_context.triggered[0]['prop_id'] == \
                     'compound_help.n_clicks':
                 return True
@@ -1005,7 +190,7 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
             Output('element_dialog', 'displayed'),
             Input('element_help', 'n_clicks')
         )
-        def pathway_help(nclicks):
+        def element_help(nclicks):
             if dash.callback_context.triggered[0]['prop_id'] == \
                     'element_help.n_clicks':
                 return True
@@ -2500,8 +1685,9 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
                 nm, network = read_model(self._model, model, element_dropdown)
                 pathway_list, rxn_set = get_pathway_list(nm, pathways_dropdown)
 
-                for i in r_dropdown:
-                    rxn_set.add(i)
+                if r_dropdown is not None:
+                    for i in r_dropdown:
+                        rxn_set.add(i)
 
                 if isinstance(filter1_dropdown, str) and \
                         isinstance(filter2_dropdown, str):
@@ -2526,6 +1712,9 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
                                     rxn_list.append(rxn.id)
                 else:
                     rxn_list = rxn_set
+
+                if fba_dropdown is None:
+                    fba_dropdown = []
                 nodes, edges, obj_flux = build_network(self, nm, model,
                                                        rxn_list, network,
                                                        fba_dropdown)
@@ -2602,6 +1791,833 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
                 action = "download"
                 return {'type': ftype, 'action': action}
 
+def build_app(self):
+    '''
+    Generates the initial required data for the visualization and
+    launches the app on a local port.
+    '''
+
+    # enable svg export
+    cyto.load_extra_layouts()
+
+    # Start with default of carbon tranfer network
+    el = 'C'
+    # generate the initial network
+    pathway = 'All'
+    pathway_list, rxn_set = get_pathway_list(self._model, "All")
+    rxns = list(rxn_set)
+
+    # get a list of all compound in the model
+    compounds_list = get_compounds_list(self._model)
+
+    # generate information about number of genes in the model
+    count = 0
+    rxns_with_genes = 0
+    gene_content = set()
+    rxns_full = []
+    for reaction in self._model.reactions:
+        rxns_full.append(reaction.id)
+        count += 1
+        if reaction.genes is None or reaction.genes == '':
+            continue
+        elif isinstance(reaction.genes, string_types):
+            rxns_with_genes += 1
+            assoc = boolean.Expression(reaction.genes)
+        else:
+            rxns_with_genes += 1
+            variables = [boolean.Variable(g) for g in reaction.genes]
+            assoc = boolean.Expression(boolean.And(*variables))
+        gene_content.update(v.symbol for v in assoc.variables)
+
+    # stores the initial model stats in content_model and generate the
+    # initial stats
+    content_model = []
+    content_model.append(html.H5("General Model Statistics:"))
+    content_model.append(html.P("Reactions in model: " + str(count)))
+    count = 0
+    for i in self._model.compounds:
+        count += 1
+    content_model.append(html.P("Compounds in model: " + str(count)))
+    content_model.append(
+        html.P("Pathways in mode: " + str(len(pathway_list))))
+    content_model.append(
+        html.P(
+            "Reactions with gene assocations: " +
+            str(rxns_with_genes)))
+    try:
+        content_model.append(
+            html.P("Total genes: " + str(count_genes(self._model))))
+    except BaseException:
+        content_model.append(html.P("Total genes: Unable to count genes"))
+    with HiddenPrints():
+        unbalanced, count, unchecked, exclude, unbalanced_list, \
+            unbalance_dict = charge_check(self, 1e-6)
+    content_model.append(html.H5("Chargecheck results:"))
+    content_model.append(html.P("Unblanced reactions: " + str(unbalanced)))
+    content_model.append(html.P("Unchecked reactions: " + str(unchecked)))
+    content_model.append(
+        html.P("Excluded reactions: " + str(len(exclude))))
+
+    with HiddenPrints():
+        unbalanced, count, unchecked, exclude, form_list, \
+            form_dict = formula_check(self)
+    content_model.append(html.H5("Formulacheck results:"))
+    content_model.append(html.P("Unblanced reactions: " + str(unbalanced)))
+    content_model.append(html.P("Unchecked reactions: " + str(unchecked)))
+    content_model.append(
+        html.P("Excluded reactions: " + str(len(exclude))))
+
+    # initialize an empty list. the full is messy
+    nodes, edges = [], []
+
+    # Initialize the app and launch the server
+    # self._app = dash.Dash(
+    #     __name__, external_stylesheets=[
+    #         dbc.themes.BOOTSTRAP])
+    # self._app = app
+    # server = self._app.server
+    # if self._app is not None and hasattr(self, "callbacks"):
+    #     self.callbacks(self._app)
+
+    # Set styles for the app
+    styles = {
+        'output': {
+            'border': 'thin lightgrey solid',
+            'overflowX': 'scroll'},
+    }
+    col_swatch = px.colors.qualitative.Dark24
+    default_stylesheet = [
+        {
+            'selector': 'node',
+            'style': {'background-color': '#BFD7B5',
+                      'label': 'data(label)'}},
+        {"selector": "edge", "style": {"width": 1,
+                                       "curve-style": "bezier"}}]
+
+    # Set the navigation bar for the app
+    navbar = dbc.Navbar(
+        dbc.Container(
+            [
+                html.A(
+                    # Use row and col to control vertical alignment of logo
+                    # / brand
+                    dbc.Row(
+                        [
+                            # dbc.Col(
+                            #     html.Img(
+                            #         src='/assets/PSAMM_logo.png',
+                            #         height="30px")),
+                            dbc.Col(
+                                dbc.NavbarBrand(
+                                    "Interactive Metabolic Modelling",
+                                    className="ms-2")),
+                        ],
+                        align="center",
+                        className="g-0",
+                    ),
+                    href="https://psamm.readthedocs.io",
+                    style={"textDecoration": "none"},
+                ),
+            ]
+        ),
+        color="dark",
+        dark=True,
+    )
+
+    # navbar = dbc.NavbarSimple(
+    #     children=[
+    #         html.Img(src=PSAMM_LOGO, height="30px"),
+    #         dbc.NavItem(
+    #             dbc.NavLink(
+    #                 "Source Code",
+    #                 href="https://github.com/cpowers11060/metavis",
+    #             )
+    #         ),
+    #         dbc.NavItem(
+    #             dbc.NavLink(
+    #                 "Psamm documentation",
+    #                 href="https://psamm.readthedocs.io",
+    #             )
+    #         ),
+    #         dbc.NavItem(
+    #             dbc.NavLink(
+    #                 "Psamm publication",
+    #                 href="https://journals.plos.org/ploscompbiol/"
+    #                      "article?id=10.1371/journal.pcbi.1004732",
+    #             )
+    #         ), ],
+    #
+    #     brand="Psamm web-based visualization of metabolic models",
+    #     brand_href="#",
+    #     color="dark",
+    #     dark=True,
+    # )
+
+    # control_tabs is an object that stores the control tabs under the
+    # s_c - simulate tab
+    s_c = dcc.Tab(label='Controls', id='Controls',
+                  children=html.Div(id='control-tab', className='control-tab', children=[
+                      html.H5(
+                          "Pathways:"),
+                      dcc.ConfirmDialog(id="pathway_dialog",
+                                        message="Select the pathways you "
+                                        "want to display from the "
+                                        "metabolic model. Multiple can be "
+                                        "selected. Reactions can be added "
+                                        "to this display from the "
+                                        "Reactions dropdown."),
+                      dbc.Row([
+                              dbc.Col(
+                                  dcc.Dropdown(
+                                      id="pathways_dropdown",
+                                      options=[
+                                          {"label": i,
+                                           "value": i, }
+                                          for i in list(pathway_list)],
+                                      value=pathway_list[0],
+                                      multi=True,
+                                      placeholder="",
+                                      style={"width": "100%"}), width=11),
+                              dbc.Col(dbc.Button("i", id='pathway_help',
+                                                 outline=True,
+                                                 color="primary",
+                                                 size="sm"),
+                                      width=1), ]),
+
+
+                      html.H5("Reactions:"),
+                      dcc.ConfirmDialog(id="reaction_dialog",
+                                        message="Select the reactions you "
+                                        "want to display from the "
+                                        "metabolic model. Multiple can "
+                                        "be selected."),
+                      dbc.Row([
+                              dbc.Col(
+                                  dcc.Dropdown(
+                                      id="reaction_dropdown",
+                                      options=[
+                                          {"label": i.id,
+                                           "value": i.id, }
+                                          for i in
+                                          list(self._model.reactions)],
+                                      value=pathway_list[0],
+                                      multi=True,
+                                      placeholder="",
+                                      style={"width": "100%"},), width=11),
+                              dbc.Col(dbc.Button("i", id='reaction_help',
+                                                 outline=True,
+                                                 color="primary",
+                                                 size="sm"), width=1), ]),
+                      html.H5("Element Transfer Networks:"),
+                      dcc.ConfirmDialog(id="element_dialog",
+                                        message="Choose the chemical "
+                                        "element for the network. Default "
+                                        "is Carbon (C). Options are "
+                                        "Carbon (C), Nitrogen (N), Sulfur "
+                                        "(S), or Phosphorous (P)"),
+                      dbc.Row([
+                              dbc.Col(
+                                  dcc.Dropdown(
+                                      id="element_dropdown",
+                                      options=[
+                                          {"label": i,
+                                           "value": i, }
+                                          for i in ["C", "N", "S", "P"]],
+                                      value=[
+                                          "C", "N", "S", "P"],
+                                      multi=False),
+                                  width=11),
+                              dbc.Col(dbc.Button("i", id='element_help',
+                                                 outline=True,
+                                                 color="primary",
+                                                 size="sm"),
+                                      width=1), ]),
+                      html.H5("Compound Search:"),
+                      dcc.ConfirmDialog(id="compound_dialog",
+                                        message="Select a compound to "
+                                        "show all reactions containing "
+                                        "that compound. Note that this "
+                                        "combines with the pathways and "
+                                        "reactions options above. If you "
+                                        "want to see all reactions with "
+                                        "that comound, select All for "
+                                        "pathways."),
+                      dbc.Row([
+                              dbc.Col(
+                                  dcc.Dropdown(
+                                      id="compounds_dropdown",
+                                      options=[
+                                          {"label": i,
+                                           "value": i, }
+                                          for i in list(compounds_list)],
+                                      value=compounds_list,
+                                      multi=False,
+                                      style={"width": "100%"}, ),
+                                  width=11),
+                              dbc.Col(
+                                  dbc.Col(dbc.Button("i",
+                                                     id='compound_help',
+                                                     outline=True,
+                                                     color="primary",
+                                                     size="sm"), width=1),
+                              ), ]),
+                      html.H5(
+                          "Path Search:"),
+                      dcc.ConfirmDialog(id="bfs_dialog",
+                                        message="Select two compounds to "
+                                        "conduct a bidirectional breadth "
+                                        "first search to show the "
+                                        "shortest path."),
+                      dbc.Row([
+                              dbc.Col([
+                                  html.P(
+                                      "Compound 1:"),
+                                  dcc.Dropdown(
+                                      id="filter1_dropdown",
+                                      options=[{"label": i,
+                                                "value": i, }
+                                               for i in
+                                               list(compounds_list)],
+                                      value=compounds_list,
+                                      multi=False,
+                                      style={"width": "100%"},), ],
+                                      width=6),
+                              dbc.Col([
+                                  html.P(
+                                      "Compound 2:"),
+                                  dcc.Dropdown(
+                                      id="filter2_dropdown",
+                                      options=[{"label": i,
+                                                "value": i, }
+                                               for i in
+                                               list(compounds_list)],
+                                      value=compounds_list,
+                                      multi=False,
+                                      style={"width": "100%"},)], width=5),
+                              dbc.Col(dbc.Button("i", id='bfs_help',
+                                                 outline=True,
+                                                 color="primary",
+                                                 size="sm"), width=1)]),
+                      html.H5(
+                          "Gene Delete:"),
+                      dcc.ConfirmDialog(id="gene_dialog",
+                                        message="Select genes to delete "
+                                        "the gene from the model. If all "
+                                        "of the genes selected constitute "
+                                        "all of the genes associated with "
+                                        "a reaction. That reaction will "
+                                        "be removed from the analysis."),
+                      dbc.Row([dbc.Col(
+                              dcc.Dropdown(
+
+                                  id="delete_dropdown",
+                                  options=[{"label": i,
+                                            "value": i, }
+                                           for i in list(gene_content)],
+                                  value=None,
+                                  multi=True,
+                                  style={"width": "100%"}), width=11),
+                          dbc.Col(dbc.Button("i", id='gene_help',
+                                             outline=True, color="primary",
+                                             size="sm"), width=1)
+                      ]),
+                      html.H5(
+                          "Flux Analysis:"),
+                      dcc.ConfirmDialog(id="fba_dialog",
+                                        message="Choose a reaction to "
+                                        "optimize for flux balance "
+                                        "analysis. Reactions carrying "
+                                        "flux will be visualized with "
+                                        "a blue color."),
+                      dbc.Row([
+                              dbc.Col(dcc.Dropdown(
+                                  id="fba_dropdown",
+                                  options=[{"label": i,
+                                            "value": i, }
+                                           for i in list(rxns_full)],
+                                  value=rxns,
+                                  multi=False,
+                                  style={"width": "100%"},), width=11),
+                              dbc.Col(dbc.Button("i", id='fba_help',
+                                                 outline=True,
+                                                 color="primary",
+                                                 size="sm"), width=1)]),
+                      dbc.Alert(id="fba-data",
+                                children="Select a reaction "
+                                "to see the flux here",
+                                color="secondary",
+                                style={"width": "75%"}),
+                      dbc.Col([
+                              html.Div([
+                                  html.Button("Submit",
+                                              id="btn_sub")]),
+                              html.Div([
+                                  html.Button("Download CSV",
+                                              id="btn_tsv"),
+                                  dcc.Download(
+                                      id="download"),
+                              ]),
+                              html.Div([
+                                  html.Button(
+                                      "Download png", id="btn-get-png"),
+                                  dcc.Download(
+                                      id="downloadpng"),
+                              ]),
+                              ]),
+                  ]),
+                  )
+    simulate_stats = dcc.Tab(
+        label='Model Stats',
+        value='Statistics',
+        children=html.Div(
+            className='about-tab',
+            children=[
+                html.H4(
+                    className='Statistics',
+                    children='Model Statistics:'),
+                html.P("""
+                    Below shows some basic information for the
+                    model.
+                    """),
+                dbc.Alert(
+                    id="model-stats",
+                    children=content_model,
+                    color="white",
+                    style={
+                        "width": "75%"}),
+            ]),
+    )
+    s_ex = dcc.Tab(label='Exchange', value='what-is',
+                   children=html.Div(className='about-tab', children=[
+                         dbc.Row([html.P(
+                             """
+                    Select Load exchange to load the exchange
+                    constraints. To modify, select update exchange.
+                    To export changes as a new media, select save
+                    exchange.
+                    """
+                         ),
+                             dbc.Alert(id="exchange",
+                                       children="display exchange here",
+                                       color="secondary",),
+                             html.Div([
+                                      dbc.Row([
+                                          dbc.Col([
+                                              html.Button(
+                                                  "Load exchange",
+                                                  id="exchange-load")
+                                          ]),
+                                          dbc.Col([
+                                              html.Button(
+                                                  "Update exchange",
+                                                  id="exchange-modify")
+                                          ]),
+                                          dbc.Col([
+                                              html.Button(
+                                                  "Save exchange",
+                                                  id="exchange-save")
+                                          ])]), ]),
+                             dbc.Alert(id="exchange-confirm",
+                                       children="This will confirm that "
+                                       "the exchange was modified",
+                                       color="secondary",),
+                             dbc.Alert(id="exchange-save-confirm",
+                                       children="confirm that exchange "
+                                       "is saved",
+                                       color="secondary",),
+                         ]),
+                   ]),
+                   )
+
+    simulate_tabs = dcc.Tabs(id="model-tabs", value="model", children=[
+        s_c,
+        simulate_stats,
+        s_ex,
+
+    ], style={'display': 'inline-block', 'width': '100%'})
+
+    s_n = cyto.Cytoscape(id='net',
+                         layout={'name': 'cose',
+                                 'animate': True,
+                                 'animationDuration': 1000},
+                         style={'width': '100%',
+                                'height': '600px'},
+                         elements=nodes + edges,
+                         stylesheet=[{'selector': 'node',
+                                      'style': {'background-color':
+                                                'data(col)',
+                                                'label': 'data(label)'}},
+                                     {"selector": "edge",
+                                      "style": {"width": 1,
+                                                "curve-style": "bezier",
+                                                "target-arrow-shape":
+                                                "triangle"}},
+                                     {"selector": "[flux > 1e-10]",
+                                     "style": {"line-color": "blue",
+                                               "target-arrow-color":
+                                               "blue",
+                                               "width": 1,
+                                               "curve-style": "bezier",
+                                               "target-arrow-shape":
+                                               "triangle",
+                                               "line-dash-pattern": [6, 3],
+                                               "line-dash-offset": 24}}, ],
+                            minZoom=0.06)
+
+    # Define components of the curate tab
+    add_tab = dcc.Tab(label='Add', value='add',
+                      children=html.Div(className='add-tab', children=[
+                          dbc.Row([
+                              dbc.Col([
+                                  html.H5(
+                                      "Add a new reaction"),
+                                  dbc.Row([
+                                      dbc.Col([
+                                          html.P(
+                                              "ID:"),
+                                          dcc.Input(
+                                              id="r_id_input"),
+                                      ], width=11),
+                                  ]),
+                                  dbc.Row([
+                                      dbc.Col([
+                                          html.P(
+                                              "Name:"),
+                                          dcc.Input(
+                                              id="r_name_input"),
+                                      ], width=11),
+                                  ]),
+                                  dbc.Row([
+                                      dbc.Col([
+                                          html.P(
+                                              "Equation:"),
+                                          dcc.Input(
+                                              id="r_eq_input"),
+                                      ], width=11),
+                                  ]),
+                                  dbc.Row([
+                                      dbc.Col([
+                                          html.P(
+                                              "Pathway:"),
+                                          dcc.Input(
+                                              id="r_pathway_input"),
+                                      ], width=11),
+                                  ]),
+                                  html.Div([
+                                      html.Button(
+                                          "Save reaction", id="btn_rxn")
+                                  ]),
+                                  dbc.Alert(
+                                      id="rxn-save-confirm")
+                              ]),
+                              dbc.Col([
+                                  html.H5(
+                                      "Add a new compound"),
+                                  dbc.Row([
+                                      dbc.Col([
+                                          html.P(
+                                              "ID:"),
+                                          dcc.Input(
+                                              id="c_id_input"),
+                                      ], width=11),
+                                  ]),
+                                  dbc.Row([
+                                      dbc.Col([
+                                          html.P(
+                                              "Name:"),
+                                          dcc.Input(
+                                              id="c_name_input"),
+                                      ], width=11),
+                                  ]),
+                                  dbc.Row([
+                                      dbc.Col([
+                                          html.P(
+                                              "Charge:"),
+                                          dcc.Input(
+                                              id="c_charge_input"),
+                                      ], width=11),
+                                  ]),
+                                  dbc.Row([
+                                      dbc.Col([
+                                          html.P(
+                                              "Formula:"),
+                                          dcc.Input(
+                                              id="c_form_input"),
+                                      ], width=11),
+                                  ]),
+                                  html.Div([
+                                      html.Button(
+                                          "Save compound", id="btn_cpd")
+                                  ]),
+                                  dbc.Alert(
+                                      id="cpd-save-confirm")
+                              ]),
+                          ]),
+                      ]),)
+    c_n = cyto.Cytoscape(id='net_curate',
+                         layout={'name': 'cose',
+                                 'animate': True,
+                                 'animationDuration': 1000},
+                         style={'width': '100%', 'height': '600px'},
+                         elements=nodes + edges,
+                         stylesheet=[{'selector': 'node',
+                                      'style': {'background-color':
+                                                'data(col)',
+                                                'label': 'data(label)'}},
+                                     {"selector": "edge",
+                                      "style": {"width": 1,
+                                                "curve-style": "bezier",
+                                                "target-arrow-shape":
+                                                "triangle"}},
+                                     {"selector": "[flux > 0]",
+                                      "style": {"line-color": "blue",
+                                                "target-arrow-color":
+                                                "blue",
+                                                "width": 1,
+                                                "curve-style": "bezier",
+                                                "target-arrow-shape":
+                                                "triangle",
+                                                "line-dash-pattern":
+                                                [6, 3],
+                                                "line-dash-offset": 24}}],
+                         minZoom=0.06)
+    e_child = html.Div(className='control-tab',
+                       children=[
+                        dbc.Row([
+                            dbc.Col([
+                                html.H5("Reaction to edit:"),
+                                dbc.Row([
+                                    dcc.Dropdown(
+                                        id="reaction_dropdown_curate",
+                                        options=[{"label": i,
+                                                  "value": i, }
+                                                 for i in [rxns_full]],
+                                        value='',
+                                        multi=False,
+                                        placeholder="",
+                                        style={"width": "100%"})]),
+                                html.H5("Compound to edit:"),
+                                dbc.Row([
+                                    dcc.Dropdown(
+                                        id="compound_dropdown_curate",
+                                        options=[{"label": i,
+                                                  "value": i}
+                                                 for i in
+                                                 list(compounds_list)],
+                                        value='',
+                                        multi=False,
+                                        placeholder="",
+                                        style={"width": "100%"}), ]),
+                                html.Div([html.Button("Confirm Edit",
+                                                      id="btn_update")]),
+                                dbc.Alert(id="edit-data",
+                                          children="Click on a node",
+                                          color="secondary"),
+                                html.Div([html.Button("Save",
+                                                      id="btn_save")]),
+                                dbc.Alert(id="edit-confirm",
+                                          children="Click save to confirm "
+                                                   "changes to model",
+                                          color="secondary")]),
+                            dbc.Col([
+                                html.H5("Pathways:"),
+                                dbc.Row([
+                                    dcc.Dropdown(
+                                        id="pathways_dropdown_curate",
+                                        options=[{"label": i, "value": i}
+                                                 for i in [pathway_list]],
+                                        value=pathway_list[0],
+                                        multi=True,
+                                        placeholder="",
+                                        style={"width": "100%"}, ), ]),
+                                html.Div([
+                                    html.Button("Submit",
+                                                id="btn_update_cur_net")]),
+                                c_n,
+                                               ]),
+                                      ]),
+                             ])
+    e_t = dcc.Tab(label='Edit',
+                  value='edit',
+                  children=e_child, )
+
+    chargecheck = dcc.Tab(label='Charge Check', value='chargeCheck',
+                          children=html.Div(className='c-tab', children=[
+                              dbc.Row(
+                                  [html.H5("Unbalanced Reactions:"),
+                                   dcc.Dropdown(
+                                      id="unbalanced_rxns",
+                                      options=[
+                                          {"label": i,
+                                           "value": i, }
+                                          for i in list(unbalanced_list)],
+                                      value=pathway_list[0],
+                                      multi=False,
+                                      placeholder="",),
+                                      dbc.Alert(
+                                      id="chargeCheckCuration",
+                                      children="Select a reaction above "
+                                      "to curate the charge balance",
+                                      color="secondary",
+                                  ),
+                                      dbc.Row([
+                                          dbc.Col([
+                                              dbc.Alert(
+                                                  id="chargeLeftCuration",
+                                                  children="The left side "
+                                                  "of the reaction will "
+                                                  "display here",
+                                                  color="secondary",
+                                              ),
+                                              html.Div([
+                                                  html.Button(
+                                                      "Save Changes",
+                                                      id="btn_save_charge")
+                                              ]),
+                                          ]),
+                                          dbc.Col([
+                                              dbc.Alert(
+                                                  id="chargeRightCuration",
+                                                  children="The right "
+                                                  "side of the reaction "
+                                                  "will display here",
+                                                  color="secondary",
+                                              ),
+                                          ]),
+                                      ]),
+                                  ]),
+
+                          ]),)
+
+    fc = dcc.Tab(label='Formula Check', value='formulaCheck',
+                 children=html.Div(className='control-tab',
+                                   children=[dbc.Row(
+                                        [html.H5("Unbalanced Reactions:"),
+                                            dcc.Dropdown(
+                                            id="unbalanced_rxns_formula",
+                                            options=[{"label": i,
+                                                      "value": i, }
+                                                     for i in
+                                                     list(form_list)],
+                                            value=pathway_list[0],
+                                            multi=False,
+                                            placeholder="",),
+                                            dbc.Alert(
+                                            id="formCheckCuration",
+                                            children="Select a reaction "
+                                            "above to curate the formula "
+                                            "balance",
+                                            color="secondary",),
+                                            dbc.Row([
+                                                dbc.Col([
+                                                    dbc.Alert(
+                                                        id="formLeft"
+                                                           "Curation",
+                                                        children="The "
+                                                                 "left "
+                                                                 "side of "
+                                                                 "the "
+                                                                 "reaction"
+                                                                 " will "
+                                                                 "display "
+                                                                 "here",
+                                                        color="secondary"),
+                                                    html.Div([
+                                                        html.Button(
+                                                            "Save Changes",
+                                                            id="btn_save"
+                                                            "_form")]), ]),
+                                                dbc.Col([
+                                                    dbc.Alert(
+                                                        id="formRight"
+                                                           "Curation",
+                                                        children="The "
+                                                                 "right "
+                                                                 "side of "
+                                                                 "the "
+                                                                 "reaction"
+                                                                 " will "
+                                                                 "display "
+                                                                 "here",
+                                                        color="secondary"),
+                                                        ]), ]), ]), ]), )
+
+    # Define the main body of the app
+    body_layout = dbc.Container(
+        [dbc.Row([
+            dcc.Markdown(
+                """
+                -----
+                ### Filter / Explore metabolic models
+                Use these filters to highlight reactions and compounds
+                associated with different reactions.
+                -----
+                """
+            ),
+            dbc.Row([
+                html.Div(id='modelling', className='modelling', children=[
+                    dcc.Tabs(id="parent-tabs", children=[
+                        dcc.Tab(id="sim", label='Simulate', children=[
+                            dbc.Row([
+                                dbc.Col([
+                                    html.Div(id='model-control-tabs',
+                                             className='control-tabs',
+                                             children=[
+                                                 simulate_tabs
+                                             ]), ]),
+                                dbc.Col([
+                                    s_n,
+                                    dbc.Row([
+                                        dbc.Alert(
+                                            id="node-data",
+                                            children="Click on a node to "
+                                                     "see its details",
+                                            color="secondary",
+                                        ),
+                                    ]), ]),
+                                dbc.Row([dcc.Markdown(
+                                    """
+                                    \\* Data analysis carried out for
+                                    demonstration of data visualisation
+                                    purposes only.
+                                    """)], style={"fontSize": 11,
+                                                  "color": "gray"},), ],
+                                    style={"marginTop": 20},)]),
+                        dcc.Tab(label='Curate', id='cur',
+                                children=[
+                                    html.Div(id='curate-control-tabs',
+                                             className='curate-tabs',
+                                             children=[dcc.Tabs(
+                                                id="curate-subtabs",
+                                                value="what is",
+                                                children=[add_tab,
+                                                          e_t,
+                                                          chargecheck,
+                                                          fc, ]),
+
+                                                       ]),
+                                    dbc.Row([
+                                        dbc.Alert(
+                                            id="save_confirmation",
+                                            children="Press Save Model "
+                                            "to save the model",
+                                            color="secondary",
+                                        ),
+                                        dbc.Row([
+                                            dbc.Col([
+                                                html.Button("Save Model",
+                                                    id="btn_save_model"),
+                                            ]), ]), ],
+                                        style={"fontSize": 16,
+                                               "color": "gray"},),
+                                ]),
+                    ]),
+                ]), ]),
+        ]),
+        ])
+
+    layout = html.Div([navbar, body_layout])
+    return layout
 
 def read_model(model, mm, el):
     if isinstance(el, list) or el is None:
@@ -2845,12 +2861,18 @@ def build_network(self, nm, mm, rxn_set, network, fba_dropdown):
         # Set up the solver
         solver = self._get_solver()
         # Define the flux balance
-        problem = fluxanalysis.FluxBalanceProblem(mm, solver)
-        problem.maximize(fba_dropdown)
-        obj = problem.get_flux(fba_dropdown)
         flux_carrying = defaultdict(lambda: 0)
-        for i in mm.reactions:
-            flux_carrying[i] = problem.get_flux(i)
+        try:
+            problem = fluxanalysis.FluxBalanceProblem(mm, solver)
+            problem.maximize(fba_dropdown)
+            obj = problem.get_flux(fba_dropdown)
+            for i in mm.reactions:
+                flux_carrying[i] = problem.get_flux(i)
+        except:
+            flux_carrying = {}
+            for i in mm.reactions:
+                flux_carrying[i] = 0
+            logger.info("Solution Not Optimal")
     else:
         flux_carrying = {}
         for i in mm.reactions:
@@ -2859,7 +2881,7 @@ def build_network(self, nm, mm, rxn_set, network, fba_dropdown):
     for i in nm.compartments:
         comp.append(i.id)
     color = ["#6FB2D2", "#85C88A", "#EBD671", "#EEEEEE"]
-    col_dict = {}
+    col_dict = defaultdict(lambda: "c")
     for col in range(0, len(comp)):
         col_dict[comp[col]] = color[col]
     for rxn in network[0]:
@@ -2867,7 +2889,7 @@ def build_network(self, nm, mm, rxn_set, network, fba_dropdown):
             if rxn.name:
                 rname = rxn.name
             else:
-                rname - rxn.id
+                rname = rxn.id
             rxn_num = 0
             visited = set()
             for cpd in network[0][rxn][0]:
