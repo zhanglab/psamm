@@ -244,6 +244,163 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
                 # self._mm._database.set_reaction(reaction.id, equation)
                 return("Added {} to the model".format(id))
 
+        ### Constraint Start
+        @_app.callback(
+            Output("constraint-save-confirm", "children"),
+            Input("constraint-save", "n_clicks"),
+            State("constraints", "children")
+        )
+        def save_file(nclicks, datalist):
+            if dash.callback_context.triggered[0]['prop_id'] == \
+                    'constraint-save.n_clicks':
+                def rec_props(data, out):
+                    for i in data:
+                        if isinstance(i, dict):
+                            if 'children' in i['props']:
+                                rec_props(i['props']['children'], out)
+                            elif 'value' in i['props']:
+                                out.append(i['props']['value'])
+                            elif 'placeholder' in i['props']:
+                                out.append(i['props']['placeholder'])
+                    return out
+                ex = []
+                for i in datalist:
+                    if isinstance(i, dict):
+                        ex_temp = rec_props(i['props']['children'], [])
+                        if len(ex_temp) > 0:
+                            ex.append(ex_temp)
+
+                path = FilePathContext(self._args.model)
+                with open('{}/limits_curated.yaml'.format(path), "w") as f:
+                    for e in ex:
+                        if e[0] != '':
+                            f.write(
+                                "{}\t{}\t{}\n".format(
+                                    e[0], e[1], e[2]))
+                return("Constraints saved!")
+
+        @_app.callback(
+            Output("constraint-confirm", "children"),
+            Input("constraint-modify", "n_clicks"),
+            State("constraints", "children")
+        )
+        def modify_constraint(nclicks, datalist):
+            def rec_props(data, out):
+                for i in data:
+                    if isinstance(i, dict):
+                        if 'children' in i['props']:
+                            rec_props(i['props']['children'], out)
+                        elif 'value' in i['props']:
+                            out.append(i['props']['value'])
+                        elif 'placeholder' in i['props']:
+                            out.append(i['props']['placeholder'])
+                return out
+            if dash.callback_context.triggered[0]['prop_id'] == \
+                    'constraint-modify.n_clicks':
+                const = []
+                for i in datalist:
+                    if isinstance(i, dict):
+                        const_temp = rec_props(i['props']['children'], [])
+                        if len(const_temp) > 0:
+                            const.append(const_temp)
+                rxns = []
+                for i in self._model.reactions:
+                    rxns.append(i.id)
+                for c in const:
+                    if c[0] in rxns:
+                        self._model._limits[c[0]] = (c[0], Decimal(c[1]),
+                                                     Decimal(c[2]))
+                        self._mm._limits_lower[c[0]] = Decimal(c[1])
+                        self._mm._limits_upper[c[0]] = Decimal(c[2])
+                    else:
+                        return("Added constraints for reaction not in model")
+
+        @_app.callback(
+            Output("constraints", "children"),
+            Input("constraint-load", "n_clicks")
+        )
+        def load_constraints(nclicks):
+            rxn_set = set()
+            for i in self._model.reactions:
+                rxn_set.add(i.id)
+            rxn_list = list(rxn_set)
+            contents = []
+            contents.append(
+                dbc.Row([
+                    dbc.Col([
+                        html.P("ID")], width=4),
+                    dbc.Col([
+                        html.P("Lower Bound")], width=4),
+                    dbc.Col([
+                        html.P("Upper Bound")], width=4),
+                ]),)
+            if dash.callback_context.triggered[0]['prop_id'] == \
+                    'constraint-load.n_clicks':
+                print(self._model._limits)
+                constraint = set()
+                for c in self._model._limits:
+                    print(c)
+                    lower = self._model._limits[c][1]
+                    upper = self._model._limits[c][2]
+                    print(self._model._limits[c], lower, upper)
+                    if lower is not None:
+                        constraint.add(c)
+                    if upper is not None:
+                        constraint.add(c)
+                rlist = set()
+                for i in self._model.reactions:
+                    rlist.add(i.id)
+                for c in constraint:
+                    if self._model._limits[c][1] is None:
+                        lower = -float(self._model.default_flux_limit)
+                    else:
+                        lower = float(self._model._limits[c][1])
+                    if self._model._limits[c][2] is None:
+                        upper = float(self._model.default_flux_limit)
+                    else:
+                        upper = float(self._model._limits[c][2])
+                    contents.append(
+                        dbc.Row([
+                            dbc.Col([
+                                dcc.Input(id="id{}".format(str(c)),
+                                          type="text",
+                                          placeholder=str(c),
+                                          style={'width': '75%'})], width=4),
+                            dbc.Col([
+                                dcc.Input(id="lower{}".format(str(c)),
+                                          type="number",
+                                          placeholder=lower,
+                                          style={'width': '85%'})], width=4),
+                            dbc.Col([
+                                dcc.Input(id="upper{}".format(str(c)),
+                                          type="number",
+                                          placeholder=upper,
+                                          style={'width': '85%'})], width=4),
+                        ]),)
+                contents.append(html.P("Add New Constraint:"))
+                contents.append(
+                    dbc.Row([
+                        dbc.Col([
+                            dcc.Input(id="id{}".format("new"),
+                                      type="text",
+                                      placeholder=str(''),
+                                      style={'width': '75%'})], width=4),
+                        dbc.Col([
+                            dcc.Input(id="lower{}".format("new"),
+                                      type="number",
+                                      placeholder=-1000,
+                                      style={'width': '85%'})], width=4),
+                        dbc.Col([
+                            dcc.Input(id="upper{}".format(str(c)),
+                                      type="number",
+                                      placeholder=1000,
+                                      style={'width': '85%'})], width=4),
+                    ]),
+                )
+            return(contents)
+
+        ### Constraint End
+
         @_app.callback(
             Output("exchange-save-confirm", "children"),
             Input("exchange-save", "n_clicks"),
@@ -403,7 +560,7 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
                                             self._model._exchange[e][3]),
                                           style={'width': '85%'})], width=3),
                         ]),)
-                contents.append(html.P("Add new constraint:"))
+                contents.append(html.P("Add New Exchange Constraint:"))
                 contents.append(
                     dbc.Row([
                         dbc.Col([
@@ -1730,57 +1887,55 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
 
                 return elements, contents
 
-        @_app.callback(Output("download", "data"),
-                       [Input("btn_tsv", "n_clicks"),
-                        Input("pathways_dropdown", "value"),
-                        Input("element_dropdown", "value"),
-                        Input("compounds_dropdown", "value"),
-                        Input("fba_dropdown", "value"),
-                        Input("filter1_dropdown", "value"),
-                        Input("filter2_dropdown", "value"), ],
+        @_app.callback([Output("download_r", "data"),
+                        Output("download_c", "data"),],
+                       Input("btn_tsv", "n_clicks"),
+                       State("net", "elements"),
                        prevent_initial_call=True,)
-        def func(n_clicks, pathways_dropdown, element_dropdown,
-                 compounds_dropdown, fba_dropdown,
-                 filter1_dropdown, filter2_dropdown):
+        def export_reactions(n_clicks, elements):
             if n_clicks is not None:
-                nm, network = read_model(self._model, self._mm,
-                                         element_dropdown)
-                pathway_list, rxn_set = get_pathway_list(nm, pathways_dropdown)
+                compounds = set()
+                reactions = set()
+                for e in elements:
+                    if 'type' in e['data']:
+                        if e['data']['type'] == 'compound':
+                            compounds.add(e['data']['orig_id'])
+                        elif e['data']['type'] == 'reaction':
+                            reactions.add(e['data']['orig_id'])
 
-                if isinstance(filter1_dropdown, str) and \
-                        isinstance(filter2_dropdown, str):
-                    rxn_list = set()
-                    cpd_list = [filter1_dropdown, filter2_dropdown]
-                    middle2 = []
-                    middle3 = []
-                    middle2, rxn_list = bfs_compounds(filter1_dropdown,
-                                                      filter2_dropdown,
-                                                      network, rxn_list,
-                                                      rxn_set, middle2,
-                                                      middle3)
-                    if rxn_list is str:
-                        raise PreventUpdate
-                elif isinstance(compounds_dropdown, str):
-                    rxn_list = []
-                    for rxn in network[0]:
-                        for cpd in network[0][rxn][0]:
-                            for i in cpd:
-                                if i.name == compounds_dropdown and \
-                                        rxn.id in rxn_set:
-                                    rxn_list.append(rxn.id)
-                else:
-                    rxn_list = rxn_set
-                id = []
-                name = []
-                equation = []
-                for rxn in nm.reactions:
-                    if rxn.id in rxn_list:
-                        id.append(rxn.id)
-                        name.append(rxn.name)
-                        equation.append(str(rxn.properties["equation"]))
-                df = pd.DataFrame({"id": id, "name": name,
-                                   "equation": equation})
-                return(dcc.send_data_frame(df.to_csv, "exported_rxns.csv"))
+                rdict = defaultdict(lambda:[])
+                props = set()
+                for rxn in self._model.reactions:
+                    if rxn.id in reactions:
+                        for p in rxn.properties:
+                            props.add(p)
+                for rxn in self._model.reactions:
+                    if rxn.id in reactions:
+                        for p in props:
+                            if p in rxn.properties:
+                                rdict[p].append(rxn.properties[p])
+                            else:
+                                rdict[p].append("NA")
+
+                cdict = defaultdict(lambda:[])
+                props = set()
+                for cpd in self._model.compounds:
+                    if cpd.id in compounds:
+                        for p in cpd.properties:
+                            props.add(p)
+                for cpd in self._model.compounds:
+                    if cpd.id in compounds:
+                        for p in props:
+                            print(p)
+                            if p in cpd.properties:
+                                cdict[p].append(cpd.properties[p])
+                            else:
+                                cdict[p].append("NA")
+                rdf = pd.DataFrame(rdict)
+                print(cdict)
+                cdf = pd.DataFrame(cdict)
+                return(dcc.send_data_frame(rdf.to_csv, "exported_rxns.csv"),
+                       dcc.send_data_frame(cdf.to_csv, "exported_cpds.csv"))
 
         @_app.callback(Output("net", "generateImage"),
                        [Input('btn-get-png', 'n_clicks')],
@@ -1909,7 +2064,8 @@ def build_app(self):
                             #         height="30px")),
                             dbc.Col(
                                 dbc.NavbarBrand(
-                                    "Interactive Metabolic Modelling",
+                                    "Interactive Metabolic Modelling "
+                                    "with PSAMM",
                                     className="ms-2")),
                         ],
                         align="center",
@@ -1923,35 +2079,6 @@ def build_app(self):
         color="dark",
         dark=True,
     )
-
-    # navbar = dbc.NavbarSimple(
-    #     children=[
-    #         html.Img(src=PSAMM_LOGO, height="30px"),
-    #         dbc.NavItem(
-    #             dbc.NavLink(
-    #                 "Source Code",
-    #                 href="https://github.com/cpowers11060/metavis",
-    #             )
-    #         ),
-    #         dbc.NavItem(
-    #             dbc.NavLink(
-    #                 "Psamm documentation",
-    #                 href="https://psamm.readthedocs.io",
-    #             )
-    #         ),
-    #         dbc.NavItem(
-    #             dbc.NavLink(
-    #                 "Psamm publication",
-    #                 href="https://journals.plos.org/ploscompbiol/"
-    #                      "article?id=10.1371/journal.pcbi.1004732",
-    #             )
-    #         ), ],
-    #
-    #     brand="Psamm web-based visualization of metabolic models",
-    #     brand_href="#",
-    #     color="dark",
-    #     dark=True,
-    # )
 
     # control_tabs is an object that stores the control tabs under the
     # s_c - simulate tab
@@ -2155,7 +2282,9 @@ def build_app(self):
                                   html.Button("Download CSV",
                                               id="btn_tsv"),
                                   dcc.Download(
-                                      id="download"),
+                                      id="download_r"),
+                                 dcc.Download(
+                                     id="download_c"),
                               ]),
                               html.Div([
                                   html.Button(
@@ -2187,6 +2316,47 @@ def build_app(self):
                         "width": "75%"}),
             ]),
     )
+    s_con = dcc.Tab(label='Constraints', value='constraints',
+                   children=html.Div(className='about-tab', children=[
+                         dbc.Row([html.P(
+                             """
+                    Select Load constraints to load the reaction
+                    constraints. To modify, select update constraints.
+                    To export changes as a new limits file, select save
+                    constraints.
+                    """
+                         ),
+                             dbc.Alert(id="constraints",
+                                       children="display exchange here",
+                                       color="secondary",),
+                             html.Div([
+                                      dbc.Row([
+                                          dbc.Col([
+                                              html.Button(
+                                                  "Load constraints",
+                                                  id="constraint-load")
+                                          ]),
+                                          dbc.Col([
+                                              html.Button(
+                                                  "Update constraints",
+                                                  id="constraint-modify")
+                                          ]),
+                                          dbc.Col([
+                                              html.Button(
+                                                  "Save constraints",
+                                                  id="constraint-save")
+                                          ])]), ]),
+                             dbc.Alert(id="constraint-confirm",
+                                       children="This will confirm that "
+                                       "the constraint was modified",
+                                       color="secondary",),
+                             dbc.Alert(id="constraint-save-confirm",
+                                       children="confirm that constraint "
+                                       "is saved",
+                                       color="secondary",),
+                         ]),
+                   ]),
+                   )
     s_ex = dcc.Tab(label='Exchange', value='what-is',
                    children=html.Div(className='about-tab', children=[
                          dbc.Row([html.P(
@@ -2230,10 +2400,7 @@ def build_app(self):
                    )
 
     simulate_tabs = dcc.Tabs(id="model-tabs", value="model", children=[
-        s_c,
-        simulate_stats,
-        s_ex,
-
+        s_c, s_ex, s_con, simulate_stats,
     ], style={'display': 'inline-block', 'width': '100%'})
 
     s_n = cyto.Cytoscape(id='net',
@@ -2545,15 +2712,6 @@ def build_app(self):
     # Define the main body of the app
     body_layout = dbc.Container(
         [dbc.Row([
-            dcc.Markdown(
-                """
-                -----
-                ### Filter / Explore metabolic models
-                Use these filters to highlight reactions and compounds
-                associated with different reactions.
-                -----
-                """
-            ),
             dbc.Row([
                 html.Div(id='modelling', className='modelling', children=[
                     dcc.Tabs(id="parent-tabs", children=[
@@ -2909,6 +3067,9 @@ def build_network(self, nm, mm, rxn_set, network, fba_dropdown):
                                   'charge': charge[str(cpd[0])
                                                    [0:(str(cpd[0]).
                                                     find('['))]],
+                                  'orig_id': str(cpd[0])
+                                                [0:(str(cpd[0]).
+                                                 find('['))],
                                   'type': 'compound'
                                   }})
                     nodes.append({'data': {
@@ -2924,6 +3085,9 @@ def build_network(self, nm, mm, rxn_set, network, fba_dropdown):
                                   'charge': charge[str(cpd[0])
                                                    [0:(str(cpd[0]).
                                                     find('['))]],
+                                  'orig_id': str(cpd[0])
+                                                [0:(str(cpd[0]).
+                                                 find('['))],
                                   'type': 'compound'
                                   }})
                     if 'pathways' in rxn.properties:
