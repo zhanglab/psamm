@@ -1489,6 +1489,7 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
         )
         def update_model(nclicks, r_dropdown_curate,
                          c_dropdown_curate, datalist):
+
             changed_id = [p['prop_id'] for p in
                           dash.callback_context.triggered][0]
             contents = []
@@ -1595,6 +1596,7 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
                         Input("reaction_dropdown_curate", "value"),
                         Input("compound_dropdown_curate", "value")])
         def display_nodedata(clicks, r, c):
+            print(r)
             changed_id = [p['prop_id'] for p in
                           dash.callback_context.triggered][0]
             contents = "Click on an edge to see its details here"
@@ -1617,11 +1619,12 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
                         else:
                             if i.id == r:
                                 reaction = i
+                    print(reaction)
                     contents = []
                     contents.append(html.H5(
-                                    "ID: " + i.id))
+                                    "ID: " + reaction.id))
                     contents.append(html.H5(
-                                    "Name: " + i.name))
+                                    "Name: " + reaction.name))
                     contents.append(
                         dbc.Row([
                             dbc.Col([
@@ -2556,9 +2559,7 @@ def build_app(self):
                                 dbc.Row([
                                     dcc.Dropdown(
                                         id="reaction_dropdown_curate",
-                                        options=[{"label": i,
-                                                  "value": i, }
-                                                 for i in [rxns_full]],
+                                        options=rxns_full,
                                         value='',
                                         multi=False,
                                         placeholder="",
@@ -2591,8 +2592,7 @@ def build_app(self):
                                 dbc.Row([
                                     dcc.Dropdown(
                                         id="pathways_dropdown_curate",
-                                        options=[{"label": i, "value": i}
-                                                 for i in [pathway_list]],
+                                        options=pathway_list,
                                         value=pathway_list[0],
                                         multi=True,
                                         placeholder="",
