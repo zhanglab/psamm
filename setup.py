@@ -139,7 +139,7 @@ setup(
         'numpy',
         'scipy',
         'future',
-        'pandas',
+        'pandas>=2.0',
     ],
     extras_require={
         'docs': ['sphinx', 'sphinx_rtd_theme', 'mock']
