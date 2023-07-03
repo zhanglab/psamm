@@ -193,7 +193,7 @@ def read_mapping(file, index_col):
 
 
 def add_mapping(map, row):
-    return map.append(pd.DataFrame(row).T)
+    return pd.concat([map, pd.DataFrame(row).T])
 
 
 def read_ignore(file):
