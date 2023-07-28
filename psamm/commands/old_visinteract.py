@@ -112,11 +112,10 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
 
     def run(self):
         # bootstrap theme CDN
-        bs_theme = "https://cdn.jsdelivr.net/npm/bootswatch@5.2.3/dist/lux/bootstrap.min.css"
+        #bs_theme = "https://cdn.jsdelivr.net/npm/bootswatch@5.2.3/dist/lux/bootstrap.min.css"
         self._app = dash.Dash(
-            __name__, external_stylesheets=[
-                bs_theme], 
-                #use_pages=True
+            __name__,  
+                external_stylesheets=[dbc.themes.COSMO]
                 )
         server = self._app.server
         if self._app is not None and hasattr(self, "callbacks"):
@@ -127,19 +126,6 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
         self._app.run_server(debug=True)
 
     def callbacks(self, _app):
-        """
-        @_app.callback(
-            Output('model-control-tabs', 'children'),
-            Input('startmenu', 'value')
-        )
-        def page_menu_run(value):
-            if value == "Simulate":
-                
-            elif value == "Curate":
-                self.build_app_cur()
-            else:
-                webbrowser.open('https://psamm.readthedocs.io')
-        """
         @_app.callback(
             Output('pathway_dialog', 'displayed'),
             Input('pathway_help', 'n_clicks')
@@ -1615,8 +1601,7 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
                        [Input("btn_update", "n_clicks"),
                         Input("reaction_dropdown_curate", "value"),
                         Input("compound_dropdown_curate", "value")])
-        def display_nodedata(clicks, r, c):
-            print(r)
+        def display_nodedata(clicks, r, fc):
             changed_id = [p['prop_id'] for p in
                           dash.callback_context.triggered][0]
             contents = "Click on an edge to see its details here"
@@ -2087,16 +2072,6 @@ def build_app(self):
                                     className="ms-2"), 
                                     align="center"
                                 ),
-                            dbc.Col(
-                                html.Div(
-                                    [
-                                        dcc.Dropdown(
-                                            options=["Simulate", "Curate", "Documentation"],
-                                            id="startmenu"), 
-                                    ],
-                                    style={"width": "200%"},
-                                ),
-                            ),
                         ],
                         align="center",
                         className="g-0",
