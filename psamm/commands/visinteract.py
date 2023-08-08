@@ -714,7 +714,6 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
 		self._app = dash.Dash(
 			__name__, external_stylesheets=[
 				bs_theme], 
-				#use_pages=True
 				suppress_callback_exceptions=True,
 				prevent_initial_callbacks="initial_duplicate",
 			)
@@ -726,7 +725,7 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
 		self._app.layout = application
 		# server link 
 		webbrowser.open_new("http://localhost:{}".format("8050"))
-		self._app.run_server(debug=True)
+		self._app.run_server(debug=False)
 
 
 	# CALLBACKS ----------------------------------------------------------------
@@ -814,18 +813,6 @@ class InteractiveCommand(MetabolicMixin, SolverCommandMixin,
 			)
 
 			# SIMULATE MODEL SETUP ---------------------------------------------
-			"""
-			# get all data needed to create the network model
-			model = self._mm
-			nm, network = read_model(self._model, model, "C")
-			pathway_list, rxn_set = get_pathway_list(nm, pathway_default)
-			rxn_list = rxn_set
-			fba_dropdown = []
-			# build the network for the model
-			nodes.clear()
-			edges.clear()
-			build_network(self, nm, model, rxn_list, network, fba_dropdown, nodes, edges)
-			"""
 			# create the network model using cytoscape
 			s_n = cyto.Cytoscape(id='net', layout={'name': 'cose','animate': True,
 				'animationDuration': 1000}, style={'width': '100%', 'height': '37.5rem'},
