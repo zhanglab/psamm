@@ -38,7 +38,7 @@ import pickle
 from itertools import islice
 import multiprocessing as mp
 
-import pkg_resources
+from importlib.metadata import entry_points
 from six import add_metaclass, iteritems, itervalues, text_type, PY3
 
 from . import __version__ as package_version
@@ -549,7 +549,7 @@ def main(command_class=None, args=None):
     else:
         # Discover all available commands
         commands = {}
-        for entry in pkg_resources.iter_entry_points('psamm.commands'):
+        for entry in entry_points(group='psamm.commands'):
             canonical = entry.name.lower()
             if canonical not in commands:
                 command_class = entry.load()
@@ -620,7 +620,7 @@ def main_sbml(command_class=None, args=None):
     else:
         # Discover all available commands
         commands = {}
-        for entry in pkg_resources.iter_entry_points('psamm.commands'):
+        for entry in entry_points(group='psamm.commands'):
             canonical = entry.name.lower()
             if canonical not in commands:
                 command_class = entry.load()

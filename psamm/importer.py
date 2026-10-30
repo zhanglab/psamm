@@ -38,7 +38,7 @@ from collections import OrderedDict, Counter
 from decimal import Decimal
 
 import yaml
-import pkg_resources
+from importlib.metadata import entry_points
 from six import iteritems, itervalues, text_type
 from six.moves.urllib.request import urlopen
 from six.moves.urllib.parse import quote as url_quote
@@ -607,8 +607,7 @@ def main(importer_class=None, args=None):
     if importer_class is None:
         # Discover all available model importers
         importers = {}
-        for importer_entry in pkg_resources.iter_entry_points(
-                'psamm.importer'):
+        for importer_entry in entry_points(group='psamm.importer'):
             canonical = importer_entry.name.lower()
             if canonical not in importers:
                 importers[canonical] = importer_entry
@@ -758,8 +757,8 @@ def main_bigg(args=None, urlopen=urlopen):
 
     importer_entry = None
     try:
-        importer_entry = next(
-            pkg_resources.iter_entry_points('psamm.importer', 'JSON'))
+        importer_entry = next(iter(
+            entry_points(group='psamm.importer', name='JSON')))
     except StopIteration:
         logger.error('Failed to locate the COBRA JSON model importer!')
         sys.exit(-1)

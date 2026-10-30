@@ -32,8 +32,8 @@ from psamm.datasource.entry import (DictReactionEntry as ReactionEntry)
 from psamm.datasource.context import FileMark
 from psamm.datasource.reaction import Reaction, Compound, Direction
 from psamm.formula import Formula, ParseError
-from pkg_resources import resource_filename
-import pkg_resources
+from psamm.util import resource_filename
+from importlib.metadata import entry_points
 from psamm.command import _trim
 from six import add_metaclass, iteritems, text_type
 import abc
@@ -992,8 +992,7 @@ def main(command_class=None, args=None):
     else:
         # Discover all available options
         commands = {}
-        for entry in pkg_resources.iter_entry_points(
-                'psamm.generate_model'):
+        for entry in entry_points(group='psamm.generate_model'):
             canonical = entry.name.lower()
             if canonical not in commands:
                 command_class = entry.load()

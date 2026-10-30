@@ -26,6 +26,7 @@ import re
 import math
 import subprocess
 import collections
+from importlib.resources import files
 
 import six
 from six import iteritems, text_type
@@ -38,6 +39,11 @@ def mkdir_p(path):
     except OSError as e:
         if e.errno != errno.EEXIST or not os.path.isdir(path):
             raise
+
+
+def resource_filename(package, resource):
+    """Return the file system path of a data file included in a package."""
+    return str(files(package).joinpath(resource))
 
 
 class LoggerFile(object):

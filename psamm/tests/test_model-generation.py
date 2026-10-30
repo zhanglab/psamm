@@ -22,7 +22,7 @@ import os
 from psamm import mapmaker
 from psamm import generate_model
 from psamm import generate_biomass
-from pkg_resources import resource_filename
+from psamm.util import resource_filename
 from psamm.datasource.native import NativeModel, ModelReader
 from psamm.datasource.reaction import Reaction, Compound, Direction
 from collections import defaultdict

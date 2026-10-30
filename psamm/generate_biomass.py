@@ -19,7 +19,7 @@ from psamm.datasource.reaction import Reaction, Compound, Direction
 from psamm.datasource import native
 from collections import Counter
 from six import add_metaclass
-from pkg_resources import resource_filename
+from psamm.util import resource_filename
 import logging
 import sys
 import os
