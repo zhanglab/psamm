@@ -12,6 +12,7 @@ Unreleased
   ChEBI release. Adds the `--chebi-dir` and `--chebi-update` options
 - Fixes `generate-database --type KO` finding no reactions with the current
   KEGG KO entry format
+- Updates the Rhea ChEBI pH 7.3 mapping used by `generate-database --rhea`
 
 v1.2.1 (2022-05-12)
 ------------------
