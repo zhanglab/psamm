@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 
 from psamm import graph
 import os
+import shutil
 import tempfile
 import unittest
 from collections import defaultdict
@@ -32,6 +33,12 @@ from psamm.formula import Formula, Atom, ParseError
 
 
 class TestGraph(unittest.TestCase):
+    def _mkdtemp(self):
+        """Create a temporary directory that is removed after the test."""
+        path = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, path)
+        return path
+
     def setUp(self):
         self.fum = CompoundEntry({
             'id': 'fum_c', 'formula': 'C4H2O4'})
@@ -178,7 +185,7 @@ class TestGraph(unittest.TestCase):
         self.g.add_node(self.node2)
         self.g.add_node(self.node3)
         self.g.add_edge(self.edge2_3)
-        path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_node')
+        path = os.path.join(self._mkdtemp(), 'tmp_cyto_node')
         with open(path, mode='w') as f:
             self.g.write_nodes_tables(f)
         read_file = []
@@ -194,7 +201,7 @@ class TestGraph(unittest.TestCase):
         self.node3.props['original_id'] = 'A_1'
         self.g.add_node(self.node3)
         self.g.add_edge(self.edge2_3)
-        path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_node')
+        path = os.path.join(self._mkdtemp(), 'tmp_cyto_node')
         with open(path, mode='w') as f:
             self.g.write_nodes_tables(f)
         read_file = []
@@ -209,7 +216,7 @@ class TestGraph(unittest.TestCase):
         self.g.add_node(self.node2)
         self.g.add_node(self.node3)
         self.g.add_edge(self.edge2_3)
-        path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+        path = os.path.join(self._mkdtemp(), 'tmp_cyto_edge')
         with open(path, mode='w') as f:
             self.g.write_edges_tables(f)
         read_file = []
@@ -223,7 +230,7 @@ class TestGraph(unittest.TestCase):
         self.g.add_node(self.node2)
         self.g.add_node(self.node3)
         self.g.add_edge(self.edge2_3)
-        path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+        path = os.path.join(self._mkdtemp(), 'tmp_cyto_edge')
         with open(path, mode='w') as f:
             self.g.write_graphviz(f, 2, 2)
         read_file = []
@@ -241,7 +248,7 @@ class TestGraph(unittest.TestCase):
         self.g.add_node(self.node3)
         self.g.add_edge(self.edge2_3)
         self.g.props['fontsize'] = 12
-        path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+        path = os.path.join(self._mkdtemp(), 'tmp_cyto_edge')
         with open(path, mode='w') as f:
             self.g.write_graphviz(f, 2, 2)
         read_file = []
@@ -260,7 +267,7 @@ class TestGraph(unittest.TestCase):
         self.g.add_edge(self.edge2_3)
         self.g._default_node_props['fontname'] = 'Arial'
         self.g._default_node_props['fontsize'] = 12
-        path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+        path = os.path.join(self._mkdtemp(), 'tmp_cyto_edge')
         with open(path, mode='w') as f:
             self.g.write_graphviz(f, 2, 2)
         read_file = []
@@ -280,7 +287,7 @@ class TestGraph(unittest.TestCase):
         self.g.add_edge(self.edge2_3)
         self.g._default_edge_props['style'] = 'dashed'
         self.g._default_edge_props['width'] = 12
-        path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+        path = os.path.join(self._mkdtemp(), 'tmp_cyto_edge')
         with open(path, mode='w') as f:
             self.g.write_graphviz(f, 2, 2)
         read_file = []
@@ -300,7 +307,7 @@ class TestGraph(unittest.TestCase):
         self.g.add_edge(self.edge2_3)
         self.g._default_node_props['fontname'] = 'Arial'
         self.g._default_node_props['fontsize'] = 12
-        path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+        path = os.path.join(self._mkdtemp(), 'tmp_cyto_edge')
         with open(path, mode='w') as f:
             self.g.write_graphviz(f, None, None)
         read_file = []
@@ -322,7 +329,7 @@ class TestGraph(unittest.TestCase):
         self.g.add_node(self.node2)
         self.g.add_node(self.node3)
         self.g.add_edge(self.edge2_3)
-        path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+        path = os.path.join(self._mkdtemp(), 'tmp_cyto_edge')
         with open(path, mode='w') as f:
             self.g.write_graphviz_compartmentalized(
                 f, {'e': {'c'}, 'c': set()}, 'e', 2, 2)
@@ -352,7 +359,7 @@ class TestGraph(unittest.TestCase):
         self.g.add_node(self.node2)
         self.g.add_node(self.node3)
         self.g.add_edge(self.edge2_3)
-        path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+        path = os.path.join(self._mkdtemp(), 'tmp_cyto_edge')
         with open(path, mode='w') as f:
             self.g.write_graphviz_compartmentalized(
                 f, {'e': {'c'}, 'c': set()}, 'e', None, None)
@@ -383,7 +390,7 @@ class TestGraph(unittest.TestCase):
         self.g.add_edge(self.edge2_3)
         self.g._default_node_props['fontname'] = 'Arial'
         self.g._default_node_props['fontsize'] = 12
-        path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+        path = os.path.join(self._mkdtemp(), 'tmp_cyto_edge')
         with open(path, mode='w') as f:
             self.g.write_graphviz_compartmentalized(
                 f, {'e': {'c'}, 'c': set()}, 'e', None, None)
@@ -414,7 +421,7 @@ class TestGraph(unittest.TestCase):
         self.g.add_edge(self.edge2_3)
         self.g._default_edge_props['style'] = 'dashed'
         self.g._default_edge_props['width'] = 12
-        path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+        path = os.path.join(self._mkdtemp(), 'tmp_cyto_edge')
         with open(path, mode='w') as f:
             self.g.write_graphviz_compartmentalized(
                 f, {'e': {'c'}, 'c': set()}, 'e', None, None)
@@ -444,7 +451,7 @@ class TestGraph(unittest.TestCase):
         self.g.add_node(self.node3)
         self.g.add_edge(self.edge2_3)
         self.g.props['fontsize'] = 12
-        path = os.path.join(tempfile.mkdtemp(), 'tmp_cyto_edge')
+        path = os.path.join(self._mkdtemp(), 'tmp_cyto_edge')
         with open(path, mode='w') as f:
             self.g.write_graphviz_compartmentalized(
                 f, {'e': {'c'}, 'c': set()}, 'e', None, None)

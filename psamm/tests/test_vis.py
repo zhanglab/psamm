@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 
 import unittest
 import os
+import shutil
 import tempfile
 
 from psamm.formula import Formula, Atom
@@ -36,6 +37,12 @@ from psamm.datasource.native import NativeModel, ReactionEntry, CompoundEntry
 
 # 2019-08-30 new test cases for vis
 class TestMakeSubset(unittest.TestCase):
+    def _mkdtemp(self):
+        """Create a temporary directory that is removed after the test."""
+        path = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, path)
+        return path
+
     def setUp(self):
         native_model = NativeModel()
         native_model.reactions.add_entry(ReactionEntry({
@@ -71,7 +78,7 @@ class TestMakeSubset(unittest.TestCase):
         self.assertEqual(subset, set(['rxn1', 'rxn2', 'rxn3']))
 
     def test2_subset_reactions(self):
-        path = os.path.join(tempfile.mkdtemp(), 'subset')
+        path = os.path.join(self._mkdtemp(), 'subset')
         with open(path, 'w') as f:
             f.write('{}\n{}'.format('rxn1', 'rxn2'))
         sub_file = open(path, 'r')
@@ -80,7 +87,7 @@ class TestMakeSubset(unittest.TestCase):
         self.assertEqual(subset, set(['rxn1', 'rxn2']))
 
     def test3_subset_one_compound1(self):
-        path = os.path.join(tempfile.mkdtemp(), 'subset')
+        path = os.path.join(self._mkdtemp(), 'subset')
         with open(path, 'w') as f:
             f.write('{}'.format('mal_L[c]'))
         sub_file = open(path, 'r')
@@ -89,7 +96,7 @@ class TestMakeSubset(unittest.TestCase):
         self.assertEqual(subset, set(['rxn1']))
 
     def test4_subset_one_compound2(self):
-        path = os.path.join(tempfile.mkdtemp(), 'subset')
+        path = os.path.join(self._mkdtemp(), 'subset')
         with open(path, 'w') as f:
             f.write('{}'.format('fum[c]'))
         sub_file = open(path, 'r')
@@ -98,7 +105,7 @@ class TestMakeSubset(unittest.TestCase):
         self.assertEqual(subset, set(['rxn1', 'rxn2']))
 
     def test5_subset_compound3(self):
-        path = os.path.join(tempfile.mkdtemp(), 'subset')
+        path = os.path.join(self._mkdtemp(), 'subset')
         with open(path, 'w') as f:
             f.write('{}'.format('h2o[c]'))
         sub_file = open(path, 'r')
@@ -107,7 +114,7 @@ class TestMakeSubset(unittest.TestCase):
         self.assertEqual(subset, set(['rxn1', 'rxn3']))
 
     def test6_mixed_subset(self):
-        path = os.path.join(tempfile.mkdtemp(), 'subset')
+        path = os.path.join(self._mkdtemp(), 'subset')
         with open(path, 'w') as f:
             f.write('{}\n{}'.format('h2o[c]', 'rxn1'))
         sub_file = open(path, 'r')
@@ -115,7 +122,7 @@ class TestMakeSubset(unittest.TestCase):
                           self.mm, sub_file, self.exclude)
 
     def test7_not_in_model(self):
-        path = os.path.join(tempfile.mkdtemp(), 'subset')
+        path = os.path.join(self._mkdtemp(), 'subset')
         with open(path, 'w') as f:
             f.write('{}'.format('h3o'))
         sub_file = open(path, 'r')

@@ -162,6 +162,12 @@ class BaseCommandTest(object):
 
 
 class TestCommandMain(unittest.TestCase, BaseCommandTest):
+    def _mkdtemp(self):
+        """Create a temporary directory that is removed after the test."""
+        path = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, path)
+        return path
+
     def setUp(self):
         reader = native.ModelReader({
             'name': 'Test model',
@@ -671,7 +677,7 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         ])
 
     def test_run_vis(self):
-        dest = tempfile.mkdtemp()
+        dest = self._mkdtemp()
         dest_path = os.path.join(dest, 'reactions')
         dest_path_dot = os.path.join(dest, 'reactions.dot')
         dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
@@ -682,7 +688,7 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_element_all(self):
-        dest = tempfile.mkdtemp()
+        dest = self._mkdtemp()
         dest_path = os.path.join(dest, 'reactions')
         dest_path_dot = os.path.join(dest, 'reactions.dot')
         dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
@@ -694,11 +700,11 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_hide_edges(self):
-        path = os.path.join(tempfile.mkdtemp(), 'hide_edges.csv')
+        path = os.path.join(self._mkdtemp(), 'hide_edges.csv')
         with open(path, 'w') as f:
             f.write('{}\t{}'.format('D[c]', 'E[c]'))
 
-        dest = tempfile.mkdtemp()
+        dest = self._mkdtemp()
         dest_path = os.path.join(dest, 'reactions')
         dest_path_dot = os.path.join(dest, 'reactions.dot')
         dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
@@ -710,10 +716,10 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_recolor(self):
-        path = os.path.join(tempfile.mkdtemp(), 'color.csv')
+        path = os.path.join(self._mkdtemp(), 'color.csv')
         with open(path, 'w') as f:
             f.write('{}\t{}'.format('B', '#f4fc55'))
-        dest = tempfile.mkdtemp()
+        dest = self._mkdtemp()
         dest_path = os.path.join(dest, 'reactions')
         dest_path_dot = os.path.join(dest, 'reactions.dot')
         dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
@@ -725,7 +731,7 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_output(self):
-        dest = tempfile.mkdtemp()
+        dest = self._mkdtemp()
         dest_path = os.path.join(dest, 'test')
         dest_path_dot = os.path.join(dest, 'test.dot')
         dest_path_nodes = os.path.join(dest, 'test.nodes.tsv')
@@ -736,7 +742,7 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_compartment(self):
-        dest = tempfile.mkdtemp()
+        dest = self._mkdtemp()
         dest_path = os.path.join(dest, 'reactions')
         dest_path_dot = os.path.join(dest, 'reactions.dot')
         dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
@@ -748,10 +754,10 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_fba(self):
-        path = os.path.join(tempfile.mkdtemp(), 'fba.tsv')
+        path = os.path.join(self._mkdtemp(), 'fba.tsv')
         with open(path, 'w') as f:
             f.write('{}\t{}'.format('rxn_1', -0.000001))
-        dest = tempfile.mkdtemp()
+        dest = self._mkdtemp()
         dest_path = os.path.join(dest, 'reactions')
         dest_path_dot = os.path.join(dest, 'reactions.dot')
         dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
@@ -763,10 +769,10 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_fba_invalid_flux(self):
-        path = os.path.join(tempfile.mkdtemp(), 'fba.tsv')
+        path = os.path.join(self._mkdtemp(), 'fba.tsv')
         with open(path, 'w') as f:
             f.write('{}\t{}'.format('rxn_1', 'a'))
-        dest = tempfile.mkdtemp()
+        dest = self._mkdtemp()
         dest_path = os.path.join(dest, 'reactions')
         dest_path_dot = os.path.join(dest, 'reactions.dot')
         dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
@@ -778,10 +784,10 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_fva(self):
-        path = os.path.join(tempfile.mkdtemp(), 'fva.tsv')
+        path = os.path.join(self._mkdtemp(), 'fva.tsv')
         with open(path, 'w') as f:
             f.write('{}\t{}\t{}'.format('rxn_1', -0.000001, 0.000001))
-        dest = tempfile.mkdtemp()
+        dest = self._mkdtemp()
         dest_path = os.path.join(dest, 'reactions')
         dest_path_dot = os.path.join(dest, 'reactions.dot')
         dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
@@ -793,10 +799,10 @@ class TestCommandMain(unittest.TestCase, BaseCommandTest):
         self.assertTrue(os.path.isfile(dest_path_edges))
 
     def test_run_vis_fva_invalid_flux(self):
-        path = os.path.join(tempfile.mkdtemp(), 'fva.tsv')
+        path = os.path.join(self._mkdtemp(), 'fva.tsv')
         with open(path, 'w') as f:
             f.write('{}\t{}\t{}'.format('rxn_1', 'a', -0.000001))
-        dest = tempfile.mkdtemp()
+        dest = self._mkdtemp()
         dest_path = os.path.join(dest, 'reactions')
         dest_path_dot = os.path.join(dest, 'reactions.dot')
         dest_path_nodes = os.path.join(dest, 'reactions.nodes.tsv')
