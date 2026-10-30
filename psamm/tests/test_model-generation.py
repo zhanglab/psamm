@@ -19,6 +19,8 @@
 import unittest
 import sys
 import os
+import shutil
+import tempfile
 from psamm import mapmaker
 from psamm import generate_model
 from psamm import generate_biomass
@@ -35,12 +37,27 @@ from io import StringIO
 
 
 # Subset of the ChEBI flat files with the compounds used in these tests
-CHEBI_DIR = os.path.join(os.path.dirname(__file__), "testdata", "chebi")
+CHEBI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "testdata", "chebi")
 CHEBI_DB = ChebiDb(os.path.join(CHEBI_DIR, "chemical_data.tsv.gz"),
                    os.path.join(CHEBI_DIR, "secondary_ids.tsv.gz"))
 
 
-class TestGenerateTransporters(unittest.TestCase):
+class TempDirTestCase(unittest.TestCase):
+    """Run each test in a new temporary working directory.
+
+    The model generation functions write their output files to the
+    current directory, so this keeps them out of the source tree.
+    """
+
+    def setUp(self):
+        tmp_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp_dir)
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(tmp_dir)
+
+
+class TestGenerateTransporters(TempDirTestCase):
 
     def test_parse_orthology(self):
         test_egg = "gene1\ta\tb\tc\td\te\tf\tg\th\ti\t2.3.3.1\tK01647\tk"
@@ -123,7 +140,7 @@ class TestGenerateTransporters(unittest.TestCase):
         os.remove("transporter_log.tsv")
 
 
-class TestGenerateDatabase(unittest.TestCase):
+class TestGenerateDatabase(TempDirTestCase):
     """
     Test cases largely designed to test download of information
     from KEGG through biopython and generate a reaction database
@@ -436,7 +453,7 @@ class TestGenerateDatabase(unittest.TestCase):
         os.remove("testin.tsv")
 
 
-class TestGenerateBiomass(unittest.TestCase):
+class TestGenerateBiomass(TempDirTestCase):
 
     def test_cpd_database_load(self):
         df = generate_biomass.load_compound_data()
