@@ -12,32 +12,17 @@ modules. The test suite is run by changing to the project directory and running
 
 .. code-block:: shell
 
-    $ ./setup.py test
+    $ pip install -e .
+    $ pip install pytest
+    $ pytest
 
-To run the tests on all the supported Python platforms with additional tests
-for coding style (PEP8) and building documentation, use tox_:
-
-.. code-block:: shell
-
-    $ tox
-
-When testing with tox, the local path for the Cplex python module must be
-provided in the environment variables ``CPLEX_PYTHON3_PACKAGE`` for Python 3.
-For example:
+Tests that require an LP solver are skipped when no solver is installed. The
+environment variable ``PSAMM_SOLVER`` can be used to select which solver is
+used for the tests, e.g. to run the tests with GLPK:
 
 .. code-block:: shell
 
-    $ export CPLEX_PYTHON3_PACKAGE=/path/to/IBM/ILOG/CPLEX_StudioXXX/cplex/python/3.7/x86-64_osx
-    $ tox -e py37-cplex
-
-
-Similarly, the local path to the Gurobi package must be specified in the
-environment variable ``GUROBI_PYTHON_PACKAGE``:
-
-.. code-block:: shell
-
-    $ export GUROBI_PYTHON_PACKAGE=/Library/gurobi604/mac64
-    $ tox -e py37-gurobi
+    $ PSAMM_SOLVER=glpk pytest
 
 Adding new tests
 ----------------
@@ -57,5 +42,3 @@ the ``affine`` module in ``expression``) using
 .. code-block:: shell
 
     $ python -m psamm.expression.affine -v
-
-.. _tox: https://testrun.org/tox/
