@@ -74,12 +74,12 @@ class VisualizationCommand(MetabolicMixin,
             nargs='+', help='List of properties to include on reaction '
                             'nodes.')
         parser.add_argument(
-            '--subset', type=argparse.FileType('rU'), default=None,
+            '--subset', type=argparse.FileType('r'), default=None,
             help='File containing a list of reactions IDs or compound IDs '
                  '(with compartment). This file determines which reactions '
                  'will be visualized')
         parser.add_argument(
-            '--color', type=argparse.FileType('rU'), default=None, nargs='+',
+            '--color', type=argparse.FileType('r'), default=None, nargs='+',
             help='File containing node color mappings')
         parser.add_argument(
             '--image', metavar='Image Format', type=str, choices=FORMATS,
@@ -87,7 +87,7 @@ class VisualizationCommand(MetabolicMixin,
             help='Image output file format '
                  '(e.g. pdf, png, eps)')
         parser.add_argument(
-            '--hide-edges', type=argparse.FileType('rU'), default=None,
+            '--hide-edges', type=argparse.FileType('r'), default=None,
             help='File containing compound edges to exclude '
                  'from visualization')
         parser.add_argument(
@@ -113,10 +113,10 @@ class VisualizationCommand(MetabolicMixin,
                  'network image')
         group = parser.add_mutually_exclusive_group()
         group.add_argument(
-            '--fba', type=argparse.FileType('rU'), default=None,
+            '--fba', type=argparse.FileType('r'), default=None,
             help='File containing fba reaction flux')
         group.add_argument(
-            '--fva', type=argparse.FileType('rU'), default=None,
+            '--fva', type=argparse.FileType('r'), default=None,
             help='File containing fva reaction flux')
 
         super(VisualizationCommand, cls).init_parser(parser)

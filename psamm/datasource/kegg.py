@@ -20,7 +20,7 @@
 
 import re
 from types import FunctionType
-from collections import Mapping
+from collections.abc import Mapping
 
 from .context import FileMark
 from .entry import (CompoundEntry as BaseCompoundEntry,
