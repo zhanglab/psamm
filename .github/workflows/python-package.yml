@@ -34,7 +34,6 @@ jobs:
         python -m pip install flake8 pytest
         pip install .
         pip install biopython
-        pip install libchebipy
         if echo ${{ matrix.solver }} | grep -q "glpk"; then
           pip install swiglpk;
         fi

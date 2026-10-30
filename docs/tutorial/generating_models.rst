@@ -23,8 +23,15 @@ reference the Installation and Materials section of the tutorial.
 In addition to the basic installation of `PSAMM`, these functions utilize an
 API to interest with the Kyoto Encyclopedia of Genes and Genomes (KEGG) to
 download model information. In order to interact with this API, the `biopython`
-package must be installed. The `libchebipy` package, which allows the user to
-query curated compound information from chebi.
+package must be installed.
+
+The charge and formula of compounds are taken from the ChEBI database. The
+ChEBI flat files (about 4 MB) are downloaded automatically the first time
+`generate-database` is run and cached in ``~/.cache/psamm/chebi``. A different
+location can be set with the ``--chebi-dir`` option or the ``PSAMM_CHEBI_DIR``
+environment variable, which is useful when the files are shared between users
+or a computer without internet access is used. To update the cached files to
+the latest ChEBI release, use the ``--chebi-update`` option.
 
 To use this function, the user will have to generate an annotation file that
 contains gene ids in the first column and another column containing an

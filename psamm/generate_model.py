@@ -33,23 +33,18 @@ from psamm.datasource.context import FileMark
 from psamm.datasource.reaction import Reaction, Compound, Direction
 from psamm.formula import Formula, ParseError
 from psamm.util import resource_filename
+from psamm.datasource.chebi import load as load_chebi_db
 from importlib.metadata import entry_points
 from psamm.command import _trim
 from six import add_metaclass, iteritems, text_type
 import abc
 from urllib.error import HTTPError
 logger = logging.getLogger(__name__)
-if sys.version_info.minor > 5:
-    try:
-        from Bio.KEGG import REST
-    except ImportError:
-        logger.warning("WARNING: Biopython package not found! "
-                       "Some functions will be unusable")
-    try:
-        from libchebipy._chebi_entity import ChebiEntity
-    except ImportError:
-        logger.warning("WARNING: The Chebi API package not found! "
-                       "Some functions will be unusable")
+try:
+    from Bio.KEGG import REST
+except ImportError:
+    logger.warning("WARNING: Biopython package not found! "
+                   "Some functions will be unusable")
 
 
 class ParseError2(Exception):
@@ -260,13 +255,16 @@ def clean_reaction_equations(reaction_entry_list):
     return(reaction_entry_list, generic)
 
 
-def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
+def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment,
+                     chebi_dir=None, chebi_update=False):
     '''
     This function creates a draft model based on the reactions:genes
     file specified in the rxn variable. This function generates
     reaction and compound information by utilizing the kegg
     REST api to download the reaction information and uses psamm
-    functions to parse out the kegg data.
+    functions to parse out the kegg data. Compound charges and formulas
+    are taken from the ChEBI flat files cached in chebi_dir (downloaded
+    if missing or if chebi_update is True).
     '''
     with open(os.path.join(out, "log.tsv"), "a+") as f:
         f.write("List of invalid Kegg IDs: \n")
@@ -304,6 +302,8 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
     else:
         rhea_db = None
 
+    chebi_db = load_chebi_db(chebi_dir, update=chebi_update)
+
     compound_entry_list = []
     compound_set = set()
     for reaction in reaction_entry_list:
@@ -316,7 +316,8 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
     count = 0
     logger.info("Downloading kegg entries and performing charge correction")
     for entry in _download_kegg_entries(out, compound_set,
-                                        rhea_db, CompoundEntry):
+                                        rhea_db, CompoundEntry,
+                                        chebi=chebi_db):
         compound_entry_list.append(entry)
         count += 1
         if verbose and count % 25 == 0:
@@ -331,7 +332,7 @@ def create_model_api(out, rxn_mapping, verbose, use_rhea, default_compartment):
     logger.info("Downloading kegg entries for generic compounds and "
                 "performing charge correction")
     for entry in _download_kegg_entries(out, generic_compounds_list, rhea_db,
-                                        CompoundEntry):
+                                        CompoundEntry, chebi=chebi_db):
         generic_entry_list.append(entry)
     with open(os.path.join(out, 'compounds_generic.yaml'), 'w+') as f:
         yaml.dump(list(model_generic_compounds(generic_entry_list)),
@@ -568,7 +569,8 @@ def model_generic_compounds(compound_entry_list):
             continue
 
 
-def _download_kegg_entries(out, rxn_mapping, rhea, entry_class, context=None):
+def _download_kegg_entries(out, rxn_mapping, rhea, entry_class, context=None,
+                           chebi=None):
     '''
     Downloads the kegg entry associated with a reaction or
     a compound and stores each line in an object that can
@@ -610,7 +612,7 @@ def _download_kegg_entries(out, rxn_mapping, rhea, entry_class, context=None):
                             'Missing section identifier at line \
                             {}'.format(lineno))
                 mark = FileMark(context, entry_line, 0)
-                yield entry_class(reaction, rhea, filemark=mark)
+                yield entry_class(reaction, rhea, filemark=mark, chebi=chebi)
 
 
 def parse_rxns_from_EC(rxn_mapping, out, verbose):
@@ -809,8 +811,6 @@ class main_transporterCommand(Command):
         super(main_transporterCommand, cls).init_parser(parser)
 
     def run(self):
-        if sys.version_info.minor < 6:
-            raise VersionError("Biopython only compatible with python > 3.5.")
         '''Entry point for the transporter assignment'''
 
         # Check the validity of the input values
@@ -916,6 +916,14 @@ class main_databaseCommand(Command):
                             'Rhea-ChEBI mappings', action='store_true')
         parser.add_argument('--force', help='force rewrite of existing '
                             'directories', action='store_true')
+        parser.add_argument('--chebi-dir', metavar='path', default=None,
+                            help='Directory where the ChEBI flat files are '
+                            'cached. They are downloaded if not present. '
+                            'Defaults to $PSAMM_CHEBI_DIR or '
+                            '~/.cache/psamm/chebi')
+        parser.add_argument('--chebi-update', help='Download the latest '
+                            'ChEBI flat files even if they are already '
+                            'cached', action='store_true')
         super(main_databaseCommand, cls).init_parser(parser)
 
     def run(self):
@@ -924,11 +932,6 @@ class main_databaseCommand(Command):
         if 'Bio.KEGG.REST' not in sys.modules:
             quit('No biopython package found. '
                  'Please run <pip install biopython>''')
-        if "libchebipy._chebi_entity" not in sys.modules:
-            quit('The Chebi API is not installed. '
-                 'Please run <pip install libchebipy>')
-        if sys.version_info.minor < 6:
-            raise VersionError("Biopython only compatible with python > 3.5.")
 
         # Check the validity of the input values
         if not self._args.annotations:
@@ -961,7 +964,8 @@ class main_databaseCommand(Command):
 
         # Create the model using the kegg api
         create_model_api(self._args.out, ortho_dict, self._args.verbose,
-                         self._args.rhea, self._args.default_compartment)
+                         self._args.rhea, self._args.default_compartment,
+                         self._args.chebi_dir, self._args.chebi_update)
 
 
 def main(command_class=None, args=None):
@@ -1024,7 +1028,7 @@ def main(command_class=None, args=None):
 class ReactionEntry(object):
     """Representation of entry in KEGG reaction file"""
 
-    def __init__(self, values, rhea, filemark=None):
+    def __init__(self, values, rhea, filemark=None, chebi=None):
         self.values = dict(values)
         if 'entry' not in values:
             raise ParseError2('Missing reaction identifier')
@@ -1125,7 +1129,7 @@ class ReactionEntry(object):
 class CompoundEntry(object):
     """Representation of entry in KEGG compound file"""
 
-    def __init__(self, values, rhea, filemark=None):
+    def __init__(self, values, rhea, filemark=None, chebi=None):
         self.values = dict(values)
         if 'entry' not in values:
             raise ParseError2('Missing compound identifier')
@@ -1135,14 +1139,15 @@ class CompoundEntry(object):
         self._chebi = None
         self._chebi_all = None
         self.rhea = rhea
+        self.chebi_db = chebi
         self.initialize_charge()
 
     def initialize_charge(self):
         """
         Sets the _charge, _chebi, and _chebi_all attributes
-        'rhea_db' is initialized as a global in generate_model_api
-        if --rhea is supplied this funcion looks for rhea_db in the
-        global namespace decide if rhea is used
+        If a RheaDb was given (--rhea) it is used to select the ChEBI ID.
+        If a ChebiDb was given, the charge and formula of the selected
+        ChEBI ID are taken from it.
         --- Logic for selecting the best chebi ID ---
         if not using rhea:
             use the first chebi ID given by KEGG
@@ -1177,23 +1182,14 @@ class CompoundEntry(object):
                     self._chebi = id_list[0]
                     self._chebi_all = list(id_list)
 
-        # libchebipy update charge and formula
-        if self._chebi is not None:
-            this_chebi_entity = ChebiEntity(self._chebi)
-            try:
-                try:
-                    # libchebipy sometimes fails with an index error
-                    # on the first time running. We have not been able
-                    # to fix the source of this error, but catching the
-                    # index error and repeating the operation appears to
-                    # fix this
-                    self._charge = int(this_chebi_entity.get_charge())
-                    self.values['formula'] = [this_chebi_entity.get_formula()]
-                except IndexError:
-                    self._charge = int(this_chebi_entity.get_charge())
-                    self.values['formula'] = [this_chebi_entity.get_formula()]
-            except ValueError:  # chebi entry has no charge; leave as None
-                pass
+        # update charge and formula from ChEBI
+        if self._chebi is not None and self.chebi_db is not None:
+            charge = self.chebi_db.get_charge(self._chebi)
+            # chebi entry has no charge; leave as None
+            if charge is not None:
+                self._charge = charge
+                self.values['formula'] = [
+                    self.chebi_db.get_formula(self._chebi)]
 
     @property
     def id(self):

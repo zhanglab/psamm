@@ -6,6 +6,10 @@ Unreleased
 - Replaces the deprecated `pkg_resources` module with `importlib`
 - Fixes compatibility with NumPy 2, SciPy sparse arrays and pandas 3
 - Fixes the `vis` command failing to open input files on Python 3.11+
+- `generate-database` now reads compound charges and formulas from the ChEBI
+  flat files, which are downloaded and cached automatically, instead of the
+  unmaintained `libchebipy` package which no longer works with the current
+  ChEBI release. Adds the `--chebi-dir` and `--chebi-update` options
 
 v1.2.1 (2022-05-12)
 ------------------
