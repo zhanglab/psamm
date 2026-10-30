@@ -27,6 +27,7 @@ from psamm.reaction import Reaction, Compound, Direction
 import re
 import numpy as np
 from scipy.io import loadmat
+from scipy.sparse import issparse
 import decimal
 import logging
 import glob
@@ -37,6 +38,8 @@ logger = logging.getLogger(__name__)
 
 
 def _float_parser(num_str):
+    if isinstance(num_str, np.ndarray):
+        num_str = num_str.item()
     num = float(num_str)
     if num.is_integer():
         return int(num)
@@ -216,6 +219,10 @@ class Importer(BaseImporter):
             yield entry
 
     def _read_reactions(self, doc):
+        stoichiometry = doc['S'][0, 0]
+        if issparse(stoichiometry):
+            # column access by index requires a compressed column format
+            stoichiometry = stoichiometry.tocsc()
         for i in range(len(doc['rxns'][0, 0])):
             properties = dict()
             properties['id'] = str(doc['rxns'][0, 0][i][0][0])
@@ -237,8 +244,8 @@ class Importer(BaseImporter):
                         dtype = dtype.lstrip('rxn')
                         properties[dtype] = str(value)
 
-            lower = float(doc['lb'][0, 0][i][0])
-            upper = float(doc['ub'][0, 0][i][0])
+            lower = float(doc['lb'][0, 0][i][0].item())
+            upper = float(doc['ub'][0, 0][i][0].item())
             if lower == 0 and upper != 0:
                 direction = Direction.Forward
             elif lower != 0 and upper == 0:
@@ -248,12 +255,10 @@ class Importer(BaseImporter):
 
             # parse equation
             compounds = list()
-            try:
-                # incase it's a sparse matrix
-                rows = doc['S'][0, 0][:, i].indices
-            except AttributeError:
-                # incase it's an ndarray
-                rows = np.flatnonzero(doc['S'][0, 0][:, i])
+            if issparse(stoichiometry):
+                rows = stoichiometry[:, [i]].indices
+            else:
+                rows = np.flatnonzero(stoichiometry[:, i])
             for j in rows:
                 cpd = self._origid_compound.get(
                     doc['mets'][0, 0][j][0][0]
@@ -264,7 +269,7 @@ class Importer(BaseImporter):
                 compounds.append(
                     (
                         cpd,  # compound id
-                        float(doc['S'][0, 0][j, i])  # stochiometry
+                        float(stoichiometry[j, i])  # stochiometry
                     )
                 )
             properties['equation'] = (Reaction(direction, compounds))
@@ -273,7 +278,7 @@ class Importer(BaseImporter):
             if 'grRules' in doc.dtype.names:
                 if len(doc['grRules'][0, 0][i][0]) > 0:
                     genes = doc['grRules'][0, 0][i][0][0]
-                    if isinstance(genes, np.unicode_):
+                    if isinstance(genes, np.str_):
                         properties['genes'] = self._try_parse_gene_association(
                             properties['id'], genes
                         )
