@@ -666,6 +666,7 @@ def main(importer_class=None, args=None):
         sys.exit(-1)
     except Exception:
         importer.help()
+        raise
 
     if args.merge_compounds:
         compounds_before = len(model.compounds)
