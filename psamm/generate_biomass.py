@@ -104,7 +104,7 @@ def load_compound_data():
     df = pd.read_csv(resource_filename("psamm",
                      "external-data/biomass_compound_descriptions.tsv"),
                      sep="\t", na_values=["None"])
-    df.set_index(df.id.values, inplace=True)
+    df = df.set_index(df.id.to_numpy())
     return df
 
 
@@ -118,7 +118,7 @@ def apply_config(df, config_path):
     config = pd.read_csv(config_path)
     save_index = df.index
     df = pd.merge(df, config, how="left", on=["id", "name"])
-    df.set_index(save_index, inplace=True)
+    df = df.set_index(save_index)
     df.custom_id = df.custom_id.fillna(df.id)
     df.id = df.custom_id
     return df

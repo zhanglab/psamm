@@ -27,7 +27,7 @@ from decimal import Decimal
 
 import numpy as np
 from scipy.io import savemat, loadmat
-from scipy.sparse.csc import csc_matrix
+from scipy.sparse import csc_matrix
 
 from six import BytesIO
 

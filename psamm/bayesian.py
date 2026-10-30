@@ -195,8 +195,7 @@ class BayesianCompoundPredictor(object):
         best_index = raw_map.iloc[:, 0].groupby(query).rank(
             method='min', ascending=False).loc[lambda x: x == 1].index.values
         compound_best = raw_map.loc[best_index]
-        compound_best.query(
-            'p >= @threshold_compound', inplace=True)
+        compound_best = compound_best.query('p >= @threshold_compound')
         return compound_best
 
     def get_cpd_pred(self, threshold_compound=0):
@@ -276,8 +275,7 @@ class BayesianReactionPredictor(object):
         best_index = raw_map.iloc[:, 0].groupby(query).rank(
             method='min', ascending=False).loc[lambda x: x == 1].index.values
         reaction_best = raw_map.loc[best_index]
-        reaction_best.query(
-            'p >= @threshold_reaction', inplace=True)
+        reaction_best = reaction_best.query('p >= @threshold_reaction')
         return reaction_best
 
 
