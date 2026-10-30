@@ -26,6 +26,7 @@ import re
 import math
 import subprocess
 import collections
+import multiprocessing
 from importlib.resources import files
 
 import six
@@ -39,6 +40,20 @@ def mkdir_p(path):
     except OSError as e:
         if e.errno != errno.EEXIST or not os.path.isdir(path):
             raise
+
+
+def multiprocessing_context():
+    """Return the multiprocessing context used for worker processes.
+
+    The forkserver start method is used where available. Forking the main
+    process directly copies its state into the workers, including objects
+    owned by LP solver libraries, which can crash the workers when they are
+    garbage collected there (e.g. GLPK problems) or deadlock if the main
+    process is multi-threaded.
+    """
+    if 'forkserver' in multiprocessing.get_all_start_methods():
+        return multiprocessing.get_context('forkserver')
+    return multiprocessing.get_context()
 
 
 def resource_filename(package, resource):

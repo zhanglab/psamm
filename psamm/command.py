@@ -45,6 +45,7 @@ from . import __version__ as package_version
 from .datasource import native, sbml
 from .datasource.context import FilePathContext
 from .lpsolver import generic
+from .util import multiprocessing_context
 
 import codecs
 
@@ -342,7 +343,10 @@ class ExecutorError(Exception):
     """Error running tasks on executor."""
 
 
-class _ExecutorProcess(mp.Process):
+_MP_CONTEXT = multiprocessing_context()
+
+
+class _ExecutorProcess(_MP_CONTEXT.Process):
     def __init__(self, task_queue, result_queue, handler_init,
                  handler_args=()):
         super(_ExecutorProcess, self).__init__()
@@ -389,8 +393,8 @@ class ProcessPoolExecutor(Executor):
 
         self._process_count = processes
         self._processes = []
-        self._task_queue = mp.Queue()
-        self._result_queue = mp.Queue()
+        self._task_queue = _MP_CONTEXT.Queue()
+        self._result_queue = _MP_CONTEXT.Queue()
 
         for _ in range(self._process_count):
             p = _ExecutorProcess(

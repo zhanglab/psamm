@@ -22,7 +22,6 @@ from future.utils import itervalues
 
 from builtins import object, range
 from itertools import product
-from multiprocessing import Pool
 import operator
 import sys
 from collections import namedtuple, defaultdict
@@ -31,6 +30,7 @@ import time
 
 import psamm.bayesian_util as util
 from psamm.formula import Formula
+from psamm.util import multiprocessing_context
 from psamm.expression.boolean import Expression
 from functools import reduce
 
@@ -623,7 +623,7 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
 
     # Initialize parallel pool of workers
     chunksize = compound_pairs // nproc
-    pool = Pool(nproc)
+    pool = multiprocessing_context().Pool(nproc)
 
     t = time.time()
     # Compound ID
@@ -809,7 +809,7 @@ def map_model_reactions(model1, model2, cpd_map, cpd_score, nproc=1,
 
     # Initialize parallel pool of workers
     chunksize = reaction_pairs // nproc
-    pool = Pool(nproc)
+    pool = multiprocessing_context().Pool(nproc)
 
     # Reaction ID
     t = time.time()
