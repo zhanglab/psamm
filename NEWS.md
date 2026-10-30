@@ -10,6 +10,8 @@ Unreleased
   flat files, which are downloaded and cached automatically, instead of the
   unmaintained `libchebipy` package which no longer works with the current
   ChEBI release. Adds the `--chebi-dir` and `--chebi-update` options
+- Fixes `generate-database --type KO` finding no reactions with the current
+  KEGG KO entry format
 
 v1.2.1 (2022-05-12)
 ------------------

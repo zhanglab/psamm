@@ -709,13 +709,23 @@ def parse_rxns_from_KO(rxn_mapping, out, verbose):
                     raise ParseError2(
                         'Missing section identifier at line \
                         {}'.format(lineno))
+            ko_reactions = []
+            # KEGG lists the reactions of a KO in the REACTION section
+            # (one reaction per line); older entries used "RN:" in DBLINKS
+            if "reaction" in reaction:
+                for i in reaction["reaction"]:
+                    r = i.split()[0] if i.split() else ""
+                    if re.match(r'R\d{5}$', r):
+                        ko_reactions.append(r)
             if "dblinks" in reaction:
                 for i in reaction["dblinks"]:
                     if i[0:2] == "RN":
                         listall = re.split(" ", i[1:])
                         for r in listall:
                             if r[0] == "R":
-                                rxn_dict[r] += rxn_mapping[reactions]
+                                ko_reactions.append(r)
+            for r in OrderedDict.fromkeys(ko_reactions):
+                rxn_dict[r] += rxn_mapping[reactions]
     return(rxn_dict)
 
 

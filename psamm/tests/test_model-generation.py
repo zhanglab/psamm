@@ -349,7 +349,7 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertEqual(list(cpd_out)[0].id, "C00001")
         self.assertEqual(list(cpd_out)[0].name, "H2O")
         self.assertEqual(list(cpd_out)[0].formula, "H2O")
-        self.assertEqual(list(cpd_out)[0].mol_weight, 18.0153)
+        self.assertEqual(list(cpd_out)[0].mol_weight, 18.02)
         self.assertEqual(list(cpd_out)[0].chebi, "15377")
         self.assertEqual(list(cpd_out)[0].charge, 0)
         os.remove("log.tsv")
@@ -380,7 +380,7 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertEqual(rxn_out[0].equation, "C00158 + C00010 <=> C00024 "
                          "+ C00001 + C00036")
         self.assertEqual(list(rxn_out[0].enzymes),
-                         ["2.3.3.1", "2.3.3.3", "2.3.3.16"])
+                         ["2.3.3.1", "2.3.3.3", "2.3.3.5", "2.3.3.16"])
         self.assertIsNone(rxn_out[0].tcdb_family)
         self.assertIsNone(rxn_out[0].substrates)
         self.assertIsNone(rxn_out[0].genes)
