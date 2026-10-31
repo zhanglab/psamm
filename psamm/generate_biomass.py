@@ -18,7 +18,6 @@
 from psamm.datasource.reaction import Reaction, Compound, Direction
 from psamm.datasource import native
 from collections import Counter
-from six import add_metaclass
 from psamm.util import resource_filename
 import logging
 import sys
@@ -38,8 +37,7 @@ if sys.version_info.minor > 5:
 logger = logging.getLogger(__name__)
 
 
-@add_metaclass(abc.ABCMeta)
-class Command(object):
+class Command(metaclass=abc.ABCMeta):
     """Represents a command in the interface, operating on a model.
 
     The constructor will be given the NativeModel and the command line

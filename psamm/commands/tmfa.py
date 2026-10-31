@@ -15,7 +15,6 @@
 #
 # Copyright 2017-2020  Keith Dufault-Thompson <keitht547@uri.edu>
 
-from __future__ import unicode_literals
 import logging
 from ..command import SolverCommandMixin, MetabolicMixin, \
     Command, ObjectiveMixin, convert_to_unicode
@@ -29,7 +28,6 @@ import random
 import yaml
 import argparse
 from psamm.datasource.entry import (DictReactionEntry as ReactionEntry)
-from six import iteritems
 logger = logging.getLogger(__name__)
 
 
@@ -154,7 +152,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
         # excluded reactions, lump reactions and lumped reactions.
         exclude_lump_list = set(base_exclude_list)
         exclude_unknown_list = set(base_exclude_list)
-        for lump_id, sub_rxn_list in iteritems(lump_to_rxnids):
+        for lump_id, sub_rxn_list in lump_to_rxnids.items():
             exclude_lump_list.add(lump_id)
             for sub_rxn in sub_rxn_list:
                 exclude_unknown_list.add(sub_rxn)
@@ -171,7 +169,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
                 cpd_conc_dict[convert_to_unicode(cpd)] = [lower, upper]
 
         # Add lump reactions to the mm_irreversible model
-        for lump_id, rxn in iteritems(lumpid_to_rxn):
+        for lump_id, rxn in lumpid_to_rxn.items():
             reaction = parse_reaction(rxn)
             mm.database.set_reaction(lump_id, reaction)
             mm.add_reaction(lump_id)
@@ -207,7 +205,7 @@ class TMFACommand(MetabolicMixin, SolverCommandMixin, ObjectiveMixin, Command):
         # reactions. exclude lump_list is a list of all excluded reactions
         # and lump reactions. exclude_lump_unkown list is a list of
         # all excluded reactions, lump reactions and lumped reactions.
-        for lump_id, sub_rxn_list in iteritems(reversible_lump_to_rxn_dict):
+        for lump_id, sub_rxn_list in reversible_lump_to_rxn_dict.items():
             exclude_lump_list.add(lump_id)
             for sub_rxn in sub_rxn_list:
                 exclude_unknown_list.add(sub_rxn)
@@ -381,10 +379,10 @@ def make_tmfa_problem(mm_irreversible, solver):
                     types=lp.VariableType.Continuous)
 
     massbalance_lhs = {compound: 0 for compound in mm_irreversible.compounds}
-    for spec, value in iteritems(mm_irreversible.matrix):
+    for spec, value in mm_irreversible.matrix.items():
         compound, reaction_id = spec
         massbalance_lhs[compound] += v(reaction_id) * value
-    for compound, lhs in iteritems(massbalance_lhs):
+    for compound, lhs in massbalance_lhs.items():
         prob.add_linear_constraints(lhs == 0)
 
     cp_list = []

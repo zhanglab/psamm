@@ -19,7 +19,6 @@
 
 """Definitions related to reaction equations and parsing of such equations."""
 
-from __future__ import unicode_literals
 
 import re
 import functools
@@ -27,11 +26,8 @@ import enum
 import numbers
 from collections import Counter
 
-import six
-from six import text_type, iteritems
 
 
-@six.python_2_unicode_compatible
 @functools.total_ordering
 class Compound(object):
     """Represents a compound in a reaction equation
@@ -119,7 +115,7 @@ class Compound(object):
         s = self._name
         if len(self._arguments) > 0:
             s += '({})'.format(
-                ', '.join(text_type(a) for a in self._arguments))
+                ', '.join(str(a) for a in self._arguments))
         if self._compartment is not None:
             s += '[{}]'.format(self._compartment)
         return s
@@ -171,7 +167,6 @@ class Direction(enum.Enum):
             return '<=>'
 
 
-@six.python_2_unicode_compatible
 class Reaction(object):
     """Reaction equation representation.
 
@@ -250,7 +245,7 @@ class Reaction(object):
 
             values = args[1]
             if isinstance(values, dict):
-                values = iteritems(values)
+                values = iter(values.items())
 
             left, right = [], []
             for compound, value in values:
@@ -340,7 +335,7 @@ class Reaction(object):
         # Use the same format as ModelSEED
         def format_compound(compound, count):
             """Format compound"""
-            cpdspec = text_type(compound)
+            cpdspec = str(compound)
 
             if re.search(r'\s', cpdspec):
                 cpdspec = '|{}|'.format(cpdspec)
@@ -353,7 +348,7 @@ class Reaction(object):
             return ' + '.join(format_compound(compound, count)
                               for compound, count in cmpds)
 
-        s = text_type(self._direction.symbol)
+        s = str(self._direction.symbol)
         if len(self._left) > 0:
             s = format_compound_list(self._left) + ' ' + s
         if len(self._right) > 0:

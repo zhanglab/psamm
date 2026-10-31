@@ -23,7 +23,6 @@ functionality to assist in importing external file formats, converting
 them into proper native models and writing those models to files.
 """
 
-from __future__ import print_function, unicode_literals
 
 import sys
 import os
@@ -39,9 +38,8 @@ from decimal import Decimal
 
 import yaml
 from importlib.metadata import entry_points
-from six import iteritems, itervalues, text_type
-from six.moves.urllib.request import urlopen
-from six.moves.urllib.parse import quote as url_quote
+from urllib.request import urlopen
+from urllib.parse import quote as url_quote
 
 from .datasource.native import ModelWriter
 from .datasource.reaction import (parse_reaction,
@@ -126,7 +124,7 @@ class Importer(object):
             return boolean.Expression(s)
         except boolean.ParseError as e:
             msg = 'Failed to parse gene association for {}: {}'.format(
-                reaction_id, text_type(e))
+                reaction_id, str(e))
             if e.indicator is not None:
                 msg += '\n{}\n{}'.format(s, e.indicator)
             logger.warning(msg)
@@ -138,7 +136,7 @@ class Importer(object):
 # This allows reading/writing Python OrderedDicts in the correct order.
 # See: https://stackoverflow.com/questions/5121931/in-python-how-can-you-load-yaml-mappings-as-ordereddicts  # noqa
 def _dict_representer(dumper, data):
-    return dumper.represent_dict(iteritems(data))
+    return dumper.represent_dict(iter(data.items()))
 
 
 def _dict_constructor(loader, node):
@@ -150,7 +148,7 @@ def _set_representer(dumper, data):
 
 
 def _boolean_expression_representer(dumper, data):
-    return dumper.represent_unicode(text_type(data))
+    return dumper.represent_unicode(str(data))
 
 
 def _decimal_representer(dumper, data):
@@ -164,7 +162,7 @@ def _decimal_representer(dumper, data):
     elif data == float('-inf'):
         value = '-.inf'
     else:
-        value = text_type(data).lower()
+        value = str(data).lower()
         if '.' not in value and 'e' in value:
             value = value.replace('e', '.0e', 1)
     return dumper.represent_scalar('tag:yaml.org,2002:float', value)
@@ -275,7 +273,7 @@ def reactions_to_files(model, dest, writer, split_subsystem):
 
         subsystem_folder = 'reactions'
         sub_existance = False
-        for subsystem_file, reactions in iteritems(subsystems):
+        for subsystem_file, reactions in subsystems.items():
             if len(reactions) < _MAX_REACTION_COUNT:
                 for reaction in reactions:
                     common_reactions.append(reaction)
@@ -336,7 +334,7 @@ def model_exchange(model):
 
     compounds = []
     for compound, reaction_id, lower, upper in sorted(
-            itervalues(model.exchange)):
+            model.exchange.values()):
         d = OrderedDict([('id', compound.name)])
         if reaction_id is not None:
             d['reaction'] = reaction_id
@@ -621,7 +619,7 @@ def main(importer_class=None, args=None):
                 logger.error('No importers found!')
             else:
                 importer_classes = []
-                for name, entry in iteritems(importers):
+                for name, entry in importers.items():
                     importer_class = entry.load()
                     title = getattr(importer_class, 'title', None)
                     generic = getattr(importer_class, 'generic', False)
@@ -659,10 +657,10 @@ def main(importer_class=None, args=None):
     except ModelLoadError as e:
         logger.error('Failed to load model!', exc_info=True)
         importer.help()
-        parser.error(text_type(e))
+        parser.error(str(e))
     except ParseError as e:
         logger.error('Failed to parse model!', exc_info=True)
-        logger.error(text_type(e))
+        logger.error(str(e))
         sys.exit(-1)
     except Exception:
         importer.help()
@@ -775,10 +773,10 @@ def main_bigg(args=None, urlopen=urlopen):
     except ModelLoadError as e:
         logger.error('Failed to load model!', exc_info=True)
         importer.help()
-        parser.error(text_type(e))
+        parser.error(str(e))
     except ParseError as e:
         logger.error('Failed to parse model!', exc_info=True)
-        logger.error(text_type(e))
+        logger.error(str(e))
         sys.exit(-1)
 
     if args.merge_compounds:

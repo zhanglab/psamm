@@ -18,7 +18,6 @@
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 # Copyright 2020-2020  Elysha Sameth <esameth@my.uri.edu>
 
-from __future__ import unicode_literals
 
 import sys
 import os
@@ -28,7 +27,7 @@ import tempfile
 from contextlib import contextmanager
 import unittest
 
-from six import StringIO, BytesIO, text_type
+from io import BytesIO, StringIO
 
 from psamm.command import (main, Command, MetabolicMixin, SolverCommandMixin,
                            CommandError, ProcessPoolExecutor, ExecutorError)

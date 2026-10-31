@@ -16,7 +16,6 @@
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
-from __future__ import unicode_literals, division
 
 import time
 import logging
@@ -27,7 +26,6 @@ from .. import fluxanalysis
 from .. import moma
 from ..expression import boolean
 
-from six import string_types, text_type
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +44,7 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
         parser.add_argument(
             '--method', metavar='method',
             choices=['fba', 'lin_moma', 'lin_moma2', 'moma', 'moma2'],
-            type=text_type, default='fba',
+            type=str, default='fba',
             help='Select which method to use. (fba, lin_moma, lin_moma2, '
                  'moma, moma2)')
         super(GeneDeletionCommand, cls).init_parser(parser)
@@ -61,7 +59,7 @@ class GeneDeletionCommand(MetabolicMixin, ObjectiveMixin, SolverCommandMixin,
             assoc = None
             if reaction.genes is None:
                 continue
-            elif isinstance(reaction.genes, string_types):
+            elif isinstance(reaction.genes, str):
                 assoc = boolean.Expression(reaction.genes)
             else:
                 variables = [boolean.Variable(g) for g in reaction.genes]

@@ -18,7 +18,6 @@
 # Copyright 2020-2020  Elysha Sameth <esameth1@my.uri.edu>
 
 
-from __future__ import unicode_literals
 
 from psamm import graph
 import os

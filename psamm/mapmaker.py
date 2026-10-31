@@ -23,7 +23,6 @@ The MapMaker algorithm is described in [Tervo16]_.
 
 from itertools import product
 
-from six import iteritems
 
 from .lpsolver import lp
 from .formula import Atom, Radical, Formula
@@ -163,7 +162,7 @@ def predict_compound_pairs(reaction, compound_formula, solver, epsilon=1e-5,
 
     # Eq 3
     zs = {}
-    for c1, v in iteritems(left):
+    for c1, v in left.items():
         f = compound_formula[c1.name]
         for e in elements:
             mf = f.get(e, 0)
@@ -184,7 +183,7 @@ def predict_compound_pairs(reaction, compound_formula, solver, epsilon=1e-5,
             zs[c1] += w * mf
 
     # Eq 2
-    for c2, v in iteritems(right):
+    for c2, v in right.items():
         f = compound_formula[c2.name]
         for e in elements:
             mf = f.get(e, 0)
@@ -194,7 +193,7 @@ def predict_compound_pairs(reaction, compound_formula, solver, epsilon=1e-5,
             except ValueError:
                 raise UnbalancedReactionError('Unable to add constraint')
 
-    for c1, v1 in iteritems(left):
+    for c1, v1 in left.items():
         for c2 in right:
             f1 = compound_formula[c1.name]
             f2 = compound_formula[c2.name]

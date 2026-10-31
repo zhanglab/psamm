@@ -22,7 +22,6 @@
 Described in [Thiele14]_.
 """
 
-from __future__ import unicode_literals
 
 import logging
 

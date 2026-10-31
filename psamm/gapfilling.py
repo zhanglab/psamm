@@ -25,11 +25,9 @@ gap-filling. Specific gap-filling methods are implemented in the ``gapfill``
 and ``fastgapfill`` modules.
 """
 
-from __future__ import unicode_literals
 
 import logging
 
-from six import iteritems
 
 from .metabolicmodel import create_exchange_id, create_transport_id
 from .reaction import Reaction, Direction
@@ -234,6 +232,6 @@ def create_extended_model(model, db_penalty=None, ex_penalty=None,
         weights.update((rxnid, 1) for rxnid in ex_added)
 
     if penalties is not None:
-        for rxnid, penalty in iteritems(penalties):
+        for rxnid, penalty in penalties.items():
             weights[rxnid] = penalty
     return model_extended, weights

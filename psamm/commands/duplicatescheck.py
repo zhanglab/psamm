@@ -16,11 +16,9 @@
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
-from __future__ import unicode_literals
 
 import logging
 
-from six import itervalues
 
 from ..command import Command
 from psamm.datasource.native import reaction_signature
@@ -58,7 +56,7 @@ class DuplicatesCheck(Command):
             database_signatures.setdefault(signature, set()).add(
                 (entry.id, entry.equation, entry.filemark))
 
-        for reaction_set in itervalues(database_signatures):
+        for reaction_set in database_signatures.values():
             if len(reaction_set) > 1:
                 print('Found {} duplicate reactions:'.format(
                     len(reaction_set)))

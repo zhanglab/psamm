@@ -24,7 +24,6 @@ Chemical formulas (:class:`.Formula`) are represented as a number of
 subformulas. This allows some simple structure to be represented.
 """
 
-from __future__ import unicode_literals
 
 import re
 from collections import Counter
@@ -32,9 +31,7 @@ import functools
 import operator
 import numbers
 
-import six
-from six import iteritems
-from six.moves import reduce
+from functools import reduce
 
 from .expression.affine import Expression
 
@@ -116,10 +113,8 @@ class _AtomType(type):
         return super(_AtomType, self).__getattribute__(name)
 
 
-@six.python_2_unicode_compatible
 @functools.total_ordering
-@six.add_metaclass(_AtomType)
-class Atom(FormulaElement):
+class Atom(FormulaElement, metaclass=_AtomType):
     """Represent an atom in a chemical formula
 
     >>> hydrogen = Atom.H
@@ -162,7 +157,6 @@ class Atom(FormulaElement):
         return str('Atom({})').format(repr(self._symbol))
 
 
-@six.python_2_unicode_compatible
 class Radical(FormulaElement):
     """Represents a radical or other unknown subformula"""
 
@@ -195,7 +189,6 @@ class Radical(FormulaElement):
         return str('Radical({})').format(repr(self._symbol))
 
 
-@six.python_2_unicode_compatible
 class Formula(FormulaElement):
     """Representation of a chemial formula
 
@@ -211,7 +204,7 @@ class Formula(FormulaElement):
         self._values = Counter()
         self._variables = set()
 
-        for element, value in iteritems(values):
+        for element, value in values.items():
             if not isinstance(element, FormulaElement):
                 raise ValueError('Not a formula element: {}'.format(
                     repr(element)))
@@ -227,7 +220,7 @@ class Formula(FormulaElement):
 
     def substitute(self, mapping):
         result = self.__class__()
-        for element, value in iteritems(self._values):
+        for element, value in self._values.items():
             if callable(getattr(value, 'substitute', None)):
                 value = value.substitute(mapping)
                 if isinstance(value, int) and value <= 0:
@@ -249,7 +242,7 @@ class Formula(FormulaElement):
         while len(stack) > 0:
             var, value = stack.pop()
             if isinstance(var, Formula):
-                for sub_var, sub_value in iteritems(var._values):
+                for sub_var, sub_value in var._values.items():
                     stack.append((sub_var, value*sub_value))
             else:
                 result[var] += value
@@ -263,7 +256,7 @@ class Formula(FormulaElement):
 
     def items(self):
         """Iterate over (:class:`.FormulaElement`, value)-pairs"""
-        return iteritems(self._values)
+        return iter(self._values.items())
 
     def is_variable(self):
         return len(self._variables) > 0
@@ -305,12 +298,12 @@ class Formula(FormulaElement):
                 if Atom.H in values:
                     yield Atom.H, values[Atom.H]
                 for element, value in sorted(
-                        iteritems(values), key=element_sort_key):
+                        values.items(), key=element_sort_key):
                     if element not in (Atom.C, Atom.H):
                         yield element, value
             else:
                 for element, value in sorted(
-                        iteritems(values), key=element_sort_key):
+                        values.items(), key=element_sort_key):
                     yield element, value
 
         s = ''
@@ -364,12 +357,12 @@ class Formula(FormulaElement):
 
     def __mul__(self, other):
         """Multiply formula element by other."""
-        values = {key: value*other for key, value in iteritems(self._values)}
+        values = {key: value*other for key, value in self._values.items()}
         return Formula(values)
 
     def __hash__(self):
         h = hash('Formula')
-        for element, value in iteritems(self._values):
+        for element, value in self._values.items():
             h ^= hash(element) ^ hash(value)
         return h
 
@@ -395,7 +388,7 @@ class Formula(FormulaElement):
         """
 
         def missing(formula, other):
-            for element, value in iteritems(formula._values):
+            for element, value in formula._values.items():
                 if element not in other._values:
                     yield value*element
                 else:
@@ -440,7 +433,7 @@ def _parse_formula(s):
         if isinstance(form, dict) and len(form) == 1:
             # A radical in a singleton subformula is interpreted as a
             # numbered radical.
-            element, value = next(iteritems(form))
+            element, value = next(iter(form.items()))
             if isinstance(element, Radical):
                 return Radical('{}{}'.format(element.symbol, value))
         return form

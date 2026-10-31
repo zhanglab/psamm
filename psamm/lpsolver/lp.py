@@ -30,7 +30,6 @@ single variable. This allows many similar expressions to be represented by one
 constructed faster.
 """
 
-from __future__ import unicode_literals
 
 import math
 import numbers
@@ -41,9 +40,7 @@ import enum
 from fractions import Fraction
 from decimal import Decimal
 
-import six
-from six import add_metaclass, iteritems, viewkeys, viewitems, text_type
-from six.moves import range, reduce
+from functools import reduce
 
 _INF = float('inf')
 
@@ -151,7 +148,6 @@ def ranged_property(min=None, max=None):
         fget, fmin=lambda obj: min_value, fmax=lambda obj: max_value)
 
 
-@six.python_2_unicode_compatible
 class Expression(object):
     """Represents a linear expression
 
@@ -190,11 +186,11 @@ class Expression(object):
 
     def variables(self):
         """Return immutable view of variables in expression."""
-        return viewkeys(self._variables)
+        return self._variables.keys()
 
     def values(self):
         """Return immutable view of (variable, value)-pairs in expression."""
-        return viewitems(self._variables)
+        return self._variables.items()
 
     def value(self, variable):
         return self._variables.get(variable, 0)
@@ -211,7 +207,7 @@ class Expression(object):
                     len(var) for var in self._variables)
 
         def value_set(n):
-            for variable, value in iteritems(self._variables):
+            for variable, value in self._variables.items():
                 if isinstance(variable, VariableSet):
                     yield variable[n], value
                 else:
@@ -272,21 +268,21 @@ class Expression(object):
 
             return self.__class__(
                 {var: value * other for var, value in
-                 iteritems(self._variables)}, self._offset * other)
+                 self._variables.items()}, self._offset * other)
         elif isinstance(other, self.__class__):
             variables = defaultdict(int)
-            for v1, value1 in iteritems(self._variables):
-                for v2, value2 in iteritems(other._variables):
+            for v1, value1 in self._variables.items():
+                for v2, value2 in other._variables.items():
                     p1 = v1 if isinstance(v1, Product) else Product((v1,))
                     p2 = v2 if isinstance(v2, Product) else Product((v2,))
-                    product = Product(sorted(p1 + p2, key=text_type))
+                    product = Product(sorted(p1 + p2, key=str))
                     variables[product] += value1 * value2
 
                 if other._offset != 0:
                     variables[v1] += value1 * other._offset
 
             if self._offset != 0:
-                for v2, value2 in iteritems(other._variables):
+                for v2, value2 in other._variables.items():
                     variables[v2] += value2 * self._offset
 
             offset = self._offset * other._offset
@@ -307,18 +303,18 @@ class Expression(object):
             self._offset *= other
         elif isinstance(other, self.__class__):
             variables = defaultdict(int)
-            for v1, value1 in iteritems(self._variables):
-                for v2, value2 in iteritems(other._variables):
+            for v1, value1 in self._variables.items():
+                for v2, value2 in other._variables.items():
                     p1 = v1 if isinstance(v1, Product) else Product((v1,))
                     p2 = v2 if isinstance(v2, Product) else Product((v2,))
-                    product = Product(sorted(p1 + p2, key=text_type))
+                    product = Product(sorted(p1 + p2, key=str))
                     variables[product] += value1 * value2
 
                 if other._offset != 0:
                     variables[v1] += value1 * other._offset
 
             if self._offset != 0:
-                for v2, value2 in iteritems(other._variables):
+                for v2, value2 in other._variables.items():
                     variables[v2] += value2 * self._offset
 
             self._offset *= other._offset
@@ -330,7 +326,7 @@ class Expression(object):
 
     def __neg__(self):
         return self.__class__(
-            {var: -value for var, value in iteritems(self._variables)},
+            {var: -value for var, value in self._variables.items()},
             -self._offset)
 
     def __pow__(self, other):
@@ -418,18 +414,18 @@ class Expression(object):
         def sort_key_variable(item):
             key, _ = item
             is_product = isinstance(key, Product)
-            return is_product, text_type(key)
+            return is_product, str(key)
 
         def all_terms():
             count_vars = 0
             for name, value in sorted(
-                    iteritems(self._variables), key=sort_key_variable):
+                    self._variables.items(), key=sort_key_variable):
                 if value != 0:
                     count_vars += 1
                     if isinstance(name, VariableSet):
                         yield '<set>', value
                     elif isinstance(name, Product):
-                        yield '*'.join(text_type(n) for n in name), value
+                        yield '*'.join(str(n) for n in name), value
                     else:
                         yield name, value
             if self._offset != 0 or count_vars == 0:
@@ -443,7 +439,7 @@ class Expression(object):
                     terms.append('{}'.format(value))
                 elif abs(value) == 1:
                     terms.append(
-                        text_type(name) if value > 0 else '-{}'.format(name))
+                        str(name) if value > 0 else '-{}'.format(name))
                 else:
                     terms.append('{}*{}'.format(value, name))
             else:
@@ -470,7 +466,6 @@ class RelationSense(enum.Enum):
     StrictlyLess = '<'
 
 
-@six.python_2_unicode_compatible
 class Relation(object):
     """Represents a binary relation (equation or inequality)
 
@@ -544,8 +539,7 @@ class VariableType(enum.Enum):
     """Binary variable type (0 or 1)"""
 
 
-@add_metaclass(abc.ABCMeta)
-class Solver(object):
+class Solver(metaclass=abc.ABCMeta):
     """Factory for LP Problem instances"""
 
     @abc.abstractmethod
@@ -553,8 +547,7 @@ class Solver(object):
         """Create a new :class:`.Problem` instance"""
 
 
-@add_metaclass(abc.ABCMeta)
-class Constraint(object):
+class Constraint(metaclass=abc.ABCMeta):
     """Represents a constraint within an LP Problem"""
 
     @abc.abstractmethod
@@ -645,8 +638,7 @@ class VariableNamespace(object):
         return str('<{}: {}>').format(self.__class__.__name__, name)
 
 
-@add_metaclass(abc.ABCMeta)
-class Problem(object):
+class Problem(metaclass=abc.ABCMeta):
     """Representation of LP Problem instance
 
     Variable names in the problem can be any hashable object. It is the

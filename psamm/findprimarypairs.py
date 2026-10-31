@@ -17,14 +17,12 @@
 # Copyright 2018-2020  Ke Zhang <kzhang@my.uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
-from __future__ import division
 
 import logging
 from itertools import product
 from collections import Counter
 
-from six import iteritems
-from six.moves import reduce
+from functools import reduce
 
 from .formula import Formula, Atom
 
@@ -188,7 +186,7 @@ def predict_compound_pairs_iterated(
     pair_reactions = {}
     possible_pairs = Counter()
     tie_breakers = {}
-    for reaction_id, equation in iteritems(reactions):
+    for reaction_id, equation in reactions.items():
         tie_breakers[reaction_id] = {}
         for (c1, _), (c2, _) in product(equation.left, equation.right):
             spair = tuple(sorted([c1.name, c2.name]))
@@ -203,7 +201,7 @@ def predict_compound_pairs_iterated(
         '''
         final_ambiguous_count = 0
         final_ambiguous_hydrogen = 0
-        for reaction, pairs in sorted(iteritems(final_ambiguous_reactions)):
+        for reaction, pairs in sorted(final_ambiguous_reactions.items()):
             all_hydrogen = False
             if len(pairs) > 0:
                 final_ambiguous_count += 1
@@ -252,7 +250,7 @@ def predict_compound_pairs_iterated(
             final_ambiguous_reactions[reaction_id] = ambiguous_pairs
 
             rpairs = {}
-            for ((c1, _), (c2, _)), form in iteritems(transfer):
+            for ((c1, _), (c2, _)), form in transfer.items():
                 rpairs.setdefault((c1, c2), []).append(form)
 
             prediction[reaction_id] = rpairs, balance
@@ -261,13 +259,13 @@ def predict_compound_pairs_iterated(
             print_ambiguous_summary()
 
         pairs_predicted = Counter()
-        for reaction_id, (rpairs, _) in iteritems(prediction):
+        for reaction_id, (rpairs, _) in prediction.items():
             for c1, c2 in rpairs:
                 spair = tuple(sorted([c1.name, c2.name]))
                 pairs_predicted[spair] += 1
 
         next_reactions = set()
-        for spair, total in sorted(iteritems(possible_pairs)):
+        for spair, total in sorted(possible_pairs.items()):
             pred = pairs_predicted[spair]
 
             # The weight is set to the maximum a posteriori (MAP) estimate
@@ -303,7 +301,7 @@ def _match_greedily(reaction, compound_formula, score_func):
 
     def compound_instances(uninstantiated):
         instances = []
-        for compound, value in iteritems(uninstantiated):
+        for compound, value in uninstantiated.items():
             if value > 0:
                 f = compound_formula[compound.name]
                 instances.append(_CompoundInstance(compound, value, f))
@@ -348,9 +346,9 @@ def _match_greedily(reaction, compound_formula, score_func):
 
     transfer = {}
     while len(pairs) > 0:
-        (inst1, inst2), _ = max(iteritems(pairs), key=inst_pair_sort_key)
+        (inst1, inst2), _ = max(pairs.items(), key=inst_pair_sort_key)
         common = inst1.formula & inst2.formula
-        sorted_pairs = sorted(iteritems(pairs),
+        sorted_pairs = sorted(pairs.items(),
                               key=inst_pair_sort_key, reverse=True)
         max_sort_key = inst_pair_sort_key(sorted_pairs[0])
 

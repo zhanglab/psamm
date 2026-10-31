@@ -18,14 +18,9 @@
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 # Copyright 2020-2021  Elysha Sameth <esameth1@uri.edu>
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
 import errno
 import pandas as pd
 import re
-from future import standard_library
-standard_library.install_aliases()
 
 
 class Curator(object):

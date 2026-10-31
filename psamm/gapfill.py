@@ -23,7 +23,6 @@ This implements a variant of the algorithms described in [Kumar07]_.
 
 import logging
 
-from six import iteritems, raise_from
 
 from .lpsolver import lp
 
@@ -91,7 +90,7 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000, implicit_sinks=True):
     # Define constraints on production of metabolites in reaction
     w = prob.namespace(types=lp.VariableType.Binary)
     binary_cons_lhs = {compound: 0 for compound in model.compounds}
-    for spec, value in iteritems(model.matrix):
+    for spec, value in model.matrix.items():
         compound, reaction_id = spec
         if value != 0:
             w.define([spec])
@@ -114,15 +113,15 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000, implicit_sinks=True):
     objective = xp.sum(model.compounds)
     prob.set_objective(objective)
 
-    for compound, lhs in iteritems(binary_cons_lhs):
+    for compound, lhs in binary_cons_lhs.items():
         prob.add_linear_constraints(lhs >= xp(compound))
 
     # Define mass balance constraints
     massbalance_lhs = {compound: 0 for compound in model.compounds}
-    for spec, value in iteritems(model.matrix):
+    for spec, value in model.matrix.items():
         compound, reaction_id = spec
         massbalance_lhs[compound] += v(reaction_id) * value
-    for compound, lhs in iteritems(massbalance_lhs):
+    for compound, lhs in massbalance_lhs.items():
         if implicit_sinks:
             # The constraint is merely >0 meaning that we have implicit sinks
             # for all compounds.
@@ -134,7 +133,7 @@ def gapfind(model, solver, epsilon=0.001, v_max=1000, implicit_sinks=True):
     try:
         result = prob.solve(lp.ObjectiveSense.Maximize)
     except lp.SolverError as e:
-        raise_from(GapFillError('Failed to solve gapfill: {}'.format(e), e))
+        raise GapFillError('Failed to solve gapfill: {}'.format(e)) from e
 
     for compound in model.compounds:
         if result.get_value(xp(compound)) < 0.5:
@@ -227,7 +226,7 @@ def gapfill(
     # Define constraints on production of blocked metabolites in reaction
     w = prob.namespace(types=lp.VariableType.Binary)
     binary_cons_lhs = {compound: 0 for compound in blocked}
-    for (compound, reaction_id), value in iteritems(model.matrix):
+    for (compound, reaction_id), value in model.matrix.items():
         if reaction_id not in exclude and compound in blocked and value != 0:
             w.define([(compound, reaction_id)])
             w_var = w((compound, reaction_id))
@@ -239,15 +238,15 @@ def gapfill(
 
             binary_cons_lhs[compound] += w_var
 
-    for compound, lhs in iteritems(binary_cons_lhs):
+    for compound, lhs in binary_cons_lhs.items():
         prob.add_linear_constraints(lhs >= 1)
 
     # Define mass balance constraints
     massbalance_lhs = {compound: 0 for compound in model.compounds}
-    for (compound, reaction_id), value in iteritems(model.matrix):
+    for (compound, reaction_id), value in model.matrix.items():
         if reaction_id not in exclude:
             massbalance_lhs[compound] += v(reaction_id) * value
-    for compound, lhs in iteritems(massbalance_lhs):
+    for compound, lhs in massbalance_lhs.items():
         if implicit_sinks:
             # The constraint is merely >0 meaning that we have implicit sinks
             # for all compounds.
@@ -259,7 +258,7 @@ def gapfill(
     try:
         prob.solve(lp.ObjectiveSense.Minimize)
     except lp.SolverError as e:
-        raise_from(GapFillError('Failed to solve gapfill: {}'.format(e)), e)
+        raise GapFillError('Failed to solve gapfill: {}'.format(e)) from e
 
     def added_iter():
         for reaction_id in database_reactions:

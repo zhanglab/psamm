@@ -17,7 +17,6 @@
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
-from __future__ import unicode_literals
 
 import unittest
 
@@ -27,7 +26,7 @@ from psamm.reaction import Reaction, Compound, Direction
 
 from decimal import Decimal
 from fractions import Fraction
-from six import BytesIO, itervalues
+from io import BytesIO
 
 
 class TestSBMLDatabaseL1V2(unittest.TestCase):
@@ -1118,7 +1117,7 @@ class TestModelExtracellularCompartment(unittest.TestCase):
             {entry.id for entry in self.model.reactions},
             {'rxn_1', 'TP_glc-D', 'SINK_glc-D'})
         self.assertEqual(
-            set(itervalues(self.model.exchange)),
+            set(self.model.exchange.values()),
             {
                 (Compound('g6p', 'e'), 'EX_g6p', None, None),
                 (Compound('glc-D', 'e'), 'EX_glc-D', None, None)

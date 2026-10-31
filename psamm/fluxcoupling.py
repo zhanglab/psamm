@@ -24,7 +24,6 @@ Described in [Burgard04]_.
 import enum
 import logging
 
-from six import iteritems
 
 from psamm.lpsolver import lp
 
@@ -84,10 +83,10 @@ class FluxCouplingProblem(object):
 
         # Define mass balance constraints
         massbalance_lhs = {compound: 0 for compound in model.compounds}
-        for (compound, reaction_id), value in iteritems(model.matrix):
+        for (compound, reaction_id), value in model.matrix.items():
             flux_bow = self._vbow(reaction_id)
             massbalance_lhs[compound] += flux_bow * value
-        for compound, lhs in iteritems(massbalance_lhs):
+        for compound, lhs in massbalance_lhs.items():
             self._prob.add_linear_constraints(lhs == 0)
 
         self._reaction_constr = None

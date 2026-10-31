@@ -18,7 +18,6 @@
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@uri.edu>
 # Copyright 2020-2020  Elysha Sameth <esameth@my.uri.edu>
 
-from __future__ import unicode_literals
 
 import unittest
 import os

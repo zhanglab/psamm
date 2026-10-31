@@ -29,7 +29,7 @@ from psamm.datasource import native, context, entry
 from psamm.reaction import Reaction, Compound, Direction
 from psamm.formula import Formula
 
-from six import StringIO
+from io import StringIO
 import yaml
 
 

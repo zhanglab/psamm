@@ -23,18 +23,14 @@ and do manipulation and evaluation with substitutions of
 particular variables.
 """
 
-from __future__ import unicode_literals
 
 import re
 import numbers
 import functools
 from collections import Counter, defaultdict
 
-import six
-from six import string_types, iteritems, iterkeys, itervalues
 
 
-@six.python_2_unicode_compatible
 @functools.total_ordering
 class Variable(object):
     """Represents a variable in an expression
@@ -143,7 +139,6 @@ class Variable(object):
         return str('Variable({})').format(repr(self._symbol))
 
 
-@six.python_2_unicode_compatible
 class Expression(object):
     """Represents an affine expression (e.g. 2x + 3y - z + 5)"""
 
@@ -156,7 +151,7 @@ class Expression(object):
         Expression('x + y')
         """
 
-        if len(args) == 1 and isinstance(args[0], string_types):
+        if len(args) == 1 and isinstance(args[0], str):
             # Parse as string
             self._variables, self._offset = self._parse_string(args[0])
         elif len(args) <= 2:
@@ -164,7 +159,7 @@ class Expression(object):
             self._offset = args[1] if len(args) >= 2 else 0
 
             variables = args[0] if len(args) >= 1 else {}
-            for var, value in iteritems(variables):
+            for var, value in variables.items():
                 if not isinstance(var, Variable):
                     raise ValueError('Not a variable: {}'.format(var))
                 if value != 0:
@@ -227,7 +222,7 @@ class Expression(object):
                         match.group(0)))
 
         # Remove zero-coefficient elements
-        variables = {var: value for var, value in iteritems(variables)
+        variables = {var: value for var, value in variables.items()
                      if value != 0}
         return variables, offset
 
@@ -242,7 +237,7 @@ class Expression(object):
         if len(result._variables) == 0:
             return result._offset
         elif len(result._variables) == 1 and result._offset == 0:
-            var, value = next(iteritems(result._variables))
+            var, value = next(iter(result._variables.items()))
             if value == 1:
                 return var
         return result
@@ -258,7 +253,7 @@ class Expression(object):
         Expression('x + 2z')
         """
         expr = self.__class__()
-        for var, value in iteritems(self._variables):
+        for var, value in self._variables.items():
             expr += value * var.substitute(mapping)
         return (expr + self._offset).simplify()
 
@@ -276,7 +271,7 @@ class Expression(object):
         elif isinstance(other, Expression):
             variables = Counter(self._variables)
             variables.update(other._variables)
-            variables = {var: value for var, value in iteritems(variables)
+            variables = {var: value for var, value in variables.items()
                          if value != 0}
             return self.__class__(variables, self._offset + other._offset)
         return NotImplemented
@@ -297,7 +292,7 @@ class Expression(object):
             if other == 0:
                 return self.__class__()
             return self.__class__({var: value * other for var, value
-                                   in iteritems(self._variables)},
+                                   in self._variables.items()},
                                   self._offset * other)
         return NotImplemented
 
@@ -308,7 +303,7 @@ class Expression(object):
         """Divide by scalar"""
         if isinstance(other, numbers.Number):
             return self.__class__({var: value / other for var, value
-                                   in iteritems(self._variables)},
+                                   in self._variables.items()},
                                   self._offset / other)
         return NotImplemented
 
@@ -317,7 +312,7 @@ class Expression(object):
     def __floordiv__(self, other):
         if isinstance(other, numbers.Number):
             return self.__class__({var: value // other for var, value
-                                   in iteritems(self._variables)},
+                                   in self._variables.items()},
                                   self._offset // other)
         return NotImplemented
 
@@ -333,8 +328,8 @@ class Expression(object):
             # Check that there is just one variable in the expression
             # with a coefficient of one.
             return (self._offset == 0 and len(self._variables) == 1 and
-                    next(iterkeys(self._variables)) == other and
-                    next(itervalues(self._variables)) == 1)
+                    next(iter(self._variables.keys())) == other and
+                    next(iter(self._variables.values())) == 1)
         elif isinstance(other, numbers.Number):
             return len(self._variables) == 0 and self._offset == other
         return False
@@ -346,7 +341,7 @@ class Expression(object):
         def all_terms():
             count_vars = 0
             for symbol, value in sorted((var.symbol, value) for var, value
-                                        in iteritems(self._variables)):
+                                        in self._variables.items()):
                 if value != 0:
                     count_vars += 1
                     yield symbol, value

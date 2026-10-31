@@ -18,14 +18,11 @@
 
 """Linear programming solver using Gurobi."""
 
-from __future__ import absolute_import
 
 import logging
 from itertools import repeat, count
 import numbers
 
-from six import raise_from
-from six.moves import zip
 
 import gurobipy
 
@@ -270,7 +267,7 @@ class Problem(BaseProblem):
         try:
             self._p.params.FeasibilityTol = value
         except gurobipy.GurobiError as e:
-            raise_from(ValueError(e.message), e)
+            raise ValueError(e.message) from e
 
     @ranged_property(min=1e-9, max=1e-2)
     def optimality_tolerance(self):
@@ -283,7 +280,7 @@ class Problem(BaseProblem):
         try:
             self._p.params.OptimalityTol = value
         except gurobipy.GurobiError as e:
-            raise_from(ValueError(e.message), e)
+            raise ValueError(e.message) from e
 
     @ranged_property(min=1e-9, max=1e-1)
     def integrality_tolerance(self):
@@ -296,7 +293,7 @@ class Problem(BaseProblem):
         try:
             self._p.params.IntFeasTol = value
         except gurobipy.GurobiError as e:
-            raise_from(ValueError(e.message), e)
+            raise ValueError(e.message) from e
 
 
 class Constraint(BaseConstraint):

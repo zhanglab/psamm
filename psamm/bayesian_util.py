@@ -17,9 +17,6 @@
 # Copyright 2018-2020  Jing Wang <wjingsjtu@gmail.com>
 
 """Utility functions."""
-from __future__ import division
-from future.utils import iteritems
-from builtins import range
 
 import re
 from itertools import product
@@ -67,7 +64,7 @@ def formula_equals(f1, f2, charge1, charge2):
 
     def calc_formula(f, charge, neutral=False):
         formula = {}
-        for e, value in iteritems(f):
+        for e, value in f.items():
             if e != Atom('H') or charge is None or not neutral:
                 formula[e] = value
             else:
@@ -113,8 +110,8 @@ def formula_exact(f1, f2):
     if f1 is None or f2 is None:
         return False
 
-    formula1 = {e: value for e, value in iteritems(f1)}
-    formula2 = {e: value for e, value in iteritems(f2)}
+    formula1 = {e: value for e, value in f1.items()}
+    formula2 = {e: value for e, value in f2.items()}
     return formula1 == formula2
 
 

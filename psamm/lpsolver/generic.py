@@ -19,7 +19,6 @@
 
 """Generic interface to LP solver instantiation."""
 
-from __future__ import absolute_import, print_function
 
 import argparse
 import os
@@ -27,7 +26,6 @@ import logging
 
 from .lp import Solver as BaseSolver
 
-from six import iteritems
 
 logger = logging.getLogger(__name__)
 _solvers = []
@@ -114,7 +112,7 @@ class RequirementsError(Exception):
 def filter_solvers(solvers, requirements):
     """Yield solvers that fullfil the requirements."""
     for solver in solvers:
-        for req, value in iteritems(requirements):
+        for req, value in requirements.items():
             if (req in ('threads', 'feasibility_tolerance',
                         'optimality_tolerance',
                         'integrality_tolerance') and solver[req] is True):
@@ -141,7 +139,7 @@ class Solver(BaseSolver):
         if len(_solvers) == 0:
             raise RequirementsError('No solvers available')
 
-        self._requirements = {key: value for key, value in iteritems(kwargs)
+        self._requirements = {key: value for key, value in kwargs.items()
                               if value is not None}
         solvers = list(filter_solvers(_solvers, self._requirements))
 
@@ -272,7 +270,7 @@ def list_solvers(args=None):
                 print('{}: Does not fullfil the specified requirements'.format(
                     solver['name']))
 
-        for solver, error in iteritems(_solver_import_errors):
+        for solver, error in _solver_import_errors.items():
             print('{}: Error loading solver: {}'.format(solver, error))
 
     if status != 0:

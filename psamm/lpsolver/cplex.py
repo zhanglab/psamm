@@ -18,14 +18,11 @@
 
 """Linear programming solver using Cplex."""
 
-from __future__ import absolute_import
 
 import logging
 from itertools import repeat, count
 import numbers
 
-from six import text_type, raise_from
-from six.moves import zip
 import cplex as cp
 
 from .lp import Solver as BaseSolver
@@ -59,7 +56,7 @@ class CplexRangedProperty(RangedProperty):
 
         def fset(obj, value):
             prop = get_prop(obj)
-            prop_name = '.'.join(text_type(prop).split('.')[1:])
+            prop_name = '.'.join(str(prop).split('.')[1:])
             logger.info('Setting {} to {!r}'.format(prop_name, value))
             prop.set(value)
 
@@ -346,7 +343,7 @@ class Problem(BaseProblem):
         try:
             self._cp.solve()
         except cp.exceptions.CplexSolverError as e:
-            raise_from(SolverError('Unable to solve: {}'.format(e)), e)
+            raise SolverError('Unable to solve: {}'.format(e)) from e
 
         self._solve_count += 1
         if (self._cp.solution.get_status() ==

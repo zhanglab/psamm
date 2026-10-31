@@ -18,14 +18,12 @@
 
 """Linear programming solver using GLPK."""
 
-from __future__ import absolute_import
 
 import logging
 from itertools import repeat, count
 import numbers
 import threading
 
-from six.moves import zip
 
 import swiglpk
 

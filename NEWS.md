@@ -4,6 +4,8 @@ Unreleased
 - Adds support for Python 3.11, 3.12, 3.13 and 3.14
 - Drops support for Python 3.10 and older, which have reached end of life
 - Replaces the deprecated `pkg_resources` module with `importlib`
+- Removes the Python 2 compatibility code and the `six` and `future`
+  dependencies
 - Fixes compatibility with NumPy 2, SciPy sparse arrays and pandas 3
 - Fixes the `vis` command failing to open input files on Python 3.11+
 - `generate-database` now reads compound charges and formulas from the ChEBI

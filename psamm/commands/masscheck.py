@@ -16,12 +16,10 @@
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
-from __future__ import unicode_literals
 
 import time
 import logging
 
-from six import iteritems
 
 from ..command import (Command, SolverCommandMixin, MetabolicMixin,
                        FilePrefixAppendAction, convert_to_unicode)
@@ -106,7 +104,7 @@ class MassConsistencyCommand(MetabolicMixin, SolverCommandMixin, Command):
         good = 0
         total = 0
         for compound, mass in sorted(
-                iteritems(masses), key=lambda x: (x[1], x[0]), reverse=True):
+                masses.items(), key=lambda x: (x[1], x[0]), reverse=True):
             if mass >= 1-epsilon or compound.name in zeromass:
                 good += 1
             total += 1

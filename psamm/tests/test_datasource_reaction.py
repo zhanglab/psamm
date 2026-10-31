@@ -20,7 +20,6 @@
 import unittest
 from decimal import Decimal
 
-from six import text_type
 
 from psamm.reaction import Reaction, Compound, Direction
 from psamm.datasource import reaction
@@ -92,7 +91,7 @@ class TestDefaultReactionParser(unittest.TestCase):
     def test_reaction_str(self):
         r = Reaction(Direction.Reverse, [(Compound('H2O'), 2)],
                      [(Compound('H2'), 2), (Compound('O2'), 1)])
-        self.assertEqual(text_type(r), '(2) H2O <= (2) H2 + O2')
+        self.assertEqual(str(r), '(2) H2O <= (2) H2 + O2')
 
 
 class TestSudenSimple(unittest.TestCase):

@@ -18,7 +18,6 @@
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 # Copyright 2020-2020  Elysha Sameth <esameth1@my.uri.edu>
 
-from __future__ import unicode_literals
 
 import logging
 import io
@@ -26,7 +25,6 @@ import os
 import csv
 import argparse
 from collections import defaultdict, Counter
-from six import text_type
 from ..command import MetabolicMixin, Command, FilePrefixAppendAction, \
     convert_to_unicode
 from .. import graph
@@ -251,9 +249,9 @@ class VisualizationCommand(MetabolicMixin,
                     model_reaction_entries[self._model.biomass_reaction]
                 g = add_biomass_rxns(g, nm_biomass_rxn)
                 for cpd, _ in nm_biomass_rxn.equation.left:
-                    bio_cpds_sub.add(text_type(cpd))
+                    bio_cpds_sub.add(str(cpd))
                 for cpd, _ in nm_biomass_rxn.equation.right:
-                    bio_cpds_pro.add(text_type(cpd))
+                    bio_cpds_pro.add(str(cpd))
             else:
                 logger.warning(
                     'Biomass reaction {} was excluded from visualization '
@@ -346,7 +344,7 @@ def rxnset_for_vis(mm, subset_file, exclude):
     """
     all_cpds = set()
     for cpd in mm.compounds:
-        all_cpds.add(text_type(cpd))
+        all_cpds.add(str(cpd))
     if subset_file is None:
         if len(exclude) == 0:
             final_rxn_set = set(mm.reactions)
@@ -375,7 +373,7 @@ def rxnset_for_vis(mm, subset_file, exclude):
             if len(cpd_set) > 0:
                 for rx in mm.reactions:
                     rxn = mm.get_reaction(rx)
-                    if any(text_type(c) in cpd_set
+                    if any(str(c) in cpd_set
                            for (c, _) in rxn.compounds):
                         final_rxn_set.add(rx)
             elif len(rxn_set) > 0:
@@ -405,7 +403,7 @@ def add_biomass_rxns(g, nm_bio_reaction):
         product_list.append(c)
     bio_pair = Counter()
     for c, _ in bio_reaction.compounds:
-        if text_type(c) in g.nodes_id_dict:
+        if str(c) in g.nodes_id_dict:
             bio_pair[biomass_rxn_id] += 1
             node_bio = graph.Node({
                 'id': u'{}_{}'.format(biomass_rxn_id,
@@ -420,16 +418,16 @@ def add_biomass_rxns(g, nm_bio_reaction):
             g.add_node(node_bio)
 
             if c in reactant_list:
-                g.add_edge(graph.Edge(g.get_node(text_type(c)), node_bio,
+                g.add_edge(graph.Edge(g.get_node(str(c)), node_bio,
                                       {'dir': direction}))
             if c in product_list:
-                g.add_edge(graph.Edge(node_bio, g.get_node(text_type(c)),
+                g.add_edge(graph.Edge(node_bio, g.get_node(str(c)),
                                       {'dir': direction}))
     return g
 
 
 def add_ex_cpd(g, mm_cpd, nm_cpd, compound_formula, element):
-    node_dict = {'id': text_type(mm_cpd),
+    node_dict = {'id': str(mm_cpd),
                  'entry': [nm_cpd],
                  'compartment': mm_cpd.compartment,
                  'type': 'cpd'}
@@ -581,8 +579,8 @@ def make_cpt_tree(boundaries, extracellular):
                        .format(etmp[0]))
     for cpt in compartments:
         for (j, k) in boundaries:
-            j = text_type(j)
-            k = text_type(k)
+            j = str(j)
+            k = str(k)
             if j == cpt:
                 children[cpt].add(k)
             elif k == cpt:
@@ -638,9 +636,9 @@ def add_exchange_rxns(g, rxn_id, reaction, style_flux_dict):
     """
     direction = graph.dir_value(reaction.direction)
     for c, _ in reaction.compounds:
-        if text_type(c) in g.nodes_id_dict:
+        if str(c) in g.nodes_id_dict:
             node_ex = graph.Node({
-                'id': text_type(rxn_id),
+                'id': str(rxn_id),
                 'entry': [reaction],
                 'shape': 'box',
                 'style': 'filled',
@@ -652,14 +650,14 @@ def add_exchange_rxns(g, rxn_id, reaction, style_flux_dict):
 
             for c1, _ in reaction.left:
                 g.add_edge(graph.Edge(
-                    g.get_node(text_type(c1)), node_ex, {
+                    g.get_node(str(c1)), node_ex, {
                         'dir': direction,
                         'style': style_flux_dict[rxn_id][0],
                         'penwidth': style_flux_dict[rxn_id][1]
                     }))
             for c2, _ in reaction.right:
                 g.add_edge(graph.Edge(
-                    node_ex, g.get_node(text_type(c2)), {
+                    node_ex, g.get_node(str(c2)), {
                         'dir': direction,
                         'style': style_flux_dict[rxn_id][0],
                         'penwidth': style_flux_dict[rxn_id][1]

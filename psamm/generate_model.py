@@ -16,7 +16,6 @@
 # Copyright 2019-2022  Christopher Powers <c-11060@uri.edu>
 # Copyright 2021-2022  Jason Vailionis <jason_vailionis@uri.edu>
 
-from __future__ import unicode_literals
 import logging
 import argparse
 import yaml
@@ -25,7 +24,6 @@ import sys
 from collections import defaultdict
 from collections import OrderedDict
 import re
-from six import iteritems
 from psamm.datasource.native import parse_reaction_equation_string
 from psamm.datasource.native import ModelReader
 from psamm.datasource.entry import (DictReactionEntry as ReactionEntry)
@@ -36,7 +34,6 @@ from psamm.util import resource_filename
 from psamm.datasource.chebi import load as load_chebi_db
 from importlib.metadata import entry_points
 from psamm.command import _trim
-from six import add_metaclass, iteritems, text_type
 import abc
 from urllib.error import HTTPError
 logger = logging.getLogger(__name__)
@@ -77,8 +74,7 @@ def dict_constructor(loader, node):
     return OrderedDict(loader.construct_pairs(node))
 
 
-@add_metaclass(abc.ABCMeta)
-class Command(object):
+class Command(metaclass=abc.ABCMeta):
     """Represents a command in the interface, operating on a model.
 
     The constructor will be given the NativeModel and the command
@@ -1018,7 +1014,7 @@ def main(command_class=None, args=None):
         # Create parsers for subcommands
         subparsers = parser.add_subparsers(title='Commands',
                                            metavar='command')
-        for name, command_class in sorted(iteritems(commands)):
+        for name, command_class in sorted(commands.items()):
             title, _, _ = command_class.__doc__.partition('\n\n')
             subparser = subparsers.add_parser(
                 name, help=title.rstrip('.'),
@@ -1032,7 +1028,7 @@ def main(command_class=None, args=None):
     try:
         command.run()
     except CommandError as e:
-        parser.error(text_type(e))
+        parser.error(str(e))
 
 
 class ReactionEntry(object):

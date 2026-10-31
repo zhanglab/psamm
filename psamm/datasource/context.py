@@ -18,18 +18,14 @@
 
 """Utilities for keeping track of parsing context."""
 
-from __future__ import unicode_literals
 
 import os
-import six
-from six import string_types, text_type
 
 
 class ContextError(Exception):
     """Raised when a context failure occurs."""
 
 
-@six.python_2_unicode_compatible
 class FilePathContext(object):
     """File context that keeps track of contextual information.
 
@@ -43,7 +39,7 @@ class FilePathContext(object):
         """Create new context from a path or existing context"""
 
         if arg is not None:
-            if isinstance(arg, string_types):
+            if isinstance(arg, str):
                 self._filepath = arg
             else:
                 self._filepath = arg.filepath
@@ -75,10 +71,9 @@ class FilePathContext(object):
         return open(self.filepath, mode)
 
     def __str__(self):
-        return text_type(self._filepath)
+        return str(self._filepath)
 
 
-@six.python_2_unicode_compatible
 class FileMark(object):
     """Marks a position in a file.
 
@@ -104,7 +99,7 @@ class FileMark(object):
         return self._column
 
     def __str__(self):
-        result = text_type(self._filecontext)
+        result = str(self._filecontext)
         if self._line is not None:
             result += ':{}'.format(self._line)
             if self._column is not None:

@@ -26,9 +26,7 @@ discovered.
 The :func:`.main` function is the entry point of command line interface.
 """
 
-from __future__ import division, unicode_literals
 
-import re
 import os
 import sys
 import argparse
@@ -40,7 +38,6 @@ from itertools import islice
 import multiprocessing as mp
 
 from importlib.metadata import entry_points
-from six import add_metaclass, iteritems, text_type, PY3
 
 from . import __version__ as package_version
 from .datasource import native, sbml
@@ -48,27 +45,14 @@ from .datasource.context import FilePathContext
 from .lpsolver import generic
 from .util import multiprocessing_context
 
-import codecs
-
-if PY3:
-    unicode = str
-if not PY3:
-    if sys.stdout.encoding != 'UTF-8':
-        sys.stdout = codecs.getwriter('utf-8')(sys.stdout, 'strict')
-
 logger = logging.getLogger(__name__)
 
 
 def convert_to_unicode(str_, encoding='UTF-8'):
-    if PY3 or bool(re.search(r'\\u', str_)):
-        try:
-            return str_.encode('latin-1').decode('unicode-escape')
-        except:
-            return str_
-    else:
-        if isinstance(str_, unicode):
-            return str_
-        return str_.decode(encoding)
+    try:
+        return str_.encode('latin-1').decode('unicode-escape')
+    except:
+        return str_
 
 
 class CommandError(Exception):
@@ -81,8 +65,7 @@ class CommandError(Exception):
     """
 
 
-@add_metaclass(abc.ABCMeta)
-class Command(object):
+class Command(metaclass=abc.ABCMeta):
     """Represents a command in the interface, operating on a model.
 
     The constructor will be given the NativeModel and the command line
@@ -199,7 +182,7 @@ class LoopRemovalMixin(object):
                 'Select type of loop removal to perform.'
                 ' Possible methods are: ' + supported_list)
             parser.add_argument(
-                '--loop-removal', help=help_text, type=text_type,
+                '--loop-removal', help=help_text, type=str,
                 default=supported[0],
                 metavar='METHOD', dest='hidden_mixin_loop_removal')
 
@@ -319,7 +302,7 @@ class FilePrefixAppendAction(argparse.Action):
         if arguments is None or len(arguments) == 0:
             arguments = []
             setattr(namespace, self.dest, arguments)
-        values = text_type(values)
+        values = str(values)
         if len(values) > 0 and values[0] in self.__fromfile_prefix_chars:
             filepath = values[1:]
             try:
@@ -582,7 +565,7 @@ def main(command_class=None, args=None):
 
         # Create parsers for subcommands
         subparsers = parser.add_subparsers(title='Commands', metavar='command')
-        for name, command_class in sorted(iteritems(commands)):
+        for name, command_class in sorted(commands.items()):
             title, _, _ = command_class.__doc__.partition('\n\n')
             subparser = subparsers.add_parser(
                 name, help=title.rstrip('.'),
@@ -602,7 +585,7 @@ def main(command_class=None, args=None):
     try:
         command.run()
     except CommandError as e:
-        parser.error(text_type(e))
+        parser.error(str(e))
 
 
 def main_sbml(command_class=None, args=None):
@@ -653,7 +636,7 @@ def main_sbml(command_class=None, args=None):
 
         # Create parsers for subcommands
         subparsers = parser.add_subparsers(title='Commands', metavar='command')
-        for name, command_class in sorted(iteritems(commands)):
+        for name, command_class in sorted(commands.items()):
             title, _, _ = command_class.__doc__.partition('\n\n')
             subparser = subparsers.add_parser(
                 name, help=title.rstrip('.'),
@@ -677,4 +660,4 @@ def main_sbml(command_class=None, args=None):
     try:
         command.run()
     except CommandError as e:
-        parser.error(text_type(e))
+        parser.error(str(e))

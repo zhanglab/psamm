@@ -29,7 +29,6 @@ from ..reaction import Reaction, Compound, Direction
 from ..expression.affine import Expression
 from ..util import DictView
 
-from six import iteritems, add_metaclass
 
 
 class ParseError(Exception):
@@ -93,7 +92,7 @@ class _MapperMeta(Mapping.__class__):
     def __new__(cls, name, bases, namespace):
         property_accessors = {}
         new_namespace = {}
-        for attr_name, attr in iteritems(namespace):
+        for attr_name, attr in namespace.items():
             if (isinstance(attr, FunctionType) and
                     not attr_name.startswith('_')):
                 property_accessors[attr_name] = attr
@@ -128,8 +127,7 @@ class _MapperMeta(Mapping.__class__):
         return inst
 
 
-@add_metaclass(_MapperMeta)
-class CompoundMapper(Mapping):
+class CompoundMapper(Mapping, metaclass=_MapperMeta):
     """Mapper for raw KEGG compound properties to standard properties.
 
     Public methods are automatically translated into cached properties by the
@@ -210,8 +208,7 @@ class CompoundMapper(Mapping):
                 yield database.strip(), entry.strip()
 
 
-@add_metaclass(_MapperMeta)
-class ReactionMapper(Mapping):
+class ReactionMapper(Mapping, metaclass=_MapperMeta):
     """Mapper for raw KEGG reaction properties to standard properties.
 
     Methods are automatically translated into cached properties by the

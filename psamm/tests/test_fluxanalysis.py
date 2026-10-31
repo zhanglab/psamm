@@ -25,7 +25,6 @@ from psamm import fluxanalysis
 from psamm.datasource.reaction import parse_reaction
 from psamm.lpsolver import generic
 
-from six import itervalues
 
 
 class TestFluxBalance(unittest.TestCase):
@@ -220,7 +219,7 @@ class TestFluxVariability(unittest.TestCase):
             self.model, self.model.reactions, {'rxn_6': 200},
             tfba=False, solver=self.solver))
 
-        for bounds in itervalues(fluxes):
+        for bounds in fluxes.values():
             self.assertEqual(len(bounds), 2)
 
         self.assertAlmostEqual(fluxes['rxn_1'][0], 100)
@@ -249,7 +248,7 @@ class TestFluxVariability(unittest.TestCase):
             self.model, self.model.reactions, {'rxn_6': 200},
             tfba=False, solver=self.solver))
 
-        for bounds in itervalues(fluxes):
+        for bounds in fluxes.values():
             self.assertEqual(len(bounds), 2)
 
         self.assertAlmostEqual(fluxes['rxn_6'][0], 200)
