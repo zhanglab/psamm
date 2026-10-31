@@ -31,7 +31,7 @@ import unittest
 from six import StringIO, BytesIO, text_type
 
 from psamm.command import (main, Command, MetabolicMixin, SolverCommandMixin,
-                           CommandError)
+                           CommandError, ProcessPoolExecutor, ExecutorError)
 from psamm.lpsolver import generic
 from psamm.datasource import native, sbml
 
@@ -903,6 +903,56 @@ class TestSBMLCommandMain(unittest.TestCase, BaseCommandTest):
 
     def test_run_fba(self):
         self.run_solver_command(FluxBalanceCommand)
+
+
+class DoubleTaskHandler(object):
+    """Executor task handler that returns twice the task value."""
+
+    def handle_task(self, value):
+        return value * 2
+
+
+class FailingTaskHandler(object):
+    """Executor task handler that raises an exception."""
+
+    def handle_task(self, value):
+        raise ValueError('Task failed: {}'.format(value))
+
+
+class ExitingTaskHandler(object):
+    """Executor task handler where the worker process dies abruptly."""
+
+    def handle_task(self, value):
+        os._exit(3)
+
+
+class TestProcessPoolExecutor(unittest.TestCase):
+    def run_tasks(self, handler, tasks):
+        executor = ProcessPoolExecutor(handler_init=handler, processes=2)
+        with executor:
+            results = dict(executor.imap_unordered(iter(tasks), 2))
+        executor.join()
+        return results
+
+    def test_imap_unordered(self):
+        results = self.run_tasks(DoubleTaskHandler, [(i,) for i in range(10)])
+        self.assertEqual(results, {(i,): i * 2 for i in range(10)})
+
+    def test_apply(self):
+        executor = ProcessPoolExecutor(
+            handler_init=DoubleTaskHandler, processes=2)
+        with executor:
+            self.assertEqual(executor.apply((21,)), 42)
+        executor.join()
+
+    def test_task_exception_is_raised(self):
+        with self.assertRaisesRegex(ValueError, 'Task failed'):
+            self.run_tasks(FailingTaskHandler, [(1,), (2,)])
+
+    def test_dead_worker_raises_error(self):
+        # Without the check for dead workers this would wait forever
+        with self.assertRaisesRegex(ExecutorError, 'exit code 3'):
+            self.run_tasks(ExitingTaskHandler, [(1,), (2,)])
 
 
 if __name__ == '__main__':

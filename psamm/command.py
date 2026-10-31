@@ -35,11 +35,12 @@ import argparse
 import logging
 import abc
 import pickle
+import queue
 from itertools import islice
 import multiprocessing as mp
 
 from importlib.metadata import entry_points
-from six import add_metaclass, iteritems, itervalues, text_type, PY3
+from six import add_metaclass, iteritems, text_type, PY3
 
 from . import __version__ as package_version
 from .datasource import native, sbml
@@ -403,14 +404,31 @@ class ProcessPoolExecutor(Executor):
             p.start()
             self._processes.append(p)
 
+    def _get_results(self):
+        """Wait for the next results from a worker process.
+
+        Raises :class:`ExecutorError` if a worker process has died (e.g.
+        crashed in a native library) since its results would never arrive.
+        """
+        while True:
+            try:
+                return self._result_queue.get(timeout=1)
+            except queue.Empty:
+                for p in self._processes:
+                    if p.exitcode is not None and p.exitcode != 0:
+                        raise ExecutorError(
+                            'Worker process {} exited unexpectedly with exit'
+                            ' code {}'.format(p.pid, p.exitcode))
+
     def apply(self, task):
         self._task_queue.put([task])
-        results = self._result_queue.get()
+        results = self._get_results()
         if isinstance(results, _ErrorMarker):
             exception = pickle.loads(results.pickled_exception)
             raise exception
 
-        return next(itervalues(results))
+        # results is a list with the single (task, result) pair
+        return results[0][1]
 
     def imap_unordered(self, iterable, chunksize=1):
         def iter_chunks():
@@ -432,7 +450,7 @@ class ProcessPoolExecutor(Executor):
 
         exception = None
         while workers > 0:
-            results = self._result_queue.get()
+            results = self._get_results()
             if isinstance(results, _ErrorMarker):
                 if exception is None:
                     if results.pickled_exception is None:
