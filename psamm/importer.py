@@ -148,7 +148,7 @@ def _set_representer(dumper, data):
 
 
 def _boolean_expression_representer(dumper, data):
-    return dumper.represent_unicode(str(data))
+    return dumper.represent_str(str(data))
 
 
 def _decimal_representer(dumper, data):
