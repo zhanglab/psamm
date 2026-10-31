@@ -18,8 +18,7 @@
 from psamm.datasource.reaction import Reaction, Compound, Direction
 from psamm.datasource import native
 from collections import Counter
-from six import add_metaclass
-from pkg_resources import resource_filename
+from psamm.util import resource_filename
 import logging
 import sys
 import os
@@ -38,8 +37,7 @@ if sys.version_info.minor > 5:
 logger = logging.getLogger(__name__)
 
 
-@add_metaclass(abc.ABCMeta)
-class Command(object):
+class Command(metaclass=abc.ABCMeta):
     """Represents a command in the interface, operating on a model.
 
     The constructor will be given the NativeModel and the command line
@@ -104,7 +102,7 @@ def load_compound_data():
     df = pd.read_csv(resource_filename("psamm",
                      "external-data/biomass_compound_descriptions.tsv"),
                      sep="\t", na_values=["None"])
-    df.set_index(df.id.values, inplace=True)
+    df = df.set_index(df.id.to_numpy())
     return df
 
 
@@ -118,7 +116,7 @@ def apply_config(df, config_path):
     config = pd.read_csv(config_path)
     save_index = df.index
     df = pd.merge(df, config, how="left", on=["id", "name"])
-    df.set_index(save_index, inplace=True)
+    df = df.set_index(save_index)
     df.custom_id = df.custom_id.fillna(df.id)
     df.id = df.custom_id
     return df

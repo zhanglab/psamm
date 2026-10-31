@@ -18,10 +18,8 @@
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 # Copyright 2020-2020  Elysha Sameth <esameth1@my.uri.edu>
 
-from __future__ import print_function, unicode_literals
 import re
 
-from six import text_type
 
 from ..command import Command, FilePrefixAppendAction, convert_to_unicode
 from ..datasource.reaction import parse_compound
@@ -123,10 +121,10 @@ class SearchCommand(Command):
                     if isinstance(cpd_property, list):
                         for i in cpd_property:
                             compound_prop_list.append(convert_to_unicode(
-                                text_type(i)).lower())
+                                str(i)).lower())
                     else:
                         compound_prop_list.append(convert_to_unicode(
-                            text_type(cpd_property)).lower())
+                            str(cpd_property)).lower())
 
                 # find compound entry based on given property argument
                 if self._args.exact:
@@ -194,11 +192,11 @@ class SearchCommand(Command):
                     if isinstance(rxn_property, list):
                         for i in rxn_property:
                             reaction_prop_list.append(convert_to_unicode(
-                                text_type(i)).lower())
+                                str(i)).lower())
 
                     else:
                         reaction_prop_list.append(convert_to_unicode(
-                            text_type(rxn_property)).lower())
+                            str(rxn_property)).lower())
 
                 # find reaction based on given property argument
                 if self._args.exact:

@@ -24,7 +24,6 @@ import json
 import logging
 import decimal
 
-from six import iteritems
 
 from ..reaction import Reaction, Compound, Direction
 from ..datasource import native
@@ -123,7 +122,7 @@ class Importer(BaseImporter):
         return model
 
     def _read_compartments(self, doc):
-        for compartment, name in iteritems(doc.get('compartments', {})):
+        for compartment, name in doc.get('compartments', {}).items():
             yield CompartmentEntry(dict(id=compartment, name=name))
 
     def _read_compounds(self, doc):
@@ -139,7 +138,7 @@ class Importer(BaseImporter):
     def _parse_reaction_equation(self, entry):
         metabolites = entry.properties.pop('metabolites')
         compounds = ((Compound(metabolite), value)
-                     for metabolite, value in iteritems(metabolites))
+                     for metabolite, value in metabolites.items())
         if (entry.properties.get('lower_bound') == 0 and
                 entry.properties.get('upper_bound') != 0):
             direction = Direction.Forward

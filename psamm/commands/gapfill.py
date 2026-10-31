@@ -16,12 +16,10 @@
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
-from __future__ import unicode_literals
 
 import logging
 import argparse
 
-from six import text_type
 
 from ..command import (Command, MetabolicMixin, SolverCommandMixin,
                        FilePrefixAppendAction)
@@ -99,7 +97,7 @@ class GapFillCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         if len(blocked) > 0:
             logger.info('Unblocking compounds: {}...'.format(
-                ', '.join(text_type(c) for c in sorted(blocked))))
+                ', '.join(str(c) for c in sorted(blocked))))
         else:
             logger.info(
                 'Unblocking all compounds in model. Use --compound option to'

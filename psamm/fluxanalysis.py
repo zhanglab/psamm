@@ -18,14 +18,12 @@
 
 """Implementation of Flux Balance Analysis."""
 
-from __future__ import unicode_literals
 
 import logging
 import random
 
 from .lpsolver import lp
 
-from six import iteritems, raise_from
 
 # Module-level logging
 logger = logging.getLogger(__name__)
@@ -91,10 +89,10 @@ class FluxBalanceProblem(object):
 
         # Define constraints
         massbalance_lhs = {compound: 0 for compound in model.compounds}
-        for spec, value in iteritems(self._model.matrix):
+        for spec, value in self._model.matrix.items():
             compound, reaction_id = spec
             massbalance_lhs[compound] += v(reaction_id) * value
-        for compound, lhs in iteritems(massbalance_lhs):
+        for compound, lhs in massbalance_lhs.items():
             self._prob.add_linear_constraints(lhs == 0)
 
     @property
@@ -160,11 +158,11 @@ class FluxBalanceProblem(object):
 
         tdbalance_lhs = {reaction_id: 0
                          for reaction_id in self._model.reactions}
-        for spec, value in iteritems(self._model.matrix):
+        for spec, value in self._model.matrix.items():
             compound, reaction_id = spec
             if not self._model.is_exchange(reaction_id):
                 tdbalance_lhs[reaction_id] += mu(compound) * value
-        for reaction_id, lhs in iteritems(tdbalance_lhs):
+        for reaction_id, lhs in tdbalance_lhs.items():
             if not self._model.is_exchange(reaction_id):
                 self._prob.add_linear_constraints(lhs == dmu(reaction_id))
 
@@ -269,8 +267,8 @@ class FluxBalanceProblem(object):
         try:
             self._prob.solve(lp.ObjectiveSense.Maximize)
         except lp.SolverError as e:
-            raise_from(FluxBalanceError('Failed to solve: {}'.format(
-                e), result=self._prob.result), e)
+            raise FluxBalanceError('Failed to solve: {}'.format(
+                e), result=self._prob.result) from e
         finally:
             # Set temporary constraints to be removed on next solve call
             self._remove_constr = self._temp_constr
@@ -283,7 +281,7 @@ class FluxBalanceProblem(object):
     def flux_expr(self, reaction):
         """Get LP expression representing the reaction flux."""
         if isinstance(reaction, dict):
-            return self._v.expr(iteritems(reaction))
+            return self._v.expr(iter(reaction.items()))
         return self._v(reaction)
 
     def get_flux(self, reaction):
@@ -355,7 +353,7 @@ def flux_variability(model, reactions, fixed, tfba, solver):
     else:
         fba.prob.integrality_tolerance.value = 0
     print(fba.prob.integrality_tolerance.value)
-    for reaction_id, value in iteritems(fixed):
+    for reaction_id, value in fixed.items():
         flux = fba.get_flux_var(reaction_id)
         fba.prob.add_linear_constraints(flux >= value)
 
@@ -386,7 +384,7 @@ def flux_minimization(model, fixed, solver, weights={}):
 
     fba = FluxBalanceProblem(model, solver)
 
-    for reaction_id, value in iteritems(fixed):
+    for reaction_id, value in fixed.items():
         flux = fba.get_flux_var(reaction_id)
         fba.prob.add_linear_constraints(flux >= value)
 
@@ -420,7 +418,7 @@ def flux_randomization(model, threshold, tfba, solver):
             optimize[reaction_id] = random.random()
 
     fba = _get_fba_problem(model, tfba, solver)
-    for reaction_id, value in iteritems(threshold):
+    for reaction_id, value in threshold.items():
         fba.prob.add_linear_constraints(fba.get_flux_var(reaction_id) >= value)
 
     fba.maximize(optimize)

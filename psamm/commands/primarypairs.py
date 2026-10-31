@@ -16,7 +16,6 @@
 # Copyright 2015-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
-from __future__ import unicode_literals
 
 import logging
 import random
@@ -27,7 +26,6 @@ from ..formula import Formula, Atom, Radical, ParseError
 from .. import findprimarypairs
 from .. import mapmaker
 
-from six import text_type, iteritems
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +50,7 @@ class PrimaryPairsCommand(SolverCommandMixin, Command):
             help=('Reaction to exclude (e.g. biomass reactions or'
                   ' macromolecule synthesis)'))
         parser.add_argument(
-            '--report-element', metavar='element', type=text_type, default=[],
+            '--report-element', metavar='element', type=str, default=[],
             action='append', help=('Only output pairs predicted to transfer'
                                    ' this element (e.g. C, N, P)'))
         parser.add_argument(
@@ -64,7 +62,7 @@ class PrimaryPairsCommand(SolverCommandMixin, Command):
             help=('Report additional information about reactions where'
                   'primary pair identification was ambiguous'))
         parser.add_argument(
-            '--weights', action='append', default=[], type=text_type,
+            '--weights', action='append', default=[], type=str,
             help=('Set weights for elements for inferring compound'
                   ' similarities (e.g. --weights N=0.4,C=1,H=0,R=20,*=0.6).'
                   ' The default value depends on the prediction method.'))
@@ -174,7 +172,7 @@ class PrimaryPairsCommand(SolverCommandMixin, Command):
             combined_form = transfers.setdefault(key, Formula())
             transfers[key] = combined_form | form
 
-        for (reaction_id, c1, c2), form in iteritems(transfers):
+        for (reaction_id, c1, c2), form in transfers.items():
             yield reaction_id, c1, c2, form
 
     def _run_find_primary_pairs(
@@ -196,7 +194,7 @@ class PrimaryPairsCommand(SolverCommandMixin, Command):
                 logger.warning('Reaction {} is not balanced!'.format(
                     reaction_id))
 
-            for (c1, c2), forms in sorted(iteritems(pairs)):
+            for (c1, c2), forms in sorted(pairs.items()):
                 for form in forms:
                     yield reaction_id, c1, c2, form
 
@@ -222,7 +220,7 @@ class PrimaryPairsCommand(SolverCommandMixin, Command):
                 continue
 
             for (c1, c2), form in sorted(
-                    iteritems(random.sample(transfer, 1)[0])):
+                    random.sample(transfer, 1)[0].items()):
                 yield reaction.id, c1, c2, form
         if self._args.ambiguous:
             for rxn_ambig in ambiguous:

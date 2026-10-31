@@ -18,13 +18,12 @@
 
 """Linear programming solver using GLPK."""
 
-from __future__ import absolute_import
 
 import logging
 from itertools import repeat, count
 import numbers
+import threading
 
-from six.moves import zip
 
 import swiglpk
 
@@ -51,6 +50,32 @@ swiglpk.glp_term_hook(_term_hook)
 
 
 _INF = float('inf')
+
+# GLPK keeps its memory pool per thread, so a problem must be deleted by the
+# thread that created it (deleting it from another thread aborts the process).
+# Problems are often freed by the cyclic garbage collector, which can run on
+# any thread (e.g. a multiprocessing queue feeder thread), so deletions from
+# other threads are deferred until the creating thread uses GLPK again.
+_pending_deletes = {}
+_pending_deletes_lock = threading.RLock()
+
+
+def _delete_problem(prob, thread_id):
+    """Delete GLPK problem now or defer it to the creating thread."""
+    if threading.get_ident() == thread_id:
+        swiglpk.glp_delete_prob(prob)
+        _delete_pending_problems()
+    else:
+        with _pending_deletes_lock:
+            _pending_deletes.setdefault(thread_id, []).append(prob)
+
+
+def _delete_pending_problems():
+    """Delete problems of the current thread that were freed elsewhere."""
+    with _pending_deletes_lock:
+        pending = _pending_deletes.pop(threading.get_ident(), [])
+    for prob in pending:
+        swiglpk.glp_delete_prob(prob)
 
 
 class GLPKError(SolverError):
@@ -84,7 +109,9 @@ class Problem(BaseProblem):
     }
 
     def __init__(self, **kwargs):
+        _delete_pending_problems()
         self._p = swiglpk.glp_create_prob()
+        self._thread_id = threading.get_ident()
 
         self._variables = {}
         self._constraints = {}
@@ -105,7 +132,7 @@ class Problem(BaseProblem):
         self._result = None
 
     def __del__(self):
-        swiglpk.glp_delete_prob(self._p)
+        _delete_problem(self._p, self._thread_id)
 
     @property
     def glpk(self):

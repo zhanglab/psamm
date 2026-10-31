@@ -17,7 +17,6 @@
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 # Copyright 2020-2020  Ke Zhang <kzhang@uri.edu>
 
-from __future__ import unicode_literals
 
 import time
 import logging
@@ -27,7 +26,6 @@ from ..command import (Command, MetabolicMixin, LoopRemovalMixin,
                        ParallelTaskMixin, convert_to_unicode)
 from .. import fluxanalysis
 
-from six.moves import range
 
 logger = logging.getLogger(__name__)
 

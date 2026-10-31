@@ -18,13 +18,10 @@
 
 """Linear programming solver using QSopt_ex."""
 
-from __future__ import absolute_import
 
 from itertools import repeat, count
 import numbers
 
-from six import iteritems
-from six.moves import zip
 import qsoptex
 
 from .lp import Solver as BaseSolver
@@ -158,7 +155,7 @@ class Problem(BaseProblem):
 
         self._p.set_linear_objective(
             (lp_name, expression.value(var))
-            for var, lp_name in iteritems(self._variables))
+            for var, lp_name in self._variables.items())
 
     set_linear_objective = set_objective
     """Set objective of the problem.

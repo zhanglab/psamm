@@ -18,14 +18,9 @@
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 # Copyright 2020-2021  Elysha Sameth <esameth1@uri.edu>
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
 import errno
 import pandas as pd
 import re
-from future import standard_library
-standard_library.install_aliases()
 
 
 class Curator(object):
@@ -65,9 +60,11 @@ class Curator(object):
         self.ignore_reaction_file = curated_reaction_map_file + '.ignore'
 
         self.compound_map = read_mapping(self.compound_map_file, [0, 1])
-        self.compound_map.sort_values(by='p', inplace=True, ascending=False)
+        self.compound_map = self.compound_map.sort_values(
+            by='p', ascending=False)
         self.reaction_map = read_mapping(self.reaction_map_file, [0, 1])
-        self.reaction_map.sort_values(by='p', inplace=True, ascending=False)
+        self.reaction_map = self.reaction_map.sort_values(
+            by='p', ascending=False)
         self.curated_compound_map = read_mapping(
             self.curated_compound_map_file, [0, 1])
         self.curated_reaction_map = read_mapping(

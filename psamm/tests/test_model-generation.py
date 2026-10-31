@@ -19,10 +19,13 @@
 import unittest
 import sys
 import os
+import shutil
+import tempfile
 from psamm import mapmaker
 from psamm import generate_model
 from psamm import generate_biomass
-from pkg_resources import resource_filename
+from psamm.util import resource_filename
+from psamm.datasource.chebi import ChebiDb
 from psamm.datasource.native import NativeModel, ModelReader
 from psamm.datasource.reaction import Reaction, Compound, Direction
 from collections import defaultdict
@@ -33,10 +36,28 @@ import numpy as np
 from io import StringIO
 
 
-if sys.version_info.minor < 6:
-    raise unittest.SkipTest("not compatible with py3.5")
+# Subset of the ChEBI flat files with the compounds used in these tests
+CHEBI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "testdata", "chebi")
+CHEBI_DB = ChebiDb(os.path.join(CHEBI_DIR, "chemical_data.tsv.gz"),
+                   os.path.join(CHEBI_DIR, "secondary_ids.tsv.gz"))
 
-class TestGenerateTransporters(unittest.TestCase):
+
+class TempDirTestCase(unittest.TestCase):
+    """Run each test in a new temporary working directory.
+
+    The model generation functions write their output files to the
+    current directory, so this keeps them out of the source tree.
+    """
+
+    def setUp(self):
+        tmp_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp_dir)
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(tmp_dir)
+
+
+class TestGenerateTransporters(TempDirTestCase):
 
     def test_parse_orthology(self):
         test_egg = "gene1\ta\tb\tc\td\te\tf\tg\th\ti\t2.3.3.1\tK01647\tk"
@@ -50,7 +71,8 @@ class TestGenerateTransporters(unittest.TestCase):
 
     def test_transporters(self):
         asso = {"R00351": ["gene1"], "R00375": ["gene2"]}
-        generate_model.create_model_api(".", asso, False, False, "c")
+        generate_model.create_model_api(".", asso, False, False, "c",
+                                        chebi_dir=CHEBI_DIR)
         substrate = resource_filename("psamm",
                                       "external-data/tcdb_substrates.tsv")
         family = resource_filename("psamm",
@@ -118,7 +140,7 @@ class TestGenerateTransporters(unittest.TestCase):
         os.remove("transporter_log.tsv")
 
 
-class TestGenerateDatabase(unittest.TestCase):
+class TestGenerateDatabase(TempDirTestCase):
     """
     Test cases largely designed to test download of information
     from KEGG through biopython and generate a reaction database
@@ -131,7 +153,8 @@ class TestGenerateDatabase(unittest.TestCase):
     def test_overall(self):
         # Check ability to create expected output files
         asso = {"R00351": ["gene1"], "R00375": ["gene2"]}
-        generate_model.create_model_api(".", asso, False, False, "c")
+        generate_model.create_model_api(".", asso, False, False, "c",
+                                        chebi_dir=CHEBI_DIR)
         self.assertTrue(os.path.exists("log.tsv"))
         self.assertTrue(os.path.exists("reactions.yaml"))
         self.assertTrue(os.path.exists("compounds.yaml"))
@@ -190,14 +213,16 @@ class TestGenerateDatabase(unittest.TestCase):
         cpd_out = generate_model._download_kegg_entries(".", cpd, None,
                                                         generate_model.
                                                         CompoundEntry,
-                                                        context=None)
+                                                        context=None,
+                                                        chebi=CHEBI_DB)
         cpd_out = list(cpd_out)
         nonRhea = list(generate_model.model_compounds(cpd_out))
         self.assertTrue(nonRhea[0]["charge"] == 0)
         cpd_out = generate_model._download_kegg_entries(".", cpd, rhea_db,
                                                         generate_model.
                                                         CompoundEntry,
-                                                        context=None)
+                                                        context=None,
+                                                        chebi=CHEBI_DB)
         cpd_out = list(cpd_out)
         Rhea = list(generate_model.model_compounds(cpd_out))
         self.assertTrue(Rhea[0]["charge"] == -4)
@@ -264,13 +289,15 @@ class TestGenerateDatabase(unittest.TestCase):
         cpd_out = generate_model._download_kegg_entries(".", cpd, None,
                                                         generate_model.
                                                         CompoundEntry,
-                                                        context=None)
+                                                        context=None,
+                                                        chebi=CHEBI_DB)
         cpd_out = list(cpd_out)
         generic = generate_model.check_generic_compounds(cpd_out)
         generic_out = generate_model._download_kegg_entries(".", generic, None,
                                                             generate_model.
                                                             CompoundEntry,
-                                                            context=None)
+                                                            context=None,
+                                                            chebi=CHEBI_DB)
         generic_out = generate_model.model_generic_compounds(list(generic_out))
         generic_out = list(generic_out)
         self.assertTrue(len(cpd_out) == 2)
@@ -295,7 +322,8 @@ class TestGenerateDatabase(unittest.TestCase):
         cpd_out = generate_model._download_kegg_entries(".", cpd, None,
                                                         generate_model.
                                                         CompoundEntry,
-                                                        context=None)
+                                                        context=None,
+                                                        chebi=CHEBI_DB)
         cpd_out = generate_model.check_generic_compounds(list(cpd_out))
         cpd_out = list(cpd_out)
         self.assertTrue(len(cpd_out) == 1)
@@ -309,7 +337,8 @@ class TestGenerateDatabase(unittest.TestCase):
         cpd_out = generate_model._download_kegg_entries(".", cpd, None,
                                                         generate_model.
                                                         CompoundEntry,
-                                                        context=None)
+                                                        context=None,
+                                                        chebi=CHEBI_DB)
         cpd_out = list(cpd_out)
         self.assertTrue(len(cpd_out) == 1)
         os.remove("log.tsv")
@@ -330,13 +359,14 @@ class TestGenerateDatabase(unittest.TestCase):
         cpd_out = generate_model._download_kegg_entries(".", cpd, None,
                                                         generate_model.
                                                         CompoundEntry,
-                                                        context=None)
+                                                        context=None,
+                                                        chebi=CHEBI_DB)
         cpd_out = list(cpd_out)
         self.assertTrue(len(cpd_out) == 1)
         self.assertEqual(list(cpd_out)[0].id, "C00001")
         self.assertEqual(list(cpd_out)[0].name, "H2O")
         self.assertEqual(list(cpd_out)[0].formula, "H2O")
-        self.assertEqual(list(cpd_out)[0].mol_weight, 18.0153)
+        self.assertEqual(list(cpd_out)[0].mol_weight, 18.02)
         self.assertEqual(list(cpd_out)[0].chebi, "15377")
         self.assertEqual(list(cpd_out)[0].charge, 0)
         os.remove("log.tsv")
@@ -367,7 +397,7 @@ class TestGenerateDatabase(unittest.TestCase):
         self.assertEqual(rxn_out[0].equation, "C00158 + C00010 <=> C00024 "
                          "+ C00001 + C00036")
         self.assertEqual(list(rxn_out[0].enzymes),
-                         ["2.3.3.1", "2.3.3.3", "2.3.3.16"])
+                         ["2.3.3.1", "2.3.3.3", "2.3.3.5", "2.3.3.16"])
         self.assertIsNone(rxn_out[0].tcdb_family)
         self.assertIsNone(rxn_out[0].substrates)
         self.assertIsNone(rxn_out[0].genes)
@@ -423,7 +453,7 @@ class TestGenerateDatabase(unittest.TestCase):
         os.remove("testin.tsv")
 
 
-class TestGenerateBiomass(unittest.TestCase):
+class TestGenerateBiomass(TempDirTestCase):
 
     def test_cpd_database_load(self):
         df = generate_biomass.load_compound_data()

@@ -25,7 +25,6 @@ pound (#). YAML-based formats are structured data following the YAML
 specification.
 """
 
-from __future__ import absolute_import, unicode_literals
 
 import os
 import logging
@@ -35,7 +34,6 @@ import math
 from collections import OrderedDict
 
 import yaml
-from six import string_types, text_type, iteritems, itervalues, PY3
 from decimal import Decimal
 
 from ..reaction import Reaction, Compound, Direction
@@ -121,7 +119,7 @@ class _OrderedEntrySet(object):
         return self._dict[key]
 
     def __iter__(self):
-        return itervalues(self._dict)
+        return iter(self._dict.values())
 
     def __len__(self):
         return len(self._dict)
@@ -166,7 +164,7 @@ class ModelReader(object):
 
         Model can be a string, open file, or dictionary.
         """
-        if isinstance(model_from, string_types):
+        if isinstance(model_from, str):
             self._model = yaml_load(model_from)
             self._context = context
         elif isinstance(model_from, dict):
@@ -276,7 +274,7 @@ class ModelReader(object):
                 compartments[compartment_id] = compartment
 
             # Check boundaries from boundary_map
-            for source, dest_set in iteritems(boundary_map):
+            for source, dest_set in boundary_map.items():
                 if source not in compartments:
                     raise ParseError(
                         'Invalid compartment {} referenced'
@@ -285,7 +283,7 @@ class ModelReader(object):
                 for dest in dest_set:
                     boundaries.add(tuple(sorted((source, dest))))
 
-        return itervalues(compartments), frozenset(boundaries)
+        return iter(compartments.values()), frozenset(boundaries)
 
     def parse_reactions(self):
         """Yield tuples of reaction ID and reactions defined in the model"""
@@ -639,8 +637,8 @@ class NativeModel(object):
                 del model_definition[reaction.id]
 
         return MetabolicModel.load_model(
-            database, model_definition, itervalues(self.exchange),
-            itervalues(self.limits), v_max=self.default_flux_limit)
+            database, model_definition, iter(self.exchange.values()),
+            iter(self.limits.values()), v_max=self.default_flux_limit)
 
     def __repr__(self):
         return str('<{} name={!r}>'.format(self.__class__.__name__, self.name))
@@ -661,7 +659,7 @@ def _check_id(entity, entity_type):
 
     if entity is None:
         raise ParseError('{} ID missing'.format(entity_type))
-    elif not isinstance(entity, string_types):
+    elif not isinstance(entity, str):
         msg = '{} ID must be a string, id was {}.'.format(entity_type, entity)
         if isinstance(entity, bool):
             msg += (' You may have accidentally used an ID value that YAML'
@@ -719,13 +717,13 @@ def parse_compound_table_file(path, f):
     context = FilePathContext(path)
 
     for i, row in enumerate(csv.DictReader(f, delimiter=str('\t'))):
-        if text_type('id') not in row or \
-                text_type(convert_to_unicode(row['id'].strip())) == '':
+        if str('id') not in row or \
+                str(convert_to_unicode(row['id'].strip())) == '':
             raise ParseError('Expected `id` column in table')
 
-        props = {key: text_type(convert_to_unicode(value))
-                 for key, value in iteritems(row)
-                 if text_type(convert_to_unicode(value)) != ''}
+        props = {key: str(convert_to_unicode(value))
+                 for key, value in row.items()
+                 if str(convert_to_unicode(value)) != ''}
         if 'charge' in props:
             props['charge'] = int(props['charge'])
 
@@ -830,7 +828,7 @@ def parse_reaction_equation(equation_def, default_compartment):
             compound = Compound(compound_id, compartment=compound_compartment)
             yield compound, value
 
-    if isinstance(equation_def, string_types):
+    if isinstance(equation_def, str):
         return parse_reaction_equation_string(
             equation_def, default_compartment)
     else:
@@ -913,12 +911,12 @@ def parse_reaction_table_file(path, f, default_compartment):
     context = FilePathContext(path)
 
     for lineno, row in enumerate(csv.DictReader(f, delimiter=str('\t'))):
-        if text_type('id') not in row or \
-                text_type(convert_to_unicode(row['id'].strip())) == '':
+        if str('id') not in row or \
+                str(convert_to_unicode(row['id'].strip())) == '':
             raise ParseError('Expected `id` column in table')
 
         props = {key: convert_to_unicode(value)
-                 for key, value in iteritems(row)
+                 for key, value in row.items()
                  if convert_to_unicode(value) != ''}
 
         if 'equation' in props:
@@ -1300,20 +1298,15 @@ def parse_model_file(path):
 _MAX_REACTION_LENGTH = 10
 
 
-# Create wrapper representer for text_type for Py2/3 compatibility.
-if PY3:
-    def _represent_text_type(dumper, data):
-        return dumper.represent_str(data)
-else:
-    def _represent_text_type(dumper, data):
-        return dumper.represent_unicode(data)
+def _represent_text_type(dumper, data):
+    return dumper.represent_str(data)
 
 
 # Define custom dict representers for YAML
 # This allows reading/writing Python OrderedDicts in the correct order.
 # See: https://stackoverflow.com/questions/5121931/in-python-how-can-you-load-yaml-mappings-as-ordereddicts  # noqa
 def _dict_representer(dumper, data):
-    return dumper.represent_dict(iteritems(data))
+    return dumper.represent_dict(iter(data.items()))
 
 
 def _set_representer(dumper, data):
@@ -1321,7 +1314,7 @@ def _set_representer(dumper, data):
 
 
 def _boolean_expression_representer(dumper, data):
-    return _represent_text_type(dumper, text_type(data))
+    return _represent_text_type(dumper, str(data))
 
 
 def _reaction_representer(dumper, data):
@@ -1336,7 +1329,7 @@ def _reaction_representer(dumper, data):
         def dict_make(compounds):
             for compound, value in compounds:
                 yield OrderedDict([
-                    ('id', text_type(compound.name)),
+                    ('id', str(compound.name)),
                     ('compartment', compound.compartment),
                     ('value', value)])
 
@@ -1356,11 +1349,11 @@ def _reaction_representer(dumper, data):
 
         return dumper.represent_data(reaction)
     else:
-        return _represent_text_type(dumper, text_type(data))
+        return _represent_text_type(dumper, str(data))
 
 
 def _formula_representer(dumper, data):
-    return _represent_text_type(dumper, text_type(data))
+    return _represent_text_type(dumper, str(data))
 
 
 def _decimal_representer(dumper, data):
@@ -1374,7 +1367,7 @@ def _decimal_representer(dumper, data):
     elif data == float('-inf'):
         value = '-.inf'
     else:
-        value = text_type(data).lower()
+        value = str(data).lower()
         if '.' not in value and 'e' in value:
             value = value.replace('e', '.0e', 1)
     return dumper.represent_scalar('tag:yaml.org,2002:float', value)
@@ -1498,7 +1491,7 @@ class ModelWriter(object):
                     continue
                 if properties is not None:
                     entry = OrderedDict(
-                        (key, value) for key, value in iteritems(entry)
+                        (key, value) for key, value in entry.items()
                         if key == 'id' or key in properties)
                 yield entry
 

@@ -15,7 +15,6 @@
 #
 # Copyright 2020  Elysha Sameth <esameth1@my.uri.edu>
 
-from __future__ import unicode_literals
 
 import unittest
 
@@ -28,7 +27,6 @@ from psamm.datasource.reaction import parse_reaction
 from psamm.commands.robustness import RobustnessTaskHandler, \
     RobustnessTaskHandlerFva
 
-from six import itervalues
 
 
 class TestRobustnessTaskHandler(unittest.TestCase):
@@ -128,7 +126,7 @@ class TestRobustnessTaskHandlerFva(unittest.TestCase):
             self.model, self.solver, 'none', self._reactions),
             ['rxn_6', 200], 'rxn_6')
 
-        for bounds in itervalues(fluxes):
+        for bounds in fluxes.values():
             self.assertEqual(len(bounds), 2)
 
         self.assertAlmostEqual(fluxes['rxn_1'][0], 100)
@@ -154,7 +152,7 @@ class TestRobustnessTaskHandlerFva(unittest.TestCase):
             self.model, self.solver, 'tfba', self._reactions),
             ['rxn_6', 200], 'rxn_3')
 
-        for bounds in itervalues(fluxes):
+        for bounds in fluxes.values():
             self.assertEqual(len(bounds), 2)
 
         self.assertAlmostEqual(fluxes['rxn_1'][0], 100)
@@ -178,7 +176,7 @@ class TestRobustnessTaskHandlerFva(unittest.TestCase):
             self.model, self.solver, 'none', self._reactions2),
             ['rxn_6', 200], 'rxn_6')
 
-        for bounds in itervalues(fluxes):
+        for bounds in fluxes.values():
             self.assertEqual(len(bounds), 2)
 
         self.assertAlmostEqual(fluxes['rxn_6'][0], 200)

@@ -17,11 +17,11 @@
 
 """Metabolic networks module."""
 
-from pkg_resources import get_distribution, DistributionNotFound
+from importlib.metadata import version, PackageNotFoundError
 
 __version__ = None
 
 try:
-    __version__ = get_distribution('psamm').version
-except DistributionNotFound:
+    __version__ = version('psamm')
+except PackageNotFoundError:
     pass

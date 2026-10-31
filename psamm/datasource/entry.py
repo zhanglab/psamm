@@ -19,16 +19,13 @@
 
 """Representation of compound/reaction entries in models."""
 
-from __future__ import unicode_literals
 
 import abc
 from collections.abc import Mapping
 
-from six import add_metaclass
 
 
-@add_metaclass(abc.ABCMeta)
-class ModelEntry(object):
+class ModelEntry(metaclass=abc.ABCMeta):
     """Abstract model entry.
 
     Provdides a base class for model entries which are representations of

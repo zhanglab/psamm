@@ -16,18 +16,11 @@
 # Copyright 2014-2015  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2018-2020  Jing Wang <wjingsjtu@gmail.com>
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import open
-from builtins import super
 import csv
 import logging
 from psamm.datasource.native import NativeModel
 from psamm.importer import write_yaml_model
 from psamm.util import mkdir_p
-from future import standard_library
-standard_library.install_aliases()  # noqa
 
 
 def read_mapping(mapping):

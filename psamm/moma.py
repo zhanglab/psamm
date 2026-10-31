@@ -22,7 +22,6 @@
 import logging
 from itertools import product
 
-from six import iteritems, text_type, raise_from
 
 from psamm.lpsolver import lp
 
@@ -113,10 +112,10 @@ class MOMAProblem(object):
         mass_balance = self.constraints()
         massbalance_lhs = {
             spec: 0 for spec in product(model.compounds, ('wt', 'mod'))}
-        for (compound, reaction_id), value in iteritems(self._model.matrix):
+        for (compound, reaction_id), value in self._model.matrix.items():
             massbalance_lhs[compound, 'wt'] += v_wt[reaction_id] * value
             massbalance_lhs[compound, 'mod'] += v[reaction_id] * value
-        for compound, lhs in iteritems(massbalance_lhs):
+        for compound, lhs in massbalance_lhs.items():
             mass_balance.add(lhs == 0)
 
     @property
@@ -151,7 +150,7 @@ class MOMAProblem(object):
         try:
             return self._prob.solve(sense=sense)
         except lp.SolverError as e:
-            raise_from(MOMAError(text_type(e)), e)
+            raise MOMAError(str(e)) from e
         finally:
             self._remove_constr = []
 
@@ -246,7 +245,7 @@ class MOMAProblem(object):
         v = self._v
 
         with self.constraints() as constr:
-            for f_reaction, f_value in iteritems(wt_fluxes):
+            for f_reaction, f_value in wt_fluxes.items():
                 if f_reaction in reactions:
                     # Add the constraint that finds the optimal solution, such
                     # that the difference between the wildtype flux is similar
@@ -317,7 +316,7 @@ class MOMAProblem(object):
         v = self._v
 
         obj_expr = 0
-        for f_reaction, f_value in iteritems(wt_fluxes):
+        for f_reaction, f_value in wt_fluxes.items():
             if f_reaction in reactions:
                 # Minimize the Euclidean distance between the two vectors
                 obj_expr += (f_value - v[f_reaction])**2

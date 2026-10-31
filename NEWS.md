@@ -1,3 +1,28 @@
+Unreleased
+------------------
+
+- Adds support for Python 3.11, 3.12, 3.13 and 3.14
+- Drops support for Python 3.10 and older, which have reached end of life
+- Replaces the deprecated `pkg_resources` module with `importlib`
+- Removes the Python 2 compatibility code and the `six` and `future`
+  dependencies
+- Fixes compatibility with NumPy 2, SciPy sparse arrays and pandas 3
+- Fixes the `vis` command failing to open input files on Python 3.11+
+- `generate-database` now reads compound charges and formulas from the ChEBI
+  flat files, which are downloaded and cached automatically, instead of the
+  unmaintained `libchebipy` package which no longer works with the current
+  ChEBI release. Adds the `--chebi-dir` and `--chebi-update` options
+- Fixes `generate-database --type KO` finding no reactions with the current
+  KEGG KO entry format
+- Updates the Rhea ChEBI pH 7.3 mapping used by `generate-database --rhea`
+- Starts parallel worker processes with the `forkserver` method instead of
+  forking the main process, as is the default from Python 3.14
+- Fixes random crashes (abort in `glp_delete_prob`) with the GLPK solver when
+  a problem was freed by the garbage collector on a different thread, e.g. in
+  parallel commands
+- Parallel commands now fail with an error instead of hanging if a worker
+  process dies
+
 v1.2.1 (2022-05-12)
 ------------------
 - fix bug in `generate-database`

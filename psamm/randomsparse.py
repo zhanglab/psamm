@@ -17,7 +17,6 @@
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 # Copyright 2016  Chao Liu <lcddzyx@gmail.com>
 
-from __future__ import unicode_literals
 
 import random
 import logging
@@ -25,7 +24,6 @@ import logging
 from . import fluxanalysis
 from .expression import boolean
 
-from six import iteritems, string_types
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +70,7 @@ class GeneDeletionStrategy(object):
         self._genes = set()
         self._gene_assoc = dict(gene_assoc)
 
-        for reaction, assoc in iteritems(self._gene_assoc):
+        for reaction, assoc in self._gene_assoc.items():
             self._genes.update(v.symbol for v in assoc.variables)
 
         self._reactions = set(self._model.reactions)
@@ -127,7 +125,7 @@ def get_gene_associations(model):
         assoc = None
         if reaction.genes is None:
             continue
-        elif isinstance(reaction.genes, string_types):
+        elif isinstance(reaction.genes, str):
             assoc = boolean.Expression(reaction.genes)
         else:
             variables = [boolean.Variable(g) for g in reaction.genes]

@@ -17,14 +17,12 @@
 
 """Implementation of Flux Balance Analysis."""
 
-from __future__ import unicode_literals
 
 import logging
 import csv
 from os import mkdir, path
 from ..lpsolver import lp
 import argparse
-from six import iteritems
 from ..expression import boolean
 from ..lpsolver.lp import Expression, ObjectiveSense
 from ..fluxanalysis import FluxBalanceProblem
@@ -191,7 +189,7 @@ def solve_gimme_problem(problem, mm, biomass, reversible_gene_assoc,
     problem.prob.add_linear_constraints(
         problem.get_flux_var(biomass) >= float(threshold))
 
-    for key, value in iteritems(ci_dict):
+    for key, value in ci_dict.items():
         gimme_objective += problem.get_flux_var(key) * value
     problem.prob.define('gimme_objective', types=lp.VariableType.Continuous)
     obj = problem.prob.var('gimme_objective')

@@ -16,7 +16,6 @@
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 # Copyright 2019-2020 Jing Wang <jingwang89@uri.edu>
 
-from __future__ import print_function
 from collections import defaultdict
 import argparse
 import re

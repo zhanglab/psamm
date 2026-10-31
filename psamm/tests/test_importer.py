@@ -16,7 +16,6 @@
 # Copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
-from __future__ import unicode_literals
 
 import os
 import tempfile
@@ -27,9 +26,9 @@ from decimal import Decimal
 
 import numpy as np
 from scipy.io import savemat, loadmat
-from scipy.sparse.csc import csc_matrix
+from scipy.sparse import csc_matrix
 
-from six import BytesIO
+from io import BytesIO
 
 from psamm import importer
 from psamm.importer import ModelLoadError

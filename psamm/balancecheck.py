@@ -17,12 +17,11 @@
 # Copyright 2016  Chao Liu <lcddzyx@gmail.com>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
-from __future__ import unicode_literals
 
 import operator
 import logging
 
-from six.moves import reduce
+from functools import reduce
 
 from .formula import Formula, ParseError
 

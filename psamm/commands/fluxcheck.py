@@ -16,13 +16,11 @@
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
-from __future__ import unicode_literals
 
 import time
 import logging
 from itertools import product
 
-from six import text_type
 
 from ..command import (Command, MetabolicMixin, LoopRemovalMixin,
                        SolverCommandMixin, ParallelTaskMixin)
@@ -200,4 +198,4 @@ class FluxCheckFVATaskHandler(object):
         except fluxanalysis.FluxBalanceError as e:
             # FluxBalanceError is not picklable. Reraise as picklable
             # exception.
-            raise FluxCheckFVATaskError(text_type(e))
+            raise FluxCheckFVATaskError(str(e))

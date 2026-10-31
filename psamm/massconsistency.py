@@ -30,7 +30,6 @@ pseudo-compounds (e.g. "photon") that also has to be excluded.
 
 from .lpsolver import lp
 
-from six import iteritems, raise_from
 
 
 class MassConsistencyError(Exception):
@@ -60,11 +59,11 @@ def is_consistent(database, solver, exchange=set(), zeromass=set()):
 
     # Define constraints
     massbalance_lhs = {reaction: 0 for reaction in database.reactions}
-    for (compound, reaction), value in iteritems(database.matrix):
+    for (compound, reaction), value in database.matrix.items():
         if compound not in zeromass:
             mass = m(compound.in_compartment(None))
             massbalance_lhs[reaction] += mass * value
-    for reaction, lhs in iteritems(massbalance_lhs):
+    for reaction, lhs in massbalance_lhs.items():
         if reaction not in exchange:
             prob.add_linear_constraints(lhs == 0)
 
@@ -108,11 +107,11 @@ def check_reaction_consistency(database, solver, exchange=set(),
     prob.add_linear_constraints(zs >= rs, rs >= -zs)
 
     massbalance_lhs = {reaction_id: 0 for reaction_id in database.reactions}
-    for (compound, reaction_id), value in iteritems(database.matrix):
+    for (compound, reaction_id), value in database.matrix.items():
         if compound not in zeromass:
             mass_var = m(compound.in_compartment(None))
             massbalance_lhs[reaction_id] += mass_var * value
-    for reaction_id, lhs in iteritems(massbalance_lhs):
+    for reaction_id, lhs in massbalance_lhs.items():
         if reaction_id not in exchange:
             if reaction_id not in checked:
                 prob.add_linear_constraints(lhs + r(reaction_id) == 0)
@@ -123,9 +122,8 @@ def check_reaction_consistency(database, solver, exchange=set(),
     try:
         prob.solve(lp.ObjectiveSense.Minimize)
     except lp.SolverError as e:
-        raise_from(
-            MassConsistencyError('Failed to solve mass consistency: {}'.format(
-                e)), e)
+        raise MassConsistencyError('Failed to solve mass consistency: {}'.format(
+                e)) from e
 
     def iterate_reactions():
         for reaction_id in database.reactions:
@@ -167,11 +165,11 @@ def check_compound_consistency(database, solver, exchange=set(),
     prob.add_linear_constraints(m.set(mass_compounds) >= z.set(mass_compounds))
 
     massbalance_lhs = {reaction_id: 0 for reaction_id in database.reactions}
-    for (compound, reaction_id), value in iteritems(database.matrix):
+    for (compound, reaction_id), value in database.matrix.items():
         if compound not in zeromass:
             mass_var = m(compound.in_compartment(None))
             massbalance_lhs[reaction_id] += mass_var * value
-    for reaction_id, lhs in iteritems(massbalance_lhs):
+    for reaction_id, lhs in massbalance_lhs.items():
         if reaction_id not in exchange:
             prob.add_linear_constraints(lhs == 0)
 
@@ -179,9 +177,8 @@ def check_compound_consistency(database, solver, exchange=set(),
     try:
         prob.solve(lp.ObjectiveSense.Maximize)
     except lp.SolverError as e:
-        raise_from(
-            MassConsistencyError('Failed to solve mass consistency: {}'.format(
-                e)), e)
+        raise MassConsistencyError('Failed to solve mass consistency: {}'.format(
+                e)) from e
 
     for compound in mass_compounds:
         yield compound, m.value(compound)

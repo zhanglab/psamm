@@ -120,21 +120,19 @@ and `QSopt_ex_higherPython`_ . This can be installed using ``pip``:
 LP Solver Compatibility
 -----------------------
 
-Not all of the LP solvers supported are supported across all python versions.
-A table showing which solvers are compatible with which versions of python
-is shown below:
+PSAMM requires Python 3.11 or later. Not all of the LP solvers supported are
+available for every Python version. A table showing which solvers are
+compatible with which versions of python is shown below:
 
 .. list-table:: Python Version Compatibility
    :header-rows: 1
 
    * - Solver
-     - Python 3.5
-     - Python 3.6
-     - Python 3.7
-     - Python 3.8
-     - Python 3.9
+     - Python 3.11
+     - Python 3.12
+     - Python 3.13
+     - Python 3.14
    * - Cplex
-     - Yes
      - Yes
      - Yes
      - Yes
@@ -144,15 +142,12 @@ is shown below:
      - Yes
      - Yes
      - Yes
-     - Yes
    * - Gurobi
-     - No
-     - No
+     - Yes
      - Yes
      - Yes
      - Yes
    * - GLPK
-     - No
      - Yes
      - Yes
      - Yes

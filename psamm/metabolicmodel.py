@@ -18,7 +18,6 @@
 
 """Representation of metabolic network models."""
 
-from __future__ import unicode_literals
 
 from collections.abc import Mapping
 

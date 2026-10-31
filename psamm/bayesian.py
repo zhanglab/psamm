@@ -17,12 +17,8 @@
 # Copyright 2018-2020  Jing Wang <wjingsjtu@gmail.com>
 
 """Calculate model mapping likelihood with bayesian."""
-from __future__ import print_function, division
-from future.utils import itervalues
 
-from builtins import object, range
 from itertools import product
-from multiprocessing import Pool
 import operator
 import sys
 from collections import namedtuple, defaultdict
@@ -31,6 +27,7 @@ import time
 
 import psamm.bayesian_util as util
 from psamm.formula import Formula
+from psamm.util import multiprocessing_context
 from psamm.expression.boolean import Expression
 from functools import reduce
 
@@ -61,7 +58,7 @@ class MappingModel(object):
 
         self._genes = set()
         self._has_gene = list()
-        for r in itervalues(self._reactions):
+        for r in self._reactions.values():
             if r.genes is not None:
                 self._has_gene.append(r.id)
                 e = Expression(r.genes)
@@ -132,7 +129,7 @@ class MappingModel(object):
         print('Checking model: {}'.format(self.name))
         consistent = True
         undefined_cpds = []
-        for reaction in itervalues(self.reactions):
+        for reaction in self.reactions.values():
             if reaction.equation is not None:
                 for compound, value in reaction.equation.compounds:
                     if compound.name not in self.compounds:
@@ -195,8 +192,7 @@ class BayesianCompoundPredictor(object):
         best_index = raw_map.iloc[:, 0].groupby(query).rank(
             method='min', ascending=False).loc[lambda x: x == 1].index.values
         compound_best = raw_map.loc[best_index]
-        compound_best.query(
-            'p >= @threshold_compound', inplace=True)
+        compound_best = compound_best.query('p >= @threshold_compound')
         return compound_best
 
     def get_cpd_pred(self, threshold_compound=0):
@@ -276,8 +272,7 @@ class BayesianReactionPredictor(object):
         best_index = raw_map.iloc[:, 0].groupby(query).rank(
             method='min', ascending=False).loc[lambda x: x == 1].index.values
         reaction_best = raw_map.loc[best_index]
-        reaction_best.query(
-            'p >= @threshold_reaction', inplace=True)
+        reaction_best = reaction_best.query('p >= @threshold_reaction')
         return reaction_best
 
 
@@ -589,7 +584,7 @@ def pairwise_likelihood(pool, chunksize, model1, model2, likelihood,
     Returns likelihoods as a dataframe with a column for each hypothesis.
     """
     tasks = (((e1, e2), likelihood, args, kwargs)
-             for e1, e2 in product(itervalues(model1), itervalues(model2)))
+             for e1, e2 in product(model1.values(), model2.values()))
     result = pool.map(generate_likelihood, tasks, chunksize=chunksize)
     return pd.DataFrame.from_records(result, index=('e1', 'e2'),
                                      columns=('e1', 'e2', 'p1', 'p2'))
@@ -625,7 +620,7 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
 
     # Initialize parallel pool of workers
     chunksize = compound_pairs // nproc
-    pool = Pool(nproc)
+    pool = multiprocessing_context().Pool(nproc)
 
     t = time.time()
     # Compound ID
@@ -634,7 +629,7 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
 
     # Marginal probability of observing two equal compound IDs
     tasks = ((util.id_equals, (c1.id, c2.id)) for c1, c2 in product(
-        itervalues(model1.compounds), itervalues(model2.compounds)))
+        model1.compounds.values(), model2.compounds.values()))
     result = pool.map(parallel_equel, tasks, chunksize=chunksize)
     compound_id_marg = sum(result) / float(compound_pairs)
 
@@ -650,7 +645,7 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
 
     # Marginal probability of observing two similar names
     tasks = ((util.name_equals, (c1.name, c2.name)) for c1, c2 in product(
-        itervalues(model1.compounds), itervalues(model2.compounds)))
+        model1.compounds.values(), model2.compounds.values()))
     result = pool.map(parallel_equel, tasks, chunksize=chunksize)
     compound_name_marg = sum(result) / float(compound_pairs)
 
@@ -671,7 +666,7 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
         c2.charge is not None and
         c1.charge == c2.charge
         for c1, c2 in product(
-            itervalues(model1.compounds), itervalues(model2.compounds))
+            model1.compounds.values(), model2.compounds.values())
     ) / compound_pairs
 
     # Marginal probability of observing two compounds with different charge
@@ -680,7 +675,7 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
         c2.charge is not None and
         c1.charge != c2.charge
         for c1, c2 in product(
-            itervalues(model1.compounds), itervalues(model2.compounds))
+            model1.compounds.values(), model2.compounds.values())
     ) / compound_pairs
 
     compound_charge_likelihoods = pairwise_likelihood(
@@ -702,15 +697,15 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
         util.formula_equals,
         (c1.formula, c2.formula, c1.charge, c2.charge))
         for c1, c2 in product(
-            itervalues(model1.compounds), itervalues(model2.compounds)))
+            model1.compounds.values(), model2.compounds.values()))
     result = pool.map(parallel_equel, tasks, chunksize=chunksize)
     compound_formula_equal_marg = sum(result) / float(compound_pairs)
 
     # Marginal probability of observing two compounds with different formula
     compound_formula_not_equal_marg = 1.0 - compound_formula_equal_marg - (
         sum(c1.formula is None or c2.formula is None
-            for c1, c2 in product(itervalues(model1.compounds),
-                                  itervalues(model2.compounds))) /
+            for c1, c2 in product(model1.compounds.values(),
+                                  model2.compounds.values())) /
         compound_pairs)
 
     compound_formula_likelihoods = pairwise_likelihood(
@@ -734,8 +729,8 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
             c2.kegg is not None and
             c1.kegg == c2.kegg
             for c1, c2 in product(
-                itervalues(model1.compounds),
-                itervalues(model2.compounds))
+                model1.compounds.values(),
+                model2.compounds.values())
         ) / compound_pairs
 
         # Marginal probability of observing two compounds
@@ -744,8 +739,8 @@ def map_model_compounds(model1, model2, nproc=1, outpath='.',
             c1.kegg is not None and
             c2.kegg is not None and
             c1.kegg != c2.kegg for c1, c2 in product(
-                itervalues(model1.compounds),
-                itervalues(model2.compounds))
+                model1.compounds.values(),
+                model2.compounds.values())
         ) / compound_pairs
 
         compound_kegg_likelihoods = pairwise_likelihood(
@@ -811,7 +806,7 @@ def map_model_reactions(model1, model2, cpd_map, cpd_score, nproc=1,
 
     # Initialize parallel pool of workers
     chunksize = reaction_pairs // nproc
-    pool = Pool(nproc)
+    pool = multiprocessing_context().Pool(nproc)
 
     # Reaction ID
     t = time.time()
@@ -820,8 +815,8 @@ def map_model_reactions(model1, model2, cpd_map, cpd_score, nproc=1,
 
     # Marginal probability of observing two reactions with the same ids.
     tasks = ((util.id_equals, (r1.id, r2.id)) for r1, r2 in product(
-        itervalues(model1.reactions),
-        itervalues(model2.reactions)))
+        model1.reactions.values(),
+        model2.reactions.values()))
     result = pool.map(parallel_equel, tasks, chunksize=chunksize)
     reaction_id_equal_marg = sum(result) / float(reaction_pairs)
 
@@ -841,8 +836,8 @@ def map_model_reactions(model1, model2, cpd_map, cpd_score, nproc=1,
 
     # Marginal probability of observing two reactions with the same name.
     tasks = ((util.name_equals, (r1.name, r2.name)) for r1, r2 in product(
-        itervalues(model1.reactions),
-        itervalues(model2.reactions)))
+        model1.reactions.values(),
+        model2.reactions.values()))
     result = pool.map(parallel_equel, tasks, chunksize=chunksize)
     reaction_name_equal_marg = sum(result) / float(reaction_pairs)
 
@@ -878,8 +873,8 @@ def map_model_reactions(model1, model2, cpd_map, cpd_score, nproc=1,
         # equal gene associations.
         tasks = ((util.genes_equals, (r1.genes, r2.genes))
                  for r1, r2 in product(
-                     itervalues(model1.reactions),
-                     itervalues(model2.reactions)))
+                     model1.reactions.values(),
+                     model2.reactions.values()))
         result = pool.map(parallel_equel, tasks, chunksize=chunksize)
         reaction_genes_equal_marg = sum(result) / float(reaction_pairs)
 
@@ -887,8 +882,8 @@ def map_model_reactions(model1, model2, cpd_map, cpd_score, nproc=1,
         # gene associations.
         reaction_genes_not_equal_marg = 1.0 - reaction_genes_equal_marg - (
             sum(r1.genes is None or r2.genes is None
-                for r1, r2 in product(itervalues(model1.reactions),
-                                      itervalues(model2.reactions))) /
+                for r1, r2 in product(model1.reactions.values(),
+                                      model2.reactions.values())) /
             reaction_pairs)
 
         reaction_genes_likelihoods = pairwise_likelihood(

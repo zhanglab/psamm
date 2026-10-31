@@ -18,7 +18,6 @@
 
 """Parser for SBML model files."""
 
-from __future__ import unicode_literals
 
 from decimal import Decimal
 from fractions import Fraction
@@ -35,7 +34,6 @@ try:
 except ImportError:
     import xml.etree.ElementTree as ETree
 
-from six import itervalues, iteritems, text_type, PY3
 
 from .context import FileMark
 from .entry import (CompoundEntry as BaseCompoundEntry,
@@ -90,7 +88,7 @@ _COBRA_DECODE_ESCAPES = {
 def _tag(tag, namespace=None):
     """Prepend namespace to tag name"""
     if namespace is None:
-        return text_type(tag)
+        return str(tag)
     return '{{{}}}{}'.format(namespace, tag)
 
 
@@ -484,7 +482,7 @@ class SBMLObjectiveEntry(object):
 
     @property
     def reactions(self):
-        return iteritems(self._reactions)
+        return iter(self._reactions.items())
 
 
 class SBMLFluxBoundEntry(object):
@@ -696,7 +694,7 @@ class SBMLReader(object):
             # Remove compartments that only contain boundary compounds
             empty_compartments = set(self._model_compartments)
             valid_compartments = set()
-            for species in itervalues(self._model_species):
+            for species in self._model_species.values():
                 empty_compartments.discard(species.compartment)
                 if not species.boundary:
                     valid_compartments.add(species.compartment)
@@ -758,12 +756,12 @@ class SBMLReader(object):
     @property
     def compartments(self):
         """Iterator over :class:`.SBMLCompartmentEntry` entries."""
-        return itervalues(self._model_compartments)
+        return iter(self._model_compartments.values())
 
     @property
     def reactions(self):
         """Iterator over :class:`ReactionEntries <.SBMLReactionEntry>`"""
-        return itervalues(self._model_reactions)
+        return iter(self._model_reactions.values())
 
     @property
     def species(self):
@@ -771,13 +769,13 @@ class SBMLReader(object):
 
         This will not yield boundary condition species if those are ignored.
         """
-        return (c for c in itervalues(self._model_species)
+        return (c for c in self._model_species.values()
                 if not self._ignore_boundary or not c.boundary)
 
     @property
     def objectives(self):
         """Iterator over :class:`.SBMLObjectiveEntry`"""
-        return itervalues(self._model_objectives)
+        return iter(self._model_objectives.values())
 
     @property
     def flux_bounds(self):
@@ -810,7 +808,7 @@ class SBMLReader(object):
         if objective is not None:
             reactions = dict(objective.reactions)
             if len(reactions) == 1:
-                reaction, value = next(iteritems(reactions))
+                reaction, value = next(iter(reactions.items()))
                 if ((value < 0 and objective.type == 'minimize') or
                         (value > 0 and objective.type == 'maximize')):
                     properties['biomass'] = reaction
@@ -909,7 +907,7 @@ class SBMLWriter(object):
 
         id = id.encode('ascii', 'backslashreplace').decode('ascii')
         id = re.sub(r'\(([a-z])\)$', '_\\1', id)
-        for symbol, escape in iteritems(substitutions):
+        for symbol, escape in substitutions.items():
             id = id.replace(symbol, escape)
         id = re.sub(r'[^a-zA-Z0-9_]', '', id)
         return id
@@ -937,7 +935,7 @@ class SBMLWriter(object):
             lower = int(lower)
         if upper % 1 == 0:
             upper = int(upper)
-        return text_type(lower), text_type(upper)
+        return str(lower), str(upper)
 
     def _make_safe_numerical_id(self, stri):
         return stri.replace('-', 'neg').replace('.', '_')
@@ -989,19 +987,19 @@ class SBMLWriter(object):
         """Create list of all gene products as sbml readable elements."""
         list_all_genes = ETree.SubElement(parent_tag, _tag(
             'listOfGeneProducts', FBC_V2))
-        for id, label in sorted(iteritems(gene_id_dict)):
+        for id, label in sorted(gene_id_dict.items()):
             gene_tag = ETree.SubElement(
                 list_all_genes, _tag('geneProduct', FBC_V2))
             gene_tag.set(_tag('id', FBC_V2), id)
             gene_tag.set(_tag('label', FBC_V2), label)
 
     def _add_properties_notes(self, parent_tag, properties):
-        for prop, value in sorted(iteritems(properties)):
+        for prop, value in sorted(properties.items()):
             p_tag = ETree.SubElement(parent_tag, _tag('p', XHTML_NS))
             try:
                 s = json.dumps(value)
             except TypeError:
-                s = json.dumps(text_type(value))
+                s = json.dumps(str(value))
             p_tag.text = '{}: {}'.format(prop, s)
 
     def _indent(self, elem, level=0):
@@ -1058,7 +1056,7 @@ class SBMLWriter(object):
         # Add exchange reactions to reaction_properties,
         # also add flux limit info to flux_limits
         flux_limits = {}
-        for compound, reaction_id, lower, upper in itervalues(model.exchange):
+        for compound, reaction_id, lower, upper in model.exchange.values():
             # Create exchange reaction
             if reaction_id is None:
                 reaction_id = create_exchange_id(reaction_properties, compound)
@@ -1101,7 +1099,7 @@ class SBMLWriter(object):
         model_compartments = {}
         model_species = {}
         species_ids = set()
-        for _, properties in iteritems(reaction_properties):
+        for _, properties in reaction_properties.items():
             for compound, _ in properties['equation'].compounds:
                 if compound in model_species:
                     continue
@@ -1125,7 +1123,7 @@ class SBMLWriter(object):
         # Create list of compartments
         compartments = ETree.SubElement(
             model_tag, self._sbml_tag('listOfCompartments'))
-        for _, compartment_id in iteritems(model_compartments):
+        for _, compartment_id in model_compartments.items():
             compartment_tag = ETree.SubElement(
                 compartments, self._sbml_tag('compartment'))
             compartment_tag.set(self._sbml_tag('id'), compartment_id)
@@ -1135,13 +1133,13 @@ class SBMLWriter(object):
         species_list = ETree.SubElement(
             model_tag, self._sbml_tag('listOfSpecies'))
         for species, species_id in sorted(
-                iteritems(model_species), key=lambda x: x[1]):
+                model_species.items(), key=lambda x: x[1]):
             species_tag = ETree.SubElement(species_list,
                                            self._sbml_tag('species'))
             species_tag.set(self._sbml_tag('id'), 'M_' + species_id)
             species_tag.set(
                 self._sbml_tag('name'),
-                text_type(compound_name.get(species.name, species.name)))
+                str(compound_name.get(species.name, species.name)))
             species_tag.set(
                 self._sbml_tag('compartment'),
                 model_compartments[species.compartment])
@@ -1149,11 +1147,11 @@ class SBMLWriter(object):
             species_tag.set(self._sbml_tag('boundaryCondition'), 'false')
             species_tag.set(self._sbml_tag('hasOnlySubstanceUnits'), 'true')
             if 'charge' in compound_properties[species.name]:
-                species_tag.set(_tag('charge', FBC_V2), text_type(
+                species_tag.set(_tag('charge', FBC_V2), str(
                     compound_properties[species.name]['charge']))
             if 'formula' in compound_properties[species.name]:
                 species_tag.set(_tag(
-                    'chemicalFormula', FBC_V2), text_type(
+                    'chemicalFormula', FBC_V2), str(
                         compound_properties[species.name]['formula']))
 
             notes_tag = ETree.SubElement(species_tag, self._sbml_tag('notes'))
@@ -1165,7 +1163,7 @@ class SBMLWriter(object):
             model_tag, self._sbml_tag('listOfParameters'))
 
         # Create mapping for reactions containing flux limit definitions
-        for rxn_id, lower_lim, upper_lim in itervalues(model.limits):
+        for rxn_id, lower_lim, upper_lim in model.limits.values():
             flux_limits[rxn_id] = lower_lim, upper_lim
 
         params = {}
@@ -1177,7 +1175,7 @@ class SBMLWriter(object):
         # Create list of reactions
         reactions = ETree.SubElement(
             model_tag, self._sbml_tag('listOfReactions'))
-        for eq_id, properties in sorted(iteritems(reaction_properties)):
+        for eq_id, properties in sorted(reaction_properties.items()):
             reaction_tag = ETree.SubElement(reactions,
                                             self._sbml_tag('reaction'))
             equation = properties['equation']
@@ -1185,7 +1183,7 @@ class SBMLWriter(object):
             reaction_tag.set(self._sbml_tag('id'), 'R_' + eq_id)
             if 'name' in properties:
                 reaction_tag.set(self._sbml_tag('name'), properties['name'])
-            reaction_tag.set(self._sbml_tag('reversible'), text_type(
+            reaction_tag.set(self._sbml_tag('reversible'), str(
                 equation.direction == Direction.Both).lower())
             reaction_tag.set(self._sbml_tag('fast'), 'false')
             lower_str, upper_str = self._get_flux_bounds(
@@ -1219,7 +1217,7 @@ class SBMLWriter(object):
                 spec_ref.set(
                     self._sbml_tag('constant'), 'true')
                 spec_ref.set(
-                    self._sbml_tag('stoichiometry'), text_type(abs(value)))
+                    self._sbml_tag('stoichiometry'), str(abs(value)))
 
             notes_tag = ETree.SubElement(reaction_tag, self._sbml_tag('notes'))
             body_tag = ETree.SubElement(notes_tag, _tag('body', XHTML_NS))
@@ -1248,7 +1246,7 @@ class SBMLWriter(object):
                     self._sbml_tag('constant'): 'true'
                 })
 
-        for val, id in iteritems(params):
+        for val, id in params.items():
             param_tag = ETree.SubElement(
                 params_list, self._sbml_tag('parameter'))
             param_tag.set(self._sbml_tag('id'), id)
@@ -1262,12 +1260,10 @@ class SBMLWriter(object):
             self._indent(root)
 
         write_options = dict(
-            encoding='ascii',
+            encoding='unicode',
             default_namespace=self._namespace,
             xml_declaration=True
         )
-        if PY3:
-            write_options['encoding'] = 'unicode'
 
         tree.write(file, **write_options)
 
@@ -1308,7 +1304,7 @@ def convert_sbml_model(model):
 
 def entry_id_from_cobra_encoding(cobra_id):
     """Convert COBRA-encoded ID string to decoded ID string."""
-    for escape, symbol in iteritems(_COBRA_DECODE_ESCAPES):
+    for escape, symbol in _COBRA_DECODE_ESCAPES.items():
         cobra_id = cobra_id.replace(escape, symbol)
     return cobra_id
 
@@ -1366,7 +1362,7 @@ def translate_sbml_reaction(entry, new_id, compartment_map, compound_map):
             new_entry.equation.direction, compounds)
 
     # Get XHTML notes properties
-    for key, value in iteritems(parse_xhtml_reaction_notes(entry)):
+    for key, value in parse_xhtml_reaction_notes(entry).items():
         if key not in new_entry.properties:
             new_entry.properties[key] = value
 
@@ -1383,7 +1379,7 @@ def translate_sbml_compound(entry, new_id, compartment_map):
             old_compartment, old_compartment)
 
     # Get XHTML notes properties
-    for key, value in iteritems(parse_xhtml_species_notes(entry)):
+    for key, value in parse_xhtml_species_notes(entry).items():
         if key not in new_entry.properties:
             new_entry.properties[key] = value
 
@@ -1476,7 +1472,7 @@ def convert_model_entries(
 
     # Convert limits
     new_limits = []
-    for reaction, lower, upper in itervalues(model.limits):
+    for reaction, lower, upper in model.limits.values():
         new_reaction_id = reaction_map.get(reaction, reaction)
         new_limits.append((new_reaction_id, lower, upper))
 
@@ -1485,7 +1481,7 @@ def convert_model_entries(
 
     # Convert exchange
     new_exchanges = []
-    for compound, reaction, lower, upper in itervalues(model.exchange):
+    for compound, reaction, lower, upper in model.exchange.values():
         new_compound_id = compound.translated(
             lambda name: compound_map.get(name, name))
         new_reaction_id = reaction_map.get(reaction, reaction)
@@ -1796,7 +1792,7 @@ def merge_equivalent_compounds(model):
                     inelegible.add(compound.name)
 
     compound_groups = {}
-    for compound_id, compartment in iteritems(compound_compartment):
+    for compound_id, compartment in compound_compartment.items():
         if compound_id in inelegible:
             continue
 
@@ -1807,7 +1803,7 @@ def merge_equivalent_compounds(model):
 
     compound_mapping = {}
     merged_compounds = {}
-    for group, compound_set in iteritems(compound_groups):
+    for group, compound_set in compound_groups.items():
         # Try to merge as many compounds as possible
         merged = []
         for compound_id in compound_set:
@@ -1882,7 +1878,7 @@ def merge_equivalent_compounds(model):
 
     # Translate exchange
     new_exchange = OrderedDict()
-    for compound, reaction_id, lower, upper in itervalues(model.exchange):
+    for compound, reaction_id, lower, upper in model.exchange.values():
         new_compound = compound.translate(
             lambda name: compound_mapping.get(name, name))
         new_exchange[new_compound] = new_compound, reaction_id, lower, upper

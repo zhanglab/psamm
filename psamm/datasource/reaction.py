@@ -18,31 +18,21 @@
 # Copyright 2020-2020  Elysha Sameth <esameth1@my.uri.edu>
 
 """Reaction parser."""
-from __future__ import unicode_literals
 
 import re
 from decimal import Decimal
 import enum
 
-from six import raise_from, PY3
 
 from psamm.reaction import Reaction, Compound, Direction
 from psamm.expression import affine
 
-if PY3:
-    unicode = str
-
 
 def convert_to_unicode(str_, encoding='UTF-8'):
-    if PY3 or bool(re.search(r'\\u', str_)):
-        try:
-            return str_.encode('latin-1').decode('unicode-escape')
-        except:
-            return str_
-    else:
-        if isinstance(str_, unicode):
-            return str_
-        return str_.decode(encoding)
+    try:
+        return str_.encode('latin-1').decode('unicode-escape')
+    except:
+        return str_
 
 
 class ParseError(Exception):
@@ -194,10 +184,10 @@ class ReactionParser(object):
                     try:
                         count = parse_compound_count(saved_token)
                     except ValueError as e:
-                        raise_from(ParseError(
+                        raise ParseError(
                             'Unable to parse compound count: {!r}'.format(
                                 saved_token),
-                            span=span), e)
+                            span=span) from e
                 else:
                     count = 1
                 compound = parse_compound(value, global_comp)
@@ -214,10 +204,10 @@ class ReactionParser(object):
                     try:
                         count = parse_compound_count(saved_token)
                     except ValueError as e:
-                        raise_from(ParseError(
+                        raise ParseError(
                             'Unable to parse compound count: {!r}'.format(
                                 saved_token),
-                            span=span), e)
+                            span=span) from e
                     compound = parse_compound(value, global_comp)
                     current_side.append((compound, count))
                     expect_operator = True

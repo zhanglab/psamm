@@ -18,14 +18,12 @@
 # Copyright 2020 Christopher Powers <c-11060@my.uri.edu>
 # Copyright 2020 Elysha Sameth <esameth1@my.uri.edu>
 
-from __future__ import unicode_literals
 
 import re
 import json
 import logging
 
 from collections import defaultdict
-from six import text_type, string_types, integer_types, itervalues
 
 from ..command import Command
 from ..expression import boolean
@@ -33,8 +31,8 @@ from ..expression import boolean
 logger = logging.getLogger(__name__)
 
 
-_JSON_TYPES = string_types + integer_types + (
-    dict, list, tuple, float, bool, type(None))
+_JSON_TYPES = (
+    str, int, dict, list, tuple, float, bool, type(None))
 _QUOTE_REGEXP = re.compile(r'[\t\n]')
 
 
@@ -42,8 +40,8 @@ def _encode_value(value):
     if value is None:
         return ''
     if not isinstance(value, _JSON_TYPES):
-        value = text_type(value)
-    if (isinstance(value, string_types) and not _QUOTE_REGEXP.search(value) and
+        value = str(value)
+    if (isinstance(value, str) and not _QUOTE_REGEXP.search(value) and
             value != ''):
         return value
     return json.dumps(value)
@@ -99,7 +97,7 @@ class ExportTableCommand(Command):
             property_set, key=lambda x: (x != 'id', x != 'equation', x))
 
         print('\t'.join(
-            [text_type(x) for x in property_list_sorted] + ['in_model']))
+            [str(x) for x in property_list_sorted] + ['in_model']))
 
         model_reactions = set(self._model.model)
         for reaction in self._model.reactions:
@@ -118,7 +116,7 @@ class ExportTableCommand(Command):
             property_set, key=lambda x: (x != 'id', x != 'equation', x))
 
         print('\t'.join(
-            [text_type(x) for x in property_list_sorted] + ['in_model'] +
+            [str(x) for x in property_list_sorted] + ['in_model'] +
             ['translated_equation']))
 
         compounds_name = {}
@@ -151,7 +149,7 @@ class ExportTableCommand(Command):
             compound_set, key=lambda x: (x != 'id', x != 'name', x))
 
         print('\t'.join(
-            [text_type(x) for x in compound_list_sorted] + ['in_model']))
+            [str(x) for x in compound_list_sorted] + ['in_model']))
 
         metabolic_model = self._model.create_metabolic_model()
         model_compounds = set(x.name for x in metabolic_model.compounds)
@@ -167,8 +165,7 @@ class ExportTableCommand(Command):
                                       'Lower Limit', 'Upper Limit'))
         default_flux = self._model.default_flux_limit
 
-        for compound, reaction, lower, upper in itervalues(
-                self._model.exchange):
+        for compound, reaction, lower, upper in self._model.exchange.values():
             if lower is None:
                 lower = -1 * default_flux
 
@@ -181,7 +178,7 @@ class ExportTableCommand(Command):
     def _limits_export(self):
         print('{}\t{}\t{}'.format(
             'Reaction ID', 'Lower Limits', 'Upper Limits'))
-        for reaction, lower, upper in itervalues(self._model.limits):
+        for reaction, lower, upper in self._model.limits.values():
             print('\t'.join(_encode_value(value) for value in (
                 reaction, lower, upper)))
 
@@ -206,7 +203,7 @@ class ExportTableCommand(Command):
             assoc = None
             if reaction.genes is None:
                 continue
-            elif isinstance(reaction.genes, string_types):
+            elif isinstance(reaction.genes, str):
                 assoc = boolean.Expression(reaction.genes)
             else:
                 variables = [boolean.Variable(g) for g in reaction.genes]

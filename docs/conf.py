@@ -15,7 +15,7 @@
 import sys
 import os
 import shlex
-import mock
+from unittest import mock
 
 import psamm
 

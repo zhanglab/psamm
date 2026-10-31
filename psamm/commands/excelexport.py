@@ -16,11 +16,9 @@
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 # Copyright 2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 
-from __future__ import unicode_literals
 
 import logging
 
-from six import text_type, itervalues, string_types
 from collections import defaultdict
 
 from ..command import Command
@@ -40,7 +38,7 @@ class ExcelExportCommand(Command):
     @classmethod
     def init_parser(cls, parser):
         parser.add_argument(
-            'file', type=text_type,
+            'file', type=str,
             help='File path for writing the Excel workbook')
 
     def run(self):
@@ -83,7 +81,7 @@ class ExcelExportCommand(Command):
         model_reactions = set(model.model)
         for z, i in enumerate(property_list_sorted + ['in_model'] +
                               ['translated_equation']):
-            reaction_sheet.write_string(0, z, text_type(i))
+            reaction_sheet.write_string(0, z, str(i))
         gene_rxn = defaultdict(list)
         for x, i in enumerate(model.reactions):
             # get translated equation
@@ -94,17 +92,17 @@ class ExcelExportCommand(Command):
             for y, j in enumerate(property_list_sorted):
                 value = i.properties.get(j)
                 if value is not None:
-                    reaction_sheet.write_string(x+1, y, text_type(value))
+                    reaction_sheet.write_string(x+1, y, str(value))
             reaction_sheet.write_string(
                 x+1, len(property_list_sorted),
-                text_type(i.id in model_reactions))
+                str(i.id in model_reactions))
             reaction_sheet.write_string(
                 x+1, len(property_list_sorted)+1,
                 translated_equation)
             assoc = None
             if i.genes is None:
                 continue
-            elif isinstance(i.genes, string_types):
+            elif isinstance(i.genes, str):
                 assoc = boolean.Expression(i.genes)
                 for j in assoc.variables:
                     gene_rxn[str(j)].append(i.id)
@@ -127,15 +125,15 @@ class ExcelExportCommand(Command):
         metabolic_model = self._model.create_metabolic_model()
         model_compounds = set(x.name for x in metabolic_model.compounds)
         for z, i in enumerate(compound_list_sorted + ['in_model']):
-            compound_sheet.write_string(0, z, text_type(i))
+            compound_sheet.write_string(0, z, str(i))
         for x, i in enumerate(model.compounds):
             for y, j in enumerate(compound_list_sorted):
                 value = i.properties.get(j)
                 if value is not None:
-                    compound_sheet.write_string(x+1, y, text_type(value))
+                    compound_sheet.write_string(x+1, y, str(value))
             compound_sheet.write_string(
                 x+1, len(compound_list_sorted),
-                text_type(i.id in model_compounds))
+                str(i.id in model_compounds))
 
         gene_sheet = workbook.add_worksheet(name='Genes')
         gene_sheet.write_string(0, 0, 'Gene')
@@ -163,17 +161,17 @@ class ExcelExportCommand(Command):
         default_flux = model.default_flux_limit
 
         for x, (compound, reaction, lower, upper) in enumerate(
-                itervalues(model.exchange)):
+                model.exchange.values()):
             if lower is None:
                 lower = -default_flux
 
             if upper is None:
                 upper = default_flux
 
-            exchange_sheet.write(x+1, 0, text_type(compound))
-            exchange_sheet.write(x+1, 1, text_type(reaction))
-            exchange_sheet.write(x+1, 2, text_type(lower))
-            exchange_sheet.write(x+1, 3, text_type(upper))
+            exchange_sheet.write(x+1, 0, str(compound))
+            exchange_sheet.write(x+1, 1, str(reaction))
+            exchange_sheet.write(x+1, 2, str(lower))
+            exchange_sheet.write(x+1, 3, str(upper))
 
         limits_sheet = workbook.add_worksheet(name='Limits')
 
@@ -181,7 +179,7 @@ class ExcelExportCommand(Command):
         limits_sheet.write_string(0, 1, 'Lower Limit')
         limits_sheet.write_string(0, 2, 'Upper Limit')
 
-        for x, limit in enumerate(itervalues(model.limits)):
+        for x, limit in enumerate(model.limits.values()):
             reaction_id, lower, upper = limit
             if lower is None:
                 lower = -default_flux

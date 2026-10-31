@@ -18,7 +18,6 @@
 
 """Various utilities."""
 
-from __future__ import unicode_literals
 
 import os
 import errno
@@ -26,9 +25,9 @@ import re
 import math
 import subprocess
 import collections
+import multiprocessing
+from importlib.resources import files
 
-import six
-from six import iteritems, text_type
 
 
 def mkdir_p(path):
@@ -38,6 +37,25 @@ def mkdir_p(path):
     except OSError as e:
         if e.errno != errno.EEXIST or not os.path.isdir(path):
             raise
+
+
+def multiprocessing_context():
+    """Return the multiprocessing context used for worker processes.
+
+    The forkserver start method is used where available. Forking the main
+    process directly copies its state into the workers, including objects
+    owned by LP solver libraries, which can crash the workers when they are
+    garbage collected there (e.g. GLPK problems) or deadlock if the main
+    process is multi-threaded.
+    """
+    if 'forkserver' in multiprocessing.get_all_start_methods():
+        return multiprocessing.get_context('forkserver')
+    return multiprocessing.get_context()
+
+
+def resource_filename(package, resource):
+    """Return the file system path of a data file included in a package."""
+    return str(files(package).joinpath(resource))
 
 
 class LoggerFile(object):
@@ -64,7 +82,6 @@ class LoggerFile(object):
         This is a noop."""
 
 
-@six.python_2_unicode_compatible
 class MaybeRelative(object):
     """Helper type for parsing possibly relative parameters.
 
@@ -127,7 +144,7 @@ class MaybeRelative(object):
             return '{:.1%} of {} = {}'.format(
                 self._value, self._reference, f)
         else:
-            return text_type(self._value)
+            return str(self._value)
 
     def __repr__(self):
         return str('<{}, {}>').format(self.__class__.__name__, str(self))
@@ -249,7 +266,7 @@ def convex_cardinality_relaxed(f, epsilon=1e-5):
         # the next is less than epsilon.
         while True:
             weights = {identifier: update_weight(value)
-                       for identifier, value in iteritems(result)}
+                       for identifier, value in result.items()}
             kwargs['weights'] = weights
 
             last_result = result
@@ -257,12 +274,12 @@ def convex_cardinality_relaxed(f, epsilon=1e-5):
             result = dict_result(full_result)
 
             delta = math.sqrt(sum(pow(value - last_result[identifier], 2)
-                                  for identifier, value in iteritems(result)))
+                                  for identifier, value in result.items()))
             if delta < epsilon:
                 break
 
         if isinstance(full_result, tuple):
-            return (iteritems(result),) + full_result[1:]
-        return iteritems(result)
+            return (iter(result.items()),) + full_result[1:]
+        return iter(result.items())
 
     return convex_cardinality_wrapper

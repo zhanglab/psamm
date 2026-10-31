@@ -16,10 +16,8 @@
 # Copyright 2014-2017  Jon Lund Steffensen <jon_steffensen@uri.edu>
 # Copyright 2015-2020  Keith Dufault-Thompson <keitht547@my.uri.edu>
 
-from __future__ import unicode_literals
 
 import logging
-from six import iteritems
 
 from ..command import Command, MetabolicMixin, SolverCommandMixin
 from ..gapfill import gapfind, GapFillError
@@ -121,12 +119,12 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         # Build mass balance constraints
         massbalance_lhs = {compound: 0 for compound in model.compounds}
-        for spec, value in iteritems(model.matrix):
+        for spec, value in model.matrix.items():
             compound, reaction_id = spec
             massbalance_lhs[compound] += v(reaction_id) * value
 
         mass_balance_constrs = {}
-        for compound, lhs in iteritems(massbalance_lhs):
+        for compound, lhs in massbalance_lhs.items():
             if implicit_sinks:
                 # The constraint is merely >0 meaning that we have implicit
                 # sinks for all compounds.
@@ -137,7 +135,7 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
                 c, = prob.add_linear_constraints(lhs == 0)
                 mass_balance_constrs[compound] = c
 
-        for compound, lhs in sorted(iteritems(massbalance_lhs)):
+        for compound, lhs in sorted(massbalance_lhs.items()):
             if not implicit_sinks:
                 mass_balance_constrs[compound].delete()
 
@@ -169,12 +167,12 @@ class GapCheckCommand(MetabolicMixin, SolverCommandMixin, Command):
 
         # Build mass balance constraints
         massbalance_lhs = {compound: 0 for compound in model.compounds}
-        for spec, value in iteritems(model.matrix):
+        for spec, value in model.matrix.items():
             compound, reaction_id = spec
             massbalance_lhs[compound] += v(reaction_id) * value
 
         # Create production variables and apply constraints
-        for compound, lhs in iteritems(massbalance_lhs):
+        for compound, lhs in massbalance_lhs.items():
             if implicit_sinks:
                 # The constraint is merely >0 meaning that we have implicit
                 # sinks for all compounds.

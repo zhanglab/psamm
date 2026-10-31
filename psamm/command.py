@@ -26,47 +26,33 @@ discovered.
 The :func:`.main` function is the entry point of command line interface.
 """
 
-from __future__ import division, unicode_literals
 
-import re
 import os
 import sys
 import argparse
 import logging
 import abc
 import pickle
+import queue
 from itertools import islice
 import multiprocessing as mp
 
-import pkg_resources
-from six import add_metaclass, iteritems, itervalues, text_type, PY3
+from importlib.metadata import entry_points
 
 from . import __version__ as package_version
 from .datasource import native, sbml
 from .datasource.context import FilePathContext
 from .lpsolver import generic
-
-import codecs
-
-if PY3:
-    unicode = str
-if not PY3:
-    if sys.stdout.encoding != 'UTF-8':
-        sys.stdout = codecs.getwriter('utf-8')(sys.stdout, 'strict')
+from .util import multiprocessing_context
 
 logger = logging.getLogger(__name__)
 
 
 def convert_to_unicode(str_, encoding='UTF-8'):
-    if PY3 or bool(re.search(r'\\u', str_)):
-        try:
-            return str_.encode('latin-1').decode('unicode-escape')
-        except:
-            return str_
-    else:
-        if isinstance(str_, unicode):
-            return str_
-        return str_.decode(encoding)
+    try:
+        return str_.encode('latin-1').decode('unicode-escape')
+    except:
+        return str_
 
 
 class CommandError(Exception):
@@ -79,8 +65,7 @@ class CommandError(Exception):
     """
 
 
-@add_metaclass(abc.ABCMeta)
-class Command(object):
+class Command(metaclass=abc.ABCMeta):
     """Represents a command in the interface, operating on a model.
 
     The constructor will be given the NativeModel and the command line
@@ -197,7 +182,7 @@ class LoopRemovalMixin(object):
                 'Select type of loop removal to perform.'
                 ' Possible methods are: ' + supported_list)
             parser.add_argument(
-                '--loop-removal', help=help_text, type=text_type,
+                '--loop-removal', help=help_text, type=str,
                 default=supported[0],
                 metavar='METHOD', dest='hidden_mixin_loop_removal')
 
@@ -317,7 +302,7 @@ class FilePrefixAppendAction(argparse.Action):
         if arguments is None or len(arguments) == 0:
             arguments = []
             setattr(namespace, self.dest, arguments)
-        values = text_type(values)
+        values = str(values)
         if len(values) > 0 and values[0] in self.__fromfile_prefix_chars:
             filepath = values[1:]
             try:
@@ -342,7 +327,10 @@ class ExecutorError(Exception):
     """Error running tasks on executor."""
 
 
-class _ExecutorProcess(mp.Process):
+_MP_CONTEXT = multiprocessing_context()
+
+
+class _ExecutorProcess(_MP_CONTEXT.Process):
     def __init__(self, task_queue, result_queue, handler_init,
                  handler_args=()):
         super(_ExecutorProcess, self).__init__()
@@ -389,8 +377,8 @@ class ProcessPoolExecutor(Executor):
 
         self._process_count = processes
         self._processes = []
-        self._task_queue = mp.Queue()
-        self._result_queue = mp.Queue()
+        self._task_queue = _MP_CONTEXT.Queue()
+        self._result_queue = _MP_CONTEXT.Queue()
 
         for _ in range(self._process_count):
             p = _ExecutorProcess(
@@ -399,14 +387,31 @@ class ProcessPoolExecutor(Executor):
             p.start()
             self._processes.append(p)
 
+    def _get_results(self):
+        """Wait for the next results from a worker process.
+
+        Raises :class:`ExecutorError` if a worker process has died (e.g.
+        crashed in a native library) since its results would never arrive.
+        """
+        while True:
+            try:
+                return self._result_queue.get(timeout=1)
+            except queue.Empty:
+                for p in self._processes:
+                    if p.exitcode is not None and p.exitcode != 0:
+                        raise ExecutorError(
+                            'Worker process {} exited unexpectedly with exit'
+                            ' code {}'.format(p.pid, p.exitcode))
+
     def apply(self, task):
         self._task_queue.put([task])
-        results = self._result_queue.get()
+        results = self._get_results()
         if isinstance(results, _ErrorMarker):
             exception = pickle.loads(results.pickled_exception)
             raise exception
 
-        return next(itervalues(results))
+        # results is a list with the single (task, result) pair
+        return results[0][1]
 
     def imap_unordered(self, iterable, chunksize=1):
         def iter_chunks():
@@ -428,7 +433,7 @@ class ProcessPoolExecutor(Executor):
 
         exception = None
         while workers > 0:
-            results = self._result_queue.get()
+            results = self._get_results()
             if isinstance(results, _ErrorMarker):
                 if exception is None:
                     if results.pickled_exception is None:
@@ -549,7 +554,7 @@ def main(command_class=None, args=None):
     else:
         # Discover all available commands
         commands = {}
-        for entry in pkg_resources.iter_entry_points('psamm.commands'):
+        for entry in entry_points(group='psamm.commands'):
             canonical = entry.name.lower()
             if canonical not in commands:
                 command_class = entry.load()
@@ -560,7 +565,7 @@ def main(command_class=None, args=None):
 
         # Create parsers for subcommands
         subparsers = parser.add_subparsers(title='Commands', metavar='command')
-        for name, command_class in sorted(iteritems(commands)):
+        for name, command_class in sorted(commands.items()):
             title, _, _ = command_class.__doc__.partition('\n\n')
             subparser = subparsers.add_parser(
                 name, help=title.rstrip('.'),
@@ -580,7 +585,7 @@ def main(command_class=None, args=None):
     try:
         command.run()
     except CommandError as e:
-        parser.error(text_type(e))
+        parser.error(str(e))
 
 
 def main_sbml(command_class=None, args=None):
@@ -620,7 +625,7 @@ def main_sbml(command_class=None, args=None):
     else:
         # Discover all available commands
         commands = {}
-        for entry in pkg_resources.iter_entry_points('psamm.commands'):
+        for entry in entry_points(group='psamm.commands'):
             canonical = entry.name.lower()
             if canonical not in commands:
                 command_class = entry.load()
@@ -631,7 +636,7 @@ def main_sbml(command_class=None, args=None):
 
         # Create parsers for subcommands
         subparsers = parser.add_subparsers(title='Commands', metavar='command')
-        for name, command_class in sorted(iteritems(commands)):
+        for name, command_class in sorted(commands.items()):
             title, _, _ = command_class.__doc__.partition('\n\n')
             subparser = subparsers.add_parser(
                 name, help=title.rstrip('.'),
@@ -655,4 +660,4 @@ def main_sbml(command_class=None, args=None):
     try:
         command.run()
     except CommandError as e:
-        parser.error(text_type(e))
+        parser.error(str(e))

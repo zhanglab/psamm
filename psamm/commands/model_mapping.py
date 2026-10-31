@@ -21,9 +21,7 @@
 
 """Generate a common model for two distinct metabolic models."""
 
-from __future__ import print_function, division
 
-from builtins import object, input
 import operator
 from itertools import product
 import time

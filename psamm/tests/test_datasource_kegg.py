@@ -23,7 +23,7 @@ from psamm.datasource import kegg
 from psamm.reaction import Reaction, Compound, Direction
 from psamm.expression.affine import Expression
 
-from six import StringIO
+from io import StringIO
 
 
 class TestKEGGEntryParser(unittest.TestCase):
