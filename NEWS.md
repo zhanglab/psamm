@@ -13,9 +13,13 @@ Unreleased
 - Fixes `generate-database --type KO` finding no reactions with the current
   KEGG KO entry format
 - Updates the Rhea ChEBI pH 7.3 mapping used by `generate-database --rhea`
-- Starts parallel worker processes with the `forkserver` method. Forking the
-  main process could crash workers when they cleaned up inherited GLPK
-  problems, leaving parallel commands hanging
+- Starts parallel worker processes with the `forkserver` method instead of
+  forking the main process, as is the default from Python 3.14
+- Fixes random crashes (abort in `glp_delete_prob`) with the GLPK solver when
+  a problem was freed by the garbage collector on a different thread, e.g. in
+  parallel commands
+- Parallel commands now fail with an error instead of hanging if a worker
+  process dies
 
 v1.2.1 (2022-05-12)
 ------------------
